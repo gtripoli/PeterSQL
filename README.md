@@ -28,7 +28,8 @@ So, as a personal challenge, I decided to port it to Python.
 
 ## 📸 Screenshot
 
-*(Coming soon)*
+![Session Manager](screenshot/session_manager.png?raw=true "Session Manager")
+![Main Frame](screenshot/main_frame.png?raw=true "Main Frame")
 
 ---
 

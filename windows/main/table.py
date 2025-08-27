@@ -322,14 +322,19 @@ class ListTableColumnsController:
 
                 length_scale_set = ""
 
-                if data_type.has_display_width and column.type.display_width is not None:
+                if data_type.has_display_width and getattr(column.type, "display_width", None) is not None:
                     length_scale_set = str(column.type.display_width)
-                elif data_type.has_length and column.type.length is not None:
+                elif data_type.has_length and getattr(column.type, "length", None) is not None:
                     length_scale_set = str(column.type.length)
-                    if data_type.has_scale:
-                        length_scale_set += f"/{column.scale}"
+
+                elif data_type.has_precision and getattr(column.type, "precision", None) is not None:
+                    length_scale_set = str(column.type.precision)
+
                 elif data_type.has_set:
                     length_scale_set = ",".join(column.type.enums)
+
+                if data_type.has_scale and getattr(column.type, "scale", None) is not None:
+                    length_scale_set += f"/{column.type.scale}"
 
                 default = ""
                 expression = ""

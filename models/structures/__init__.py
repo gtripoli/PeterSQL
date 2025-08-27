@@ -31,6 +31,7 @@ class SQLDataType:
     has_set: bool = dataclasses.field(default=None)
     has_scale: bool = dataclasses.field(default=None)
     has_length: bool = dataclasses.field(default=None)
+    has_precision: bool = dataclasses.field(default=None)
     has_charset: bool = dataclasses.field(default=None)
     has_display_width: bool = dataclasses.field(default=None)
 
@@ -53,6 +54,8 @@ class SQLDataType:
             object.__setattr__(self, "has_zerofill", self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
         if self.has_unsigned is None:
             object.__setattr__(self, "has_unsigned", self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
+        if self.has_precision is None:
+            object.__setattr__(self, "has_precision", self.category in [DataTypeCategory.REAL])
 
 
 class StandardDataType():
