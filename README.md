@@ -17,6 +17,7 @@ The project is **not finished** and should be considered **unstable**.
 
 Features may be incomplete, change without notice, or break between versions.  
 Use at your own risk and **do not rely on this project in production environments** yet.
+
 ---
 
 ## 🧭 Why PeterSQL?
