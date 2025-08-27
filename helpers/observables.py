@@ -87,7 +87,7 @@ class ObservableArray(Observable[List[T]]):
         self._callbacks[ObservableArray.CallbackEvent.ON_INSERT.value] = []
 
     def _ensure_list(self) -> List:
-        value = copy.deepcopy(super().get_value()) or []
+        value = super().get_value() or []
         if not isinstance(value, list):
             raise TypeError(f"Expected list, got {type(value)}")
         return value
