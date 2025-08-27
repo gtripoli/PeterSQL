@@ -1,14 +1,28 @@
+![status: unstable](https://img.shields.io/badge/status-unstable-orange)
+
 # PeterSQL
 
 > Heidi's (silly?) friend - a wxPython porting of HeidiSQL
 
-**PeterSQL** is a graphical client for database management, inspired by the excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python** with **wxPython**, and designed to run natively on **All OS**.
+**PeterSQL** is a graphical client for database management, inspired by the
+excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python** with **wxPython**, and designed to
+run natively on **All OS**.
 
+---
+
+## ⚠️ Project Status
+
+PeterSQL is currently under active development.  
+The project is **not finished** and should be considered **unstable**.
+
+Features may be incomplete, change without notice, or break between versions.  
+Use at your own risk and **do not rely on this project in production environments** yet.
 ---
 
 ## 🧭 Why PeterSQL?
 
-Over the years, I have used **HeidiSQL** as my primary tool for working with MySQL, MariaDB, SQLite, and other databases. It is a tool that I greatly appreciate: **streamlined**, **intuitive**, **powerful**.
+Over the years, I have used **HeidiSQL** as my primary tool for working with MySQL, MariaDB, SQLite, and other
+databases. It is a tool that I greatly appreciate: **streamlined**, **intuitive**, **powerful**.
 
 So, as a personal challenge, I decided to port it to Python.
 
@@ -43,9 +57,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
+
 ---
 
 ### 📄 LICENSE
+
 ```text
 PeterSQL - Database Client for Python lovers
 Copyright (C) 2025 [Tuo Nome o Username]
