@@ -1,0 +1,10 @@
+language: it-IT
+window:
+  size: 600x800
+  position: center
+sessions:
+  - name: This is a Test
+    engine: SQLite
+    configuration:
+      filename: ./test.db
+    comments: The SQLite test
