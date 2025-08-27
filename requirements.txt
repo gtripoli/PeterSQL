@@ -1,0 +1,8 @@
+pyyaml
+pymysql
+babel
+requests
+wxpython==4.2.3
+sqlalchemy
+geoalchemy
+alembic
