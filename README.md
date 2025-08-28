@@ -33,7 +33,7 @@ So, as a personal challenge, I decided to port it to Python.
 
 ---
 
-## 🔧 Tecnologie utilizzate
+## 🔧 Technologies used
 
 - [Python 3.11+](https://www.python.org/)
 - [wxPython 4.2.3](https://wxpython.org/) - native cross-platform interface
@@ -43,8 +43,8 @@ So, as a personal challenge, I decided to port it to Python.
 
 ## 📸 Screenshot
 
-![Session Manager](screenshot/session_manager.png?raw=true "Session Manager")
-![Main Frame](screenshot/main_frame.png?raw=true "Main Frame")
+![Session Manager](screenshot/session_manager.png?raw=true "Session Manager"){width=200}
+![Main Frame](screenshot/main_frame.png?raw=true "Main Frame"){width=200}
 
 ---
 
@@ -58,19 +58,3 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
-
----
-
-### 📄 LICENSE
-
-```text
-PeterSQL - Database Client for Python lovers
-Copyright (C) 2025 [Tuo Nome o Username]
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-...
-# Icons copyright
-Icons by [Icons8](https://icons8.com)
