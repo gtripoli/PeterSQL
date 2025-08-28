@@ -42,10 +42,10 @@ So, as a personal challenge, I decided to port it to Python.
 ---
 
 ## 📸 Screenshot
-
-![Session Manager](screenshot/session_manager.png?raw=true "Session Manager"){width=200}
-![Main Frame](screenshot/main_frame.png?raw=true "Main Frame"){width=200}
-
+<p align="center">
+  <img src="screenshot/session_manager.png" alt="Session Manager" width="200"/>
+  <img src="screenshot/main_frame.png" alt="Main Frame" width="200"/>
+</p>
 ---
 
 ## 🚀 How to get started
