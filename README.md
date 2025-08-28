@@ -46,6 +46,7 @@ So, as a personal challenge, I decided to port it to Python.
   <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
   <img src="screenshot/main_frame.png" alt="Main Frame" height="200"/>
 </p>
+
 ---
 
 ## 🚀 How to get started
