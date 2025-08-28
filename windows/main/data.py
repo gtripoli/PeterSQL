@@ -52,7 +52,6 @@ class TableDataController:
                 self.list_ctrl_data.DeleteColumn(self.list_ctrl_data.GetColumn(0))
 
             for i, column in enumerate(table.columns):
-                print("make column", i, column)
                 self.list_ctrl_data.AppendTextColumn(column.name, i, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 

@@ -1,12 +1,12 @@
+import re
 import copy
 import dataclasses
+from collections import Counter
 
-from typing import List, Optional, Type
+from typing import List, Optional, Tuple
 
 import wx
 import wx.dataview
-
-# from sqlalchemy import Table, Column
 
 import sqlalchemy as sa
 import sqlalchemy.sql.elements
@@ -16,74 +16,17 @@ from helpers.bindings import AbstractModel
 from helpers.observables import Observable, debounce, ObservableArray
 
 from models.session import Session, SessionEngine
-from models.structures import SQLDataType
+from models.structures import SQLDataType, DataTypeCategoryColor
 from models.structures.charset import COLLATION_CHARSETS
 
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.sqlite.datatype import SQLiteDataType
 
-from windows import DialogDefaultColumn, CustomPopupTransientWindow
 from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_COLUMN
 
 NEW_TABLE: Observable[sa.Table] = Observable()
 NEW_COLUMN: Observable[sa.Column] = Observable()
-
-
-class ColumnDialogRenderer(wx.dataview.DataViewCustomRenderer):
-
-    def __init__(self, dialog: Type[CustomPopupTransientWindow]):
-        self.dialog = dialog
-        super().__init__("string", wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
-
-    def Render(self, rect, dc, state):
-        dc.DrawText(self.GetValue(), rect.x, rect.y)
-        return True
-
-    def GetValue(self):
-        return self._value if hasattr(self, "_value") else ""
-
-    def SetValue(self, value):
-        self._value = value
-        return True
-
-    def GetSize(self):
-        return wx.Size(100, -1)
-
-    def ActivateCell(self, rect, model, item, col, mouseEvent):
-        view = self.GetView()
-
-        popup = self.dialog(parent=view)
-        point_x_y = view.ClientToScreen(wx.Point(rect.x, rect.y + 17))
-        # popup.SetSize(wx.Rect())
-        popup.SetPosition(point_x_y)
-        popup.SetSize(width=view.Columns[col].Width, height=-1)
-        popup.Popup()
-
-        if self._value != "":
-            if self._value == "NULL":
-                popup.rb_null.SetValue(True)
-            elif self._value == "AUTO_INCREMENT":
-                popup.rb_auto_increment.SetValue(True)
-            else:
-                popup.rb_expression.SetValue(True)
-                popup.txt_expression.SetValue(self._value)
-
-        def onDismiss(*args, **kwargs):
-            if popup.rb_no_default.GetValue():
-                self._value = ""
-            elif popup.rb_null.GetValue():
-                self._value = "NULL"
-            elif popup.rb_auto_increment.GetValue():
-                self._value = "AUTO_INCREMENT"
-            elif popup.rb_expression.GetValue():
-                self._value = popup.txt_expression.GetValue()
-
-            model.ChangeValue(self._value, item, col)
-
-        popup.OnDismiss = onDismiss
-
-        return True
 
 
 @dataclasses.dataclass
@@ -95,11 +38,13 @@ class ColumnModelData:
     unsigned: bool = False
     nullable: bool = True
     zerofill: bool = False
-    default: Optional[str] = ""
+    primary_key: bool = False
+    default: Optional[str] = None
     virtuality: Optional[str] = ""
     expression: Optional[str] = ""
     collation: Optional[str] = ""
     comments: str = ""
+    index_summary: Counter = None
 
 
 class ColumnModel(wx.dataview.DataViewIndexListModel):
@@ -116,6 +61,21 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
             return getattr(self.data[row], ColumnModel.COLUMN_FIELDS[col])
         except Exception as ex:
             logger.error(ex, exc_info=True)
+
+    def GetAttrByRow(self, row, col, attr):
+        if col == 0:
+            attr.SetBackgroundColour(wx.Colour(239, 239, 239))
+            return True
+
+        if col in [2, 7]:
+            data_type = self.GetValueByRow(row, 2)
+            color = DataTypeCategoryColor[self.engine_data_type.get_by_name(data_type).category.value].value
+
+            attr.SetColour(wx.Colour(color))
+            # attr.SetBold(True)
+            return True
+
+        return super().GetAttrByRow(row, col, attr)
 
     def SetValueByRow(self, value, row, col):
         item = self.GetItem(row)
@@ -264,35 +224,6 @@ class ListTableColumnsController:
         # CURRENT_DATABASE.subscribe(self._update_columns)
         CURRENT_TABLE.subscribe(self._load_table)
 
-    def _render_columns(self, *_args):
-        index_column = self.list_ctrl_table_columns.GetColumn(0)
-
-        data_type_column = self.list_ctrl_table_columns.GetColumn(2)
-        self.list_ctrl_table_columns.DeleteColumn(data_type_column)
-
-        datatype_renderer = wx.dataview.DataViewChoiceRenderer([data_type.name for data_type in self.engine_data_type.get_all()], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn("Data type", datatype_renderer, 2, width=120, align=wx.ALIGN_CENTER)
-        self.list_ctrl_table_columns.InsertColumn(2, column)
-
-        default_column = self.list_ctrl_table_columns.GetColumn(7)
-        self.list_ctrl_table_columns.DeleteColumn(default_column)
-
-        default_renderer = ColumnDialogRenderer(DialogDefaultColumn)
-        column = wx.dataview.DataViewColumn("Default", default_renderer, 7, width=200, align=wx.ALIGN_LEFT)
-        self.list_ctrl_table_columns.InsertColumn(7, column)
-
-        virtuality_column = self.list_ctrl_table_columns.GetColumn(8)
-        self.list_ctrl_table_columns.DeleteColumn(virtuality_column)
-        collation_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "PERSISTED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn("Virtuality", collation_renderer, 8, width=200, align=wx.ALIGN_CENTER)
-        self.list_ctrl_table_columns.InsertColumn(8, column)
-
-        collation_column = self.list_ctrl_table_columns.GetColumn(10)
-        self.list_ctrl_table_columns.DeleteColumn(collation_column)
-        collation_renderer = wx.dataview.DataViewChoiceRenderer([c for c in COLLATION_CHARSETS.keys()], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn("Collation", collation_renderer, 10, width=120, align=wx.ALIGN_CENTER)
-        self.list_ctrl_table_columns.InsertColumn(10, column)
-
     def _load_session(self, session: Session):
         self.session = session
 
@@ -303,15 +234,85 @@ class ListTableColumnsController:
         elif self.session.engine == SessionEngine.SQLITE:
             self.engine_data_type = SQLiteDataType()
 
-            self.list_ctrl_table_columns.GetColumn(4)
-            self.list_ctrl_table_columns.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-            self.list_ctrl_table_columns.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-            self.list_ctrl_table_columns.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-
         self.model = ColumnModel(self.engine_data_type)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
-        self._render_columns()
+    def _normalize_column_default(self, value: str) -> str:
+        """Remove surrounding quotes if present."""
+        if not value:
+            return ""
+        value = re.sub(r"""^(["'])(.*)\1$""", r"\2", value)
+        if value.strip() == "":
+            return ""
+        else:
+            return value
+
+    def _get_column_default(self, column) -> Tuple[str, str, str]:
+        default = ""
+        expression = ""
+        virtuality = ""
+
+        if column.autoincrement is True:
+            default = "AUTO_INCREMENT"
+
+        else:
+            if (server_default := getattr(column, "server_default", None)) is not None:
+                if (arg := getattr(server_default, "arg", None)) is not None:
+                    default = self._normalize_column_default(arg.text)
+
+                elif (sqltext := getattr(server_default, "sqltext", None)) is not None and hasattr(column, "computed"):
+                    default = str(sqltext.type)
+                    expression = sqltext.text
+                    virtuality = "VIRTUAL" if not column.computed.persisted else "PERSISTENT"
+
+        return default, expression, virtuality
+
+    def _get_length_scale_set(self, column, data_type) -> str:
+        """
+        Return formatted length/scale/set string depending on the SQLDataType.
+        """
+        candidates = [
+            (data_type.has_display_width, "display_width", str),
+            (data_type.has_length, "length", str),
+            (data_type.has_precision, "precision", str),
+            (data_type.has_set, "enums", lambda v: ",".join(v)),
+        ]
+
+        length_scale_set = ""
+
+        for condition, attr, transform in candidates:
+            if condition and (value := getattr(column.type, attr, None)) is not None:
+                length_scale_set = transform(value)
+                break
+
+        if data_type.has_scale and (scale := getattr(column.type, "scale", None)) is not None:
+            length_scale_set += f"/{scale}"
+
+        return length_scale_set
+
+    def _column_index_summary(self, table, col: sa.Column) -> Counter:
+        summary = Counter()
+
+        for constraint in table.constraints:
+            if isinstance(constraint, sa.UniqueConstraint) and col in list(constraint.columns):
+                summary["unique_constraint"] += 1
+
+        for idx in table.indexes:
+            if col not in list(idx.columns):
+                continue
+
+            if idx.unique:
+                summary["unique_index"] += 1
+            else:
+                summary["normal_index"] += 1
+
+            mysql_opts = idx.dialect_options.get("mysql", {})
+            if mysql_opts.get("fulltext"):
+                summary["fulltext_index"] += 1
+            if mysql_opts.get("spatial"):
+                summary["spatial_index"] += 1
+
+        return summary
 
     def _load_table(self, table: sa.Table):
         with self.app.cursor_wait():
@@ -320,34 +321,11 @@ class ListTableColumnsController:
             for index, column in enumerate(table.columns, 1):
                 data_type = self.engine_data_type.get_by_type(column.type)
 
-                length_scale_set = ""
+                length_scale_set = self._get_length_scale_set(column, data_type)
 
-                if data_type.has_display_width and getattr(column.type, "display_width", None) is not None:
-                    length_scale_set = str(column.type.display_width)
-                elif data_type.has_length and getattr(column.type, "length", None) is not None:
-                    length_scale_set = str(column.type.length)
+                default, expression, virtuality = self._get_column_default(column)
 
-                elif data_type.has_precision and getattr(column.type, "precision", None) is not None:
-                    length_scale_set = str(column.type.precision)
-
-                elif data_type.has_set:
-                    length_scale_set = ",".join(column.type.enums)
-
-                if data_type.has_scale and getattr(column.type, "scale", None) is not None:
-                    length_scale_set += f"/{column.type.scale}"
-
-                default = ""
-                expression = ""
-                virtuality = ""
-                if column.autoincrement == True:
-                    default = "AUTO_INCREMENT"
-                elif column.server_default is not None:
-                    if hasattr(column.server_default, "arg"):
-                        default = column.server_default.arg.text
-                    elif hasattr(column.server_default, "sqltext"):
-                        default = str(column.server_default.sqltext.type)
-                        expression = column.server_default.sqltext.text
-                        virtuality = "VIRTUAL" if not column.computed.persisted else "PERSISTENT"
+                print("default", default)
 
                 self.model.add_row(
                     ColumnModelData(
@@ -358,12 +336,13 @@ class ListTableColumnsController:
                         unsigned=bool(data_type.has_unsigned and getattr(column.type, "unsigned", False)),
                         nullable=bool(column.nullable),
                         zerofill=bool(data_type.has_zerofill and getattr(column.type, "zerofill", False)),
+                        primary_key=bool(column.primary_key),
                         default=default,
-                        # column.server_default if column.server_default else "",
                         collation=getattr(column.type, "collation", None) or "",
                         virtuality=virtuality,  # Virtuality
                         expression=expression,
-                        comments=column.comment or ""
+                        comments=column.comment or "",
+                        index_summary=self._column_index_summary(table, column)
                     ))
 
     def _edit_column(self, item, column_index: int = 1):
@@ -477,7 +456,7 @@ class ListTableColumnsController:
         if idx < len(editable_columns) - 1:
             self._edit_column(item, idx)
 
-        self.do_build(item)
+        # self.do_build(item) # TODO: reactive this
 
         event.Skip()
 
@@ -502,11 +481,11 @@ class ListTableColumnsController:
             if data_type.has_zerofill and model_data.zerofill:
                 sa_data_type_kwargs["zerofill"] = True
 
-            if data_type.has_charset and model_data.collation != "":
+            if data_type.has_collation and model_data.collation != "":
                 sa_data_type_kwargs["charset"] = COLLATION_CHARSETS[model_data.collation]
                 sa_data_type_kwargs["collation"] = model_data.collation
 
-            if model_data.default != "":
+            if model_data.default != None:
                 if model_data.default == "AUTO_INCREMENT":
                     sa_column_kwargs["autoincrement"] = True
                 elif model_data.default == "NULL":

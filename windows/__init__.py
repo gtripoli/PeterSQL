@@ -7,7 +7,7 @@
 ## PLEASE DO *NOT* EDIT THIS FILE!
 ###########################################################################
 
-from .custom_components import CustomPopupTransientWindow
+from .custom_components import ColumnDataViewCtrl
 import wx
 import wx.xrc
 import wx.dataview
@@ -796,19 +796,7 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer54.Add( bSizer53, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.list_ctrl_table_columns = wx.dataview.DataViewCtrl( self.PanelTableColumn, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_HORIZ_RULES|wx.dataview.DV_ROW_LINES|wx.dataview.DV_SINGLE|wx.dataview.DV_VARIABLE_LINE_HEIGHT|wx.dataview.DV_VERT_RULES )
-		self.m_dataViewColumn2 = self.list_ctrl_table_columns.AppendTextColumn( _(u"#"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn3 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn4 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Data type"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn5 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Length/Set"), 3, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn6 = self.list_ctrl_table_columns.AppendToggleColumn( _(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn7 = self.list_ctrl_table_columns.AppendToggleColumn( _(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn8 = self.list_ctrl_table_columns.AppendToggleColumn( _(u"Zerofill"), 6, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn9 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Default"), 7, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn12 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Virtuality"), 8, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn11 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Expression"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn13 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Collation"), 10, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn10 = self.list_ctrl_table_columns.AppendTextColumn( _(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.list_ctrl_table_columns = ColumnDataViewCtrl( self.PanelTableColumn, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_HORIZ_RULES|wx.dataview.DV_ROW_LINES|wx.dataview.DV_SINGLE|wx.dataview.DV_VARIABLE_LINE_HEIGHT|wx.dataview.DV_VERT_RULES )
 		bSizer54.Add( self.list_ctrl_table_columns, 1, wx.ALL|wx.EXPAND, 5 )
 
 		bSizer52 = wx.BoxSizer( wx.HORIZONTAL )
@@ -1063,43 +1051,6 @@ class MainFrameView ( wx.Frame ):
 
 	def m_panel15OnContextMenu( self, event ):
 		self.m_panel15.PopupMenu( self.m_menu3, event.GetPosition() )
-
-
-###########################################################################
-## Class DialogDefaultColumn
-###########################################################################
-
-class DialogDefaultColumn ( CustomPopupTransientWindow ):
-
-	def __init__( self, parent ):
-		CustomPopupTransientWindow.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.DIALOG_NO_PARENT )
-
-		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
-
-		bSizer63 = wx.BoxSizer( wx.VERTICAL )
-
-		self.rb_no_default = wx.RadioButton( self, wx.ID_ANY, _(u"No default value"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer63.Add( self.rb_no_default, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.rb_expression = wx.RadioButton( self, wx.ID_ANY, _(u"Expression"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer63.Add( self.rb_expression, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.txt_expression = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
-		bSizer63.Add( self.txt_expression, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.rb_null = wx.RadioButton( self, wx.ID_ANY, _(u"NULL"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer63.Add( self.rb_null, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.rb_auto_increment = wx.RadioButton( self, wx.ID_ANY, _(u"AUTO INCREMENT"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer63.Add( self.rb_auto_increment, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-		self.SetSizer( bSizer63 )
-		self.Layout()
-		bSizer63.Fit( self )
-
-	def __del__( self ):
-		pass
 
 
 ###########################################################################
