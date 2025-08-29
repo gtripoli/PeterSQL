@@ -14,7 +14,7 @@ from models.structures import SQLDataType
 class Column:
     id: Optional[int]
     name: str
-    data_type: Type[SQLDataType]
+    datatype: Type[SQLDataType]
     is_nullable: bool
     extra: Optional[str] = None
     key: Optional[str] = None
@@ -33,16 +33,16 @@ class Column:
     scale: Optional[int] = None
 
     def is_valid(self):
-        return all([self.name, self.data_type])
+        return all([self.name, self.datatype])
 
     def to_sa_column(self):
         sa_col_args = []
         sa_col_kwargs = {}
-        if self.data_type.has_set:
+        if self.datatype.has_set:
             sa_col_args.append(self.set)
-        elif self.data_type.has_length:
+        elif self.datatype.has_length:
             sa_col_args.append(self.length)
-            if self.data_type.has_scale:
+            if self.datatype.has_scale:
                 sa_col_args.append(self.scale)
 
         if self.is_unsigned:
@@ -53,7 +53,7 @@ class Column:
 
         return sqlalchemy.Column(
             self.name,
-            self.data_type.sa_column(*sa_col_args, **sa_col_kwargs),
+            self.datatype.sa_column(*sa_col_args, **sa_col_kwargs),
             # primary_key=self.primary_key,
             # autoincrement=self.auto_increment,
             nullable=self.is_nullable,

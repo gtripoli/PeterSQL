@@ -24,17 +24,6 @@ class TableDataController:
 
     def _load_session(self, session: Session):
         self.session = session
-        # if self.session.engine == SessionEngine.MYSQL:
-        #     self.engine_data_type = MySQLDataType
-        # if self.session.engine == SessionEngine.SQLITE:
-        #     self.engine_data_type = SQLiteDataType
-        #
-        #     self.list_ctrl_table_columns.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-        #     self.list_ctrl_table_columns.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-        #     self.list_ctrl_table_columns.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-
-        # self.model = ColumnModel(self.engine_data_type)
-        # self.list_ctrl_table_columns.AssociateModel(self.model)
 
     def _load_table(self, table: Table):
         # self.m_dataViewColumn2 = self.list_ctrl_table_columns.AppendTextColumn( _(u"#"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE )

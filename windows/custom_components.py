@@ -6,16 +6,14 @@ import wx.dataview
 
 from gettext import gettext as _
 
-from wx.dataview import DATAVIEW_CELL_EDITABLE
-
 from models.session import Session, SessionEngine
 from models.structures import StandardDataType
 from models.structures.charset import COLLATION_CHARSETS
 from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.sqlite.datatype import SQLiteDataType
-from windows.main import CURRENT_SESSION
 
+from windows.main import CURRENT_SESSION
 
 class PopupColumnDefault(wx.PopupTransientWindow):
     def __init__(self, *args, **kwargs):
@@ -58,7 +56,6 @@ class DataViewChoiceRenderer(wx.dataview.DataViewCustomRenderer):
         return True
 
     def GetSize(self):
-        w, h = self.GetTextExtent(self._value)
         return wx.Size(-1, -1)
 
     def SetValue(self, value):
@@ -72,15 +69,23 @@ class DataViewChoiceRenderer(wx.dataview.DataViewCustomRenderer):
         return True
 
     def CreateEditorCtrl(self, parent, rect, value):
-        choice = wx.Choice(
+        ctrl = wx.Choice(
             parent,
             choices=self.choices,
             pos=rect.GetTopLeft(),
             size=rect.GetSize()
         )
+
+        def on_select(event):
+            self.FinishEditing()
+            ctrl.Destroy()  # forza la chiusura del widget editor
+
+        ctrl.Bind(wx.EVT_CHOICE, on_select)
+
         if self._value in self.choices:
-            choice.SetStringSelection(self._value)
-        return choice
+            ctrl.SetStringSelection(self._value)
+
+        return ctrl
 
     def GetValueFromEditorCtrl(self, editor):
         return editor.GetStringSelection()
@@ -248,16 +253,16 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
         self.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
     def _load_session(self, session: Session):
-        self.engine_data_type = StandardDataType()
+        self.engine_datatype = StandardDataType()
         if session.engine == SessionEngine.MYSQL:
-            self.engine_data_type = MySQLDataType()
+            self.engine_datatype = MySQLDataType()
         elif session.engine == SessionEngine.MARIADB:
-            self.engine_data_type = MariaDBDataType
+            self.engine_datatype = MariaDBDataType
         elif session.engine == SessionEngine.SQLITE:
-            self.engine_data_type = SQLiteDataType()
+            self.engine_datatype = SQLiteDataType()
 
             self.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
 
-        self.GetColumn(2).GetRenderer().set_choices([data_type.name for data_type in self.engine_data_type.get_all()])
+        self.GetColumn(2).GetRenderer().set_choices([datatype.name for datatype in self.engine_datatype.get_all()])

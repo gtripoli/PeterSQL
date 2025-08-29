@@ -33,7 +33,7 @@ NEW_COLUMN: Observable[sa.Column] = Observable()
 class ColumnModelData:
     id: str
     name: str = ""
-    data_type: Optional[str] = ""
+    datatype: Optional[str] = ""
     length_set: Optional[str] = ""
     unsigned: bool = False
     nullable: bool = True
@@ -50,10 +50,10 @@ class ColumnModelData:
 class ColumnModel(wx.dataview.DataViewIndexListModel):
     COLUMN_FIELDS = [f.name for f in dataclasses.fields(ColumnModelData)]
 
-    def __init__(self, engine_data_type):
+    def __init__(self, engine_datatype):
         super().__init__()
         self.data: List[ColumnModelData] = []
-        self.engine_data_type = engine_data_type
+        self.engine_datatype = engine_datatype
 
     def GetValueByRow(self, row, col):
         try:
@@ -64,7 +64,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
     def GetAttrByRow(self, row, col, attr):
         column_model_data: ColumnModelData = self.data[row]
-        if column_model_data.primary_key :
+        if column_model_data.primary_key:
             attr.SetBold(True)
 
         if col == 0:
@@ -72,7 +72,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
             return True
 
         if col in [2, 7]:
-            color = DataTypeCategoryColor[self.engine_data_type.get_by_name(column_model_data.data_type).category.value].value
+            color = DataTypeCategoryColor[self.engine_datatype.get_by_name(column_model_data.datatype).category.value].value
 
             attr.SetColour(wx.Colour(color))
             return True
@@ -96,18 +96,18 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         length_set_value = ""
         column_model_data: ColumnModelData = self.data[row]
 
-        if column_model_data.data_type is not None and col == 3:
-            data_type: SQLDataType = self.engine_data_type.get_by_name(column_model_data.data_type)
+        if column_model_data.datatype is not None and col == 3:
+            datatype: SQLDataType = self.engine_datatype.get_by_name(column_model_data.datatype)
 
-            if data_type.has_set:
-                length_set_value = data_type.default_set
+            if datatype.has_set:
+                length_set_value = datatype.default_set
 
-            elif data_type.has_length:
-                length_set_value = [data_type.default_length]
-                if data_type.has_scale:
-                    length_set_value.append(data_type.default_scale)
+            elif datatype.has_length:
+                length_set_value = [datatype.default_length]
+                if datatype.has_scale:
+                    length_set_value.append(datatype.default_scale)
 
-            if data_type.has_length or data_type.has_set:
+            if datatype.has_length or datatype.has_set:
                 if isinstance(length_set_value, list):
                     length_set_value = ','.join(map(str, length_set_value))
 
@@ -115,12 +115,12 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
             self.ValueChanged(item, 3)
 
-            if not data_type.has_unsigned:
+            if not datatype.has_unsigned:
                 column_model_data.unsigned = False
 
                 self.ValueChanged(item, 4)
 
-            if not data_type.has_zerofill:
+            if not datatype.has_zerofill:
                 column_model_data.zerofill = False
                 self.ValueChanged(item, 5)
 
@@ -230,13 +230,13 @@ class ListTableColumnsController:
         self.session = session
 
         if self.session.engine == SessionEngine.MYSQL:
-            self.engine_data_type = MySQLDataType()
+            self.engine_datatype = MySQLDataType()
         elif self.session.engine == SessionEngine.MARIADB:
-            self.engine_data_type = MariaDBDataType
+            self.engine_datatype = MariaDBDataType
         elif self.session.engine == SessionEngine.SQLITE:
-            self.engine_data_type = SQLiteDataType()
+            self.engine_datatype = SQLiteDataType()
 
-        self.model = ColumnModel(self.engine_data_type)
+        self.model = ColumnModel(self.engine_datatype)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
     def _normalize_column_default(self, value: str) -> str:
@@ -269,15 +269,12 @@ class ListTableColumnsController:
 
         return default, expression, virtuality
 
-    def _get_length_scale_set(self, column, data_type) -> str:
-        """
-        Return formatted length/scale/set string depending on the SQLDataType.
-        """
+    def _get_length_scale_set(self, column, datatype) -> str:
         candidates = [
-            (data_type.has_display_width, "display_width", str),
-            (data_type.has_length, "length", str),
-            (data_type.has_precision, "precision", str),
-            (data_type.has_set, "enums", lambda v: ",".join(v)),
+            (datatype.has_display_width, "display_width", str),
+            (datatype.has_length, "length", str),
+            (datatype.has_precision, "precision", str),
+            (datatype.has_set, "enums", lambda v: ",".join(v)),
         ]
 
         length_scale_set = ""
@@ -287,7 +284,7 @@ class ListTableColumnsController:
                 length_scale_set = transform(value)
                 break
 
-        if data_type.has_scale and (scale := getattr(column.type, "scale", None)) is not None:
+        if datatype.has_scale and (scale := getattr(column.type, "scale", None)) is not None:
             length_scale_set += f"/{scale}"
 
         return length_scale_set
@@ -321,9 +318,9 @@ class ListTableColumnsController:
             self.model.clear()
 
             for index, column in enumerate(table.columns, 1):
-                data_type = self.engine_data_type.get_by_type(column.type)
+                datatype = self.engine_datatype.get_by_type(column.type)
 
-                length_scale_set = self._get_length_scale_set(column, data_type)
+                length_scale_set = self._get_length_scale_set(column, datatype)
 
                 default, expression, virtuality = self._get_column_default(column)
 
@@ -333,11 +330,11 @@ class ListTableColumnsController:
                     ColumnModelData(
                         id=str(index),
                         name=column.name,
-                        data_type=data_type.name,
+                        datatype=datatype.name,
                         length_set=length_scale_set,
-                        unsigned=bool(data_type.has_unsigned and getattr(column.type, "unsigned", False)),
+                        unsigned=bool(datatype.has_unsigned and getattr(column.type, "unsigned", False)),
                         nullable=bool(column.nullable),
-                        zerofill=bool(data_type.has_zerofill and getattr(column.type, "zerofill", False)),
+                        zerofill=bool(datatype.has_zerofill and getattr(column.type, "zerofill", False)),
                         primary_key=bool(column.primary_key),
                         default=default,
                         collation=getattr(column.type, "collation", None) or "",
@@ -418,9 +415,9 @@ class ListTableColumnsController:
         self._edit_column(item, 1)
 
     def on_item_changed(self, event: wx.dataview.DataViewEvent):
-        item = event.GetItem()
+        print("#" * 10, "ON_EDITING_DONE", "#" * 10)
 
-        print("on_editing_done")
+        item = event.GetItem()
 
         if not item.IsOk():
             event.Skip()
@@ -434,18 +431,18 @@ class ListTableColumnsController:
         editable_columns = [column.ModelColumn for column in self.list_ctrl_table_columns.GetColumns() if wx.dataview.DATAVIEW_CELL_EDITABLE & column.Flags]
 
         if column == 2:
-            data_type: SQLDataType = self.engine_data_type.get_by_name(value)
-            if not all([data_type.has_length, data_type.has_set]):
+            datatype: SQLDataType = self.engine_datatype.get_by_name(value)
+            if not all([datatype.has_length, datatype.has_set]):
                 self.list_ctrl_table_columns.GetColumn(3).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
                 self.model.SetValue("", item, 3)
                 self.model.ValueChanged(item, 3)
 
-            if not data_type.has_unsigned:
+            if not datatype.has_unsigned:
                 self.list_ctrl_table_columns.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
                 self.model.SetValue(False, item, 4)
                 self.model.ValueChanged(item, 4)
 
-            if not data_type.has_zerofill:
+            if not datatype.has_zerofill:
                 self.list_ctrl_table_columns.GetColumn(5).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
                 self.model.SetValue(False, item, 5)
                 self.model.ValueChanged(item, 5)
@@ -465,27 +462,27 @@ class ListTableColumnsController:
     def do_build(self, item: wx.dataview.DataViewItem):
         model_data: ColumnModelData = self.model.data[self.model.GetRow(item)]
 
-        data_type = self.engine_data_type.get_by_name(model_data.data_type) if model_data.data_type is not None else None
+        datatype = self.engine_datatype.get_by_name(model_data.datatype) if model_data.datatype is not None else None
 
-        if data_type is not None:
+        if datatype is not None:
             sa_column_kwargs = {}
-            sa_data_type_kwargs = {}
+            sa_datatype_kwargs = {}
 
-            if data_type.has_length and model_data.length_set != '':
-                sa_data_type_kwargs["length"] = int(model_data.length_set)
+            if datatype.has_length and model_data.length_set != '':
+                sa_datatype_kwargs["length"] = int(model_data.length_set)
 
-                if data_type.has_scale:
-                    sa_data_type_kwargs["precision"] = int(0)
+                if datatype.has_scale:
+                    sa_datatype_kwargs["precision"] = int(0)
 
-            if data_type.has_unsigned and model_data.unsigned:
-                sa_data_type_kwargs["unsigned"] = True
+            if datatype.has_unsigned and model_data.unsigned:
+                sa_datatype_kwargs["unsigned"] = True
 
-            if data_type.has_zerofill and model_data.zerofill:
-                sa_data_type_kwargs["zerofill"] = True
+            if datatype.has_zerofill and model_data.zerofill:
+                sa_datatype_kwargs["zerofill"] = True
 
-            if data_type.has_collation and model_data.collation != "":
-                sa_data_type_kwargs["charset"] = COLLATION_CHARSETS[model_data.collation]
-                sa_data_type_kwargs["collation"] = model_data.collation
+            if datatype.has_collation and model_data.collation != "":
+                sa_datatype_kwargs["charset"] = COLLATION_CHARSETS[model_data.collation]
+                sa_datatype_kwargs["collation"] = model_data.collation
 
             if model_data.default != None:
                 if model_data.default == "AUTO_INCREMENT":
@@ -501,10 +498,8 @@ class ListTableColumnsController:
 
                 new_column = sa.Column(
                     model_data.name,
-                    data_type.sa_type(**sa_data_type_kwargs),
-                    # is_unsigned=is_unsigned,
+                    datatype.sa_type(**sa_datatype_kwargs),
                     nullable=model_data.nullable,
-
                     comment=model_data.comments,
                     **sa_column_kwargs
                     # generation_expression=generation_expression
@@ -512,7 +507,7 @@ class ListTableColumnsController:
             else:
                 modified_column: sa.Column = copy.copy(current_column)
                 modified_column.name = model_data.name
-                modified_column.data_type = data_type.sa_type(**sa_data_type_kwargs),
+                modified_column.datatype = datatype.sa_type(**sa_datatype_kwargs)
 
                 for key, value in sa_column_kwargs.items():
                     setattr(modified_column, key, value)
