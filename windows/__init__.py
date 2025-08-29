@@ -907,7 +907,7 @@ class MainFrameView ( wx.Frame ):
 		bSizer263.Fit( self.QueryPanelTpl )
 		self.MainFrameNotebook.AddPage( self.QueryPanelTpl, _(u"Query #2"), False )
 
-		bSizer25.Add( self.MainFrameNotebook, 1, wx.EXPAND|wx.RIGHT|wx.TOP, 5 )
+		bSizer25.Add( self.MainFrameNotebook, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.m_panel15.SetSizer( bSizer25 )

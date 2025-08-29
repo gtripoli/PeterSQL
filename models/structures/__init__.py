@@ -55,16 +55,12 @@ class SQLDataType:
 
         if self.has_length is None:
             object.__setattr__(self, "has_length", self.category in [DataTypeCategory.TEXT])
-
         if self.has_display_width is None:
             object.__setattr__(self, "has_display_width", self.category in [DataTypeCategory.INTEGER])
-
         if self.has_precision is None:
             object.__setattr__(self, "has_precision", self.category in [DataTypeCategory.REAL])
-
         if self.has_scale is None:
             object.__setattr__(self, "has_scale", self.has_precision)
-
         if self.has_collation is None:
             object.__setattr__(self, "has_collation", self.category in [DataTypeCategory.TEXT])
         if self.has_zerofill is None:

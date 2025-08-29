@@ -38,12 +38,12 @@ class ColumnModelData:
     unsigned: bool = False
     nullable: bool = True
     zerofill: bool = False
-    primary_key: bool = False
     default: Optional[str] = None
     virtuality: Optional[str] = ""
     expression: Optional[str] = ""
     collation: Optional[str] = ""
     comments: str = ""
+    primary_key: bool = False
     index_summary: Counter = None
 
 
@@ -63,16 +63,18 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
             logger.error(ex, exc_info=True)
 
     def GetAttrByRow(self, row, col, attr):
+        column_model_data: ColumnModelData = self.data[row]
+        if column_model_data.primary_key :
+            attr.SetBold(True)
+
         if col == 0:
-            attr.SetBackgroundColour(wx.Colour(239, 239, 239))
+            attr.SetBackgroundColour(wx.Colour(241, 241, 241))
             return True
 
         if col in [2, 7]:
-            data_type = self.GetValueByRow(row, 2)
-            color = DataTypeCategoryColor[self.engine_data_type.get_by_name(data_type).category.value].value
+            color = DataTypeCategoryColor[self.engine_data_type.get_by_name(column_model_data.data_type).category.value].value
 
             attr.SetColour(wx.Colour(color))
-            # attr.SetBold(True)
             return True
 
         return super().GetAttrByRow(row, col, attr)

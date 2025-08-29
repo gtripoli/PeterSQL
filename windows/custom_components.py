@@ -1,5 +1,5 @@
 import os
-from typing import Type
+from typing import Type, List
 
 import wx
 import wx.dataview
@@ -47,47 +47,46 @@ class PopupColumnDefault(wx.PopupTransientWindow):
 
 class DataViewChoiceRenderer(wx.dataview.DataViewCustomRenderer):
 
-    def __init__(self, choices, mode=DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT):
-        super().__init__("string", mode, align)
+    def __init__(self, choices):
+        super().__init__("string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
         self.choices = choices
-        self.value = ""
+        self._value = ""
 
     def Render(self, rect, dc, state):
-        # Set colore blu e font bold
-        dc.SetTextForeground(wx.Colour(0, 0, 255))
-        font = dc.GetFont()
-        font.SetWeight(wx.FONTWEIGHT_BOLD)
-        dc.SetFont(font)
+        self.RenderText(self._value, 0, rect, dc, state)
 
-        dc.DrawText(self.value, rect.x + 2, rect.y + 2)
         return True
 
     def GetSize(self):
-        return wx.Size(100, -1)
+        w, h = self.GetTextExtent(self._value)
+        return wx.Size(-1, -1)
 
     def SetValue(self, value):
-        self.value = value
+        self._value = value
         return True
 
     def GetValue(self):
-        return self.value
+        return self._value
 
     def HasEditorCtrl(self):
         return True
 
-    def CreateEditorCtrl(self, parent, labelRect, value):
-        # crea una combo come editor
-        combo = wx.ComboBox(
+    def CreateEditorCtrl(self, parent, rect, value):
+        choice = wx.Choice(
             parent,
-            value=value,
             choices=self.choices,
-            style=wx.CB_READONLY
+            pos=rect.GetTopLeft(),
+            size=rect.GetSize()
         )
-        # combo.SetFocus()
-        return combo
+        if self._value in self.choices:
+            choice.SetStringSelection(self._value)
+        return choice
 
     def GetValueFromEditorCtrl(self, editor):
-        return editor.GetValue()
+        return editor.GetStringSelection()
+
+    def set_choices(self, choices: List[str]):
+        self.choices = choices
 
 
 class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
@@ -108,8 +107,6 @@ class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
             else:
                 text = value
 
-        print("->", self.GetValue(), (self.GetValue()) != "", text)
-
         self.RenderText(text, 0, rect, dc, state)
 
         return True
@@ -123,10 +120,7 @@ class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
         return True
 
     def GetSize(self):
-        value = getattr(self, "_value", "")
-        size = self.GetTextExtent(value)
-        size += (2, 2)
-        return size
+        return wx.Size(-1, -1)
 
     def ActivateCell(self, rect, model, item, col, mouseEvent):
         view = self.GetView()
@@ -179,12 +173,6 @@ class DataViewIconRender(wx.dataview.DataViewCustomRenderer):
         return self._value
 
     def GetSize(self):
-        # text, bmp, count = self._value
-        # if not bmp:
-        #     return wx.Size(50, 16)
-        # w, h = bmp.GetSize()
-        # tw, th = self.GetTextExtent(text)
-        # return wx.Size(w * count + tw + 4, max(h, th))
         return wx.Size(-1, -1)
 
     def Render(self, rect, dc, state):
@@ -208,13 +196,11 @@ class DataViewIconRender(wx.dataview.DataViewCustomRenderer):
         dc.DrawText(self._value, x, y)
 
         tw, th = dc.GetTextExtent(self._value)
-        x += tw + 4  # 4px di spazio dopo il testo
+        x += tw + 4
 
-        # 3. Disegna le icone in sequenza
         spacing = 2
         for icon in icons:
             w, h = icon.GetSize()
-            # centro le icone rispetto al testo (verticale)
             text_y = y + (th - h) // 2
             dc.DrawBitmap(icon, x, text_y, True)
             x += w + spacing
@@ -230,16 +216,14 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
         CURRENT_SESSION.subscribe(self._load_session)
 
         icon_id_render = DataViewIconRender()
-        column = wx.dataview.DataViewColumn(_(u"#"), icon_id_render, 0,
-                                            width=40,
-                                            align=wx.ALIGN_LEFT)
+        column = wx.dataview.DataViewColumn(_(u"#"), icon_id_render, 0, width=40, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
-        # self.AppendTextColumn(_(u"#"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE)
         self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
-        # Reload after session change
-        self.AppendTextColumn(_(u"Data type"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        datatype_renderer = DataViewChoiceRenderer([])
+        column = wx.dataview.DataViewColumn(_(u"Data type"), datatype_renderer, 2, width=120, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column)
 
         self.AppendTextColumn(_(u"Length/Set"), 3, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
@@ -276,12 +260,4 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
             self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
 
-        datatype_renderer = wx.dataview.DataViewChoiceRenderer([data_type.name for data_type in self.engine_data_type.get_all()], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn(_(u"Data type"), datatype_renderer, 2, width=120, align=wx.ALIGN_LEFT)
-        self.DeleteColumn(self.GetColumn(2))
-        self.InsertColumn(2, column)
-
-    # def _get_datatype_color(self) -> Tuple[int, int, int]:
-    #     data_type = self.GetColumn(2).GetRenderer().GetValue()
-    #
-    #     return DataTypeCategoryColor[self.engine_data_type.get_by_name(data_type).category.value].value
+        self.GetColumn(2).GetRenderer().set_choices([data_type.name for data_type in self.engine_data_type.get_all()])
