@@ -7,7 +7,6 @@ class DataType(SQLDataType):
     has_set = False
     has_length = False
     has_scale = False
-    has_precision = False
 
 
 class SQLiteDataType(StandardDataType):

@@ -15,6 +15,7 @@ from models.structures.sqlite.datatype import SQLiteDataType
 
 from windows.main import CURRENT_SESSION
 
+
 class PopupColumnDefault(wx.PopupTransientWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,11 +77,11 @@ class DataViewChoiceRenderer(wx.dataview.DataViewCustomRenderer):
             size=rect.GetSize()
         )
 
-        def on_select(event):
+        def _on_select(event):
             self.FinishEditing()
-            ctrl.Destroy()  # forza la chiusura del widget editor
+            ctrl.Destroy()
 
-        ctrl.Bind(wx.EVT_CHOICE, on_select)
+        ctrl.Bind(wx.EVT_CHOICE, _on_select)
 
         if self._value in self.choices:
             ctrl.SetStringSelection(self._value)

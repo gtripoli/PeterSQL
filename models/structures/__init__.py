@@ -41,7 +41,6 @@ class SQLDataType:
     has_set: bool = dataclasses.field(default=None)
     has_scale: bool = dataclasses.field(default=None)
     has_length: bool = dataclasses.field(default=None)
-    has_precision: bool = dataclasses.field(default=None)
     has_collation: bool = dataclasses.field(default=None)
     has_display_width: bool = dataclasses.field(default=None)
 
@@ -57,10 +56,8 @@ class SQLDataType:
             object.__setattr__(self, "has_length", self.category in [DataTypeCategory.TEXT])
         if self.has_display_width is None:
             object.__setattr__(self, "has_display_width", self.category in [DataTypeCategory.INTEGER])
-        if self.has_precision is None:
-            object.__setattr__(self, "has_precision", self.category in [DataTypeCategory.REAL])
         if self.has_scale is None:
-            object.__setattr__(self, "has_scale", self.has_precision)
+            object.__setattr__(self, "has_scale", self.has_length and self.category in [DataTypeCategory.REAL])
         if self.has_collation is None:
             object.__setattr__(self, "has_collation", self.category in [DataTypeCategory.TEXT])
         if self.has_zerofill is None:

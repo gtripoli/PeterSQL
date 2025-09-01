@@ -33,8 +33,8 @@ class MariaDBDataType(StandardDataType):
     MEDIUMBLOB = SQLDataType(name="MEDIUMBLOB", category=DataTypeCategory.BINARY, has_default=False, max_size=(2 ** 24) - 1, sa_type=lambda **kwargs: sa.dialects.mysql.MEDIUMBLOB(**kwargs))
     LONGBLOB = SQLDataType(name="LONGBLOB", category=DataTypeCategory.BINARY, has_default=False, max_size=(2 ** 32) - 1, sa_type=lambda **kwargs: sa.dialects.mysql.LONGBLOB(**kwargs))
 
-    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.OTHER, has_default=False, default_set=["Y", "N"], sa_type=lambda **kwargs: sa.Enum(**kwargs))
-    SET = SQLDataType(name="SET", category=DataTypeCategory.OTHER, has_default=False, default_set=["Value 1", "Value 2"], sa_type=lambda **kwargs: sa.dialects.mysql.SET(**kwargs))
+    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.OTHER, has_default=False, default_set=["'Y'", "'N'"], sa_type=lambda **kwargs: sa.Enum(**kwargs))
+    SET = SQLDataType(name="SET", category=DataTypeCategory.OTHER, has_default=False, default_set=["'Value 1'", "'Value 2'"], sa_type=lambda **kwargs: sa.dialects.mysql.SET(**kwargs))
 
     POINT = SQLDataType(name="Point", category=DataTypeCategory.SPATIAL, has_default=False, sa_type=lambda **kwargs: ga.Geometry('Point'))
     LINESTRING = SQLDataType(name="LineString", category=DataTypeCategory.SPATIAL, has_default=False, sa_type=lambda **kwargs: ga.Geometry('LineString'))

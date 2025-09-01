@@ -119,7 +119,6 @@ class MainFrameController(MainFrameView):
         session = CURRENT_SESSION.get_value()
         db = CURRENT_DATABASE.get_value()
         db.tables = session.statement.get_tables(schema=db.name)
-        CURRENT_DATABASE.set_value(None)
         CURRENT_DATABASE.set_value(db)
 
     def _select_tree_item(self, **filters):

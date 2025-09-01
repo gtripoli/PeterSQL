@@ -23,7 +23,7 @@ from models.structures.mysql.datatype import MySQLDataType
 from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.sqlite.datatype import SQLiteDataType
 
-from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_COLUMN
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_COLUMN
 
 NEW_TABLE: Observable[sa.Table] = Observable()
 NEW_COLUMN: Observable[sa.Column] = Observable()
@@ -57,7 +57,6 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
     def GetValueByRow(self, row, col):
         try:
-            # print(ColumnModel.COLUMN_FIELDS[col], getattr(self.data[row], ColumnModel.COLUMN_FIELDS[col]))
             return getattr(self.data[row], ColumnModel.COLUMN_FIELDS[col])
         except Exception as ex:
             logger.error(ex, exc_info=True)
@@ -218,9 +217,7 @@ class ListTableColumnsController:
 
     def __init__(self, list_ctrl_table_columns: wx.dataview.DataViewCtrl):
         self.list_ctrl_table_columns = list_ctrl_table_columns
-        # self.list_ctrl_table_columns.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
-        # self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_EDITING_DONE, self.on_editing_done)
-        self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self.on_item_changed)
+        self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_value_changed)
 
         CURRENT_SESSION.subscribe(self._load_session)
         # CURRENT_DATABASE.subscribe(self._update_columns)
@@ -269,22 +266,21 @@ class ListTableColumnsController:
 
         return default, expression, virtuality
 
-    def _get_length_scale_set(self, column, datatype) -> str:
+    def _get_length_scale_set(self, datatype, column: Optional[sa.Column] = None) -> str:
         candidates = [
-            (datatype.has_display_width, "display_width", str),
-            (datatype.has_length, "length", str),
-            (datatype.has_precision, "precision", str),
-            (datatype.has_set, "enums", lambda v: ",".join(v)),
+            (datatype.has_display_width, "display_width", str, datatype.default_length),
+            (datatype.has_length, "length", str, datatype.default_length),
+            (datatype.has_set, "enums", lambda v: ",".join(v), datatype.default_set),
         ]
 
         length_scale_set = ""
 
-        for condition, attr, transform in candidates:
-            if condition and (value := getattr(column.type, attr, None)) is not None:
+        for condition, attr, transform, default in candidates:
+            if condition and (value := getattr(column.type, attr, None) if column is not None else default) is not None:
                 length_scale_set = transform(value)
                 break
 
-        if datatype.has_scale and (scale := getattr(column.type, "scale", None)) is not None:
+        if datatype.has_scale and (scale := getattr(column.type, "scale", None) if column is not None else datatype.default_scale) is not None:
             length_scale_set += f"/{scale}"
 
         return length_scale_set
@@ -320,11 +316,9 @@ class ListTableColumnsController:
             for index, column in enumerate(table.columns, 1):
                 datatype = self.engine_datatype.get_by_type(column.type)
 
-                length_scale_set = self._get_length_scale_set(column, datatype)
+                length_scale_set = self._get_length_scale_set(datatype, column)
 
                 default, expression, virtuality = self._get_column_default(column)
-
-                print("default", default)
 
                 self.model.add_row(
                     ColumnModelData(
@@ -414,7 +408,7 @@ class ListTableColumnsController:
 
         self._edit_column(item, 1)
 
-    def on_item_changed(self, event: wx.dataview.DataViewEvent):
+    def _on_value_changed(self, event: wx.dataview.DataViewEvent):
         print("#" * 10, "ON_EDITING_DONE", "#" * 10)
 
         item = event.GetItem()
@@ -428,11 +422,15 @@ class ListTableColumnsController:
 
         print("CURRENT:", "column", column, "value", value)
 
-        editable_columns = [column.ModelColumn for column in self.list_ctrl_table_columns.GetColumns() if wx.dataview.DATAVIEW_CELL_EDITABLE & column.Flags]
-
         if column == 2:
-            datatype: SQLDataType = self.engine_datatype.get_by_name(value)
-            if not all([datatype.has_length, datatype.has_set]):
+            datatype = self.engine_datatype.get_by_name(value)
+
+            if any([datatype.has_length, datatype.has_set]):
+                length_scale_set = self._get_length_scale_set(datatype, None)
+
+                self.model.SetValue(length_scale_set, item, 3)
+                self.model.ValueChanged(item, 3)
+            else:
                 self.list_ctrl_table_columns.GetColumn(3).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
                 self.model.SetValue("", item, 3)
                 self.model.ValueChanged(item, 3)
@@ -447,15 +445,16 @@ class ListTableColumnsController:
                 self.model.SetValue(False, item, 5)
                 self.model.ValueChanged(item, 5)
 
-            # Forza il refresh della cella collation
             self.list_ctrl_table_columns.Refresh()
+
+        editable_columns = [column.ModelColumn for column in self.list_ctrl_table_columns.GetColumns() if wx.dataview.DATAVIEW_CELL_EDITABLE & column.Flags]
 
         idx = min(len(editable_columns) - 1, column + 1)
 
         if idx < len(editable_columns) - 1:
             self._edit_column(item, idx)
 
-        # self.do_build(item) # TODO: reactive this
+        self.do_build(item)
 
         event.Skip()
 
@@ -468,11 +467,13 @@ class ListTableColumnsController:
             sa_column_kwargs = {}
             sa_datatype_kwargs = {}
 
-            if datatype.has_length and model_data.length_set != '':
-                sa_datatype_kwargs["length"] = int(model_data.length_set)
-
+            if any([datatype.has_length, datatype.has_display_width]) and model_data.length_set != '':
                 if datatype.has_scale:
-                    sa_datatype_kwargs["precision"] = int(0)
+                    sa_datatype_kwargs["precision"], sa_datatype_kwargs["scale"] = model_data.length_set.split("/")
+                elif datatype.has_display_width:
+                    sa_datatype_kwargs["display_width"] = int(model_data.length_set)
+                elif datatype.has_length:
+                    sa_datatype_kwargs["length"] = int(model_data.length_set)
 
             if datatype.has_unsigned and model_data.unsigned:
                 sa_datatype_kwargs["unsigned"] = True
@@ -528,9 +529,4 @@ class ListTableColumnsController:
 
         table.append_column(column, replace_existing=True)
 
-        # if new_table is not None:
         NEW_TABLE.set_value(table)
-        # NEW_TABLE.execute_callback(Observable.CallbackEvent.AFTER_CHANGE)
-        # elif current_table is not None:
-        # CURRENT_TABLE.set_value(None)
-        # CURRENT_TABLE.execute_callback(Observable.CallbackEvent.AFTER_CHANGE)
