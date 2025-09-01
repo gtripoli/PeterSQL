@@ -98,21 +98,21 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         if column_model_data.datatype is not None and col == 3:
             datatype: SQLDataType = self.engine_datatype.get_by_name(column_model_data.datatype)
 
-            if datatype.has_set:
-                length_set_value = datatype.default_set
+            # if datatype.has_set:
+            #     length_set_value = datatype.default_set
+            #
+            # elif datatype.has_length or:
+            #     length_set_value = [datatype.default_length]
+            #     if datatype.has_scale:
+            #         length_set_value.append(datatype.default_scale)
+            #
+            # if datatype.has_length or datatype.has_set:
+            #     if isinstance(length_set_value, list):
+            #         length_set_value = ','.join(map(str, length_set_value))
 
-            elif datatype.has_length:
-                length_set_value = [datatype.default_length]
-                if datatype.has_scale:
-                    length_set_value.append(datatype.default_scale)
+            # column_model_data.length_set = length_set_value
 
-            if datatype.has_length or datatype.has_set:
-                if isinstance(length_set_value, list):
-                    length_set_value = ','.join(map(str, length_set_value))
-
-            column_model_data.length_set = length_set_value
-
-            self.ValueChanged(item, 3)
+            # self.ValueChanged(item, 3)
 
             if not datatype.has_unsigned:
                 column_model_data.unsigned = False

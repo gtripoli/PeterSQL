@@ -48,10 +48,8 @@ class SQLDataType:
     has_unsigned: bool = dataclasses.field(default=None)
 
     def __post_init__(self):
-
         if self.has_set is None:
             object.__setattr__(self, "has_set", self.name in ["ENUM", "SET"])
-
         if self.has_length is None:
             object.__setattr__(self, "has_length", self.category in [DataTypeCategory.TEXT])
         if self.has_display_width is None:

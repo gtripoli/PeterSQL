@@ -1,5 +1,5 @@
 import os
-from typing import Type, List
+from typing import Type, List, Self, Any
 
 import wx
 import wx.dataview
@@ -7,113 +7,222 @@ import wx.dataview
 from gettext import gettext as _
 
 from models.session import Session, SessionEngine
-from models.structures import StandardDataType
+from models.structures import StandardDataType, SQLDataType, DataTypeCategoryColor
 from models.structures.charset import COLLATION_CHARSETS
 from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.sqlite.datatype import SQLiteDataType
+from windows.components.tree_ctrl import CustomTreeCtrl
 
 from windows.main import CURRENT_SESSION
 
 
-class PopupColumnDefault(wx.PopupTransientWindow):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def GetSessionEngineDatatype(session: Session) -> StandardDataType:
+    engine_datatype = StandardDataType()
+    if session.engine == SessionEngine.MYSQL:
+        engine_datatype = MySQLDataType()
+    elif session.engine == SessionEngine.MARIADB:
+        engine_datatype = MariaDBDataType
+    elif session.engine == SessionEngine.SQLITE:
+        engine_datatype = SQLiteDataType()
+
+    return engine_datatype
+
+
+class BaseDataviewPopup(wx.PopupTransientWindow):
+    """Base class for all DataView popup windows."""
+
+    def __init__(self, parent):
+        super().__init__(parent, flags=wx.BORDER_NONE)
+        self._value = None
 
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.sizer)
 
-        bSizer63 = wx.BoxSizer(wx.VERTICAL)
-
-        self.rb_no_default = wx.RadioButton(self, wx.ID_ANY, _(u"No default value"), wx.DefaultPosition, wx.DefaultSize, 0)
-        bSizer63.Add(self.rb_no_default, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_expression = wx.RadioButton(self, wx.ID_ANY, _(u"Expression"), wx.DefaultPosition, wx.DefaultSize, 0)
-        bSizer63.Add(self.rb_expression, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.txt_expression = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        bSizer63.Add(self.txt_expression, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_null = wx.RadioButton(self, wx.ID_ANY, _(u"NULL"), wx.DefaultPosition, wx.DefaultSize, 0)
-        bSizer63.Add(self.rb_null, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_auto_increment = wx.RadioButton(self, wx.ID_ANY, _(u"AUTO INCREMENT"), wx.DefaultPosition, wx.DefaultSize, 0)
-        bSizer63.Add(self.rb_auto_increment, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.SetSizer(bSizer63)
-        self.Layout()
-        bSizer63.Fit(self)
-
-
-class DataViewChoiceRenderer(wx.dataview.DataViewCustomRenderer):
-
-    def __init__(self, choices):
-        super().__init__("string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
-        self.choices = choices
-        self._value = ""
-
-    def Render(self, rect, dc, state):
-        self.RenderText(self._value, 0, rect, dc, state)
-
-        return True
-
-    def GetSize(self):
-        return wx.Size(-1, -1)
-
-    def SetValue(self, value):
-        self._value = value
-        return True
-
-    def GetValue(self):
+    def get_value(self):
+        """Get the current value from the popup."""
         return self._value
 
-    def HasEditorCtrl(self):
-        return True
+    def set_value(self, value):
+        """Set the current value in the popup."""
+        self._value = value
+        return self
 
-    def CreateEditorCtrl(self, parent, rect, value):
-        ctrl = wx.Choice(
-            parent,
-            choices=self.choices,
-            pos=rect.GetTopLeft(),
-            size=rect.GetSize()
-        )
+    @staticmethod
+    def render(value):
+        return value
 
-        def _on_select(event):
-            self.FinishEditing()
-            ctrl.Destroy()
+    def open(self, value: Any, position: wx.Point, min_size: wx.Size) -> Self:
+        self.set_value(value)
 
-        ctrl.Bind(wx.EVT_CHOICE, _on_select)
+        self.SetPosition(position)
+        self.SetMinSize(min_size)
 
-        if self._value in self.choices:
-            ctrl.SetStringSelection(self._value)
+        self.Layout()
+        self.sizer.Fit(self)
 
-        return ctrl
+        self.Popup()
 
-    def GetValueFromEditorCtrl(self, editor):
-        return editor.GetStringSelection()
+        return self
 
-    def set_choices(self, choices: List[str]):
+    def close(self):
+        self.Destroy()
+
+
+class PopupColumnDefault(BaseDataviewPopup):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.rb_no_default = wx.RadioButton(self, wx.ID_ANY, _(u"No default value"), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rb_no_default.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.sizer.Add(self.rb_no_default, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.rb_expression = wx.RadioButton(self, wx.ID_ANY, _(u"Expression"), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rb_expression.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.sizer.Add(self.rb_expression, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.txt_expression = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
+        # self.rb_no_default.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.sizer.Add(self.txt_expression, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.rb_null = wx.RadioButton(self, wx.ID_ANY, _(u"NULL"), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rb_null.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.sizer.Add(self.rb_null, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.rb_auto_increment = wx.RadioButton(self, wx.ID_ANY, _(u"AUTO INCREMENT"), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rb_auto_increment.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.sizer.Add(self.rb_auto_increment, 0, wx.ALL | wx.EXPAND, 5)
+
+    def _on_radio_button(self, event):
+        """Handle radio button selection changes."""
+        if self.rb_no_default.GetValue():
+            self._value = ""
+        elif self.rb_null.GetValue():
+            self._value = "NULL"
+        elif self.rb_auto_increment.GetValue():
+            self._value = "AUTO_INCREMENT"
+        elif self.rb_expression.GetValue():
+            self._value = self.txt_expression.GetValue()
+
+    def _on_expression_changed(self, event):
+        """Handle expression text changes."""
+        if self.rb_expression.GetValue():
+            self._value = self.txt_expression.GetValue()
+
+    @staticmethod
+    def render(value):
+        if not value:
+            return "No default"
+        return value
+
+    def set_value(self, value):
+        """Set the initial value and update UI accordingly."""
+        super().set_value(value)
+
+        if not value:
+            self.rb_no_default.SetValue(True)
+        elif value == "NULL":
+            self.rb_null.SetValue(True)
+        elif value == "AUTO_INCREMENT":
+            self.rb_auto_increment.SetValue(True)
+        else:
+            self.rb_expression.SetValue(True)
+            self.txt_expression.SetValue(value)
+
+        return self
+
+
+class PopupColumnDatatype(BaseDataviewPopup):
+    """Popup for selecting column data types."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.choices = []
+
+        self.parent = parent
+        self.tree_ctrl = None
+
+        self.tree_ctrl = wx.TreeCtrl(self, style=wx.TR_HIDE_ROOT | wx.TR_NO_BUTTONS | wx.TR_FULL_ROW_HIGHLIGHT |
+                                                 wx.TR_NO_LINES | wx.TR_SINGLE)
+
+        self.tree_ctrl.AddRoot("Root")
+
+        self.sizer.Add(self.tree_ctrl, 0, wx.ALL | wx.EXPAND, 0)
+
+        # self.Layout()
+        # self.sizer.Fit(self)
+        self.tree_ctrl.Bind(wx.EVT_TREE_SEL_CHANGED, self._on_select)
+        self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
+
+        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+
+    def _load_session(self, session):
+        engine_datatype = GetSessionEngineDatatype(session)
+        self.set_choices(engine_datatype.get_all())
+
+    def _on_select(self, event):
+        """Handle tree selection changes."""
+        item = event.GetItem()
+        if item and item != self.tree_ctrl.GetRootItem():
+            parent = self.tree_ctrl.GetItemParent(item)
+            if parent != self.tree_ctrl.GetRootItem():  # Only leaf items
+                self._value = self.tree_ctrl.GetItemText(item)
+
+    def set_choices(self, choices: List[SQLDataType]) -> Self:
         self.choices = choices
+
+        return self
+
+    def open(self, value: Any, position: wx.Point, min_size: wx.Size) -> Self:
+        groups = {}
+
+        root = self.tree_ctrl.GetRootItem()
+
+        for choice in self.choices:
+            groups.setdefault(choice.category.value, []).append(choice.name)
+
+        dc = wx.ClientDC(self.tree_ctrl)
+        max_width = 0
+        selected = None
+
+        for category, datatypes in groups.items():
+            color = DataTypeCategoryColor[category].value
+
+            category_item = self.tree_ctrl.AppendItem(root, str(category).capitalize())
+            self.tree_ctrl.SetItemBold(category_item, True)
+
+            max_width = max(max_width, dc.GetTextExtent(category)[0])
+
+            for datatype in datatypes:
+                datatype_item = self.tree_ctrl.AppendItem(category_item, datatype)
+                self.tree_ctrl.SetItemTextColour(datatype_item, color)
+
+                max_width = max(max_width, dc.GetTextExtent(datatype)[0])
+
+                if datatype == value:
+                    selected = datatype_item
+
+        self.tree_ctrl.ExpandAll()
+
+        size = wx.Size(max(max_width + 100, min_size.width), 200)
+
+        if selected is not None:
+            self.tree_ctrl.SelectItem(selected)
+            self.tree_ctrl.EnsureVisible(selected)
+
+        return super().open(value, position, size)
 
 
 class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
-    def __init__(self, popup: Type[wx.PopupTransientWindow]):
+    def __init__(self, popup_class: Type[BaseDataviewPopup]):
         super().__init__("string", wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
 
-        self.popup = popup
         self._value = ""
+        self.popup_class = popup_class
 
     def Render(self, rect, dc, state):
-        text = "No default"
-
-        if (value := self.GetValue()) != "":
-            if value == "NULL":
-                text = "NULL"
-            elif value == "AUTO_INCREMENT":
-                text = "AUTO_INCREMENT"
-            else:
-                text = value
-
-        self.RenderText(text, 0, rect, dc, state)
+        self.RenderText(self.popup_class.render(self._value), 0, rect, dc, state)
 
         return True
 
@@ -122,7 +231,6 @@ class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
 
     def SetValue(self, value):
         self._value = value
-
         return True
 
     def GetSize(self):
@@ -131,36 +239,20 @@ class DataViewPopupRenderer(wx.dataview.DataViewCustomRenderer):
     def ActivateCell(self, rect, model, item, col, mouseEvent):
         view = self.GetView()
 
-        popup = self.popup(parent=view)
-        point_x_y = view.ClientToScreen(wx.Point(rect.x, rect.y + 17))
-        popup.SetPosition(point_x_y)
-        popup.SetSize(width=view.Columns[col].Width, height=-1)
-        popup.Popup()
+        position = view.ClientToScreen(wx.Point(rect.x, rect.y + view.CharHeight))
 
-        if self._value != "":
-            if self._value == "NULL":
-                popup.rb_null.SetValue(True)
-            elif self._value == "AUTO_INCREMENT":
-                popup.rb_auto_increment.SetValue(True)
-            else:
-                popup.rb_expression.SetValue(True)
-                popup.txt_expression.SetValue(self._value)
-        else:
-            popup.rb_no_default.SetValue(True)
+        popup = self.popup_class(view)
 
-        def onDismiss(*args, **kwargs):
-            if popup.rb_no_default.GetValue():
-                self._value = ""
-            elif popup.rb_null.GetValue():
-                self._value = "NULL"
-            elif popup.rb_auto_increment.GetValue():
-                self._value = "AUTO_INCREMENT"
-            elif popup.rb_expression.GetValue():
-                self._value = popup.txt_expression.GetValue()
+        def _on_dismiss():
+            new_value = popup.get_value()
+            if new_value != self._value:
+                self._value = new_value
+                model.SetValue(self._value, item, col)
 
-            model.ChangeValue(self._value, item, col)
+            popup.close()
 
-        popup.OnDismiss = onDismiss
+        popup.OnDismiss = _on_dismiss
+        popup.open(self._value, position, wx.Size(width=view.Columns[col].Width, height=-1))
 
         return True
 
@@ -227,7 +319,7 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
 
         self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
-        datatype_renderer = DataViewChoiceRenderer([])
+        datatype_renderer = DataViewPopupRenderer(PopupColumnDatatype)
         column = wx.dataview.DataViewColumn(_(u"Data type"), datatype_renderer, 2, width=120, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
@@ -254,16 +346,8 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
         self.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
     def _load_session(self, session: Session):
-        self.engine_datatype = StandardDataType()
-        if session.engine == SessionEngine.MYSQL:
-            self.engine_datatype = MySQLDataType()
-        elif session.engine == SessionEngine.MARIADB:
-            self.engine_datatype = MariaDBDataType
-        elif session.engine == SessionEngine.SQLITE:
-            self.engine_datatype = SQLiteDataType()
-
+        self.engine_datatype = GetSessionEngineDatatype(session)
+        if self.engine_datatype == SessionEngine.SQLITE:
             self.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-
-        self.GetColumn(2).GetRenderer().set_choices([datatype.name for datatype in self.engine_datatype.get_all()])
