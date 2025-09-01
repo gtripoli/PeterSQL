@@ -52,7 +52,7 @@ So, as a personal challenge, I decided to port it to Python.
 ## 🚀 How to get started
 
 ```bash
-git clone https://github.com/Lymagi/petersql.git
+git clone https://github.com/gtripoli/petersql.git
 cd petersql
 python -m venv .venv
 source .venv/bin/activate
