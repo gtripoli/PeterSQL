@@ -7,26 +7,10 @@ import wx.dataview
 from gettext import gettext as _
 
 from models.session import Session, SessionEngine
-from models.structures import StandardDataType, SQLDataType, DataTypeCategoryColor
+from models.structures import SQLDataType
 from models.structures.charset import COLLATION_CHARSETS
-from models.structures.mariadb.datatype import MariaDBDataType
-from models.structures.mysql.datatype import MySQLDataType
-from models.structures.sqlite.datatype import SQLiteDataType
-from windows.components.tree_ctrl import CustomTreeCtrl
 
 from windows.main import CURRENT_SESSION
-
-
-def GetSessionEngineDatatype(session: Session) -> StandardDataType:
-    engine_datatype = StandardDataType()
-    if session.engine == SessionEngine.MYSQL:
-        engine_datatype = MySQLDataType()
-    elif session.engine == SessionEngine.MARIADB:
-        engine_datatype = MariaDBDataType
-    elif session.engine == SessionEngine.SQLITE:
-        engine_datatype = SQLiteDataType()
-
-    return engine_datatype
 
 
 class BaseDataviewPopup(wx.PopupTransientWindow):
@@ -53,14 +37,16 @@ class BaseDataviewPopup(wx.PopupTransientWindow):
     def render(value):
         return value
 
-    def open(self, value: Any, position: wx.Point, min_size: wx.Size) -> Self:
+    def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
         self.set_value(value)
 
         self.SetPosition(position)
-        self.SetMinSize(min_size)
+        self.SetMinSize(size)
+        self.SetMaxSize(size)
 
         self.Layout()
         self.sizer.Fit(self)
+        self.Fit()
 
         self.Popup()
 
@@ -148,18 +134,15 @@ class PopupColumnDatatype(BaseDataviewPopup):
 
         self.tree_ctrl.AddRoot("Root")
 
-        self.sizer.Add(self.tree_ctrl, 0, wx.ALL | wx.EXPAND, 0)
+        self.sizer.Add(self.tree_ctrl, 1, wx.ALL | wx.EXPAND, 0)
 
-        # self.Layout()
-        # self.sizer.Fit(self)
-        self.tree_ctrl.Bind(wx.EVT_TREE_SEL_CHANGED, self._on_select)
+        self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_select)
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
 
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
     def _load_session(self, session):
-        engine_datatype = GetSessionEngineDatatype(session)
-        self.set_choices(engine_datatype.get_all())
+        self.set_choices(session.datatype.get_all())
 
     def _on_select(self, event):
         """Handle tree selection changes."""
@@ -169,15 +152,18 @@ class PopupColumnDatatype(BaseDataviewPopup):
             if parent != self.tree_ctrl.GetRootItem():  # Only leaf items
                 self._value = self.tree_ctrl.GetItemText(item)
 
+                self.OnDismiss()
+
     def set_choices(self, choices: List[SQLDataType]) -> Self:
         self.choices = choices
 
         return self
 
-    def open(self, value: Any, position: wx.Point, min_size: wx.Size) -> Self:
+    def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
         groups = {}
 
         root = self.tree_ctrl.GetRootItem()
+        self.tree_ctrl.DeleteChildren(root)
 
         for choice in self.choices:
             groups.setdefault(choice.category.value, []).append(choice.name)
@@ -187,16 +173,15 @@ class PopupColumnDatatype(BaseDataviewPopup):
         selected = None
 
         for category, datatypes in groups.items():
-            color = DataTypeCategoryColor[category].value
 
-            category_item = self.tree_ctrl.AppendItem(root, str(category).capitalize())
+            category_item = self.tree_ctrl.AppendItem(root, category.name)
             self.tree_ctrl.SetItemBold(category_item, True)
 
-            max_width = max(max_width, dc.GetTextExtent(category)[0])
+            max_width = max(max_width, dc.GetTextExtent(category.name)[0])
 
             for datatype in datatypes:
                 datatype_item = self.tree_ctrl.AppendItem(category_item, datatype)
-                self.tree_ctrl.SetItemTextColour(datatype_item, color)
+                self.tree_ctrl.SetItemTextColour(datatype_item, category.color)
 
                 max_width = max(max_width, dc.GetTextExtent(datatype)[0])
 
@@ -205,7 +190,7 @@ class PopupColumnDatatype(BaseDataviewPopup):
 
         self.tree_ctrl.ExpandAll()
 
-        size = wx.Size(max(max_width + 100, min_size.width), 200)
+        size = wx.Size(max(max_width + 100, size.width), 300)
 
         if selected is not None:
             self.tree_ctrl.SelectItem(selected)
@@ -346,8 +331,7 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
         self.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
     def _load_session(self, session: Session):
-        self.engine_datatype = GetSessionEngineDatatype(session)
-        if self.engine_datatype == SessionEngine.SQLITE:
+        if session.datatype == SessionEngine.SQLITE:
             self.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
