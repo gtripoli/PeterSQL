@@ -4,7 +4,7 @@ import abc
 
 from typing import List, Dict, Iterator
 
-from sqlalchemy import MetaData, Table, create_engine, inspect, text, event
+from sqlalchemy import MetaData, Table, create_engine, inspect, text, event, Column, Index
 
 import alembic
 import alembic.migration
@@ -151,15 +151,50 @@ class AbstractStatement(abc.ABC):
 
         return buf.getvalue()
 
+    def _clone_table(self, table: Table, metadata: MetaData, extend_existing: bool = True) -> Table:
+        new_cols = []
+        for col in list(table.columns):
+            copied = Column(
+                col.name,
+                col.type,
+                *col.foreign_keys,  # mantiene le FK
+                primary_key=col.primary_key,
+                nullable=col.nullable,
+                unique=col.unique,
+                index=col.index,
+                autoincrement=col.autoincrement,
+            )
+
+            if col.server_default is not None:
+                if hasattr(col.server_default, "arg"):
+                    copied.server_default = text(col.server_default.arg.text)
+                else:
+                    copied.server_default = col.server_default
+
+            new_cols.append(copied)
+
+        new_table = Table(
+            table.name,
+            metadata,
+            *new_cols,
+            extend_existing=extend_existing
+        )
+
+        # Copiamo i vincoli (eccetto PK che è gestita nelle colonne)
+        for constraint in table.constraints:
+            if constraint.__class__.__name__ == "PrimaryKeyConstraint":
+                continue
+            new_table.append_constraint(constraint.copy(new_table))
+
+        for idx in list(table.indexes):
+            Index(idx.name, *[new_table.c[col.name] for col in idx.columns], unique=idx.unique)
+
+        return new_table
+
     def update_table(self, database: Database, table: Table) -> bool:
         metadata = self._metadata[database.name]
 
-        Table(
-            table.name,
-            metadata,
-            *[c.copy() for c in list(table.columns)],
-            extend_existing=True
-        )
+        new_table = self._clone_table(table, metadata)
 
         d = self.render_sql_from_diff(metadata, schema=database.name, table_name=table.name)
         print(d)

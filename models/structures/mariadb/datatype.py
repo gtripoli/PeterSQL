@@ -11,11 +11,12 @@ class MariaDBDataType(StandardDataType):
 
     TINYINT = SQLDataType(name="TINYINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=127, sa_type=lambda **kwargs: sa.dialects.mysql.TINYINT(display_width=kwargs.get("length")))
     SMALLINT = SQLDataType(name="SMALLINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=32767, sa_type=lambda **kwargs: sa.dialects.mysql.SMALLINT(display_width=kwargs.get("length")))
+    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.INTEGER(display_width=kwargs.get("length")))
     MEDIUMINT = SQLDataType(name="MEDIUMINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=8388607, sa_type=lambda **kwargs: sa.dialects.mysql.MEDIUMINT(display_width=kwargs.get("length")))
     BIGINT = SQLDataType(name="BIGINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=9223372036854775807, sa_type=lambda **kwargs: sa.dialects.mysql.BIGINT(display_width=kwargs.get("length")))
 
-    FLOAT = SQLDataType(name="FLOAT", category=DataTypeCategory.REAL, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.FLOAT(precision=kwargs.get("precision"), scale=kwargs.get("scale")))
-    DOUBLE = SQLDataType(name="DOUBLE", category=DataTypeCategory.REAL, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.DOUBLE(precision=kwargs.get("precision"), scale=kwargs.get("scale")))
+    FLOAT = SQLDataType(name="FLOAT", category=DataTypeCategory.REAL, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.FLOAT(precision=kwargs.get("length"), scale=kwargs.get("scale")))
+    DOUBLE = SQLDataType(name="DOUBLE", category=DataTypeCategory.REAL, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.DOUBLE(precision=kwargs.get("length"), scale=kwargs.get("scale")))
     DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_default=True, default_length=20, default_scale=6, max_size=9223372036854775807, sa_type=lambda **kwargs: sa.dialects.mysql.NUMERIC(precision=kwargs.get("precision"), scale=kwargs.get("scale")))
 
     TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, has_default=True, format="HH:MM:SS", sa_type=lambda **kwargs: sa.Time())

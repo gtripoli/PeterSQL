@@ -40,15 +40,13 @@ class SQLDataType:
     has_scale: bool = dataclasses.field(default=None)
     has_length: bool = dataclasses.field(default=None)
     has_collation: bool = dataclasses.field(default=None)
-    has_display_width: bool = dataclasses.field(default=None)
 
     has_zerofill: bool = dataclasses.field(default=None)
     has_unsigned: bool = dataclasses.field(default=None)
 
     def __post_init__(self):
         object.__setattr__(self, "has_set", self.has_set or self.name in ["ENUM", "SET"])
-        object.__setattr__(self, "has_length", self.has_length or self.category in [DataTypeCategory.TEXT])
-        object.__setattr__(self, "has_display_width", self.has_display_width or self.category in [DataTypeCategory.INTEGER])
+        object.__setattr__(self, "has_length", self.has_length or self.category in [DataTypeCategory.TEXT, DataTypeCategory.INTEGER, DataTypeCategory.REAL])
         object.__setattr__(self, "has_scale", self.has_scale or self.has_length and self.category in [DataTypeCategory.REAL])
         object.__setattr__(self, "has_collation", self.has_collation or self.category in [DataTypeCategory.TEXT])
         object.__setattr__(self, "has_zerofill", self.has_zerofill or self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])

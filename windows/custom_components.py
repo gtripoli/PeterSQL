@@ -18,6 +18,7 @@ class BaseDataviewPopup(wx.PopupTransientWindow):
 
     def __init__(self, parent):
         super().__init__(parent, flags=wx.BORDER_NONE)
+        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
         self._value = None
 
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
@@ -69,7 +70,8 @@ class PopupColumnDefault(BaseDataviewPopup):
         self.sizer.Add(self.rb_expression, 0, wx.ALL | wx.EXPAND, 5)
 
         self.txt_expression = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        # self.rb_no_default.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
+        self.txt_expression.Enable(False)
+        self.txt_expression.Bind(wx.EVT_TEXT, self._on_expression_changed)
         self.sizer.Add(self.txt_expression, 0, wx.ALL | wx.EXPAND, 5)
 
         self.rb_null = wx.RadioButton(self, wx.ID_ANY, _(u"NULL"), wx.DefaultPosition, wx.DefaultSize, 0)
@@ -83,13 +85,15 @@ class PopupColumnDefault(BaseDataviewPopup):
     def _on_radio_button(self, event):
         """Handle radio button selection changes."""
         if self.rb_no_default.GetValue():
-            self._value = ""
+            self._value = None
         elif self.rb_null.GetValue():
             self._value = "NULL"
         elif self.rb_auto_increment.GetValue():
             self._value = "AUTO_INCREMENT"
         elif self.rb_expression.GetValue():
-            self._value = self.txt_expression.GetValue()
+            self.txt_expression.Enable(True)
+            self.txt_expression.SetFocus()
+            self._value = ""
 
     def _on_expression_changed(self, event):
         """Handle expression text changes."""
@@ -114,7 +118,10 @@ class PopupColumnDefault(BaseDataviewPopup):
             self.rb_auto_increment.SetValue(True)
         else:
             self.rb_expression.SetValue(True)
+            self.txt_expression.Enable(True)
             self.txt_expression.SetValue(value)
+            self.txt_expression.SetFocus()
+
 
         return self
 
@@ -259,7 +266,11 @@ class DataViewIconRender(wx.dataview.DataViewCustomRenderer):
         return wx.Size(-1, -1)
 
     def Render(self, rect, dc, state):
-        model = self.GetView().GetModel().data[int(self._value) - 1]
+        data = self.GetView().GetModel().data
+        if not len(data) :
+            return False
+
+        model = data[int(self._value) - 1]
 
         icons = []
         x, y = rect.GetTopLeft()

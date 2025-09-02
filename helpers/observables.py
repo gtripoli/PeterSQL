@@ -1,6 +1,7 @@
 import copy
 import enum
-from functools import partial
+import inspect
+import weakref
 from threading import Timer
 from typing import Any, Dict, List, Callable, Union, Optional, Self, TypeVar, Generic
 
@@ -23,10 +24,18 @@ class Observable(Generic[T]):
         }
 
     def execute_callback(self, event: CallbackEvent, **kwargs) -> None:
+        dead = []
         value = kwargs.pop("value", self._value)
         for callback in self._callbacks[event.value]:
-            if callable(callback):
-                callback(value, **kwargs)
+            ref = callback()
+            if ref is None:
+                dead.append(callback)
+                continue
+
+            ref(value, **kwargs)
+
+        for callback in dead:
+            self._callbacks[event.value].remove(callback)
 
         return None
 
@@ -55,10 +64,26 @@ class Observable(Generic[T]):
 
     def subscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE, execute_immediately: bool = False) -> Self:
         if callable(callback):
-            self._callbacks[callback_event.value].append(callback)
+            if inspect.ismethod(callback):
+                ref = weakref.WeakMethod(callback)
+            else:
+                ref = weakref.ref(callback)
+
+            self._callbacks[callback_event.value].append(ref)
+
             if self.is_dirty or execute_immediately:
                 callback(self._value)
+
         return self
+
+    def unsubscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE):
+        to_remove = []
+        for ref in self._callbacks[callback_event.value]:
+            if ref() is callback:
+                to_remove.append(ref)
+
+        for r in to_remove:
+            self._callbacks[callback_event.value].remove(r)
 
     @property
     def is_empty(self) -> bool:

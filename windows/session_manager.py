@@ -324,7 +324,8 @@ class SessionManagerController(SessionManagerView):
             self.app.open_main_frame()
 
         SESSIONS.append(session)
-        self.Close()
+
+        self.Destroy()
 
     def on_exit(self, event):
         if not self.app.main_frame:
@@ -333,3 +334,6 @@ class SessionManagerController(SessionManagerView):
             self.Destroy()
 
         event.Skip()
+
+    def __del__(self):
+        super().__del__()

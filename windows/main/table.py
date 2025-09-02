@@ -46,21 +46,19 @@ class ColumnModelData:
 class ColumnModel(wx.dataview.DataViewIndexListModel):
     COLUMN_FIELDS = [f.name for f in dataclasses.fields(ColumnModelData)]
 
-    def __init__(self, session : Session):
+    def __init__(self, session: Session):
         super().__init__()
         self.data: List[ColumnModelData] = []
         self.session = session
 
     def GetValueByRow(self, row, col):
-        try:
-            return getattr(self.data[row], ColumnModel.COLUMN_FIELDS[col])
-        except Exception as ex:
-            logger.error(ex, exc_info=True)
+        if len(self.data):
+            return getattr(self.data[row], ColumnModel.COLUMN_FIELDS[col], "")
+        return ""
 
     def GetAttrByRow(self, row, col, attr):
+        if not len(self.data): return False
         column_model_data: ColumnModelData = self.data[row]
-        if column_model_data.primary_key:
-            attr.SetBold(True)
 
         if col == 0:
             attr.SetBackgroundColour(wx.Colour(241, 241, 241))
@@ -70,6 +68,10 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
             color = self.session.datatype.get_by_name(column_model_data.datatype).category.value.color
 
             attr.SetColour(wx.Colour(color))
+            return True
+
+        if column_model_data.primary_key:
+            attr.SetBold(True)
             return True
 
         return super().GetAttrByRow(row, col, attr)
@@ -256,8 +258,8 @@ class ListTableColumnsController:
 
     def _get_length_scale_set(self, datatype, column: Optional[sa.Column] = None) -> str:
         candidates = [
-            (datatype.has_display_width, "display_width", str, datatype.default_length),
             (datatype.has_length, "length", str, datatype.default_length),
+            (datatype.has_length, "display_width", str, datatype.default_length),
             (datatype.has_set, "enums", lambda v: ",".join(v), datatype.default_set),
         ]
 
@@ -269,7 +271,7 @@ class ListTableColumnsController:
                 break
 
         if datatype.has_scale and (scale := getattr(column.type, "scale", None) if column is not None else datatype.default_scale) is not None:
-            length_scale_set += f"/{scale}"
+            length_scale_set += f",{scale}"
 
         return length_scale_set
 
@@ -301,30 +303,31 @@ class ListTableColumnsController:
         with self.app.cursor_wait():
             self.model.clear()
 
-            for index, column in enumerate(table.columns, 1):
-                datatype = self.session.datatype.get_by_type(column.type)
+            if table is not None:
+                for index, column in enumerate(table.columns, 1):
+                    datatype = self.session.datatype.get_by_type(column.type)
 
-                length_scale_set = self._get_length_scale_set(datatype, column)
+                    length_scale_set = self._get_length_scale_set(datatype, column)
 
-                default, expression, virtuality = self._get_column_default(column)
+                    default, expression, virtuality = self._get_column_default(column)
 
-                self.model.add_row(
-                    ColumnModelData(
-                        id=str(index),
-                        name=column.name,
-                        datatype=datatype.name,
-                        length_set=length_scale_set,
-                        unsigned=bool(datatype.has_unsigned and getattr(column.type, "unsigned", False)),
-                        nullable=bool(column.nullable),
-                        zerofill=bool(datatype.has_zerofill and getattr(column.type, "zerofill", False)),
-                        primary_key=bool(column.primary_key),
-                        default=default,
-                        collation=getattr(column.type, "collation", None) or "",
-                        virtuality=virtuality,  # Virtuality
-                        expression=expression,
-                        comments=column.comment or "",
-                        index_summary=self._column_index_summary(table, column)
-                    ))
+                    self.model.add_row(
+                        ColumnModelData(
+                            id=str(index),
+                            name=column.name,
+                            datatype=datatype.name,
+                            length_set=length_scale_set,
+                            unsigned=bool(datatype.has_unsigned and getattr(column.type, "unsigned", False)),
+                            nullable=bool(column.nullable),
+                            zerofill=bool(datatype.has_zerofill and getattr(column.type, "zerofill", False)),
+                            primary_key=bool(column.primary_key),
+                            default=default,
+                            collation=getattr(column.type, "collation", None) or "",
+                            virtuality=virtuality,  # Virtuality
+                            expression=expression,
+                            comments=column.comment or "",
+                            index_summary=self._column_index_summary(table, column)
+                        ))
 
     def _edit_column(self, item, column_index: int = 1):
         wx.CallAfter(
@@ -455,12 +458,10 @@ class ListTableColumnsController:
             sa_column_kwargs = {}
             sa_datatype_kwargs = {}
 
-            if any([datatype.has_length, datatype.has_display_width]) and model_data.length_set != '':
+            if datatype.has_length and model_data.length_set != '':
                 if datatype.has_scale:
-                    sa_datatype_kwargs["precision"], sa_datatype_kwargs["scale"] = model_data.length_set.split("/")
-                elif datatype.has_display_width:
-                    sa_datatype_kwargs["display_width"] = int(model_data.length_set)
-                elif datatype.has_length:
+                    sa_datatype_kwargs["length"], sa_datatype_kwargs["scale"] = model_data.length_set.split(",")
+                else:
                     sa_datatype_kwargs["length"] = int(model_data.length_set)
 
             if datatype.has_unsigned and model_data.unsigned:

@@ -21,11 +21,14 @@ class TreeSessionsController:
 
         self.tree_ctrl_sessions_root = self.tree_ctrl_sessions.AddRoot("sessions")
 
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_select_item)
+        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_select_item)
 
         CURRENT_DATABASE.subscribe(self.on_select_database)
 
-    def load_child(self, parent, children: Union[Iterator[Database], List[Table]]):
+    def load_child(self, parent: wx.TreeItemId, children: Union[Iterator[Database], List[Table]]):
+        if self.tree_ctrl_sessions.GetChildrenCount(parent) > 0:
+            return
+
         self.tree_ctrl_sessions.DeleteChildren(parent)
 
         for child in children:
@@ -59,10 +62,10 @@ class TreeSessionsController:
     def on_select_database(self, database: Database):
         with self.app.cursor_wait():
             if database is not None:
-                self.load_child(
-                    parent=database.control,
-                    children=list(database.tables)
-                )
+                wx.CallAfter(self.load_child,
+                             parent=database.control,
+                             children=list(database.tables)
+                             )
 
     def on_select_item(self, event: wx.TreeEvent):
         item = event.GetItem()
