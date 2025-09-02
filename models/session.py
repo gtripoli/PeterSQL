@@ -5,12 +5,15 @@ from typing import NamedTuple, Union, Type, Optional, Any, Callable, List
 
 import wx
 
-from helpers.lazylist import LazyList
-from models.database import Database
+from models.structures import StandardDataType
 from models.structures.statement import AbstractStatement
-from models.structures.mysql.statment import MySQLStatement
-from models.structures.sqlite.statment import SQLiteStatement
+
+from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.mariadb.statment import MariaDBStatement
+from models.structures.mysql.datatype import MySQLDataType
+from models.structures.mysql.statment import MySQLStatement
+from models.structures.sqlite.datatype import SQLiteDataType
+from models.structures.sqlite.statment import SQLiteStatement
 
 
 class SessionEngine(enum.Enum):
@@ -38,9 +41,9 @@ class Session:
     comments: Optional[str] = None
 
     _id: str = None
+    _datatype: StandardDataType = None
     _statement: AbstractStatement = None
     _control: Optional[wx.Control] = None
-
 
     @property
     def statement(self) -> AbstractStatement:
@@ -55,6 +58,20 @@ class Session:
                 raise ValueError(f"Unsupported engine {self.engine}")
 
         return self._statement
+
+    @property
+    def datatype(self) -> StandardDataType:
+        if self._datatype is None:
+            if self.engine == SessionEngine.MYSQL:
+                self._datatype = MySQLDataType()
+            elif self.engine == SessionEngine.MARIADB:
+                self._datatype = MariaDBDataType()
+            elif self.engine == SessionEngine.SQLITE:
+                self._datatype = SQLiteDataType()
+            else:
+                raise ValueError(f"Unsupported engine {self.engine}")
+
+        return self._datatype
 
     def to_dict(self):
         attributes = copy.copy(self.__dict__)

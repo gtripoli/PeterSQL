@@ -15,13 +15,9 @@ from helpers.logger import logger
 from helpers.bindings import AbstractModel
 from helpers.observables import Observable, debounce, ObservableArray
 
-from models.session import Session, SessionEngine
-from models.structures import SQLDataType, DataTypeCategoryColor
+from models.session import Session
+from models.structures import SQLDataType
 from models.structures.charset import COLLATION_CHARSETS
-
-from models.structures.mysql.datatype import MySQLDataType
-from models.structures.mariadb.datatype import MariaDBDataType
-from models.structures.sqlite.datatype import SQLiteDataType
 
 from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_COLUMN
 
@@ -50,10 +46,10 @@ class ColumnModelData:
 class ColumnModel(wx.dataview.DataViewIndexListModel):
     COLUMN_FIELDS = [f.name for f in dataclasses.fields(ColumnModelData)]
 
-    def __init__(self, engine_datatype):
+    def __init__(self, session : Session):
         super().__init__()
         self.data: List[ColumnModelData] = []
-        self.engine_datatype = engine_datatype
+        self.session = session
 
     def GetValueByRow(self, row, col):
         try:
@@ -71,7 +67,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
             return True
 
         if col in [2, 7]:
-            color = DataTypeCategoryColor[self.engine_datatype.get_by_name(column_model_data.datatype).category.value].value
+            color = self.session.datatype.get_by_name(column_model_data.datatype).category.value.color
 
             attr.SetColour(wx.Colour(color))
             return True
@@ -96,7 +92,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         column_model_data: ColumnModelData = self.data[row]
 
         if column_model_data.datatype is not None and col == 3:
-            datatype: SQLDataType = self.engine_datatype.get_by_name(column_model_data.datatype)
+            datatype: SQLDataType = self.session.datatype.get_by_name(column_model_data.datatype)
 
             # if datatype.has_set:
             #     length_set_value = datatype.default_set
@@ -225,15 +221,7 @@ class ListTableColumnsController:
 
     def _load_session(self, session: Session):
         self.session = session
-
-        if self.session.engine == SessionEngine.MYSQL:
-            self.engine_datatype = MySQLDataType()
-        elif self.session.engine == SessionEngine.MARIADB:
-            self.engine_datatype = MariaDBDataType
-        elif self.session.engine == SessionEngine.SQLITE:
-            self.engine_datatype = SQLiteDataType()
-
-        self.model = ColumnModel(self.engine_datatype)
+        self.model = ColumnModel(self.session)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
     def _normalize_column_default(self, value: str) -> str:
@@ -314,7 +302,7 @@ class ListTableColumnsController:
             self.model.clear()
 
             for index, column in enumerate(table.columns, 1):
-                datatype = self.engine_datatype.get_by_type(column.type)
+                datatype = self.session.datatype.get_by_type(column.type)
 
                 length_scale_set = self._get_length_scale_set(datatype, column)
 
@@ -423,7 +411,7 @@ class ListTableColumnsController:
         print("CURRENT:", "column", column, "value", value)
 
         if column == 2:
-            datatype = self.engine_datatype.get_by_name(value)
+            datatype = self.session.datatype.get_by_name(value)
 
             if any([datatype.has_length, datatype.has_set]):
                 length_scale_set = self._get_length_scale_set(datatype, None)
@@ -461,7 +449,7 @@ class ListTableColumnsController:
     def do_build(self, item: wx.dataview.DataViewItem):
         model_data: ColumnModelData = self.model.data[self.model.GetRow(item)]
 
-        datatype = self.engine_datatype.get_by_name(model_data.datatype) if model_data.datatype is not None else None
+        datatype = self.session.datatype.get_by_name(model_data.datatype) if model_data.datatype is not None else None
 
         if datatype is not None:
             sa_column_kwargs = {}

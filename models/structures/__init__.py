@@ -1,28 +1,26 @@
 import abc
 import enum
 import dataclasses
+import functools
+
 import sqlalchemy as sa
-from typing import List, Callable
+from typing import List, Callable, NamedTuple, Tuple, Dict
+
+
+class Category(NamedTuple):
+    name: str
+    color: Tuple[int, int, int]
+    description: str = None
 
 
 class DataTypeCategory(enum.Enum):
-    TEXT = "TEXT"
-    BINARY = "BINARY"
-    INTEGER = "INTEGER"
-    REAL = "REAL"
-    SPATIAL = "SPATIAL"
-    TEMPORAL = "TEMPORAL"
-    OTHER = "OTHER"
-
-
-class DataTypeCategoryColor(enum.Enum):
-    TEXT = (23, 139, 23)
-    BINARY = (190, 44, 130)
-    INTEGER = (0, 0, 255)
-    REAL = (83, 80, 255)
-    SPATIAL = (125, 151, 143)
-    TEMPORAL = (190, 46, 31)
-    OTHER = (148, 147, 29)
+    TEXT = Category(name="Text", color=(23, 139, 23))
+    BINARY = Category(name="Binary", color=(190, 44, 130))
+    INTEGER = Category(name="Integer", color=(0, 0, 255))
+    REAL = Category(name="Real", color=(83, 80, 255))
+    SPATIAL = Category(name="Spatial", color=(125, 151, 143))
+    TEMPORAL = Category(name="Temporal", color=(190, 46, 31))
+    OTHER = Category(name="Other", color=(148, 147, 29))
 
 
 @dataclasses.dataclass
@@ -33,7 +31,7 @@ class SQLDataType:
     sa_type: Callable[..., sa.types.TypeEngine]
     # alias: Optional[List[str]] = None
     max_size: int = None
-    default_set: List[str] = ""
+    default_set: List[str] = dataclasses.field(default_factory=list)
     default_length: int = 10
     default_scale: int = 5
     format: str = None
@@ -48,20 +46,13 @@ class SQLDataType:
     has_unsigned: bool = dataclasses.field(default=None)
 
     def __post_init__(self):
-        if self.has_set is None:
-            object.__setattr__(self, "has_set", self.name in ["ENUM", "SET"])
-        if self.has_length is None:
-            object.__setattr__(self, "has_length", self.category in [DataTypeCategory.TEXT])
-        if self.has_display_width is None:
-            object.__setattr__(self, "has_display_width", self.category in [DataTypeCategory.INTEGER])
-        if self.has_scale is None:
-            object.__setattr__(self, "has_scale", self.has_length and self.category in [DataTypeCategory.REAL])
-        if self.has_collation is None:
-            object.__setattr__(self, "has_collation", self.category in [DataTypeCategory.TEXT])
-        if self.has_zerofill is None:
-            object.__setattr__(self, "has_zerofill", self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
-        if self.has_unsigned is None:
-            object.__setattr__(self, "has_unsigned", self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
+        object.__setattr__(self, "has_set", self.has_set or self.name in ["ENUM", "SET"])
+        object.__setattr__(self, "has_length", self.has_length or self.category in [DataTypeCategory.TEXT])
+        object.__setattr__(self, "has_display_width", self.has_display_width or self.category in [DataTypeCategory.INTEGER])
+        object.__setattr__(self, "has_scale", self.has_scale or self.has_length and self.category in [DataTypeCategory.REAL])
+        object.__setattr__(self, "has_collation", self.has_collation or self.category in [DataTypeCategory.TEXT])
+        object.__setattr__(self, "has_zerofill", self.has_zerofill or self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
+        object.__setattr__(self, "has_unsigned", self.has_unsigned or self.category in [DataTypeCategory.INTEGER, DataTypeCategory.REAL])
 
 
 class StandardDataType():
@@ -81,7 +72,15 @@ class StandardDataType():
     DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, has_default=True, sa_type=lambda **kwargs: sa.Date())
     DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, has_default=True, sa_type=lambda **kwargs: sa.DateTime())
 
+    _category_order = {cat: i for i, cat in enumerate(DataTypeCategory)}
+
     @classmethod
+    @functools.lru_cache(maxsize=1)
+    def _map_by_name(cls) -> Dict[str, SQLDataType]:
+        return {t.name: t for t in cls.get_all()}
+
+    @classmethod
+    @functools.lru_cache(maxsize=1)
     def get_all(cls) -> List[SQLDataType]:
         types = [
             getattr(cls, name)
@@ -89,17 +88,12 @@ class StandardDataType():
             if isinstance(getattr(cls, name), SQLDataType)
         ]
 
-        return sorted(types, key=lambda t: list(DataTypeCategory).index(t.category))
+        return sorted(types, key=lambda t: cls._category_order[t.category])
 
     @classmethod
     def get_by_name(cls, name: str) -> SQLDataType:
-        for datatype in cls.get_all():
-            if name == datatype.name:
-                return datatype
-        return cls.VARCHAR
+        return cls._map_by_name().get(name.upper(), cls.VARCHAR)
 
     @classmethod
     def get_by_type(cls, type: sa.types.TypeEngine) -> SQLDataType:
-        name = type.__visit_name__.upper()
-
-        return cls.get_by_name(name)
+        return cls.get_by_name(type.__visit_name__.upper())
