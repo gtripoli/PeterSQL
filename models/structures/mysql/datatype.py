@@ -9,7 +9,7 @@ from models.structures import StandardDataType, SQLDataType, DataTypeCategory
 class MySQLDataType(StandardDataType):
     BIT = SQLDataType(name="BIT", category=DataTypeCategory.INTEGER, has_default=True, max_size=64, sa_type=lambda **kwargs: sa.dialects.mysql.BIT(**kwargs))
 
-    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.INTEGER(**kwargs))
+    INTEGER = SQLDataType(name="INTEGER", alias=["INT"] , category=DataTypeCategory.INTEGER, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.INTEGER(**kwargs))
     TINYINT = SQLDataType(name="TINYINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=127, sa_type=lambda **kwargs: sa.dialects.mysql.TINYINT(display_width=kwargs.get("length")))
     SMALLINT = SQLDataType(name="SMALLINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=32767, sa_type=lambda **kwargs: sa.dialects.mysql.SMALLINT(display_width=kwargs.get("length")))
     MEDIUMINT = SQLDataType(name="MEDIUMINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=8388607, sa_type=lambda **kwargs: sa.dialects.mysql.MEDIUMINT(display_width=kwargs.get("length")))

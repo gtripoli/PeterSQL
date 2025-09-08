@@ -12,11 +12,9 @@ from typing import Dict, Optional, List
 from gettext import gettext as _, translation
 
 from helpers.logger import logger
-from helpers.observables import ObservableObject
+from helpers.observables import ObservableObject, Loader
 
 from models.session import Session
-
-from windows.main import CursorWait
 
 WORKDIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -31,8 +29,8 @@ class PeterSQL(wx.App):
 
     def OnInit(self) -> bool:
 
-        self.cursor_wait = CursorWait()
-
+        Loader.loading.subscribe(self._on_loading_change)
+        
         self.settings = ObservableObject(yaml.full_load(open(SETTINGS_CONFIG_FILE)))
 
         self.settings.subscribe(self.save_settings)
@@ -49,9 +47,9 @@ class PeterSQL(wx.App):
         self._locale.AddCatalog("PeterSQL")
 
     def verify_connection(self, session: Session):
-        with self.cursor_wait():
+        with Loader.cursor_wait():
             try:
-                session.statement.connect()
+                session.statement.connect(connect_args={'connect_timeout': 5})
             except Exception as ex:
                 logger.warning(ex)
                 wx.MessageDialog(None, message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))), style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
@@ -92,6 +90,13 @@ class PeterSQL(wx.App):
 
         with open(SETTINGS_CONFIG_FILE, 'w') as outfile:
             yaml.dump(settings, outfile, sort_keys=False)
+
+    def _on_loading_change(self, loading):
+        """Handle loading state changes"""
+        if loading:
+            wx.BeginBusyCursor()
+        else:
+            wx.EndBusyCursor()
 
     def do_exit(self, event):
         self.ExitMainLoop()

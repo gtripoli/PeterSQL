@@ -4,6 +4,7 @@ import inspect
 import weakref
 from threading import Timer
 from typing import Any, Dict, List, Callable, Union, Optional, Self, TypeVar, Generic
+from contextlib import contextmanager
 
 T = TypeVar("T")
 
@@ -225,6 +226,44 @@ class ObservableObject(Observable):
             if ref is None:
                 return None
         return ref
+
+
+class Loader:
+    """
+    Manages async operations and cursor state
+    Usage:
+        with Loader.cursor_wait():
+            # long-running operation
+    """
+    _queue = Observable([])
+    loading = Observable(False)
+
+    @classmethod
+    def _update_loading_state(cls):
+        """Update loading state based on queue length"""
+        cls.loading.set_value(len(cls._queue.get_value()) > 0)
+
+    @classmethod
+    @contextmanager
+    def cursor_wait(cls):
+        """Context manager to show wait cursor during operations"""
+        token = object()  # Unique token for this operation
+        
+        # Add token to queue
+        current_queue = cls._queue.get_value()
+        current_queue.append(token)
+        cls._queue.set_value(current_queue)
+        cls._update_loading_state()
+        
+        try:
+            yield
+        finally:
+            # Remove token from queue
+            current_queue = cls._queue.get_value()
+            if token in current_queue:
+                current_queue.remove(token)
+                cls._queue.set_value(current_queue)
+                cls._update_loading_state()
 
 
 def debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):

@@ -11,7 +11,7 @@ class MariaDBDataType(StandardDataType):
 
     TINYINT = SQLDataType(name="TINYINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=127, sa_type=lambda **kwargs: sa.dialects.mysql.TINYINT(display_width=kwargs.get("length")))
     SMALLINT = SQLDataType(name="SMALLINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=32767, sa_type=lambda **kwargs: sa.dialects.mysql.SMALLINT(display_width=kwargs.get("length")))
-    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.INTEGER(display_width=kwargs.get("length")))
+    INTEGER = SQLDataType(name="INTEGER", alias=["INT"], category=DataTypeCategory.INTEGER, has_default=True, sa_type=lambda **kwargs: sa.dialects.mysql.INTEGER(display_width=kwargs.get("length")))
     MEDIUMINT = SQLDataType(name="MEDIUMINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=8388607, sa_type=lambda **kwargs: sa.dialects.mysql.MEDIUMINT(display_width=kwargs.get("length")))
     BIGINT = SQLDataType(name="BIGINT", category=DataTypeCategory.INTEGER, has_default=True, max_size=9223372036854775807, sa_type=lambda **kwargs: sa.dialects.mysql.BIGINT(display_width=kwargs.get("length")))
 

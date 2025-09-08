@@ -2,12 +2,11 @@ import wx
 
 from typing import Type, Iterator, Union, List
 
-from sqlalchemy import Table
-
+from helpers.observables import Loader
 from icons import ImageList, IconList
 
 from models.session import Session, SessionEngine
-from models.database import Database
+from models.database import Database, Table
 
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
 
@@ -22,8 +21,6 @@ class TreeSessionsController:
         self.tree_ctrl_sessions_root = self.tree_ctrl_sessions.AddRoot("sessions")
 
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_select_item)
-
-        CURRENT_DATABASE.subscribe(self.on_select_database)
 
     def load_child(self, parent: wx.TreeItemId, children: Union[Iterator[Database], List[Table]]):
         if self.tree_ctrl_sessions.GetChildrenCount(parent) > 0:
@@ -59,14 +56,6 @@ class TreeSessionsController:
 
         self.load_child(session_tree_item, session.statement.get_databases())
 
-    def on_select_database(self, database: Database):
-        with self.app.cursor_wait():
-            if database is not None:
-                wx.CallAfter(self.load_child,
-                             parent=database.control,
-                             children=list(database.tables)
-                             )
-
     def on_select_item(self, event: wx.TreeEvent):
         item = event.GetItem()
         data = self.tree_ctrl_sessions.GetItemData(item)
@@ -81,6 +70,12 @@ class TreeSessionsController:
             CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(parent))
             CURRENT_DATABASE.set_value(data)
             CURRENT_TABLE.set_value(None)
+
+            with Loader.cursor_wait():
+                wx.CallAfter(self.load_child,
+                             parent=data.control,
+                             children=list(data.tables)
+                             )
 
         elif isinstance(data, Table):
             CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent)))

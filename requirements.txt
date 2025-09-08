@@ -6,3 +6,5 @@ wxpython==4.2.3
 sqlalchemy
 geoalchemy
 alembic
+clickhouse-sqlalchemy
+cx_Oracle

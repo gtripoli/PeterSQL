@@ -6,6 +6,7 @@ import wx.dataview
 
 from gettext import gettext as _
 
+from models.database import Column
 from models.session import Session, SessionEngine
 from models.structures import SQLDataType
 from models.structures.charset import COLLATION_CHARSETS
@@ -18,19 +19,17 @@ class BaseDataviewPopup(wx.PopupTransientWindow):
 
     def __init__(self, parent):
         super().__init__(parent, flags=wx.BORDER_NONE)
-        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
         self._value = None
-
-        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
         self.SetSizer(self.sizer)
 
     def get_value(self):
-        """Get the current value from the popup."""
         return self._value
 
     def set_value(self, value):
-        """Set the current value in the popup."""
         self._value = value
         return self
 
@@ -83,7 +82,6 @@ class PopupColumnDefault(BaseDataviewPopup):
         self.sizer.Add(self.rb_auto_increment, 0, wx.ALL | wx.EXPAND, 5)
 
     def _on_radio_button(self, event):
-        """Handle radio button selection changes."""
         if self.rb_no_default.GetValue():
             self._value = None
         elif self.rb_null.GetValue():
@@ -122,12 +120,12 @@ class PopupColumnDefault(BaseDataviewPopup):
             self.txt_expression.SetValue(value)
             self.txt_expression.SetFocus()
 
-
         return self
 
 
 class PopupColumnDatatype(BaseDataviewPopup):
     """Popup for selecting column data types."""
+    _session: Session
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -148,8 +146,9 @@ class PopupColumnDatatype(BaseDataviewPopup):
 
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
-    def _load_session(self, session):
-        self.set_choices(session.datatype.get_all())
+    def _load_session(self, session: Session):
+        self._session = session
+        self.set_choices(self._session.datatype.get_all())
 
     def _on_select(self, event):
         """Handle tree selection changes."""
@@ -157,7 +156,7 @@ class PopupColumnDatatype(BaseDataviewPopup):
         if item and item != self.tree_ctrl.GetRootItem():
             parent = self.tree_ctrl.GetItemParent(item)
             if parent != self.tree_ctrl.GetRootItem():  # Only leaf items
-                self._value = self.tree_ctrl.GetItemText(item)
+                self._value = self._session.datatype.get_by_name(self.tree_ctrl.GetItemText(item))
 
                 self.OnDismiss()
 
@@ -267,32 +266,40 @@ class DataViewIconRender(wx.dataview.DataViewCustomRenderer):
 
     def Render(self, rect, dc, state):
         data = self.GetView().GetModel().data
-        if not len(data) :
+        if not len(data):
             return False
 
-        model = data[int(self._value) - 1]
+        if self._value is None:
+            print("a problem")
+            return False
+
+        column: Column = data[int(self._value) - 1]
 
         icons = []
         x, y = rect.GetTopLeft()
 
-        if model.primary_key:
-            icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY))
+        for index in column.indexes:
+            if index.is_primary:
+                icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY))
 
-        for _ in range(model.index_summary.get("unique_index", 0)):
-            icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_unique.png"), wx.BITMAP_TYPE_ANY))
-        for _ in range(model.index_summary.get("normal_index", 0)):
-            icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_index.png"), wx.BITMAP_TYPE_ANY))
-        for _ in range(model.index_summary.get("fulltext_index", 0)):
-            icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_ANY))
-        for _ in range(model.index_summary.get("spatial_index", 0)):
-            icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_spatial.png"), wx.BITMAP_TYPE_ANY))
+            if index.is_unique:
+                icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_unique.png"), wx.BITMAP_TYPE_ANY))
+
+            if index.is_fulltext:
+                icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_ANY))
+
+            if index.is_spatial:
+                icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_spatial.png"), wx.BITMAP_TYPE_ANY))
+
+            if index.is_normal:
+                icons.append(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_index.png"), wx.BITMAP_TYPE_ANY))
 
         dc.DrawText(self._value, x, y)
 
         tw, th = dc.GetTextExtent(self._value)
         x += tw + 4
 
-        spacing = 2
+        spacing = 1
         for icon in icons:
             w, h = icon.GetSize()
             text_y = y + (th - h) // 2
@@ -329,7 +336,7 @@ class ColumnDataViewCtrl(wx.dataview.DataViewCtrl):
         column = wx.dataview.DataViewColumn(_(u"Default"), popup_default_renderer, 7, width=200, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
-        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "PERSISTED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "STORED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
         column = wx.dataview.DataViewColumn(_(u"Virtuality"), choice_virtuality_renderer, 8, width=-1, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
