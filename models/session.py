@@ -5,11 +5,11 @@ from typing import NamedTuple, Union, Type, Optional, Any, Callable, List
 
 import wx
 
-from models.structures import StandardDataType
+from models.structures.datatype import StandardDataType
 from models.structures.statement import AbstractStatement
 
 from models.structures.mariadb.datatype import MariaDBDataType
-from models.structures.mariadb.statment import MariaDBStatement
+from models.structures.mariadb.statement import MariaDBStatement
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.mysql.statment import MySQLStatement
 from models.structures.sqlite.datatype import SQLiteDataType

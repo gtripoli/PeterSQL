@@ -1,30 +1,20 @@
-import re
 import copy
-import dataclasses
-from collections import Counter
 
-from typing import List, Optional, Tuple
+from typing import List
 
 import wx
 import wx.dataview
 
-import sqlalchemy as sa
-import sqlalchemy.sql.elements
-from clickhouse_driver.columns.service import column_by_type
-
-from helpers.logger import logger
 from helpers.bindings import AbstractModel
 from helpers.observables import Observable, debounce, ObservableArray, Loader
 
+from windows.main import CURRENT_SESSION, CURRENT_TABLE
+
 from models.session import Session
-from models.structures import SQLDataType
-from models.structures.charset import COLLATION_CHARSETS
-from models.database import Table, Column, Index
+from models.structures.database import SQLTable, SQLColumn
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_COLUMN
-
-NEW_TABLE: Observable[Table] = Observable()
-NEW_COLUMN: Observable[Column] = Observable()
+NEW_TABLE: Observable[SQLTable] = Observable()
+NEW_COLUMN: Observable[SQLColumn] = Observable()
 
 
 class ColumnModel(wx.dataview.DataViewIndexListModel):
@@ -45,7 +35,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
     def __init__(self, session: Session):
         super().__init__()
-        self.data: List[Column] = []
+        self.data: List[SQLColumn] = []
         self.session = session
 
     def GetValueByRow(self, row, col):
@@ -76,7 +66,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
     def GetAttrByRow(self, row, col, attr):
         if not len(self.data): return False
-        column: Column = self.data[row]
+        column: SQLColumn = self.data[row]
 
         if column.is_primary:
             attr.SetBold(True)
@@ -96,7 +86,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
     def _update_columns(self, col, row):
         item = self.GetItem(row)
 
-        column: Column = self.data[row]
+        column: SQLColumn = self.data[row]
 
         if column.datatype is not None and col == 3:
             if not column.datatype.has_unsigned:
@@ -108,15 +98,15 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
                 column.is_zerofill = False
                 self.ValueChanged(item, 5)
 
-    def add_row(self, data: Column) -> wx.dataview.DataViewItem:
+    def add_row(self, data: SQLColumn) -> wx.dataview.DataViewItem:
         self.data.append(data)
         new_row_index = len(self.data) - 1
         self.RowAppended()
         return self.GetItem(new_row_index)
 
     def add_empty_row(self) -> wx.dataview.DataViewItem:
-        column_model_data = Column(id=str(len(self.data) + 1), name="")
-        return self.add_row(column_model_data)
+        column = SQLColumn(id=str(len(self.data) + 1), name="", datatype=self.session.datatype.VARCHAR)
+        return self.add_row(column)
 
     def clear(self):
         self.data = []
@@ -140,7 +130,7 @@ class EditTableModel(AbstractModel):
             callback=self.build_table
         )
 
-    def _load_table(self, table: Table):
+    def _load_table(self, table: SQLTable):
         self.name.set_value(table.name if table is not None else "")
         self.comment.set_value(table.comment if table is not None else "")
         # self.auto_increment.set_value(table.auto_increment if table is not None else 0)
@@ -154,7 +144,7 @@ class EditTableModel(AbstractModel):
             # if self.engine.get_value() == SessionEngine.MYSQL.value and not any([
             #     self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
             # ]):
-            new_table = Table(
+            new_table = SQLTable(
                 id=None,
                 name=self.name.get_value(),
                 comment=self.comment.get_value(),
@@ -214,28 +204,18 @@ class ListTableColumnsController:
         self.model = ColumnModel(self.session)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
-    def _get_column_default(self, column) -> Tuple[str, str, str]:
-        default = ""
-
-        if column.is_auto_increment is True:
-            default = "AUTO_INCREMENT"
-
-        else:
-            if column.default is not None:
-                default = column.default
-
-            if column.extra is not None:
-                default += column.extra
-
-        return default, column.expression, column.virtuality
-
-    def _load_table(self, table: Table):
+    def _load_table(self, table: SQLTable):
         with Loader.cursor_wait():
             self.model.clear()
 
             if table is not None:
                 for index, column in enumerate(table.columns, 1):
                     self.model.add_row(column)
+
+            # Reset the view to reflect the changes
+            self.model.Reset(len(table.columns))
+
+            self.list_ctrl_table_columns.Refresh()
 
     def _edit_column(self, item, column_index: int = 1):
         wx.CallAfter(
@@ -319,33 +299,35 @@ class ListTableColumnsController:
         column = event.GetColumn()
         value = self.model.GetValue(item, column)
 
-        print("CURRENT:", "column", column, "value", value)
-
         if column == 2:
             datatype = self.session.datatype.get_by_name(value)
 
             self.model.SetValue(None, item, 3)
-            self.model.ValueChanged(item, 3)
 
             if not any([datatype.has_length, datatype.has_precision, datatype.has_set]):
-                self.list_ctrl_table_columns.GetColumn(3).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
+                # self.list_ctrl_table_columns.GetColumn(3).GetRenderer().GetEditorCtrl().Enable(False)
+                pass
 
             if not datatype.has_unsigned:
-                self.list_ctrl_table_columns.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
-                self.list_ctrl_table_columns.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
+                # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
                 self.model.SetValue(False, item, 4)
-                self.model.ValueChanged(item, 4)
 
             if not datatype.has_zerofill:
-                self.list_ctrl_table_columns.GetColumn(5).SetFlag(wx.dataview.DATAVIEW_CELL_INERT)
+                # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
                 self.model.SetValue(False, item, 5)
-                self.model.ValueChanged(item, 5)
 
-            self.list_ctrl_table_columns.Refresh()
+            if datatype.has_collation and (collation := datatype.default_collation) is not None:
+                self.model.SetValue(collation, item, 10)
 
-        editable_columns = [column.ModelColumn for column in self.list_ctrl_table_columns.GetColumns() if wx.dataview.DATAVIEW_CELL_EDITABLE & column.Flags]
+        self.list_ctrl_table_columns.Refresh()
 
-        idx = min(len(editable_columns) - 1, column + 1)
+        editable_columns = [
+            c.ModelColumn
+            for c in self.list_ctrl_table_columns.GetColumns()
+            if c.ModelColumn > column and c.HasFlag(wx.dataview.DATAVIEW_CELL_EDITABLE)
+        ]
+
+        idx = min(editable_columns)
 
         if idx < len(editable_columns) - 1:
             self._edit_column(item, idx)
@@ -355,50 +337,15 @@ class ListTableColumnsController:
         event.Skip()
 
     def do_build(self, item: wx.dataview.DataViewItem):
-        column: Column = self.model.data[self.model.GetRow(item)]
+        column: SQLColumn = self.model.data[self.model.GetRow(item)]
 
-        if column.datatype is not None:
-            column_kwargs = {}
-            datatype_kwargs = {}
+        table: SQLTable = CURRENT_TABLE.get_value()
 
-            # if column.datatype.has_length and column.length != None:
-            #     if column.datatype.has_scale:
-            #         datatype_kwargs["length"], datatype_kwargs["scale"] = model_data.length_set.split(",")
-            #     else:
-            #         datatype_kwargs["length"] = int(model_data.length_set)
-
-            if column.datatype.has_unsigned and column.is_unsigned:
-                datatype_kwargs["unsigned"] = True
-
-            if column.datatype.has_zerofill and column.is_zerofill:
-                datatype_kwargs["zerofill"] = True
-
-            if column.datatype.has_collation and column.collation_name != "":
-                datatype_kwargs["charset"] = COLLATION_CHARSETS[column.collation_name]
-                datatype_kwargs["collation"] = column.collation_name
-
-            # if model_data.default != None:
-            #     if model_data.default == "AUTO_INCREMENT":
-            #         column_kwargs["autoincrement"] = True
-            #     elif model_data.default == "NULL":
-            #         column_kwargs["server_default"] = "NULL"
-            #     else:
-            #         column_kwargs["server_default"] = model_data.default
-            # else:
-            #     column_kwargs["server_default"] = None
-
-    def _do_update_table(self, column: Column):
-        table = None
-        if (new_table := NEW_TABLE.get_value()) is not None:
-            table = copy.copy(new_table)
-        elif (current_table := CURRENT_TABLE.get_value()) is not None:
-            table = copy.copy(current_table)
-
-        table.append_column(column, replace_existing=True)
+        if table is not None:
+            table.columns.append(column, replace_existing=True)
 
         NEW_TABLE.set_value(table)
 
     def _on_scroll(self, event):
-        """Chiudi l'editor attivo durante lo scroll."""
         self.list_ctrl_table_columns.ProcessEvent(wx.dataview.EVT_DATAVIEW_ITEM_EDITING_DONE)
         event.Skip()

@@ -1,18 +1,20 @@
+import math
+
 import wx.stc
 import wx.html2
 
 from gettext import gettext as _
 
 from helpers.observables import ObservableArray
-from models.database import Column, Table
 from models.session import Session
+from models.structures.database import SQLTable, SQLColumn
 from models.structures.statement import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_COLUMN, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION
-from windows.main.data import TableDataController
+from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION
+from windows.main.table import EditTableModel, ListTableColumnsController, NEW_TABLE, NEW_COLUMN
+from windows.main.records import TableRecordsController
 from windows.main.sessions import TreeSessionsController
-from windows.main.table import EditTableModel, ListTableColumnsController, NEW_TABLE
 
 
 class MainFrameController(MainFrameView):
@@ -32,7 +34,7 @@ class MainFrameController(MainFrameView):
 
         self.controller_tree_sessions = TreeSessionsController(self.tree_ctrl_sessions)
         self.controller_list_table_columns = ListTableColumnsController(self.list_ctrl_table_columns)
-        self.controller_table_data = TableDataController(self.list_ctrl_table_data)
+        self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
 
         self._setup_query_logs()
 
@@ -45,6 +47,7 @@ class MainFrameController(MainFrameView):
             "index primary key unique not null default auto_increment values set pragma"
             "and or as distinct order by group having join left right inner outer on "
             "if exists like in is between limit offset case when then else end show describe"
+            "modify add drop column"
         ))
 
         self.query_logs.StyleClearAll()
@@ -75,6 +78,7 @@ class MainFrameController(MainFrameView):
 
         # Table name, Columns, etc.
         self.query_logs.StyleSetSpec(wx.stc.STC_SQL_IDENTIFIER, "fore:#333333")
+        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_QUOTEDIDENTIFIER, "fore:#333333")
 
         # Line numbers
         self.query_logs.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
@@ -87,7 +91,7 @@ class MainFrameController(MainFrameView):
         self.query_logs.SetSelForeground(True, wx.Colour("#000000"))
 
     def _setup_subscribers(self):
-        LOG_QUERY.subscribe(self._write_query_log)
+        LOG_QUERY.subscribe(self._write_query_log, ObservableArray.CallbackEvent.ON_APPEND)
 
         SESSIONS.subscribe(self._load_session, ObservableArray.CallbackEvent.ON_APPEND)
 
@@ -97,7 +101,7 @@ class MainFrameController(MainFrameView):
 
         CURRENT_TABLE.subscribe(self.show_panel_table)
 
-        NEW_TABLE.subscribe(self.on_new_table)
+        NEW_TABLE.subscribe(self._on_new_table)
 
         # NEW_COLUMN.subscribe(self._on_new_column)
 
@@ -118,7 +122,7 @@ class MainFrameController(MainFrameView):
     def _refresh_database(self):
         session = CURRENT_SESSION.get_value()
         db = CURRENT_DATABASE.get_value()
-        db.tables = session.statement.get_tables(schema=db.name)
+        db.tables = session.statement.get_tables(database=db.name)
         CURRENT_DATABASE.set_value(db)
 
     def _select_tree_item(self, **filters):
@@ -126,6 +130,12 @@ class MainFrameController(MainFrameView):
             tree = self.controller_tree_sessions.tree_ctrl_sessions
             tree.SelectItem(table_item, True)
             tree.EnsureVisible(table_item)
+
+    def _format_server_uptime(self, uptime: int) -> str:
+        return (f"{math.floor(uptime / 86400)} {_('days')}, "
+                f"{math.floor((uptime % 86400) / 3600)} {_('hours')}, "
+                f"{math.floor((uptime % 3600) / 60)} {_('minutes')}, "
+                f"{math.floor(uptime % 60)} {_('seconds')}")
 
     def _load_session(self, session: Session):
         self.controller_tree_sessions.append_session(session)
@@ -157,22 +167,20 @@ class MainFrameController(MainFrameView):
         self.MainFrameNotebook.SetSelection(0)
 
         self.status_bar.SetStatusText(f"{_('Version')}: {session.statement.get_server_version()}", 1)
-        self.status_bar.SetStatusText(f"{_('Uptime')}: {session.statement.get_server_uptime()}", 2)
+
+        self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.statement.get_server_uptime())}", 2)
 
     def show_panel_database(self, *args):
         self._toggle_panel(1, True)
         self.MainFrameNotebook.SetSelection(1)
 
-    def show_panel_table(self, table: Table):
+    def show_panel_table(self, table: SQLTable):
         self._toggle_edit_table(True)
         if self.MainFrameNotebook.GetSelection() != 2:
             self.MainFrameNotebook.SetSelection(2)
             self.table_name.SetFocus()
 
         self.btn_table_delete.Enable(table is not None)
-
-    def _on_new_column(self, column: Column):
-        self.btn_table_save.Enable(column.is_valid())
 
     def on_page_changed(self, event: wx.BookCtrlEvent):
         if event.GetEventObject() != self.MainFrameNotebook:
@@ -181,19 +189,24 @@ class MainFrameController(MainFrameView):
         if event.GetSelection() == 1 and not CURRENT_TABLE.get_value():
             self._toggle_edit_table(False)
 
-    def on_new_table(self, new_table: Table):
+    def _on_new_table(self, new_table: SQLTable):
         self.btn_table_save.Enable(bool(new_table is not None))
+        self.btn_table_save.Bind(wx.EVT_BUTTON, self._do_save_table)
+        self.btn_table_cancel.Bind(wx.EVT_BUTTON, self._do_cancel_table)
 
-    def do_save_table(self, event: wx.Event):
+    def _do_save_table(self, event: wx.Event):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = NEW_TABLE.get_value()
-        session.statement.update_table(database, table)
+        # session.statement.update_table(database, table)
+        if session.statement.update_table(database, table):
+            NEW_TABLE.set_value(None)
+            self._refresh_database()
+            # CURRENT_TABLE.set_value(table)
+            self._select_tree_item(name=table.name)
 
+    def _do_cancel_table(self, event: wx.Event):
         NEW_TABLE.set_value(None)
-        self._refresh_database()
-        # CURRENT_TABLE.set_value(table)
-        self._select_tree_item(name=table.name)
 
     def on_delete_table(self, event):
         table = CURRENT_TABLE.get_value()

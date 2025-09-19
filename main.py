@@ -30,7 +30,7 @@ class PeterSQL(wx.App):
     def OnInit(self) -> bool:
 
         Loader.loading.subscribe(self._on_loading_change)
-        
+
         self.settings = ObservableObject(yaml.full_load(open(SETTINGS_CONFIG_FILE)))
 
         self.settings.subscribe(self.save_settings)
@@ -49,7 +49,7 @@ class PeterSQL(wx.App):
     def verify_connection(self, session: Session):
         with Loader.cursor_wait():
             try:
-                session.statement.connect(connect_args={'connect_timeout': 5})
+                session.statement.connect(connect_timeout=5)
             except Exception as ex:
                 logger.warning(ex)
                 wx.MessageDialog(None, message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))), style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
@@ -66,9 +66,30 @@ class PeterSQL(wx.App):
             from windows.main.main_frame import MainFrameController
 
             self.main_frame = MainFrameController()
+            size = wx.Size(*list(map(int, self.settings.get_value("window", "size").split(","))))
+            self.main_frame.SetSize(width=size.width, height=size.height)
+
+            position = wx.Point(*list(map(int, self.settings.get_value("window", "position").split(","))))
+            self.main_frame.SetPosition(position)
+            self.main_frame.Layout()
             self.main_frame.Show()
+
+            self.main_frame.Bind(wx.EVT_SIZE, self._on_size)
+            self.main_frame.Bind(wx.EVT_MOVE, self._on_move)
         except Exception as ex:
             logger.error(ex, exc_info=True)
+
+    def _on_size(self, event):
+        size = event.GetSize()
+        logger.debug(f"new size {size}")
+        self.settings.set_value("window", "size", value=f"{size.Width},{size.Height}")
+        self.main_frame.Layout()
+
+    def _on_move(self, event):
+        position = event.GetPosition()
+        logger.debug(f"new position {position}")
+        self.settings.set_value("window", "position", value=f"{position.x},{position.y}")
+        self.main_frame.Layout()
 
     def _dump_sessions(self, sessions: Optional[List] = None):
         sessions_dump = []
@@ -86,7 +107,7 @@ class PeterSQL(wx.App):
 
     def save_settings(self, settings: Dict):
         settings = copy.copy(settings)
-        settings["sessions"] = self._dump_sessions(settings.get("sessions"))
+        # settings["sessions"] = self._dump_sessions(settings.get("sessions"))
 
         with open(SETTINGS_CONFIG_FILE, 'w') as outfile:
             yaml.dump(settings, outfile, sort_keys=False)

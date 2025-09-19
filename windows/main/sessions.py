@@ -1,12 +1,12 @@
 import wx
 
-from typing import Type, Iterator, Union, List
+from typing import Iterator, Union, List
 
 from helpers.observables import Loader
 from icons import ImageList, IconList
 
 from models.session import Session, SessionEngine
-from models.database import Database, Table
+from models.structures.database import SQLDatabase, SQLTable
 
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
 
@@ -22,7 +22,7 @@ class TreeSessionsController:
 
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_select_item)
 
-    def load_child(self, parent: wx.TreeItemId, children: Union[Iterator[Database], List[Table]]):
+    def load_child(self, parent: wx.TreeItemId, children: Union[Iterator[SQLDatabase], List[SQLTable]]):
         if self.tree_ctrl_sessions.GetChildrenCount(parent) > 0:
             return
 
@@ -32,9 +32,9 @@ class TreeSessionsController:
             item = self.tree_ctrl_sessions.AppendItem(parent=parent, text=child.name, data=child)
             child.control = item
 
-            if type(child) is Database:
+            if type(child) is SQLDatabase:
                 self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_DATABASE, wx.TreeItemIcon_Normal)
-            elif type(child) is Table:
+            elif type(child) is SQLTable:
                 self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TABLE, wx.TreeItemIcon_Normal)
 
         self.tree_ctrl_sessions.Expand(parent)
@@ -66,7 +66,7 @@ class TreeSessionsController:
             CURRENT_DATABASE.set_value(None)
             CURRENT_TABLE.set_value(None)
 
-        if isinstance(data, Database):
+        if isinstance(data, SQLDatabase):
             CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(parent))
             CURRENT_DATABASE.set_value(data)
             CURRENT_TABLE.set_value(None)
@@ -77,7 +77,7 @@ class TreeSessionsController:
                              children=list(data.tables)
                              )
 
-        elif isinstance(data, Table):
+        elif isinstance(data, SQLTable):
             CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent)))
             CURRENT_DATABASE.set_value(self.tree_ctrl_sessions.GetItemData(parent))
             CURRENT_TABLE.set_value(data)

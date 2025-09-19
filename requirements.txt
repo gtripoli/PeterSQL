@@ -1,10 +1,7 @@
 pyyaml
 pymysql
+psycopg2-binary
 babel
 requests
-wxpython==4.2.3
-sqlalchemy
-geoalchemy
-alembic
-clickhouse-sqlalchemy
+wxpython==4.2.3 --no-binary=wxPython
 cx_Oracle
