@@ -1,4 +1,7 @@
 import math
+import datetime
+
+from typing import Optional
 
 import wx.stc
 import wx.html2
@@ -48,6 +51,7 @@ class MainFrameController(MainFrameView):
             "and or as distinct order by group having join left right inner outer on "
             "if exists like in is between limit offset case when then else end show describe"
             "modify add drop column"
+            "sqlite_master begin rollback"
         ))
 
         self.query_logs.StyleClearAll()
@@ -99,7 +103,7 @@ class MainFrameController(MainFrameView):
 
         CURRENT_DATABASE.subscribe(self.show_panel_database)
 
-        CURRENT_TABLE.subscribe(self.show_panel_table)
+        CURRENT_TABLE.subscribe(self._on_current_table)
 
         NEW_TABLE.subscribe(self._on_new_table)
 
@@ -122,16 +126,23 @@ class MainFrameController(MainFrameView):
     def _refresh_database(self):
         session = CURRENT_SESSION.get_value()
         db = CURRENT_DATABASE.get_value()
-        db.tables = session.statement.get_tables(database=db.name)
+        db.tables = session.statement.get_tables(database=db)
         CURRENT_DATABASE.set_value(db)
 
     def _select_tree_item(self, **filters):
+        print("filters", filters)
         if table_item := self.controller_tree_sessions.find_by_data(**filters):
+            print("select", table_item)
             tree = self.controller_tree_sessions.tree_ctrl_sessions
+            tree.UnselectAll()
+
             tree.SelectItem(table_item, True)
             tree.EnsureVisible(table_item)
 
-    def _format_server_uptime(self, uptime: int) -> str:
+    def _format_server_uptime(self, uptime: Optional[float] = None) -> str:
+        if not uptime:
+            uptime = (datetime.datetime.now()).timestamp()
+
         return (f"{math.floor(uptime / 86400)} {_('days')}, "
                 f"{math.floor((uptime % 86400) / 3600)} {_('hours')}, "
                 f"{math.floor((uptime % 3600) / 60)} {_('minutes')}, "
@@ -160,6 +171,7 @@ class MainFrameController(MainFrameView):
         self._toggle_panel(2, True)
         self.MainFrameNotebook.SetSelection(2)
         self.table_name.SetFocus()
+
         self.edit_table_model.build_table()
 
     def show_panel_session(self, session: Session):
@@ -174,9 +186,9 @@ class MainFrameController(MainFrameView):
         self._toggle_panel(1, True)
         self.MainFrameNotebook.SetSelection(1)
 
-    def show_panel_table(self, table: SQLTable):
+    def _on_current_table(self, table: SQLTable):
         self._toggle_edit_table(True)
-        if self.MainFrameNotebook.GetSelection() != 2:
+        if self.MainFrameNotebook.GetSelection() == 1:
             self.MainFrameNotebook.SetSelection(2)
             self.table_name.SetFocus()
 
@@ -186,26 +198,36 @@ class MainFrameController(MainFrameView):
         if event.GetEventObject() != self.MainFrameNotebook:
             event.Skip()
             return
-        if event.GetSelection() == 1 and not CURRENT_TABLE.get_value():
+        if event.GetSelection() == 1 and not CURRENT_TABLE.get_value() and not NEW_TABLE.get_value():
             self._toggle_edit_table(False)
 
     def _on_new_table(self, new_table: SQLTable):
-        self.btn_table_save.Enable(bool(new_table is not None))
-        self.btn_table_save.Bind(wx.EVT_BUTTON, self._do_save_table)
-        self.btn_table_cancel.Bind(wx.EVT_BUTTON, self._do_cancel_table)
+        self.btn_table_save.Enable(bool(new_table is not None and new_table.is_valid()))
+        self.btn_table_cancel.Enable(bool(new_table is not None))
 
-    def _do_save_table(self, event: wx.Event):
+    def do_save_table(self, event: wx.Event):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = NEW_TABLE.get_value()
-        # session.statement.update_table(database, table)
-        if session.statement.update_table(database, table):
-            NEW_TABLE.set_value(None)
-            self._refresh_database()
-            # CURRENT_TABLE.set_value(table)
-            self._select_tree_item(name=table.name)
 
-    def _do_cancel_table(self, event: wx.Event):
+        if session is None or database is None or table is None:
+            return
+
+        if not table.is_valid():
+            return
+
+        if table.id == -1:
+            method = session.statement.create_table
+        else:
+            method = session.statement.update_table
+
+        if method(database, table):
+            NEW_TABLE.set_value(None)
+            wx.CallAfter(self._select_tree_item, **{"name": database.name})
+
+            wx.CallAfter(self._select_tree_item, **{"name": table.name})
+
+    def do_cancel_table(self, event: wx.Event):
         NEW_TABLE.set_value(None)
 
     def on_delete_table(self, event):
@@ -221,8 +243,10 @@ class MainFrameController(MainFrameView):
 
     def do_delete_table(self):
         session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
         table = CURRENT_TABLE.get_value()
-        session.statement.drop_table(table)
+        if session.statement.drop_table(database, table):
+            CURRENT_TABLE.set_value(None)
+            # self._refresh_database()
 
-        CURRENT_TABLE.set_value(None)
-        self._refresh_database()
+            self._select_tree_item(name=database.name)

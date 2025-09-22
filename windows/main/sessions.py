@@ -22,22 +22,21 @@ class TreeSessionsController:
 
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_select_item)
 
-    def load_child(self, parent: wx.TreeItemId, children: Union[Iterator[SQLDatabase], List[SQLTable]]):
-        if self.tree_ctrl_sessions.GetChildrenCount(parent) > 0:
-            return
+    def load_child(self, parent: wx.TreeItemId, childrens: Union[Iterator[SQLDatabase], List[SQLTable]]):
+        with Loader.cursor_wait():
+            print("Load children", childrens)
+            self.tree_ctrl_sessions.DeleteChildren(parent)
 
-        self.tree_ctrl_sessions.DeleteChildren(parent)
+            for children in childrens:
+                item = self.tree_ctrl_sessions.AppendItem(parent=parent, text=children.name, data=children)
+                children.control = item
 
-        for child in children:
-            item = self.tree_ctrl_sessions.AppendItem(parent=parent, text=child.name, data=child)
-            child.control = item
+                if type(children) is SQLDatabase:
+                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_DATABASE, wx.TreeItemIcon_Normal)
+                elif type(children) is SQLTable:
+                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TABLE, wx.TreeItemIcon_Normal)
 
-            if type(child) is SQLDatabase:
-                self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_DATABASE, wx.TreeItemIcon_Normal)
-            elif type(child) is SQLTable:
-                self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TABLE, wx.TreeItemIcon_Normal)
-
-        self.tree_ctrl_sessions.Expand(parent)
+            self.tree_ctrl_sessions.Expand(parent)
 
     def append_session(self, session: Session):
         icon = IconList.NOT_FOUND
@@ -47,6 +46,8 @@ class TreeSessionsController:
             icon = IconList.ENGINE_MARIADB
         elif session.engine == SessionEngine.SQLITE:
             icon = IconList.ENGINE_SQLITE
+        elif session.engine == SessionEngine.POSTGRESQL:
+            icon = IconList.ENGINE_POSTGRESQL
 
         session_tree_item = self.tree_ctrl_sessions.AppendItem(self.tree_ctrl_sessions_root, text=session.name, data=session)
 
@@ -67,22 +68,22 @@ class TreeSessionsController:
             CURRENT_TABLE.set_value(None)
 
         if isinstance(data, SQLDatabase):
-            CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(parent))
-            CURRENT_DATABASE.set_value(data)
+            session = self.tree_ctrl_sessions.GetItemData(parent)
+            CURRENT_SESSION.set_value(session)
+
+            database = data
+            CURRENT_DATABASE.set_value(database)
+
             CURRENT_TABLE.set_value(None)
 
-            with Loader.cursor_wait():
-                wx.CallAfter(self.load_child,
-                             parent=data.control,
-                             children=list(data.tables)
-                             )
+            self.load_child(data.control, childrens=session.statement.get_tables(database=database))
 
         elif isinstance(data, SQLTable):
             CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent)))
             CURRENT_DATABASE.set_value(self.tree_ctrl_sessions.GetItemData(parent))
             CURRENT_TABLE.set_value(data)
 
-    def find_by_data(self, **filters):
+    def find_by_data(self, **filters) -> wx.TreeItemId:
         def _matches(data):
             return all(getattr(data, key, None) == value for key, value in filters.items())
 

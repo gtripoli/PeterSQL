@@ -1,4 +1,5 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
+![Coverage](https://img.shields.io/badge/coverage-27%25-brightgreen)
 
 # PeterSQL
 

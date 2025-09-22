@@ -1,8 +1,6 @@
-import locale
 import os
 import copy
-import threading
-import traceback
+import locale
 
 import wx
 import yaml
@@ -46,20 +44,11 @@ class PeterSQL(wx.App):
         self._locale.AddCatalogLookupPathPrefix(os.path.join(WORKDIR, "locales"))
         self._locale.AddCatalog("PeterSQL")
 
-    def verify_connection(self, session: Session):
-        with Loader.cursor_wait():
-            try:
-                session.statement.connect(connect_timeout=5)
-            except Exception as ex:
-                logger.warning(ex)
-                wx.MessageDialog(None, message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))), style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
-                raise
-
     def open_session_manager(self):
-        from windows.session_manager import SessionManagerController
+        from windows.sessions.controller import SessionManagerController
 
-        sm = SessionManagerController(None, sessions=self.settings.get_value("sessions"))
-        sm.Show()
+        self.session_manager = SessionManagerController(None)
+        self.session_manager.Show()
 
     def open_main_frame(self):
         try:
@@ -91,23 +80,8 @@ class PeterSQL(wx.App):
         self.settings.set_value("window", "position", value=f"{position.x},{position.y}")
         self.main_frame.Layout()
 
-    def _dump_sessions(self, sessions: Optional[List] = None):
-        sessions_dump = []
-        for session in sessions:
-            if type(session) is dict:
-                sessions_dump.append(dict(
-                    name=session["name"],
-                    sessions=self._dump_sessions(sessions=session.get("sessions"))
-                ))
-
-            elif type(session) is Session:
-                sessions_dump.append(session.to_dict())
-
-        return sessions_dump
-
     def save_settings(self, settings: Dict):
         settings = copy.copy(settings)
-        # settings["sessions"] = self._dump_sessions(settings.get("sessions"))
 
         with open(SETTINGS_CONFIG_FILE, 'w') as outfile:
             yaml.dump(settings, outfile, sort_keys=False)

@@ -70,25 +70,28 @@ class BindLabelControl(AbstractBindControl):
 
 class BindValueControl(AbstractBindControl):
     def __init__(self, control: CONTROL_BIND_VALUE, observable: Observable):
+        event = None
         if isinstance(control, wx.TextCtrl):
             event = wx.EVT_TEXT
         elif isinstance(control, wx.SpinCtrl):
             event = wx.EVT_SPINCTRL
         elif isinstance(control, wx.CheckBox):
             event = wx.EVT_CHECKBOX
-        else:
-            event = None
         super().__init__(control, observable, event=event)
 
     def clear(self) -> None:
         if isinstance(self.control, wx.CheckBox):
             self.control.SetValue(False)
+        elif isinstance(self.control, wx.SpinCtrl):
+            self.control.SetValue(0)
         else:
             self.control.SetValue(self.initial if self.initial is not None else "")
 
     def set(self, value: Any) -> None:
         if isinstance(self.control, wx.CheckBox):
             self.control.SetValue(bool(value))
+        elif isinstance(self.control, wx.SpinCtrl):
+            self.control.SetValue(int(value))
         else:
             self.control.SetValue(str(value))
 
@@ -99,7 +102,7 @@ class BindValueControl(AbstractBindControl):
 
 
 class BindSelectionControl(AbstractBindControl):
-    def __init__(self, control: CONTROL_BIND_SELECTION, observable: Observable, initial: List[str] = None):
+    def __init__(self, control: CONTROL_BIND_SELECTION, observable: Observable, initial: Optional[List[str]] = None):
         super().__init__(control, observable, event=wx.EVT_CHOICE)
         if initial is not None:
             self.control.Set(initial)
@@ -128,12 +131,12 @@ class BindSelectionControl(AbstractBindControl):
 
 class BindPathControl(AbstractBindControl):
     def __init__(self, control: CONTROL_BIND_PATH, observable: Observable):
+        event = None
         if isinstance(control, wx.FilePickerCtrl):
             event = wx.EVT_FILEPICKER_CHANGED
         elif isinstance(control, wx.DirPickerCtrl):
             event = wx.EVT_DIRPICKER_CHANGED
-        else:
-            event = None
+
         super().__init__(control, observable, event=event)
 
     def clear(self) -> None:
@@ -157,7 +160,7 @@ class AbstractMetaModel(abc.ABCMeta):
 class AbstractModel(metaclass=AbstractMetaModel):
     observables: List[Observable] = []
 
-    def bind_control(self, control: CONTROLS, observable: Observable = None, **kwargs):
+    def bind_control(self, control: CONTROLS, observable: Observable, **kwargs):
         if isinstance(control, wx.StaticText):
             BindLabelControl(control, observable, **kwargs)
         elif isinstance(control, (wx.TextCtrl, wx.SpinCtrl, wx.CheckBox)):

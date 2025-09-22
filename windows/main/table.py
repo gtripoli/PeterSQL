@@ -1,17 +1,18 @@
 import copy
 
-from typing import List
+from typing import List, Optional
 
 import wx
 import wx.dataview
 
 from helpers.bindings import AbstractModel
+from helpers.logger import logger
 from helpers.observables import Observable, debounce, ObservableArray, Loader
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
 
 from models.session import Session
-from models.structures.database import SQLTable, SQLColumn
+from models.structures.database import SQLTable, SQLColumn, SQLDatabase
 
 NEW_TABLE: Observable[SQLTable] = Observable()
 NEW_COLUMN: Observable[SQLColumn] = Observable()
@@ -66,7 +67,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
     def GetAttrByRow(self, row, col, attr):
         if not len(self.data): return False
-        column: SQLColumn = self.data[row]
+        column = self.data[row]
 
         if column.is_primary:
             attr.SetBold(True)
@@ -86,7 +87,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
     def _update_columns(self, col, row):
         item = self.GetItem(row)
 
-        column: SQLColumn = self.data[row]
+        column = self.data[row]
 
         if column.datatype is not None and col == 3:
             if not column.datatype.has_unsigned:
@@ -105,11 +106,12 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         return self.GetItem(new_row_index)
 
     def add_empty_row(self) -> wx.dataview.DataViewItem:
-        column = SQLColumn(id=str(len(self.data) + 1), name="", datatype=self.session.datatype.VARCHAR)
+        column = SQLColumn(id=int(len(self.data) + 1), name="", datatype=self.session.datatype.VARCHAR)
         return self.add_row(column)
 
     def clear(self):
         self.data = []
+        self.Reset(0)
         self.Cleared()
 
 
@@ -123,12 +125,12 @@ class EditTableModel(AbstractModel):
         self.collation = Observable()
         self.engine = Observable()
 
-        CURRENT_TABLE.subscribe(self._load_table)
-
         debounce(
             self.name, self.comment, self.auto_increment, self.collation, self.engine,
             callback=self.build_table
         )
+
+        CURRENT_TABLE.subscribe(self._load_table)
 
     def _load_table(self, table: SQLTable):
         self.name.set_value(table.name if table is not None else "")
@@ -138,51 +140,19 @@ class EditTableModel(AbstractModel):
         # self.engine.set_value(table.engine if table is not None else "")
 
     def build_table(self, *_args):
-        new_table = None
-
         if (current_table := CURRENT_TABLE.get_value()) is None:
-            # if self.engine.get_value() == SessionEngine.MYSQL.value and not any([
-            #     self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
-            # ]):
-            new_table = SQLTable(
-                id=None,
-                name=self.name.get_value(),
-                comment=self.comment.get_value(),
-                engine=self.engine.get_value(),
-                collation=self.collation.get_value(),
-                auto_increment=self.auto_increment.get_value(),
-
-                count_rows=0
-                #         comments=self.comments.get_value(),
-                #         configuration=SessionMySQLConfiguration(
-                #             hostname=self.hostname.get_value(),
-                #             username=self.username.get_value(),
-                #             password=self.password.get_value(),
-                #             password=self.password.get_value(),
-                #             port=self.port.get_value()
-                #         )
-            )
-        # elif self.engine.get_value() == SessionEngine.SQLITE.value and not self.filename.is_empty:
-        #     new_session = Session(
-        #         id=None,
-        #         name=self.name.get_value(),
-        #         engine=SessionEngine(self.engine.get_value()),
-        #         comments=self.comments.get_value(),
-        #         configuration=SessionSQLiteConfiguration(
-        #             filename=self.filename.get_value()
-        #         )
-        #     )
+            session = CURRENT_SESSION.get_value()
+            database = CURRENT_DATABASE.get_value()
+            new_table = session.statement.build_new_table(database)
         else:
-            modified = copy.copy(current_table)
-            modified.name = self.name.get_value()
-            modified.engine = self.engine.get_value()
-            modified.comment = self.comment.get_value()
-            modified.engine = self.engine.get_value(),
-            modified.collation = self.collation.get_value(),
-            modified.auto_increment = self.auto_increment.get_value(),
+            new_table = copy.copy(current_table)
 
-            # if modified.is_valid() and modified != current_table:
-            #     new_table = modified
+        new_table.name = self.name.get_value()
+        new_table.comment = self.comment.get_value()
+        new_table.collation = self.collation.get_value()
+        new_table.auto_increment = self.auto_increment.get_value()
+
+        logger.info(f"Building table: {new_table}")
 
         NEW_TABLE.set_value(new_table)
 
@@ -195,8 +165,7 @@ class ListTableColumnsController:
         self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_value_changed)
         self.list_ctrl_table_columns.Bind(wx.EVT_SCROLL, self._on_scroll)
 
-        CURRENT_SESSION.subscribe(self._load_session)
-        # CURRENT_DATABASE.subscribe(self._update_columns)
+        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
         CURRENT_TABLE.subscribe(self._load_table)
 
     def _load_session(self, session: Session):
@@ -207,13 +176,11 @@ class ListTableColumnsController:
     def _load_table(self, table: SQLTable):
         with Loader.cursor_wait():
             self.model.clear()
-
             if table is not None:
                 for index, column in enumerate(table.columns, 1):
                     self.model.add_row(column)
 
-            # Reset the view to reflect the changes
-            self.model.Reset(len(table.columns))
+                self.model.Reset(len(table.columns))
 
             self.list_ctrl_table_columns.Refresh()
 
@@ -304,20 +271,21 @@ class ListTableColumnsController:
 
             self.model.SetValue(None, item, 3)
 
-            if not any([datatype.has_length, datatype.has_precision, datatype.has_set]):
-                # self.list_ctrl_table_columns.GetColumn(3).GetRenderer().GetEditorCtrl().Enable(False)
-                pass
+            if datatype is not None:
+                if not any([datatype.has_length, datatype.has_precision, datatype.has_set]):
+                    # self.list_ctrl_table_columns.GetColumn(3).GetRenderer().GetEditorCtrl().Enable(False)
+                    pass
 
-            if not datatype.has_unsigned:
-                # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
-                self.model.SetValue(False, item, 4)
+                if not datatype.has_unsigned:
+                    # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
+                    self.model.SetValue(False, item, 4)
 
-            if not datatype.has_zerofill:
-                # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
-                self.model.SetValue(False, item, 5)
+                if not datatype.has_zerofill:
+                    # self.list_ctrl_table_columns.GetColumn(4).GetRenderer().GetEditorCtrl().Enable(False)
+                    self.model.SetValue(False, item, 5)
 
-            if datatype.has_collation and (collation := datatype.default_collation) is not None:
-                self.model.SetValue(collation, item, 10)
+                if datatype.has_collation and (collation := datatype.default_collation) is not None:
+                    self.model.SetValue(collation, item, 10)
 
         self.list_ctrl_table_columns.Refresh()
 
@@ -339,7 +307,7 @@ class ListTableColumnsController:
     def do_build(self, item: wx.dataview.DataViewItem):
         column: SQLColumn = self.model.data[self.model.GetRow(item)]
 
-        table: SQLTable = CURRENT_TABLE.get_value()
+        table: Optional[SQLTable] = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
 
         if table is not None:
             table.columns.append(column, replace_existing=True)

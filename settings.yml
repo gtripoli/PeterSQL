@@ -1,10 +1,4 @@
 language: it-IT
 window:
-  size: 600x800
-  position: center
-sessions:
-  - name: This is a Test
-    engine: SQLite
-    configuration:
-      filename: ./test.db
-    comments: The SQLite test
+  size: 1920,1048
+  position: 0,0

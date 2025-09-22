@@ -1,5 +1,4 @@
-import re
-from typing import Iterator, List, Optional, Union, Dict
+from typing import Iterator, Dict, Any
 
 import pymysql
 
@@ -26,21 +25,7 @@ class MariaDBStatement(AbstractStatement):
 
         super().__init__(self.connection_url)
 
-    @staticmethod
-    def _parse_type(column_type: str) -> Optional[Union[int, List[str]]]:
-        int_match = re.search(r'\((\d+)\)', column_type)
-        if int_match:
-            return int(int_match.group(1))
-
-        enum_match = re.search(r'^(enum|set)\((.*)\)$', column_type)
-        if enum_match:
-            inner = enum_match.group(2)
-            return [value.strip("'") for value in inner.split(",")]
-
-        return None
-
-    @staticmethod
-    def _get_column_definition(table: SQLTable, column: SQLColumn):
+    def _get_column_definition(self, table: SQLTable, column: SQLColumn):
         # ALTER TABLE tbl_name
         # MODIFY [COLUMN] col_name
         #     data_type[(length)][UNSIGNED|SIGNED|ZEROFILL]
@@ -55,19 +40,23 @@ class MariaDBStatement(AbstractStatement):
         #     [STORAGE {DISK|MEMORY|DEFAULT}]
         #     [reference_definition]
 
-        parts = [f"`{column.name}`", str(column.datatype.name)]
+        parts = [f"`{column.name}`"]
+
+        datatype_parts = str(column.datatype.name)
 
         if column.datatype.has_length:
-            parts.append(f"({column.length or column.datatype.default_length})")
+            datatype_parts += f"({column.length or column.datatype.default_length})"
 
         if column.datatype.has_precision:
             if column.datatype.has_scale:
-                parts.append(f"({column.numeric_precision or column.datatype.default_precision}, {column.numeric_scale or column.datatype.default_scale})")
+                datatype_parts += f"({column.numeric_precision or column.datatype.default_precision},{column.numeric_scale or column.datatype.default_scale})"
             else:
-                parts.append(f"({column.numeric_precision or column.datatype.default_precision})")
+                datatype_parts += f"({column.numeric_precision or column.datatype.default_precision})"
 
         if column.datatype.has_set:
-            parts.append(f"""('{"','".join(list(set(column.set or column.datatype.default_set)))}')""")
+            datatype_parts += f"""('{"','".join(list(set(column.set or column.datatype.default_set)))}')"""
+
+        parts.append(datatype_parts)
 
         if column.datatype.has_unsigned and column.is_unsigned:
             parts.append("UNSIGNED")
@@ -183,7 +172,7 @@ class MariaDBStatement(AbstractStatement):
         """)
         indexes_result = self.cursor.fetchall()
 
-        indexes_map = {}
+        indexes_map: Dict[str, Any] = {}
         for idx in indexes_result:
             col_name = idx['COLUMN_NAME']
             if col_name not in indexes_map:
@@ -208,10 +197,12 @@ class MariaDBStatement(AbstractStatement):
                 )
                 column_indexes.append(index_obj)
 
+            parsed_type = self._parse_type(col['COLUMN_TYPE'])
+
             yield SQLColumn(
                 id=col['ORDINAL_POSITION'],
                 name=col['COLUMN_NAME'],
-                datatype=MariaDBDataType.get_by_name(col['DATA_TYPE'], col=col),
+                datatype=MariaDBDataType.get_by_name(col),
                 is_nullable=col['IS_NULLABLE'] == 'YES',
                 extra=col['EXTRA'] if col['EXTRA'] not in ['', 'auto_increment', 'VIRTUAL GENERATED', 'STORED GENERATED'] else None,
                 key=col['COLUMN_KEY'],
@@ -225,40 +216,42 @@ class MariaDBStatement(AbstractStatement):
                 expression=col['GENERATION_EXPRESSION'],
 
                 server_default=col['COLUMN_DEFAULT'],
-                set=self._parse_type(col['COLUMN_TYPE']) if col['DATA_TYPE'] in ['enum', 'set'] else None,
+                set=parsed_type.set if col['DATA_TYPE'] in ['enum', 'set'] else None,
                 length=col.get('CHARACTER_MAXIMUM_LENGTH', None),
                 indexes=column_indexes,
                 is_auto_increment='auto_increment' in col['EXTRA'],
 
-                numeric_precision=self._parse_type(col['COLUMN_TYPE']) if col['DATA_TYPE'] in [
+                numeric_precision=parsed_type.precision if col['DATA_TYPE'] in [
                     "int", "tinyint", "smallint", "mediumint", "bigint"
                 ] else col.get('NUMERIC_PRECISION', None),
 
-                numeric_scale=col.get('NUMERIC_SCALE', None),
+                numeric_scale=parsed_type.scale,
                 datetime_precision=col.get('DATETIME_PRECISION', None)
             )
 
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> Iterator[Dict]:
-        query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
+    def get_records(self, database: SQLDatabase, table: SQLTable, limit: int = 1000, offset: int = 0) -> Iterator[Dict]:
+        query = f"SELECT * FROM `{database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
         self.execute(query)
         results = self.cursor.fetchall()
 
         for row in results:
             yield dict(row)
 
-    def _add_column(self, table: SQLTable, column: SQLColumn):
-        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` ADD COLUMN {MariaDBStatement._get_column_definition(table, column)}"
-        if column.after:
-            sql += f" AFTER `{column.after}`"
-        self.execute(sql)
+    def build_new_table(self, database: SQLDatabase) -> SQLTable:
+        return SQLTable(
+            id=-1,
+            name='',
+            database=database,
+            engine='InnoDB',
+            get_columns_handler=self.get_columns,
+        )
 
-    def _modify_column(self, table: SQLTable, column: SQLColumn):
-        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` MODIFY COLUMN {MariaDBStatement._get_column_definition(table, column)}"
-        self.execute(sql)
+    def create_table(self, database: SQLDatabase, table: SQLTable) -> bool:
+        column_defs = [self._get_column_definition(table, c) for c in table.columns]
 
-    def _drop_column(self, table: SQLTable, column: SQLColumn):
-        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` DROP COLUMN `{column.name}`"
-        self.execute(sql)
+        sql = f"CREATE TABLE `{table.database.name}`.`{table.name}` ({', '.join(column_defs)})"
+
+        return self._execute_transaction(sql, f"create table {table.name}")
 
     def update_table(self, database: SQLDatabase, table: SQLTable) -> bool:
         existing_columns = self.get_columns(database, table)
@@ -287,8 +280,7 @@ class MariaDBStatement(AbstractStatement):
                 existing_col = existing_columns_map[col.name]
 
                 if (existing_col.virtuality and not col.virtuality):
-                    # La colonna era virtuale e ora diventa normale, cancella i valori
-                    clear_sql = f"UPDATE `{table.schema}`.`{table.name}` SET `{col.name}` = {'NULL' if col.is_nullable else 'DEFAULT'}"
+                    clear_sql = f"UPDATE `{database.name}`.`{table.name}` SET `{col.name}` = {'NULL' if col.is_nullable else 'DEFAULT'}"
                     self.execute(clear_sql)
 
                 self._modify_column(table, col)
@@ -296,9 +288,14 @@ class MariaDBStatement(AbstractStatement):
             for col in columns_to_drop:
                 self._drop_column(table, col)
 
-            return True
-
         except Exception as ex:
-            logger.error(f"Error altering table name={table.name}: {str(ex)}")
-            LOG_QUERY.append(str(ex))
+            log = f"Error altering table name={table.name}: {str(ex)}"
+            logger.error(log)
+            LOG_QUERY.append(log)
             return False
+
+        return True
+
+    def drop_table(self, database: SQLDatabase, table: SQLTable) -> bool:
+        sql = f"DROP TABLE `{database.name}`.`{table.name}`"
+        return self._execute_transaction(sql, f"drop table {table.name}")

@@ -1,5 +1,5 @@
 import os
-from typing import Type, List, Self, Any, Callable
+from typing import Type, List, Self, Any, Callable, Dict, Optional
 
 import wx
 import wx.dataview
@@ -37,7 +37,21 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
             value = default
 
         self.RenderText(str(value), 0, rect, dc, state)
+
         return True
+
+    def RenderText(self, text, x, rect, dc, state):
+        x, y = rect.GetTopLeft()
+
+        dc.DrawText(str(text), x, self.get_draw_x(rect))
+
+        return True
+
+    def get_draw_x(self, rect):
+        rect_height = rect.GetHeight()
+        chars_height = self.GetView().CharHeight
+
+        return int((rect_height / 2) - (chars_height / 2))
 
 
 class BasePopup(wx.PopupTransientWindow):
@@ -191,13 +205,13 @@ class PopupColumnDatatype(BasePopup):
         return self
 
     def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
-        groups = {}
+        groups: Dict[DataTypeCategory, List[str]] = {}
 
         root = self.tree_ctrl.GetRootItem()
         self.tree_ctrl.DeleteChildren(root)
 
         for choice in self.choices:
-            groups.setdefault(choice.category.value, []).append(choice.name)
+            groups.setdefault(choice.category, []).append(choice.name)
 
         dc = wx.ClientDC(self.tree_ctrl)
         max_width = 0
@@ -205,14 +219,14 @@ class PopupColumnDatatype(BasePopup):
 
         for category, datatypes in groups.items():
 
-            category_item = self.tree_ctrl.AppendItem(root, category.name)
+            category_item = self.tree_ctrl.AppendItem(root, category.value.name)
             self.tree_ctrl.SetItemBold(category_item, True)
 
-            max_width = max(max_width, dc.GetTextExtent(category.name)[0])
+            max_width = max(max_width, dc.GetTextExtent(category.value.name)[0])
 
             for datatype in datatypes:
                 datatype_item = self.tree_ctrl.AppendItem(category_item, datatype)
-                self.tree_ctrl.SetItemTextColour(datatype_item, category.color)
+                self.tree_ctrl.SetItemTextColour(datatype_item, category.value.color)
 
                 max_width = max(max_width, dc.GetTextExtent(datatype)[0])
 
@@ -255,7 +269,7 @@ class PopupCheckList(BasePopup):
 
 
 class PopupRenderer(BaseDataViewCustomRenderer):
-    on_open: Callable[[BasePopup], None] = lambda self, popup: None
+    on_open: Optional[Callable[[BasePopup], None]] = None
 
     def __init__(self, popup_class: Type[BasePopup]):
         super().__init__("string", wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
@@ -284,7 +298,9 @@ class PopupRenderer(BaseDataViewCustomRenderer):
             popup.close()
 
         popup.OnDismiss = _on_dismiss
-        self.on_open(popup)
+        if self.on_open :
+            self.on_open(popup)
+
         popup.open(self._value, position, wx.Size(width=view.Columns[col].Width, height=-1))
 
         return True
@@ -300,7 +316,7 @@ class IconRender(BaseDataViewCustomRenderer):
         if not len(data):
             return False
 
-        column: SQLColumn = data[int(self._value) - 1]
+        column = data[int(self._value) - 1]
 
         icons = []
         x, y = rect.GetTopLeft()
@@ -326,7 +342,8 @@ class IconRender(BaseDataViewCustomRenderer):
                 icons.append(
                     wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_index.png"), wx.BITMAP_TYPE_ANY))
 
-        dc.DrawText(self._value, x, y)
+        # dc.DrawText(self._value, x, self.get_draw_x(rect))
+        self.RenderText(self._value, x, rect, dc, state)
 
         tw, th = dc.GetTextExtent(self._value)
         x += tw + 4
@@ -511,7 +528,7 @@ class BooleanRenderer(BaseDataViewCustomRenderer):
     """Renderer for boolean columns"""
 
     def __init__(self):
-        super().__init__(varianttype="bool", mode= wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
+        super().__init__(varianttype="bool", mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
         self.editor_ctrl = None
 
     def Render(self, rect, dc, state):

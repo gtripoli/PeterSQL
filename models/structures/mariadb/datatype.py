@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict
 
 from models.structures.datatype import StandardDataType, SQLDataType, DataTypeCategory
 
@@ -45,10 +45,11 @@ class MariaDBDataType(StandardDataType):
     GEOMETRYCOLLECTION = SQLDataType(name="GeometryCollection", category=DataTypeCategory.SPATIAL)
 
     @classmethod
-    def get_by_name(cls, name: str, **kwargs) -> Optional['SQLDataType']:
-        if name.upper() == "LONGTEXT" and str(kwargs.get("col", {}).get("COLLATION_NAME", "")).endswith("_bin"):
+    def get_by_name(cls, col : Dict[str, str]) -> SQLDataType:  # type: ignore[override]
+        name = col['DATA_TYPE']
+        if name.upper() == "LONGTEXT" and str(col.get("COLLATION_NAME", "")).endswith("_bin"):
             return cls.JSON
-        if name.upper() == "TINYINT" and str(kwargs.get("col", {}).get("COLUMN_TYPE", "")) == "tinyint(1)":
+        if name.upper() == "TINYINT" and str(col.get("COLUMN_TYPE", "")) == "tinyint(1)":
             return cls.BOOLEAN
 
         return super().get_by_name(name)

@@ -2,9 +2,10 @@ import copy
 import enum
 import inspect
 import weakref
-from threading import Timer
-from typing import Any, Dict, List, Callable, Union, Optional, Self, TypeVar, Generic
+from typing import Any, Dict, List, Callable, Union, Optional, Self, TypeVar, Generic, SupportsIndex, cast
 from contextlib import contextmanager
+
+import wx
 
 T = TypeVar("T")
 
@@ -68,7 +69,7 @@ class Observable(Generic[T]):
             if inspect.ismethod(callback):
                 ref = weakref.WeakMethod(callback)
             else:
-                ref = weakref.ref(callback)
+                ref = weakref.ref(callback)  # type: ignore[assignment]
 
             self._callbacks[callback_event.value].append(ref)
 
@@ -131,7 +132,7 @@ class ObservableArray(Observable[List[T]]):
         values = self._ensure_list()
         values.append(value)
 
-        self.execute_callback(ObservableArray.CallbackEvent.ON_APPEND, value=value)
+        self.execute_callback(ObservableArray.CallbackEvent.ON_APPEND, value=value)  # type: ignore[arg-type]
 
         return self.set_value(values)
 
@@ -139,7 +140,7 @@ class ObservableArray(Observable[List[T]]):
         values = self._ensure_list()
         values.insert(index, value)
 
-        self.execute_callback(ObservableArray.CallbackEvent.ON_INSERT, value=value)
+        self.execute_callback(ObservableArray.CallbackEvent.ON_INSERT, value=value)  # type: ignore[arg-type]
 
         return self.set_value(values)
 
@@ -190,22 +191,25 @@ class ObservableArray(Observable[List[T]]):
 
 
 class ObservableObject(Observable):
-    def _get_in_ref(self, ref: Any, key: Union[str, int]):
+    def _get_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex]):
         if isinstance(ref, dict):
             return ref.get(key)
         elif isinstance(ref, list):
-            return ref[key]
+            return ref[cast(SupportsIndex, key)]
         else:
-            return getattr(ref, key, None)
+            return getattr(ref, str(key), None)
 
-    def _set_in_ref(self, ref: Any, key: Union[str, int], value: Any):
-        if isinstance(ref, dict) or isinstance(ref, list):
+    def _set_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex], value: Any):
+        if isinstance(ref, dict):
             ref[key] = value
+        elif isinstance(ref, list):
+            ref[cast(SupportsIndex, key)] = value
         else:
-            setattr(ref, key, value)
+            setattr(ref, str(key), value)
+
         return ref
 
-    def set_value(self, *attributes: str, value: Any) -> Self:
+    def set_value(self, *attributes: str, value: Any) -> Self:  # type: ignore[override]
         ref = copy.deepcopy(super().get_value())
         target = ref
 
@@ -229,14 +233,8 @@ class ObservableObject(Observable):
 
 
 class Loader:
-    """
-    Manages async operations and cursor state
-    Usage:
-        with Loader.cursor_wait():
-            # long-running operation
-    """
-    _queue = Observable([])
-    loading = Observable(False)
+    _queue: Observable[list] = Observable([])
+    loading: Observable[bool] = Observable(False)
 
     @classmethod
     def _update_loading_state(cls):
@@ -248,13 +246,13 @@ class Loader:
     def cursor_wait(cls):
         """Context manager to show wait cursor during operations"""
         token = object()  # Unique token for this operation
-        
+
         # Add token to queue
         current_queue = cls._queue.get_value()
         current_queue.append(token)
         cls._queue.set_value(current_queue)
         cls._update_loading_state()
-        
+
         try:
             yield
         finally:
@@ -267,14 +265,14 @@ class Loader:
 
 
 def debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):
-    timer: Optional[Timer] = None
+    call_later: Optional[wx.CallLater] = None
 
     def _debounced(*args, **kwargs):
-        nonlocal timer
-        if timer:
-            timer.cancel()
-        timer = Timer(wait_time, callback, args, kwargs)
-        timer.start()
+        nonlocal call_later
+        if call_later:
+            call_later.Stop()
+        call_later = wx.CallLater(int(wait_time * 1000), callback, *args, **kwargs)
 
     for obs in observables:
+        setattr(obs, '_debounce_callback', _debounced)
         obs.subscribe(_debounced)

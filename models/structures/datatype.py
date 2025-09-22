@@ -8,7 +8,7 @@ from typing import List, Callable, NamedTuple, Tuple, Dict, Optional
 class Category(NamedTuple):
     name: str
     color: Tuple[int, int, int]
-    description: str = None
+    description: Optional[str] = None
 
 
 class DataTypeCategory(enum.Enum):
@@ -29,7 +29,7 @@ class SQLDataType:
     alias: List[str] = dataclasses.field(default_factory=list)
     max_size: Optional[int] = None
 
-    format: str = None
+    format: Optional[str] = None
 
     default_set: List[str] = dataclasses.field(default_factory=list)
     default_length: int = 50  # for the text
@@ -37,14 +37,14 @@ class SQLDataType:
     default_scale: int = 5  # for the real
     default_collation: Optional[str] = None
 
-    has_set: bool = dataclasses.field(default=None)  # for the enum and set
-    has_length: bool = dataclasses.field(default=None)  # for the text
-    has_scale: bool = dataclasses.field(default=None)  # for the real
-    has_precision: bool = dataclasses.field(default=None)  # for the integer
-    has_collation: bool = dataclasses.field(default=None)  # for the text
+    has_set: Optional[bool] = dataclasses.field(default=None)  # for the enum and set
+    has_length: Optional[bool] = dataclasses.field(default=None)  # for the text
+    has_scale: Optional[bool] = dataclasses.field(default=None)  # for the real
+    has_precision: Optional[bool] = dataclasses.field(default=None)  # for the integer
+    has_collation: Optional[bool] = dataclasses.field(default=None)  # for the text
 
-    has_zerofill: bool = dataclasses.field(default=None)  # for the integer and real
-    has_unsigned: bool = dataclasses.field(default=None)  # for the integer and real
+    has_zerofill: Optional[bool] = dataclasses.field(default=None)  # for the integer and real
+    has_unsigned: Optional[bool] = dataclasses.field(default=None)  # for the integer and real
 
     def __post_init__(self):
         if self.has_set is None:
@@ -102,12 +102,11 @@ class StandardDataType():
         return sorted(types, key=lambda t: category_order[t.category])
 
     @classmethod
-    def get_by_name(cls, name: str) -> Optional['SQLDataType']:
+    def get_by_name(cls, name: str) -> SQLDataType:
         name_upper = name.upper()
         for datatype in cls.get_all():
             if datatype.name == name_upper:
                 return datatype
             if any(alias == name.upper() for alias in datatype.alias):
                 return datatype
-        return None
-
+        raise ValueError(f"datatype name={name_upper} not found")

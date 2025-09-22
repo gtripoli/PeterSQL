@@ -1,5 +1,5 @@
-import datetime
 import dataclasses
+from datetime import datetime
 
 from typing import Optional, Callable, Literal, List, Any, Iterator, Self
 
@@ -21,6 +21,15 @@ class SQLDatabase:
     def __post_init__(self):
         self.tables = LazyList(lambda: self.get_tables_handler(self))
 
+    def __ne__(self, other: Any) -> bool:
+        if not isinstance(other, SQLDatabase):
+            return True
+
+        if any([field != getattr(other, field.name) for field in dataclasses.fields(self)]):
+            return True
+
+        return any([t1 != t2 for t1, t2 in zip(self.tables, other.tables)])
+
 
 @dataclasses.dataclass
 class SQLTable:
@@ -34,7 +43,7 @@ class SQLTable:
 
     comment: Optional[str] = None
     count_rows: Optional[int] = None
-    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=list)
+    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
 
     auto_increment: Optional[int] = None
     create_time: Optional[datetime] = None
@@ -61,6 +70,15 @@ class SQLTable:
 
     def is_valid(self) -> bool:
         return all([self.name != "", len(self.columns) > 0, all([c.is_valid for c in self.columns])])
+
+    def __ne__(self, other: Any) -> bool:
+        if not isinstance(other, SQLTable):
+            return True
+
+        if any([field != getattr(other, field.name) for field in dataclasses.fields(self)]):
+            return True
+
+        return any([c1 != c2 for c1, c2 in zip(self.columns, other.columns)])
 
 
 @dataclasses.dataclass
@@ -120,9 +138,9 @@ class SQLColumn:
         for condition, attr, transform, default in candidates:
             if condition:
                 if value := getattr(self, attr, None):
-                    length_scale_set = transform(value)
+                    length_scale_set = transform(value)  # type: ignore[operator]
                 else:
-                    length_scale_set = transform(default)
+                    length_scale_set = transform(default)  # type: ignore[operator]
 
                 break
 

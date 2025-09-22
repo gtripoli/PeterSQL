@@ -5,3 +5,9 @@ babel
 requests
 wxpython==4.2.3 --no-binary=wxPython
 cx_Oracle
+mypy
+types-PyYAML
+types-PyMySQL
+pytest
+pytest-mock
+pytest-cov

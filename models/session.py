@@ -12,6 +12,8 @@ from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.mariadb.statement import MariaDBStatement
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.mysql.statment import MySQLStatement
+from models.structures.postgresql.datatype import PostgreSQLDataType
+from models.structures.postgresql.statement import PostgreSQLStatement
 from models.structures.sqlite.datatype import SQLiteDataType
 from models.structures.sqlite.statment import SQLiteStatement
 
@@ -19,6 +21,7 @@ from models.structures.sqlite.statment import SQLiteStatement
 class SessionEngine(enum.Enum):
     MYSQL = "MySQL"
     MARIADB = "MariaDB"
+    POSTGRESQL = "PostgreSQL"
     SQLITE = "SQLite"
 
 
@@ -40,10 +43,10 @@ class Session:
     configuration: Union[CredentialsConfiguration, SourceConfiguration] | None
     comments: Optional[str] = None
 
-    _id: str = None
-    _datatype: StandardDataType = None
-    _statement: AbstractStatement = None
-    _control: Optional[wx.Control] = None
+    _id: Optional[str] = None
+    _datatype: Optional[StandardDataType] = None
+    _statement: Optional[AbstractStatement] = None
+    # _control: Optional[wx.Control] = None
 
     @property
     def statement(self) -> AbstractStatement:
@@ -52,6 +55,8 @@ class Session:
                 self._statement = MySQLStatement(self)
             elif self.engine == SessionEngine.MARIADB:
                 self._statement = MariaDBStatement(self)
+            elif self.engine == SessionEngine.POSTGRESQL:
+                self._statement = PostgreSQLStatement(self)
             elif self.engine == SessionEngine.SQLITE:
                 self._statement = SQLiteStatement(self)
             else:
@@ -66,6 +71,8 @@ class Session:
                 self._datatype = MySQLDataType()
             elif self.engine == SessionEngine.MARIADB:
                 self._datatype = MariaDBDataType()
+            elif self.engine == SessionEngine.POSTGRESQL:
+                self._datatype = PostgreSQLDataType()
             elif self.engine == SessionEngine.SQLITE:
                 self._datatype = SQLiteDataType()
             else:
@@ -74,18 +81,12 @@ class Session:
         return self._datatype
 
     def to_dict(self):
-        attributes = copy.copy(self.__dict__)
-        del attributes["control"]
-
-        result = dict(attributes, **dict(engine=self.engine.value, configuration=self.configuration._asdict()))
-
-        return result
+        return {
+            'name': self.name,
+            'engine': self.engine.value if self.engine else None,
+            'configuration': self.configuration._asdict() if self.configuration else None,
+            'comments': self.comments
+        }
 
     def is_valid(self):
         return all([self.name, self.engine]) and all(self.configuration._asdict().values())
-
-    # def __eq__(self, other: 'Session'):
-    #     if isinstance(other, Session):
-    #         return self.to_dict() == other.to_dict()
-    #
-    #     return False

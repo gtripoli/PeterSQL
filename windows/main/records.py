@@ -3,10 +3,10 @@ import wx.dataview
 from helpers.logger import logger
 
 from models.session import Session
-from models.structures.database import SQLTable
+from models.structures.database import SQLTable, SQLDatabase
 from models.structures.datatype import DataTypeCategory
 
-from windows.main import CURRENT_TABLE, CURRENT_SESSION
+from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE
 
 
 class RecordsModel(wx.dataview.DataViewIndexListModel):
@@ -54,24 +54,28 @@ class TableRecordsController:
     def __init__(self, list_ctrl_records: wx.dataview.DataViewCtrl):
         self.list_ctrl_records = list_ctrl_records
 
-        CURRENT_SESSION.subscribe(self._load_session)
+        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+        CURRENT_DATABASE.subscribe(self._load_database)
         CURRENT_TABLE.subscribe(self._load_table)
 
     def _load_session(self, session: Session):
         self.session = session
 
+    def _load_database(self, database: SQLDatabase):
+        self.database = database
+
     def _load_table(self, table: SQLTable):
         if table is not None:
             self.table = table
 
-            records = list(self.session.statement.get_records(table=table))
+            records = list(self.session.statement.get_records(database=self.database, table=table))
             model = RecordsModel(self.session, table, records)
             self.list_ctrl_records.AssociateModel(model)
 
     def refresh_records(self):
         if hasattr(self, 'session') and hasattr(self, 'table'):
-            records = list(self.session.statement.get_records(table=self.table))
-            model = RecordsModel(self.table, records)
+            records = list(self.session.statement.get_records(database=self.database, table=self.table))
+            model = RecordsModel(self.session, self.table, records)
             self.list_ctrl_records.AssociateModel(model)
 
     def get_selected_record(self):

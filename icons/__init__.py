@@ -17,6 +17,7 @@ class IconList(object):
     ENGINE_SQLITE = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-sqlite.png"), wx.BITMAP_TYPE_ANY))
     ENGINE_MYSQL = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-mysql.png"), wx.BITMAP_TYPE_ANY))
     ENGINE_MARIADB = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-mariadb.png"), wx.BITMAP_TYPE_ANY))
+    ENGINE_POSTGRESQL = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-postgresql.png"), wx.BITMAP_TYPE_ANY))
 
     KEY_FULLTEXT = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_ANY))
     KEY_PRIMARY = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY))

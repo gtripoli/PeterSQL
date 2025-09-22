@@ -1,5 +1,5 @@
 from typing import List, Callable, Iterator, TypeVar, Generic, Type, Any, overload, Union, Tuple
-from collections.abc import Sequence
+from typing import SupportsIndex
 
 T = TypeVar('T')
 
@@ -21,12 +21,12 @@ class LazyList(List[T]):
         return super().__iter__()
 
     @overload
-    def __getitem__(self, i: int) -> T: ...
-    
+    def __getitem__(self, __i: SupportsIndex) -> T: ...
+
     @overload
-    def __getitem__(self, s: slice) -> List[T]: ...
-    
-    def __getitem__(self, i: Union[int, slice]) -> Union[T, List[T]]:
+    def __getitem__(self, __s: slice) -> List[T]: ...
+
+    def __getitem__(self, i: Union[SupportsIndex, slice]) -> Union[T, List[T]]:
         self._ensure_loaded()
         return super().__getitem__(i)
 
