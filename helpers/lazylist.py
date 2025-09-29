@@ -3,6 +3,7 @@ from typing import SupportsIndex
 
 T = TypeVar('T')
 
+
 class LazyList(List[T]):
     def __init__(self, loader: Callable[[], Iterator[T]]) -> None:
         super().__init__()
@@ -21,10 +22,12 @@ class LazyList(List[T]):
         return super().__iter__()
 
     @overload
-    def __getitem__(self, __i: SupportsIndex) -> T: ...
+    def __getitem__(self, __i: SupportsIndex) -> T:
+        ...
 
     @overload
-    def __getitem__(self, __s: slice) -> List[T]: ...
+    def __getitem__(self, __s: slice) -> List[T]:
+        ...
 
     def __getitem__(self, i: Union[SupportsIndex, slice]) -> Union[T, List[T]]:
         self._ensure_loaded()
@@ -34,6 +37,18 @@ class LazyList(List[T]):
         self._ensure_loaded()
         return super().__len__()
 
+    def __contains__(self, item: object) -> bool:
+        self._ensure_loaded()
+        return super().__contains__(item)
+
+    def __setitem__(self, key, value):
+        self._ensure_loaded()
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        self._ensure_loaded()
+        super().__delitem__(key)
+
     def append(self, item: T, replace_existing: bool = False) -> None:
         self._ensure_loaded()
         if replace_existing and item in self:
@@ -41,15 +56,20 @@ class LazyList(List[T]):
             self[idx] = item
         else:
             super().append(item)
-    
-    def __contains__(self, item: object) -> bool:
+
+    def insert(self, index: int, item: T) -> None:
         self._ensure_loaded()
-        return super().__contains__(item)
-    
+        super().insert(index, item)
+
     def index(self, item: T, *args: Any) -> int:
         self._ensure_loaded()
         return super().index(item, *args)
-    
+
     def count(self, item: T) -> int:
         self._ensure_loaded()
         return super().count(item)
+
+    def override(self, items: List[T]) -> None:
+        self.clear()
+        self.extend(items)
+        self._loaded = True

@@ -1,21 +1,23 @@
-import copy
 import enum
 import dataclasses
-from typing import NamedTuple, Union, Type, Optional, Any, Callable, List
+from typing import NamedTuple, Union, Optional
 
-import wx
-
+from models.structures.indextype import StandardIndexType
 from models.structures.datatype import StandardDataType
 from models.structures.statement import AbstractStatement
 
 from models.structures.mariadb.datatype import MariaDBDataType
 from models.structures.mariadb.statement import MariaDBStatement
+
 from models.structures.mysql.datatype import MySQLDataType
 from models.structures.mysql.statment import MySQLStatement
+
 from models.structures.postgresql.datatype import PostgreSQLDataType
 from models.structures.postgresql.statement import PostgreSQLStatement
-from models.structures.sqlite.datatype import SQLiteDataType
+
 from models.structures.sqlite.statment import SQLiteStatement
+from models.structures.sqlite.datatype import SQLiteDataType
+from models.structures.sqlite.indextype import SQLiteIndexType
 
 
 class SessionEngine(enum.Enum):
@@ -44,41 +46,31 @@ class Session:
     comments: Optional[str] = None
 
     _id: Optional[str] = None
-    _datatype: Optional[StandardDataType] = None
-    _statement: Optional[AbstractStatement] = None
-    # _control: Optional[wx.Control] = None
+    statement: Optional[AbstractStatement] = dataclasses.field(init=False)
 
-    @property
-    def statement(self) -> AbstractStatement:
-        if self._statement is None:
-            if self.engine == SessionEngine.MYSQL:
-                self._statement = MySQLStatement(self)
-            elif self.engine == SessionEngine.MARIADB:
-                self._statement = MariaDBStatement(self)
-            elif self.engine == SessionEngine.POSTGRESQL:
-                self._statement = PostgreSQLStatement(self)
-            elif self.engine == SessionEngine.SQLITE:
-                self._statement = SQLiteStatement(self)
-            else:
-                raise ValueError(f"Unsupported engine {self.engine}")
+    datatype: Optional[StandardDataType] = dataclasses.field(init=False)
+    indextype: Optional[StandardIndexType] = dataclasses.field(init=False)
 
-        return self._statement
+    def __post_init__(self):
+        if self.engine == SessionEngine.MYSQL:
+            self.statement = MySQLStatement(self)
+            self.datatype = MySQLDataType()
+            # self.indextype = MySQLIndexType()
+        elif self.engine == SessionEngine.MARIADB:
+            self.statement = MariaDBStatement(self)
+            self.datatype = MariaDBDataType()
+            # self.indextype = MariaDBIndexType()
+        elif self.engine == SessionEngine.POSTGRESQL:
+            self.statement = PostgreSQLStatement(self)
+            self.datatype = PostgreSQLDataType()
+            # self.indextype = PostgreSQLIndexType()
+        elif self.engine == SessionEngine.SQLITE:
+            self.statement = SQLiteStatement(self)
+            self.datatype = SQLiteDataType()
+            self.indextype = SQLiteIndexType()
 
-    @property
-    def datatype(self) -> StandardDataType:
-        if self._datatype is None:
-            if self.engine == SessionEngine.MYSQL:
-                self._datatype = MySQLDataType()
-            elif self.engine == SessionEngine.MARIADB:
-                self._datatype = MariaDBDataType()
-            elif self.engine == SessionEngine.POSTGRESQL:
-                self._datatype = PostgreSQLDataType()
-            elif self.engine == SessionEngine.SQLITE:
-                self._datatype = SQLiteDataType()
-            else:
-                raise ValueError(f"Unsupported engine {self.engine}")
-
-        return self._datatype
+        else :
+            raise ValueError(f"Unsupported engine {self.engine}")
 
     def to_dict(self):
         return {

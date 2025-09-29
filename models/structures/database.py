@@ -6,6 +6,7 @@ from typing import Optional, Callable, Literal, List, Any, Iterator, Self
 import wx
 
 from helpers.lazylist import LazyList
+from models.structures.indextype import SQLIndexType
 from models.structures.datatype import SQLDataType
 
 
@@ -14,7 +15,7 @@ class SQLDatabase:
     id: Optional[int]
     name: str
 
-    get_tables_handler: Callable[[Self], Iterator['SQLTable']]
+    get_tables_handler: Callable[[Self], Iterator['SQLTable']] = dataclasses.field(default_factory=lambda: lambda database: iter([]))
 
     control: Optional[wx.Control] = None
 
@@ -39,11 +40,14 @@ class SQLTable:
     database: SQLDatabase
     engine: Optional[str]
 
-    get_columns_handler: Callable[[SQLDatabase, Self], Iterator['SQLColumn']]
+    get_indexes_handler: Callable[[Self], Iterator['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda table: iter([]))
+    get_columns_handler: Callable[[Self], Iterator['SQLColumn']] = dataclasses.field(default_factory=lambda: lambda table: iter([]))
+
+    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
+    indexes: LazyList['SQLIndex'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
 
     comment: Optional[str] = None
     count_rows: Optional[int] = None
-    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
 
     auto_increment: Optional[int] = None
     create_time: Optional[datetime] = None
@@ -66,7 +70,8 @@ class SQLTable:
     temporary: bool = False
 
     def __post_init__(self):
-        self.columns = LazyList(lambda: self.get_columns_handler(self.database, self))
+        self.indexes = LazyList(lambda: self.get_indexes_handler(self))
+        self.columns = LazyList(lambda: self.get_columns_handler(self))
 
     def is_valid(self) -> bool:
         return all([self.name != "", len(self.columns) > 0, all([c.is_valid for c in self.columns])])
@@ -75,20 +80,32 @@ class SQLTable:
         if not isinstance(other, SQLTable):
             return True
 
-        if any([field != getattr(other, field.name) for field in dataclasses.fields(self)]):
+        if any([
+            getattr(self, field.name) != getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.default_factory is dataclasses.MISSING
+        ]):
             return True
 
-        return any([c1 != c2 for c1, c2 in zip(self.columns, other.columns)])
+        if any([c1 != c2 for c1, c2 in zip(self.columns, other.columns)]):
+            return True
+
+        if any([i1 != i2 for i1, i2 in zip(self.indexes, other.indexes)]):
+            return True
+
+        return False
 
 
 @dataclasses.dataclass
 class SQLColumn:
-    id: Optional[int]
+    id: int
     name: str
+    table: SQLTable
     datatype: SQLDataType
-    is_nullable: Optional[bool] = False
+    get_indexes_handler: Callable[[Self], Iterator['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda column: iter([]))
+    is_nullable: bool = False
     extra: Optional[str] = None
-    key: Optional[str] = None
+    # key: Optional[str] = None
     comment: Optional[str] = None
 
     server_default: Optional[str] = None
@@ -96,32 +113,38 @@ class SQLColumn:
     is_unsigned: bool = False
     is_zerofill: bool = False
     is_auto_increment: bool = False
+    is_primary_key: bool = False
 
     set: Optional[List[str]] = None
     length: Optional[int] = None
 
-    # character_set: Optional[str] = None
     collation_name: Optional[str] = None
     numeric_precision: Optional[int] = None
     numeric_scale: Optional[int] = None
     datetime_precision: Optional[int] = None
-
     virtuality: Optional[Literal["VIRTUAL", "STORED"]] = None
     expression: Optional[str] = None
 
-    indexes: List['SQLIndex'] = dataclasses.field(default_factory=list)
+    indexes: LazyList['SQLIndex'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
 
-    def __sub__(self, other):
-        return {
-            field: (getattr(self, field), getattr(other, field))
+    def __post_init__(self):
+        self.indexes = LazyList(lambda: self.get_indexes_handler(self))
+
+    def __ne__(self, other):
+        if not isinstance(other, SQLColumn):
+            return True
+
+        return any([
+            getattr(self, field.name) != getattr(other, field.name)
             for field in dataclasses.fields(self)
-            if getattr(self, field) != getattr(other, field)
-        }
+            if field.default_factory is dataclasses.MISSING and field.type != SQLTable
+        ])
+
+    # @property
+    # def is_primary(self) -> bool:
+    #     return any(index.is_primary for index in self.indexes)
 
     @property
-    def is_primary(self) -> bool:
-        return any(index.is_primary for index in self.indexes)
-
     def is_valid(self):
         return all([self.name, self.datatype])
 
@@ -191,52 +214,56 @@ class SQLColumn:
         else:
             self.server_default = value
 
-    def to_sql(self):
-        parts = [str(self.datatype)]
+    def get_definition(self) -> dict:
+        datatype_str = str(self.datatype.name)
 
         if self.datatype.has_length:
-            parts.append(f"({self.length or self.datatype.default_length})")
+            datatype_str += f"({self.length or self.datatype.default_length})"
 
         if self.datatype.has_precision:
             if self.datatype.has_scale:
-                parts.append(f"({self.numeric_precision or self.datatype.default_precision}, {self.numeric_scale or self.datatype.default_scale})")
-
-            parts.append(f"({self.numeric_precision or self.datatype.default_precision})")
+                datatype_str += f"({self.numeric_precision or self.datatype.default_precision},{self.numeric_scale or self.datatype.default_scale})"
+            else:
+                datatype_str += f"({self.numeric_precision or self.datatype.default_precision})"
 
         if self.datatype.has_set:
-            parts.append(f"({self.set or self.datatype.default_set})")
+            datatype_str += f"""('{"','".join(list(set(self.set or self.datatype.default_set)))}')"""
 
-        if self.datatype.has_unsigned:
-            parts.append("UNSIGNED")
+        result = {
+            'name': f"`{self.name}`",
+            'datatype': datatype_str,
+            'nullable': 'NOT NULL' if not self.is_nullable else 'NULL',
+        }
 
-        if not self.is_nullable:
-            parts.append("NOT NULL")
-
-        if self.default is not None:
-            parts.append(f"DEFAULT {self.default}")
-
-        if self.extra:
-            parts.append(self.extra)
-
-        if self.comment:
-            parts.append(f"COMMENT '{self.comment}'")
+        if self.default and self.default != '':
+            result['default'] = f"DEFAULT {self.default}"
 
         if self.collation_name:
-            parts.append(f"COLLATE {self.collation_name}")
+            result['collation'] = f"COLLATE {self.collation_name}"
 
-        return " ".join(parts)
+        if self.comment:
+            result['comment'] = f"COMMENT '{self.comment}'"
+
+        if self.virtuality and self.expression:
+            result['virtual'] = f"AS ({self.expression}) {self.virtuality}"
+
+        return result
 
 
 @dataclasses.dataclass
-class SQLIndex():
+class SQLIndex:
     name: str
-    type: str
+    type: SQLIndexType
     columns: List[str]
-    is_primary: bool = False
-    is_unique: bool = False
-    is_fulltext: bool = False
-    is_spatial: bool = False
+    expression: Optional[str] = None
+    partial_condition: Optional[str] = None
 
-    @property
-    def is_normal(self):
-        return not any([self.is_primary, self.is_unique, self.is_fulltext, self.is_spatial])
+    def __ne__(self, other):
+        if not isinstance(other, SQLIndex):
+            return True
+
+        return any([
+            getattr(self, field.name) != getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.default_factory is dataclasses.MISSING
+        ])

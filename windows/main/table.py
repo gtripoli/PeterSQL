@@ -8,11 +8,12 @@ import wx.dataview
 from helpers.bindings import AbstractModel
 from helpers.logger import logger
 from helpers.observables import Observable, debounce, ObservableArray, Loader
+from models.structures.indextype import SQLIndexType
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_COLUMN
 
 from models.session import Session
-from models.structures.database import SQLTable, SQLColumn, SQLDatabase
+from models.structures.database import SQLTable, SQLColumn, SQLIndex
 
 NEW_TABLE: Observable[SQLTable] = Observable()
 NEW_COLUMN: Observable[SQLColumn] = Observable()
@@ -43,7 +44,11 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         if not len(self.data):
             return None
 
-        column_field = ColumnModel.MAP_COLUMN_FIELDS[col]
+        try:
+            column_field = self.MAP_COLUMN_FIELDS[col]
+        except Exception as ex:
+            logger.error(ex)
+            return None
 
         value = getattr(self.data[row], column_field['attr'])
 
@@ -69,7 +74,7 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         if not len(self.data): return False
         column = self.data[row]
 
-        if column.is_primary:
+        if column.is_primary_key:
             attr.SetBold(True)
 
         if col == 0:
@@ -106,8 +111,42 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         return self.GetItem(new_row_index)
 
     def add_empty_row(self) -> wx.dataview.DataViewItem:
-        column = SQLColumn(id=int(len(self.data) + 1), name="", datatype=self.session.datatype.VARCHAR)
+        column = SQLColumn(
+            id=int(len(self.data) + 1),
+            name="",
+            datatype=self.session.datatype.VARCHAR,
+            table=CURRENT_TABLE.get_value()
+        )
         return self.add_row(column)
+
+    def del_row(self, item: wx.dataview.DataViewItem):
+        row = self.GetRow(item)
+        del self.data[row]
+        self.RowDeleted(row)
+
+    def move_up(self, item: wx.dataview.DataViewItem):
+        row = self.GetRow(item)
+        if row == 0:
+            return
+        self.data[row].id -= 1
+        self.data[row - 1].id += 1
+        self.data[row - 1], self.data[row] = self.data[row], self.data[row - 1]
+
+        self.RowChanged(row - 1)
+        self.RowChanged(row)
+        return self.GetItem(row - 1)
+
+    def move_down(self, item: wx.dataview.DataViewItem):
+        row = self.GetRow(item)
+        if row == len(self.data) - 1:
+            return
+        self.data[row].id += 1
+        self.data[row + 1].id -= 1
+        self.data[row], self.data[row + 1] = self.data[row + 1], self.data[row]
+
+        self.RowChanged(row + 1)
+        self.RowChanged(row)
+        return self.GetItem(row + 1)
 
     def clear(self):
         self.data = []
@@ -139,7 +178,9 @@ class EditTableModel(AbstractModel):
         # self.collation.set_value(table.collation if table is not None else "")
         # self.engine.set_value(table.engine if table is not None else "")
 
-    def build_table(self, *_args):
+    def build_table(self, *args):
+        if not any(args):
+            return
         if (current_table := CURRENT_TABLE.get_value()) is None:
             session = CURRENT_SESSION.get_value()
             database = CURRENT_DATABASE.get_value()
@@ -162,8 +203,18 @@ class ListTableColumnsController:
 
     def __init__(self, list_ctrl_table_columns: wx.dataview.DataViewCtrl):
         self.list_ctrl_table_columns = list_ctrl_table_columns
+        self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_value_changed)
         self.list_ctrl_table_columns.Bind(wx.EVT_SCROLL, self._on_scroll)
+        # self.list_ctrl_table_columns.Bind(wx.dataview.EVT_DATAVIEW_ITEM_EDITING_DONE, self._on_editing_done)
+
+        self.list_ctrl_table_columns.on_column_insert = self.on_column_insert
+        self.list_ctrl_table_columns.on_column_delete = self.on_column_delete
+        self.list_ctrl_table_columns.on_column_move_up = self.on_column_move_up
+        self.list_ctrl_table_columns.on_column_move_down = self.on_column_move_down
+
+        self.list_ctrl_table_columns.on_index_create = self.on_index_create
+        self.list_ctrl_table_columns.on_index_insert = self.on_index_insert
 
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
         CURRENT_TABLE.subscribe(self._load_table)
@@ -188,6 +239,15 @@ class ListTableColumnsController:
         wx.CallAfter(
             self.list_ctrl_table_columns.EditItem, item, self.list_ctrl_table_columns.GetColumn(column_index)
         )
+
+    def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
+        item = event.GetItem()
+
+        if not item.IsOk():
+            CURRENT_COLUMN.set_value(None)
+        else:
+            CURRENT_COLUMN.set_value(self.model.GetValue(item, 0))
+        event.Skip()
 
     def on_key_down(self, event: wx.KeyEvent):
         print("key_down")
@@ -248,11 +308,74 @@ class ListTableColumnsController:
         #
         event.Skip()
 
-    def on_insert_column(self):
+    def on_column_insert(self):
         item = self.model.add_empty_row()
         self.list_ctrl_table_columns.Select(item)
 
         self._edit_column(item, 1)
+
+    def on_column_delete(self):
+        selected = self.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            return
+        self.model.del_row(selected)
+        self.do_refresh_table()
+
+    def on_column_move_up(self):
+        selected = self.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            return
+
+        if item := self.model.move_up(selected):
+            self.do_refresh_table()
+            self.list_ctrl_table_columns.Select(item)
+
+    def on_column_move_down(self):
+        selected = self.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            return
+        if item := self.model.move_down(selected):
+            self.do_refresh_table()
+            self.list_ctrl_table_columns.Select(item)
+
+    def on_index_create(self, event, index_type: SQLIndexType):
+        selected = self.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            return
+
+        table = CURRENT_TABLE.get_value()
+
+        row = self.model.GetRow(selected)
+        col = self.model.data[row]
+
+        counter = 1
+        indexes = [index.name for index in table.indexes]
+        while (name := f"{index_type.prefix}_{table.name}_{col.name}_{str(counter).zfill(3)}") in indexes:
+            counter += 1
+
+        # name = f"{index_type.lower()}_{col.name}" if not is_primary else "PRIMARY"
+        new_index = SQLIndex(name=name, type=index_type, columns=[col.name])
+        table.indexes.append(new_index)
+
+        self.do_refresh_table()
+
+        return True
+
+    def on_index_insert(self, event: wx.Event, index: SQLIndex) -> Optional[bool]:
+        selected = self.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            return
+        row = self.model.GetRow(selected)
+        col = self.model.data[row]
+        index.columns.append(col.name)
+
+        self.do_refresh_table()
+
+        return True
+
+    def on_index_delete(self):
+        # selected = self.list_ctrl_table_columns.GetSelection()
+        pass
 
     def _on_value_changed(self, event: wx.dataview.DataViewEvent):
         print("#" * 10, "ON_EDITING_DONE", "#" * 10)
@@ -269,7 +392,7 @@ class ListTableColumnsController:
         if column == 2:
             datatype = self.session.datatype.get_by_name(value)
 
-            self.model.SetValue(None, item, 3)
+            self.model.SetValue("", item, 3)
 
             if datatype is not None:
                 if not any([datatype.has_length, datatype.has_precision, datatype.has_set]):
@@ -311,6 +434,16 @@ class ListTableColumnsController:
 
         if table is not None:
             table.columns.append(column, replace_existing=True)
+
+        NEW_TABLE.set_value(table)
+
+    def do_refresh_table(self):
+        columns: List[SQLColumn] = self.model.data
+
+        table: Optional[SQLTable] = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
+
+        if table is not None:
+            table.columns.override(columns)
 
         NEW_TABLE.set_value(table)
 

@@ -1,5 +1,5 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-27%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-44%25-brightgreen)
 
 # PeterSQL
 
@@ -39,24 +39,54 @@ So, as a personal challenge, I decided to port it to Python.
 - [Python 3.11+](https://www.python.org/)
 - [wxPython 4.2.3](https://wxpython.org/) - native cross-platform interface
 - [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
-
 ---
+
+## 🚀 Installation
+
+PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable dependency management.
+
+### Prerequisites
+
+- Python 3.11+
+- uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/gtripoli/petersql.git
+   cd petersql
+   ```
+
+2. Install dependencies (including dev tools for testing):
+   ```bash
+   uv sync --group dev
+   ```
+
+3. Run the application:
+   ```bash
+   uv run python main.py
+   ```
+
+### Development
+
+For production deployments, install only functional dependencies:
+```bash
+uv sync
+```
+
+To run tests:
+```bash
+uv run --group dev pytest
+```
+
+To run mypy:
+```bash
+uv run --group dev mypy
+```
 
 ## 📸 Screenshot
 <p align="center">
   <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
   <img src="screenshot/main_frame.png" alt="Main Frame" height="200"/>
 </p>
-
----
-
-## 🚀 How to get started
-
-```bash
-git clone https://github.com/gtripoli/petersql.git
-cd petersql
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
-```

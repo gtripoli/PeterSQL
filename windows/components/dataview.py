@@ -7,9 +7,10 @@ import wx.dataview
 from gettext import gettext as _
 
 from helpers.logger import logger
+from models.structures.indextype import SQLIndexType
 from models.session import Session, SessionEngine
 from models.structures.charset import COLLATION_CHARSETS
-from models.structures.database import SQLColumn, SQLTable
+from models.structures.database import SQLColumn, SQLTable, SQLIndex
 from models.structures.datatype import SQLDataType, DataTypeCategory
 
 from windows.main import CURRENT_SESSION, CURRENT_TABLE
@@ -43,13 +44,15 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
     def RenderText(self, text, x, rect, dc, state):
         x, y = rect.GetTopLeft()
 
-        dc.DrawText(str(text), x, self.get_draw_x(rect))
+        # dc.DrawText(str(text), x, self.get_draw_x(rect))
+        super().RenderText(str(text), 0, rect, dc, state)
 
         return True
 
     def get_draw_x(self, rect):
         rect_height = rect.GetHeight()
         chars_height = self.GetView().CharHeight
+        print(rect, chars_height)
 
         return int((rect_height / 2) - (chars_height / 2))
 
@@ -298,7 +301,7 @@ class PopupRenderer(BaseDataViewCustomRenderer):
             popup.close()
 
         popup.OnDismiss = _on_dismiss
-        if self.on_open :
+        if self.on_open:
             self.on_open(popup)
 
         popup.open(self._value, position, wx.Size(width=view.Columns[col].Width, height=-1))
@@ -312,8 +315,10 @@ class IconRender(BaseDataViewCustomRenderer):
         super().__init__("string", wx.dataview.DATAVIEW_CELL_INERT, wx.ALIGN_LEFT)
 
     def Render(self, rect, dc, state):
+        from icons import IconList
+
         data = self.GetView().GetModel().data
-        if not len(data):
+        if not len(data) or int(self._value) > len(data):
             return False
 
         column = data[int(self._value) - 1]
@@ -324,7 +329,9 @@ class IconRender(BaseDataViewCustomRenderer):
         for index in column.indexes:
             if index.is_primary:
                 icons.append(
-                    wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY))
+                    IconList.KEY_PRIMARY.GetBitmap()
+                    # wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY)
+                )
 
             if index.is_unique:
                 icons.append(
@@ -566,6 +573,13 @@ class BooleanRenderer(BaseDataViewCustomRenderer):
 
 
 class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
+    on_column_insert: Callable[[...], Optional[bool]]
+    on_column_delete: Callable[[...], Optional[bool]]
+    on_column_move_up: Callable[[...], Optional[bool]]
+    on_column_move_down: Callable[[...], Optional[bool]]
+
+    on_index_create: Callable[[wx.Event, SQLIndexType], Optional[bool]]
+    on_index_insert: Callable[[wx.Event, SQLIndex], Optional[bool]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -608,11 +622,112 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
 
         self.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
+        self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
+
     def _load_session(self, session: Session):
         if session.datatype == SessionEngine.SQLITE:
             self.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
             self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
+
+    def _on_context_menu(self, event):
+        from icons import BitmapList
+
+        session = CURRENT_SESSION.get_value()
+
+        selected = self.GetSelection()
+        model = self.GetModel()
+        row = model.GetRow(selected)
+        column = model.data[row]
+
+        menu = wx.Menu()
+
+        add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add column\tCTRL+INS"), wx.EmptyString, wx.ITEM_NORMAL)
+        add_item.SetBitmap(BitmapList.ADD)
+        menu.Append(add_item)
+
+        self.Bind(wx.EVT_MENU, self.on_column_insert, add_item)
+
+        delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove column\tCTRL+DEL"), wx.EmptyString, wx.ITEM_NORMAL)
+        delete_item.SetBitmap(BitmapList.DELETE)
+        # delete_item.Enable(selected.IsOk())
+        menu.Append(delete_item)
+        menu.Enable(delete_item.GetId(), selected.IsOk())
+
+        self.Bind(wx.EVT_MENU, self.on_column_delete, delete_item)
+
+        move_up_item = wx.MenuItem(menu, wx.ID_ANY, _("Move up\tCTRL+UP"), wx.EmptyString, wx.ITEM_NORMAL)
+        move_up_item.SetBitmap(BitmapList.ARROW_UP)
+        menu.Append(move_up_item)
+        menu.Enable(move_up_item.GetId(), selected.IsOk())
+
+        self.Bind(wx.EVT_MENU, self.on_column_move_up, move_up_item)
+
+        move_down_item = wx.MenuItem(menu, wx.ID_ANY, _("Move down\tCTRL+D"), wx.EmptyString, wx.ITEM_NORMAL)
+        move_down_item.SetBitmap(BitmapList.ARROW_DOWN)
+        menu.Append(move_down_item)
+        menu.Enable(move_down_item.GetId(), selected.IsOk())
+
+        self.Bind(wx.EVT_MENU, self.on_column_move_down, move_down_item)
+
+        menu.AppendSeparator()
+
+        create_index_menu = wx.Menu()
+
+        for index_type in session.indextype.get_all() :
+            item = wx.MenuItem(create_index_menu, wx.ID_ANY, index_type.name, wx.EmptyString, wx.ITEM_NORMAL)
+            item.SetBitmap(index_type.bitmap)
+            create_index_menu.Append(item)
+            create_index_menu.Enable(item.GetId(), selected.IsOk())
+            self.Bind(wx.EVT_MENU, lambda e : self.on_index_create(e, index_type), item)
+
+        # primary_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Primary"), wx.EmptyString, wx.ITEM_NORMAL)
+        # primary_item.SetBitmap(BitmapList.KEY_PRIMARY)
+        # create_index_menu.Append(primary_item)
+        # create_index_menu.Enable(primary_item.GetId(), selected.IsOk())
+        # self.Bind(wx.EVT_MENU, lambda e : self.on_index_create(e, SQLIndexType.), primary_item)
+        #
+        # index_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Index"), wx.EmptyString, wx.ITEM_NORMAL)
+        # index_item.SetBitmap(BitmapList.KEY_NORMAL)
+        # create_index_menu.Append(index_item)
+        # create_index_menu.Enable(index_item.GetId(), selected.IsOk())
+        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "INDEX"), index_item)
+        #
+        # unique_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Unique"), wx.EmptyString, wx.ITEM_NORMAL)
+        # unique_item.SetBitmap(BitmapList.KEY_UNIQUE)
+        # create_index_menu.Append(unique_item)
+        # create_index_menu.Enable(unique_item.GetId(), selected.IsOk())
+        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "UNIQUE"), unique_item)
+        #
+        # spatial_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Spatial"), wx.EmptyString, wx.ITEM_NORMAL)
+        # spatial_item.SetBitmap(BitmapList.KEY_SPATIAL)
+        # create_index_menu.Append(spatial_item)
+        # create_index_menu.Enable(spatial_item.GetId(), selected.IsOk())
+        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "SPATIAL"), spatial_item)
+        #
+        # fulltext_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Fulltext"), wx.EmptyString, wx.ITEM_NORMAL)
+        # fulltext_item.SetBitmap(BitmapList.KEY_FULLTEXT)
+        # create_index_menu.Append(fulltext_item)
+        # create_index_menu.Enable(fulltext_item.GetId(), selected.IsOk())
+        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "fulltext"), fulltext_item)
+
+        # self.Bind(wx.EVT_MENU, self._on_create_spatial_index, spatial_item)
+        menu.AppendSubMenu(create_index_menu, _("Create new index"))
+
+        table = CURRENT_TABLE.get_value()
+
+        add_to_index_menu = wx.Menu()
+        for index in list(table.indexes):
+            if column.name not in index.columns:
+                item = wx.MenuItem(add_to_index_menu, wx.ID_ANY, index.name, wx.EmptyString, wx.ITEM_NORMAL)
+                item.SetBitmap(index.type.bitmap)
+                self.Bind(wx.EVT_MENU, lambda e : self.on_index_insert(e, index), item)
+
+                add_to_index_menu.Append(item)
+
+        menu.AppendSubMenu(add_to_index_menu, _("Add to index"))
+
+        self.PopupMenu(menu)
 
 
 class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):

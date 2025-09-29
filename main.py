@@ -12,8 +12,6 @@ from gettext import gettext as _, translation
 from helpers.logger import logger
 from helpers.observables import ObservableObject, Loader
 
-from models.session import Session
-
 WORKDIR = os.path.abspath(os.path.dirname(__file__))
 
 SETTINGS_CONFIG_FILE = os.path.join(WORKDIR, "settings.yml")

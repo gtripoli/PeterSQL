@@ -14,7 +14,7 @@ from models.structures.database import SQLTable, SQLColumn
 from models.structures.statement import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION
+from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION, CURRENT_COLUMN
 from windows.main.table import EditTableModel, ListTableColumnsController, NEW_TABLE, NEW_COLUMN
 from windows.main.records import TableRecordsController
 from windows.main.sessions import TreeSessionsController
@@ -105,6 +105,8 @@ class MainFrameController(MainFrameView):
 
         CURRENT_TABLE.subscribe(self._on_current_table)
 
+        CURRENT_COLUMN.subscribe(self._on_current_column)
+
         NEW_TABLE.subscribe(self._on_new_table)
 
         # NEW_COLUMN.subscribe(self._on_new_column)
@@ -161,8 +163,17 @@ class MainFrameController(MainFrameView):
         sm = SessionManagerController(self, sessions=self.app.settings.get_value("sessions"))
         sm.Show()
 
-    def on_insert_column(self, event):
-        self.controller_list_table_columns.on_insert_column()
+    def on_column_insert(self, event):
+        self.controller_list_table_columns.on_column_insert()
+
+    def on_column_delete(self, event):
+        self.controller_list_table_columns.on_column_delete()
+
+    def on_column_move_up(self, event):
+        self.controller_list_table_columns.on_column_move_up()
+
+    def on_column_move_down(self, event):
+        self.controller_list_table_columns.on_column_move_down()
 
     def on_insert_table(self, event):
         NEW_TABLE.set_value(None)
@@ -193,6 +204,11 @@ class MainFrameController(MainFrameView):
             self.table_name.SetFocus()
 
         self.btn_table_delete.Enable(table is not None)
+
+    def _on_current_column(self, column: SQLColumn):
+        self.btn_column_delete.Enable(column is not None)
+        self.btn_column_move_up.Enable(column is not None)
+        self.btn_column_move_down.Enable(column is not None)
 
     def on_page_changed(self, event: wx.BookCtrlEvent):
         if event.GetEventObject() != self.MainFrameNotebook:

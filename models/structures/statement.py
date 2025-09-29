@@ -6,7 +6,7 @@ from typing import Dict, Iterator, Any, Optional, Union, List, NamedTuple
 from helpers.logger import logger
 
 from helpers.observables import ObservableArray
-from models.structures.database import SQLDatabase, SQLTable, SQLColumn
+from models.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex
 
 LOG_QUERY: ObservableArray[str] = ObservableArray()
 
@@ -65,6 +65,25 @@ class AbstractStatement(abc.ABC):
     def _on_disconnect(self, *args, **kwargs):
         print("DISCONNECTED", args, kwargs)
 
+    @staticmethod
+    def _parse_type(column_definition: str) -> ParsedColumnType:
+        match = re.search(r'(\w+)\s*\((\d+)(,\s*(\d+))?(\s*zerofill)?\)', column_definition)
+        if match:
+            return ParsedColumnType(
+                name=match.group(1).upper(),
+                precision=int(match.group(2)),
+                scale=int(match.group(4)) if match.group(4) else None,
+            )
+
+        match = re.search(r'^(enum|set)\((.*)\)$', column_definition)
+        if match:
+            return ParsedColumnType(
+                name=match.group(1).upper(),
+                set=[value.strip("'") for value in match.group(2).split(",")]
+            )
+
+        return ParsedColumnType(name=column_definition.upper())
+
     @abc.abstractmethod
     def get_server_version(self) -> str:
         raise NotImplementedError
@@ -82,7 +101,11 @@ class AbstractStatement(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_columns(self, database: SQLDatabase, table: SQLTable) -> Iterator[SQLColumn]:
+    def get_columns(self, table: SQLTable) -> Iterator[SQLColumn]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_indexes(self, table: SQLTable) -> Iterator[SQLIndex]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -105,9 +128,18 @@ class AbstractStatement(abc.ABC):
     def build_new_table(self, database: SQLDatabase) -> SQLTable:
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def _get_column_definition(self, table: SQLTable, column: SQLColumn) -> str:
-        raise NotImplementedError
+    def build_column_definition(self, table: SQLTable, column: SQLColumn) -> str:
+        d = column.get_definition()
+        parts = [d['name'], d['datatype'], d['nullable']]
+        if 'default' in d:
+            parts.append(d['default'])
+        if 'collation' in d:
+            parts.append(d['collation'])
+        if 'comment' in d:
+            parts.append(d['comment'])
+        if 'virtual' in d:
+            parts.append(d['virtual'])
+        return ' '.join(parts)
 
     def _execute_transaction(self, sql: str, operation_name: str) -> bool:
         try:
@@ -150,25 +182,6 @@ class AbstractStatement(abc.ABC):
             raise
 
         return self.cursor
-
-    @staticmethod
-    def _parse_type(column_definition: str) -> ParsedColumnType:
-        match = re.search(r'(\w+)\s*\((\d+)(,\s*(\d+))?(\s*zerofill)?\)', column_definition)
-        if match:
-            return ParsedColumnType(
-                name=match.group(1).upper(),
-                precision=int(match.group(2)),
-                scale=int(match.group(4)) if match.group(4) else None,
-            )
-
-        match = re.search(r'^(enum|set)\((.*)\)$', column_definition)
-        if match:
-            return ParsedColumnType(
-                name=match.group(1).upper(),
-                set=[value.strip("'") for value in match.group(2).split(",")]
-            )
-
-        return ParsedColumnType(name=column_definition.upper())
 
 
 class Transaction:
