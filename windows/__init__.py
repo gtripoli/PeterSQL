@@ -7,6 +7,8 @@
 ## PLEASE DO *NOT* EDIT THIS FILE!
 ###########################################################################
 
+from .components.dataview import TableIndexesDataViewCtrl
+from .components.dataview import TableForeignKeysDataViewCtrl
 from .components.dataview import TableColumnsDataViewCtrl
 from .components.dataview import TableRecordsDataViewCtrl
 import wx
@@ -732,12 +734,73 @@ class MainFrameView ( wx.Frame ):
 		self.PanelTableIndex = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
 
+		bSizer76 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_button27 = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer76.Add( self.m_button27, 0, wx.ALL, 5 )
+
+		self.m_button28 = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer76.Add( self.m_button28, 0, wx.ALL, 5 )
+
+		self.m_button29 = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer76.Add( self.m_button29, 0, wx.ALL, 5 )
+
+
+		bSizer28.Add( bSizer76, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 5 )
+
+		self.dv_table_indexes = TableIndexesDataViewCtrl( self.PanelTableIndex, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer28.Add( self.dv_table_indexes, 1, wx.ALL|wx.EXPAND, 0 )
+
 
 		self.PanelTableIndex.SetSizer( bSizer28 )
 		self.PanelTableIndex.Layout()
 		bSizer28.Fit( self.PanelTableIndex )
 		self.m_notebook3.AddPage( self.PanelTableIndex, _(u"Indexes"), False )
 		m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/lightning.png", wx.BITMAP_TYPE_ANY )
+		if ( m_notebook3Bitmap.IsOk() ):
+			m_notebook3Images.Add( m_notebook3Bitmap )
+			self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
+			m_notebook3Index += 1
+
+		self.PanelTableFK = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer77 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer78 = wx.BoxSizer( wx.HORIZONTAL )
+
+		bSizer79 = wx.BoxSizer( wx.VERTICAL )
+
+		self.btn_foreign_key_insert = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_foreign_key_insert.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer79.Add( self.btn_foreign_key_insert, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.btn_foreign_key_delete = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_foreign_key_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_foreign_key_delete.Enable( False )
+
+		bSizer79.Add( self.btn_foreign_key_delete, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.btn_foreign_key_clear = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_foreign_key_clear.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer79.Add( self.btn_foreign_key_clear, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		bSizer78.Add( bSizer79, 0, wx.ALIGN_CENTER, 5 )
+
+		self.dv_table_foreign_keys = TableForeignKeysDataViewCtrl( self.PanelTableFK, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer78.Add( self.dv_table_foreign_keys, 1, wx.ALL|wx.EXPAND, 0 )
+
+
+		bSizer77.Add( bSizer78, 1, wx.EXPAND, 5 )
+
+
+		self.PanelTableFK.SetSizer( bSizer77 )
+		self.PanelTableFK.Layout()
+		bSizer77.Fit( self.PanelTableFK )
+		self.m_notebook3.AddPage( self.PanelTableFK, _(u"Foreign Key"), False )
+		m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/table_relationship.png", wx.BITMAP_TYPE_ANY )
 		if ( m_notebook3Bitmap.IsOk() ):
 			m_notebook3Images.Add( m_notebook3Bitmap )
 			self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
@@ -1002,6 +1065,9 @@ class MainFrameView ( wx.Frame ):
 		self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 		self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
 		self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
+		self.btn_foreign_key_insert.Bind( wx.EVT_BUTTON, self.on_foreign_key_insert )
+		self.btn_foreign_key_delete.Bind( wx.EVT_BUTTON, self.on_foreign_key_delete )
+		self.btn_foreign_key_clear.Bind( wx.EVT_BUTTON, self.on_foreign_key_clear )
 		self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_column_insert )
 		self.btn_column_delete.Bind( wx.EVT_BUTTON, self.on_column_delete )
 		self.btn_column_move_up.Bind( wx.EVT_BUTTON, self.on_column_move_up )
@@ -1031,6 +1097,15 @@ class MainFrameView ( wx.Frame ):
 		event.Skip()
 
 	def on_insert_table( self, event ):
+		event.Skip()
+
+	def on_foreign_key_insert( self, event ):
+		event.Skip()
+
+	def on_foreign_key_delete( self, event ):
+		event.Skip()
+
+	def on_foreign_key_clear( self, event ):
 		event.Skip()
 
 	def on_column_insert( self, event ):

@@ -15,7 +15,9 @@ class SQLDatabase:
     id: Optional[int]
     name: str
 
-    get_tables_handler: Callable[[Self], Iterator['SQLTable']] = dataclasses.field(default_factory=lambda: lambda database: iter([]))
+    tables: LazyList['SQLTable'] = dataclasses.field(default_factory=lambda: LazyList(lambda: list([])))
+
+    get_tables_handler: Callable[[Self], List['SQLTable']] = dataclasses.field(default_factory=lambda: lambda database: list([]))
 
     control: Optional[wx.Control] = None
 
@@ -40,11 +42,13 @@ class SQLTable:
     database: SQLDatabase
     engine: Optional[str]
 
-    get_indexes_handler: Callable[[Self], Iterator['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda table: iter([]))
-    get_columns_handler: Callable[[Self], Iterator['SQLColumn']] = dataclasses.field(default_factory=lambda: lambda table: iter([]))
+    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=lambda: LazyList(lambda: list([])))
+    indexes: LazyList['SQLIndex'] = dataclasses.field(default_factory=lambda: LazyList(lambda: list([])))
+    foreign_keys: LazyList['SQLForeignKey'] = dataclasses.field(default_factory=lambda: LazyList(lambda: list([])))
 
-    columns: LazyList['SQLColumn'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
-    indexes: LazyList['SQLIndex'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
+    get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(default_factory=lambda: lambda table: list([]))
+    get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda table: list([]))
+    get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(default_factory=lambda: lambda table: list([]))
 
     comment: Optional[str] = None
     count_rows: Optional[int] = None
@@ -72,8 +76,10 @@ class SQLTable:
     def __post_init__(self):
         self.indexes = LazyList(lambda: self.get_indexes_handler(self))
         self.columns = LazyList(lambda: self.get_columns_handler(self))
+        self.foreign_keys = LazyList(lambda: self.get_foreign_keys_handler(self))
 
     def is_valid(self) -> bool:
+        print("table is valid:", self.name != "", len(self.columns) > 0, {c.name: c.is_valid for c in self.columns})
         return all([self.name != "", len(self.columns) > 0, all([c.is_valid for c in self.columns])])
 
     def __ne__(self, other: Any) -> bool:
@@ -102,7 +108,7 @@ class SQLColumn:
     name: str
     table: SQLTable
     datatype: SQLDataType
-    get_indexes_handler: Callable[[Self], Iterator['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda column: iter([]))
+    # get_indexes_handler: Callable[[SQLTable], Iterator['SQLIndex']] = dataclasses.field(default_factory=lambda: lambda index: iter([]))
     is_nullable: bool = False
     extra: Optional[str] = None
     # key: Optional[str] = None
@@ -125,24 +131,15 @@ class SQLColumn:
     virtuality: Optional[Literal["VIRTUAL", "STORED"]] = None
     expression: Optional[str] = None
 
-    indexes: LazyList['SQLIndex'] = dataclasses.field(default_factory=lambda: LazyList(lambda: iter([])))
-
-    def __post_init__(self):
-        self.indexes = LazyList(lambda: self.get_indexes_handler(self))
-
-    def __ne__(self, other):
+    def __eq__(self, other):
         if not isinstance(other, SQLColumn):
-            return True
+            return False
 
-        return any([
-            getattr(self, field.name) != getattr(other, field.name)
+        return all([
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.default_factory is dataclasses.MISSING and field.type != SQLTable
         ])
-
-    # @property
-    # def is_primary(self) -> bool:
-    #     return any(index.is_primary for index in self.indexes)
 
     @property
     def is_valid(self):
@@ -252,11 +249,12 @@ class SQLColumn:
 
 @dataclasses.dataclass
 class SQLIndex:
+    id: int
     name: str
     type: SQLIndexType
     columns: List[str]
-    expression: Optional[str] = None
-    partial_condition: Optional[str] = None
+    condition: str = dataclasses.field(default_factory=str)
+    expression: List[str] = dataclasses.field(default_factory=list)
 
     def __ne__(self, other):
         if not isinstance(other, SQLIndex):
@@ -264,6 +262,28 @@ class SQLIndex:
 
         return any([
             getattr(self, field.name) != getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.default_factory is dataclasses.MISSING
+        ])
+
+
+@dataclasses.dataclass
+class SQLForeignKey:
+    id: int
+    name: str
+    columns: List[str]
+    reference_table: str = dataclasses.field(default_factory=str)
+    reference_columns: List[str] = dataclasses.field(default_factory=list)
+
+    on_update: str = dataclasses.field(default_factory=str)
+    on_delete: str = dataclasses.field(default_factory=str)
+
+    def __eq__(self, other):
+        if not isinstance(other, SQLForeignKey):
+            return False
+
+        return all([
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.default_factory is dataclasses.MISSING
         ])

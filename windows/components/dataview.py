@@ -7,13 +7,13 @@ import wx.dataview
 from gettext import gettext as _
 
 from helpers.logger import logger
-from models.structures.indextype import SQLIndexType
+from models.structures.indextype import SQLIndexType, StandardIndexType
 from models.session import Session, SessionEngine
 from models.structures.charset import COLLATION_CHARSETS
-from models.structures.database import SQLColumn, SQLTable, SQLIndex
+from models.structures.database import SQLColumn, SQLTable, SQLIndex, SQLDatabase
 from models.structures.datatype import SQLDataType, DataTypeCategory
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
 
 
 class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
@@ -63,6 +63,7 @@ class BasePopup(wx.PopupTransientWindow):
     def __init__(self, parent):
         super().__init__(parent, flags=wx.BORDER_NONE)
         self._value = None
+        self._initial = None
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
@@ -76,12 +77,16 @@ class BasePopup(wx.PopupTransientWindow):
         self._value = value
         return self
 
+    def get_initial(self):
+        return self._initial
+
     @staticmethod
     def render(value):
         return value
 
     def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
-        self.set_value(value)
+        self._value = value
+        self._initial = value
 
         self.SetPosition(position)
         self.SetMinSize(size)
@@ -255,30 +260,82 @@ class PopupCheckList(BasePopup):
         self.sizer.Add(self.check_list_box, 0, wx.ALL | wx.EXPAND, 5)
         self.check_list_box.Bind(wx.EVT_CHECKLISTBOX, self._on_select)
 
+        self.check_list_box.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        # self.check_list_box.Bind(wx.EVT_KEY_DOWN, self._on_char_hook)
+
     def open(self, value: str, position: wx.Point, size: wx.Size) -> Self:
+        max_width = 0
+        dc = wx.ClientDC(self.check_list_box)
+        for choice in self.choices:
+            max_width = max(max_width, dc.GetTextExtent(choice)[0])
+
+        size = wx.Size(max(max_width + 100, size.width), -1)
+
         self.check_list_box.AppendItems(self.choices)
-        self.check_list_box.SetCheckedStrings(value.split(','))
-        #
-        return super().open(value, position, size)
+
+        super().open(value, position, size)
+
+        if value := self.get_value():
+            self.check_list_box.SetCheckedStrings(value.split(', '))
+
+        if self.check_list_box.GetCount() > 0:
+            self.check_list_box.SetSelection(0)
+
+        wx.CallAfter(self.SetFocus)
+
+        return self
 
     def _on_select(self, event):
-        self._value = ",".join(self.check_list_box.GetCheckedStrings())
+        self._value = ", ".join(self.check_list_box.GetCheckedStrings())
         event.Skip()
 
+    def _on_char_hook(self, event):
+        key_code = event.GetKeyCode()
+
+        print("PopupCheckList EVT_CHAR_HOOK key_code:", key_code, "ENTER:", wx.WXK_RETURN, "NUMPAD_ENTER:", wx.WXK_NUMPAD_ENTER)
+
+        if key_code == wx.WXK_SPACE:
+            selection = self.check_list_box.GetSelection()
+            if selection != wx.NOT_FOUND:
+                current_state = self.check_list_box.IsChecked(selection)
+                self.check_list_box.Check(selection, not current_state)
+                self._value = ", ".join(self.check_list_box.GetCheckedStrings())
+                logger.debug(f"Space pressed, toggled item {selection}")
+        elif key_code == wx.WXK_UP:
+            current = self.check_list_box.GetSelection()
+            if current > 0:
+                self.check_list_box.SetSelection(current - 1)
+                logger.debug(f"Up arrow, selected item {current - 1}")
+        elif key_code == wx.WXK_DOWN:
+            current = self.check_list_box.GetSelection()
+            if current < self.check_list_box.GetCount() - 1:
+                self.check_list_box.SetSelection(current + 1)
+                logger.debug(f"Down arrow, selected item {current + 1}")
+        elif key_code == wx.WXK_RETURN or key_code == wx.WXK_NUMPAD_ENTER:
+            logger.debug("ENTER pressed, closing popup")
+            self.close()
+        elif key_code == wx.WXK_ESCAPE:
+            logger.debug("ESC pressed, reverting to initial value")
+            self.set_value(self.get_initial())
+            self.close()
+        else:
+            print("Other key, skipping")
+            event.Skip()
+
     def set_choices(self, choices: List[str]) -> Self:
+        print("set_choices", choices)
         self.choices = choices
 
         return self
 
 
 class PopupRenderer(BaseDataViewCustomRenderer):
-    on_open: Optional[Callable[[BasePopup], None]] = None
-
-    def __init__(self, popup_class: Type[BasePopup]):
+    def __init__(self, popup_class: Type[BasePopup], on_open: Optional[Callable[[BasePopup], None]] = None):
         super().__init__("string", wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
 
         self._value = ""
         self.popup_class = popup_class
+        self.on_open: Optional[Callable[[BasePopup], None]] = on_open
 
     def Render(self, rect, dc, state):
         self.RenderText(self.popup_class.render(self._value), 0, rect, dc, state)
@@ -297,113 +354,21 @@ class PopupRenderer(BaseDataViewCustomRenderer):
             if new_value != self._value:
                 self._value = new_value
                 model.SetValue(self._value, item, col)
-
             popup.close()
 
-        popup.OnDismiss = _on_dismiss
         if self.on_open:
             self.on_open(popup)
+
+        popup.OnDismiss = _on_dismiss
 
         popup.open(self._value, position, wx.Size(width=view.Columns[col].Width, height=-1))
 
         return True
 
 
-class IconRender(BaseDataViewCustomRenderer):
-
-    def __init__(self):
-        super().__init__("string", wx.dataview.DATAVIEW_CELL_INERT, wx.ALIGN_LEFT)
-
-    def Render(self, rect, dc, state):
-        from icons import IconList
-
-        data = self.GetView().GetModel().data
-        if not len(data) or int(self._value) > len(data):
-            return False
-
-        column = data[int(self._value) - 1]
-
-        icons = []
-        x, y = rect.GetTopLeft()
-
-        for index in column.indexes:
-            if index.is_primary:
-                icons.append(
-                    IconList.KEY_PRIMARY.GetBitmap()
-                    # wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_ANY)
-                )
-
-            if index.is_unique:
-                icons.append(
-                    wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_unique.png"), wx.BITMAP_TYPE_ANY))
-
-            if index.is_fulltext:
-                icons.append(
-                    wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_ANY))
-
-            if index.is_spatial:
-                icons.append(
-                    wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_spatial.png"), wx.BITMAP_TYPE_ANY))
-
-            if index.is_normal:
-                icons.append(
-                    wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_index.png"), wx.BITMAP_TYPE_ANY))
-
-        # dc.DrawText(self._value, x, self.get_draw_x(rect))
-        self.RenderText(self._value, x, rect, dc, state)
-
-        tw, th = dc.GetTextExtent(self._value)
-        x += tw + 4
-
-        spacing = 1
-        for icon in icons:
-            w, h = icon.GetSize()
-            text_y = y + (th - h) // 2
-            dc.DrawBitmap(icon, x, text_y, True)
-            x += w + spacing
-
-        return True
-
-
-class EnumRenderer(wx.dataview.DataViewChoiceRenderer):
+class ChoiceRenderer(wx.dataview.DataViewChoiceRenderer):
     def __init__(self, choices):
         super().__init__(choices, wx.dataview.DATAVIEW_CELL_EDITABLE, wx.ALIGN_LEFT)
-
-
-class SetRenderer(BaseDataViewCustomRenderer):
-    """Renderer for SET columns with single-selection"""
-
-    def __init__(self, choices):
-        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
-        self.choices = choices
-
-    def HasEditorCtrl(self):
-        return True
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        listbox = wx.CheckListBox(parent, choices=self.choices, style=wx.LB_MULTIPLE)
-        listbox.SetSize(rect.GetSize())
-
-        if value:
-            current_values = value.split(',')
-            for i, choice in enumerate(self.choices):
-                if choice in current_values:
-                    listbox.Check(i)
-
-        return listbox
-
-    def GetValueFromEditorCtrl(self, editor):
-        """Get comma-separated string of selected values"""
-        if not editor:
-            return ""
-
-        selected = []
-
-        if editor:  # Check if editor exists
-            for i in range(editor.GetCount()):
-                if editor.IsChecked(i):
-                    selected.append(editor.GetString(i))
-        return ','.join(selected)
 
 
 class IntegerRenderer(BaseDataViewCustomRenderer):
@@ -578,16 +543,15 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
     on_column_move_up: Callable[[...], Optional[bool]]
     on_column_move_down: Callable[[...], Optional[bool]]
 
-    on_index_create: Callable[[wx.Event, SQLIndexType], Optional[bool]]
-    on_index_insert: Callable[[wx.Event, SQLIndex], Optional[bool]]
+    insert_column_index: Callable[[wx.Event, SQLIndexType], Optional[bool]]
+    append_column_index: Callable[[wx.Event, SQLIndex], Optional[bool]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         CURRENT_SESSION.subscribe(self._load_session)
 
-        column_id_render = IconRender()
-        column = wx.dataview.DataViewColumn(_(u"#"), column_id_render, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        column = wx.dataview.DataViewColumn(_(u"#"), wx.dataview.DataViewIconTextRenderer(align=wx.ALIGN_LEFT), 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
         self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
@@ -597,10 +561,6 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         self.AppendColumn(column)
 
         self.AppendTextColumn(_(u"Length/Set"), 3, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
-
-        # column_unsigned_renderer = BooleanRenderer()
-        # column = wx.dataview.DataViewColumn(_(u"Unsigned"), column_unsigned_renderer, 4, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_CENTER)
-        # self.AppendColumn(column)
 
         self.AppendToggleColumn(_(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
         self.AppendToggleColumn(_(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
@@ -634,6 +594,7 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         from icons import BitmapList
 
         session = CURRENT_SESSION.get_value()
+        table = CURRENT_TABLE.get_value()
 
         selected = self.GetSelection()
         model = self.GetModel()
@@ -674,58 +635,34 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
 
         create_index_menu = wx.Menu()
 
-        for index_type in session.indextype.get_all() :
+        for index_type in session.indextype.get_all():
             item = wx.MenuItem(create_index_menu, wx.ID_ANY, index_type.name, wx.EmptyString, wx.ITEM_NORMAL)
             item.SetBitmap(index_type.bitmap)
             create_index_menu.Append(item)
-            create_index_menu.Enable(item.GetId(), selected.IsOk())
-            self.Bind(wx.EVT_MENU, lambda e : self.on_index_create(e, index_type), item)
 
-        # primary_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Primary"), wx.EmptyString, wx.ITEM_NORMAL)
-        # primary_item.SetBitmap(BitmapList.KEY_PRIMARY)
-        # create_index_menu.Append(primary_item)
-        # create_index_menu.Enable(primary_item.GetId(), selected.IsOk())
-        # self.Bind(wx.EVT_MENU, lambda e : self.on_index_create(e, SQLIndexType.), primary_item)
-        #
-        # index_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Index"), wx.EmptyString, wx.ITEM_NORMAL)
-        # index_item.SetBitmap(BitmapList.KEY_NORMAL)
-        # create_index_menu.Append(index_item)
-        # create_index_menu.Enable(index_item.GetId(), selected.IsOk())
-        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "INDEX"), index_item)
-        #
-        # unique_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Unique"), wx.EmptyString, wx.ITEM_NORMAL)
-        # unique_item.SetBitmap(BitmapList.KEY_UNIQUE)
-        # create_index_menu.Append(unique_item)
-        # create_index_menu.Enable(unique_item.GetId(), selected.IsOk())
-        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "UNIQUE"), unique_item)
-        #
-        # spatial_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Spatial"), wx.EmptyString, wx.ITEM_NORMAL)
-        # spatial_item.SetBitmap(BitmapList.KEY_SPATIAL)
-        # create_index_menu.Append(spatial_item)
-        # create_index_menu.Enable(spatial_item.GetId(), selected.IsOk())
-        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "SPATIAL"), spatial_item)
-        #
-        # fulltext_item = wx.MenuItem(create_index_menu, wx.ID_ANY, _("Fulltext"), wx.EmptyString, wx.ITEM_NORMAL)
-        # fulltext_item.SetBitmap(BitmapList.KEY_FULLTEXT)
-        # create_index_menu.Append(fulltext_item)
-        # create_index_menu.Enable(fulltext_item.GetId(), selected.IsOk())
-        # self.Bind(wx.EVT_MENU, partial(self.on_index_create, "fulltext"), fulltext_item)
+            if index_type.name == "PRIMARY" and len([pk for pk in list(table.indexes) if pk.type == StandardIndexType.PRIMARY]) > 0:
+                # primary index already exists
+                create_index_menu.Enable(item.GetId(), False)
+            else:
+                create_index_menu.Enable(item.GetId(), selected.IsOk())
+                self.Bind(wx.EVT_MENU, lambda e, it=index_type: self.insert_column_index(e, it), item)
 
-        # self.Bind(wx.EVT_MENU, self._on_create_spatial_index, spatial_item)
         menu.AppendSubMenu(create_index_menu, _("Create new index"))
 
-        table = CURRENT_TABLE.get_value()
-
-        add_to_index_menu = wx.Menu()
+        append_index_menu = wx.Menu()
         for index in list(table.indexes):
             if column.name not in index.columns:
-                item = wx.MenuItem(add_to_index_menu, wx.ID_ANY, index.name, wx.EmptyString, wx.ITEM_NORMAL)
+                item = wx.MenuItem(append_index_menu, wx.ID_ANY, index.name, wx.EmptyString, wx.ITEM_NORMAL)
                 item.SetBitmap(index.type.bitmap)
-                self.Bind(wx.EVT_MENU, lambda e : self.on_index_insert(e, index), item)
+                append_index_menu.Append(item)
 
-                add_to_index_menu.Append(item)
+                if not index.type.enable_append:
+                    append_index_menu.Enable(item.GetId(), False)
 
-        menu.AppendSubMenu(add_to_index_menu, _("Add to index"))
+                else:
+                    self.Bind(wx.EVT_MENU, lambda e, idx=index: self.append_column_index(e, idx), item)
+
+        menu.AppendSubMenu(append_index_menu, _("Append to index"))
 
         self.PopupMenu(menu)
 
@@ -739,7 +676,7 @@ class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
 
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         if column.datatype.name == 'ENUM' and column.set:
-            return EnumRenderer(column.set)
+            return ChoiceRenderer(column.set)
 
         elif column.datatype.name == 'SET' and column.set:
             popoup_render = PopupRenderer(PopupCheckList)
@@ -780,3 +717,119 @@ class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
 
                 col = wx.dataview.DataViewColumn(column.name, renderer, i, width=-1, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
                 self.AppendColumn(col)
+
+
+class TableIndexesDataViewCtrl(wx.dataview.DataViewCtrl):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        icon_render_column0 = wx.dataview.DataViewIconTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column = wx.dataview.DataViewColumn(_(u"Name"), icon_render_column0, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column)
+
+        self.AppendTextColumn(_(u"Column(s)/Expression"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        self.AppendTextColumn(_(u"Condition"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+
+class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
+
+    on_foreign_key_insert: Callable[[...], Optional[bool]]
+    on_foreign_key_delete: Callable[[...], Optional[bool]]
+    on_foreign_key_update: Callable[[...], Optional[bool]]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        icon_render_column0 = wx.dataview.DataViewIconTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column = wx.dataview.DataViewColumn(_(u"Name"), icon_render_column0, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        column.SetMinWidth(250)
+        self.AppendColumn(column)
+
+        # Colonna 1: Column(s) - larghezza minima 150px
+        popup_render_column_1 = PopupRenderer(PopupCheckList)
+        popup_render_column_1.on_open = lambda popup: popup.set_choices([c.name for c in list(CURRENT_TABLE.get_value().columns)])
+        column1 = wx.dataview.DataViewColumn(_(u"Column(s)"), popup_render_column_1, 1, width=150, flags=wx.dataview.DATAVIEW_COL_RESIZABLE, align=wx.ALIGN_LEFT)
+        column1.SetMinWidth(150)
+        self.AppendColumn(column1)
+
+        # colonne 2-5 vengono caricate dopo il database
+        CURRENT_DATABASE.subscribe(self._load_database)
+
+        self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
+
+    def _on_context_menu(self, event):
+        from icons import BitmapList
+
+        selected = self.GetSelection()
+        model = self.GetModel()
+        row = model.GetRow(selected)
+        foreign_key = model.data[row]
+
+        menu = wx.Menu()
+
+        add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
+        add_item.SetBitmap(BitmapList.ADD)
+        menu.Append(add_item)
+
+        self.Bind(wx.EVT_MENU, self.on_foreign_key_insert, add_item)
+
+        delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
+        delete_item.SetBitmap(BitmapList.DELETE)
+        menu.Append(delete_item)
+        menu.Enable(delete_item.GetId(), selected.IsOk())
+
+        self.Bind(wx.EVT_MENU, self.on_foreign_key_delete, delete_item)
+
+        # Forse non necessario, dato che editing è già disponibile
+        # update_item = wx.MenuItem(menu, wx.ID_ANY, _("Update foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
+        # menu.Append(update_item)
+        # self.Bind(wx.EVT_MENU, self.on_foreign_key_update, update_item)
+
+        self.PopupMenu(menu)
+
+    def _load_database(self, database: SQLDatabase) -> None:
+        if not database:
+            return
+
+        if column_2 := self.GetColumn(2):
+            self.DeleteColumn(column_2)
+
+        tables = list(CURRENT_DATABASE.get_value().tables)
+        select_render_column_2 = ChoiceRenderer([t.name for t in tables])
+        column2 = wx.dataview.DataViewColumn(_(u"Reference table"), select_render_column_2, 2, width=wx.COL_WIDTH_AUTOSIZE, flags=wx.dataview.DATAVIEW_COL_RESIZABLE, align=wx.ALIGN_LEFT)
+        column2.SetMinWidth(140)
+        self.InsertColumn(2, column2)
+
+        if column_3 := self.GetColumn(3):
+            self.DeleteColumn(column_3)
+
+        popup_render_column_3 = PopupRenderer(PopupCheckList)
+        popup_render_column_3.on_open = lambda popup: self._load_reference_columns(popup, select_render_column_2)
+        column3 = wx.dataview.DataViewColumn(_(u"Reference column(s)"), popup_render_column_3, 3, width=200, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
+        column3.SetMinWidth(200)
+        self.InsertColumn(3, column3)
+
+        if column_4 := self.GetColumn(4):
+            self.DeleteColumn(column_4)
+
+        choice_render_column_4 = ChoiceRenderer(["RESTRICT", "CASCADE", "SET NULL", "NO ACTION"])
+        column4 = wx.dataview.DataViewColumn(_(u"On UPDATE"), choice_render_column_4, 4, width=100, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
+        column4.SetMinWidth(100)
+        self.InsertColumn(4, column4)
+
+        if column_5 := self.GetColumn(5):
+            self.DeleteColumn(column_5)
+
+        choice_render_column_5 = ChoiceRenderer(["RESTRICT", "CASCADE", "SET NULL", "NO ACTION"])
+        column5 = wx.dataview.DataViewColumn(_(u"On DELETE"), choice_render_column_5, 5, width=100, align=wx.ALIGN_LEFT)
+        column5.SetMinWidth(100)
+        self.InsertColumn(5, column5)
+
+    def _load_reference_columns(self, popup, choice_render: ChoiceRenderer) -> None:
+        value = choice_render.GetValue()
+        if value:
+            table = next((t for t in list(CURRENT_DATABASE.get_value().tables) if t.name == value), None)
+            if table:
+                columns = [c.name for c in list(table.columns)]
+                popup.set_choices(columns)

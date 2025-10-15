@@ -19,11 +19,13 @@ class BitmapList(object):
     ENGINE_MARIADB = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-mariadb.png"), wx.BITMAP_TYPE_PNG)
     ENGINE_POSTGRESQL = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-postgresql.png"), wx.BITMAP_TYPE_PNG)
 
-    KEY_FULLTEXT = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_PNG)
     KEY_PRIMARY = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_primary.png"), wx.BITMAP_TYPE_PNG)
-    KEY_SPATIAL = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_spatial.png"), wx.BITMAP_TYPE_PNG)
     KEY_UNIQUE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_unique.png"), wx.BITMAP_TYPE_PNG)
     KEY_NORMAL = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_index.png"), wx.BITMAP_TYPE_PNG)
+    KEY_SPATIAL = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_spatial.png"), wx.BITMAP_TYPE_PNG)
+    KEY_FULLTEXT = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "key_fulltext.png"), wx.BITMAP_TYPE_PNG)
+
+    KEY_FOREIGN = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "table_relationship.png"), wx.BITMAP_TYPE_PNG)
 
     ADD = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "add.png"), wx.BITMAP_TYPE_PNG)
     DELETE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "delete.png"), wx.BITMAP_TYPE_PNG)
@@ -55,3 +57,30 @@ class IconList(object):
     ADD = ImageList.Add(BitmapList.ADD)
     DELETE = ImageList.Add(BitmapList.DELETE)
     LIGHTNING = ImageList.Add(BitmapList.LIGHTNING)
+
+
+def combine_bitmaps(*bitmaps: wx.Bitmap) -> wx.Bitmap:
+    if not bitmaps:
+        return wx.NullBitmap
+
+    width = bitmaps[0].GetWidth()
+    height = bitmaps[0].GetHeight()
+
+    # Create a new image with combined width and alpha channel
+    combined_width = width * len(bitmaps)
+    combined_image = wx.Image(combined_width, height)
+    combined_image.InitAlpha()  # Enable alpha channel
+
+    # Set all pixels to transparent initially
+    combined_image.SetAlpha(b'\xff' * (combined_width * height))  # Fully transparent
+
+    x_offset = 0
+    for bitmap in bitmaps:
+        icon_image = bitmap.ConvertToImage()
+        # Paste the icon onto the combined image at x_offset
+        combined_image.Paste(icon_image, x_offset, 0)
+        x_offset += width
+
+    # Convert back to bitmap
+    combined_bitmap = combined_image.ConvertToBitmap()
+    return combined_bitmap

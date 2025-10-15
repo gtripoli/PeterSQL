@@ -18,7 +18,7 @@ class SQLiteDataType(StandardDataType):
     TEXT = DataType(name="TEXT", category=DataTypeCategory.TEXT, has_length=True)
     VARCHAR = DataType(name="VARCHAR", category=DataTypeCategory.TEXT)
     CHAR = DataType(name="CHAR", category=DataTypeCategory.TEXT)
-    JSON = DataType(name=" JSON", category=DataTypeCategory.TEXT)
+    JSON = DataType(name="JSON", category=DataTypeCategory.TEXT)
 
     BLOB = DataType(name="BLOB", category=DataTypeCategory.BINARY)
 

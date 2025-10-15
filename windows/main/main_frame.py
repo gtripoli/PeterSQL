@@ -1,5 +1,7 @@
 import math
 import datetime
+import psutil
+import os
 
 from typing import Optional
 
@@ -10,14 +12,17 @@ from gettext import gettext as _
 
 from helpers.observables import ObservableArray
 from models.session import Session
-from models.structures.database import SQLTable, SQLColumn
+from models.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey
 from models.structures.statement import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION, CURRENT_COLUMN
-from windows.main.table import EditTableModel, ListTableColumnsController, NEW_TABLE, NEW_COLUMN
-from windows.main.records import TableRecordsController
+from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY
 from windows.main.sessions import TreeSessionsController
+from windows.main.table import EditTableModel, NEW_TABLE
+from windows.main.index import TableIndexController
+from windows.main.column import TableColumnsController
+from windows.main.records import TableRecordsController
+from windows.main.foreign_key import TableForeignKeyController
 
 
 class MainFrameController(MainFrameView):
@@ -36,12 +41,20 @@ class MainFrameController(MainFrameView):
         )
 
         self.controller_tree_sessions = TreeSessionsController(self.tree_ctrl_sessions)
-        self.controller_list_table_columns = ListTableColumnsController(self.list_ctrl_table_columns)
+        self.controller_list_table_columns = TableColumnsController(self.list_ctrl_table_columns)
         self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
+
+        self.controller_list_table_index = TableIndexController(self.dv_table_indexes)
+        self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
         self._setup_query_logs()
 
         self._setup_subscribers()
+
+        # Memory update timer
+        self.memory_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._update_memory, self.memory_timer)
+        self.memory_timer.Start(5000)  # Update every 5 seconds
 
     def _setup_query_logs(self):
         self.query_logs.SetLexer(wx.stc.STC_LEX_SQL)
@@ -107,6 +120,10 @@ class MainFrameController(MainFrameView):
 
         CURRENT_COLUMN.subscribe(self._on_current_column)
 
+        CURRENT_INDEX.subscribe(self._on_current_index)
+
+        CURRENT_FOREIGN_KEY.subscribe(self._on_current_foreign_key)
+
         NEW_TABLE.subscribe(self._on_new_table)
 
         # NEW_COLUMN.subscribe(self._on_new_column)
@@ -125,11 +142,11 @@ class MainFrameController(MainFrameView):
         self._toggle_panel(2, visible)
         self._toggle_panel(3, visible)
 
-    def _refresh_database(self):
-        session = CURRENT_SESSION.get_value()
-        db = CURRENT_DATABASE.get_value()
-        db.tables = session.statement.get_tables(database=db)
-        CURRENT_DATABASE.set_value(db)
+    # def _refresh_database(self):
+    #     session = CURRENT_SESSION.get_value()
+    #     db = CURRENT_DATABASE.get_value()
+    #     db.tables = session.statement.get_tables(database=db)
+    #     CURRENT_DATABASE.set_value(db)
 
     def _select_tree_item(self, **filters):
         print("filters", filters)
@@ -150,6 +167,14 @@ class MainFrameController(MainFrameView):
                 f"{math.floor((uptime % 3600) / 60)} {_('minutes')}, "
                 f"{math.floor(uptime % 60)} {_('seconds')}")
 
+    def _update_memory(self, event):
+        memory_info = psutil.Process(os.getpid()).memory_info()
+        used = memory_info.rss / 1024 / 1024  # MB
+        total = psutil.virtual_memory().total / 1024 / 1024  # MB
+        percentage = used / total
+
+        self.status_bar.SetStatusText(_('Memory used: {used:.2f} ({percentage:.2%})').format(used=used, percentage=percentage), 3)
+
     def _load_session(self, session: Session):
         self.controller_tree_sessions.append_session(session)
 
@@ -163,6 +188,22 @@ class MainFrameController(MainFrameView):
         sm = SessionManagerController(self, sessions=self.app.settings.get_value("sessions"))
         sm.Show()
 
+    def on_insert_table(self, event):
+        NEW_TABLE.set_value(None)
+        CURRENT_TABLE.set_value(None)
+
+        self._toggle_panel(2, True)
+        self.MainFrameNotebook.SetSelection(2)
+        self.table_name.SetFocus()
+
+        self.controller_list_table_columns.model.clear()
+
+    # COLUMNS
+    def _on_current_column(self, column: SQLColumn):
+        self.btn_column_delete.Enable(column is not None)
+        self.btn_column_move_up.Enable(column is not None)
+        self.btn_column_move_down.Enable(column is not None)
+
     def on_column_insert(self, event):
         self.controller_list_table_columns.on_column_insert()
 
@@ -175,15 +216,25 @@ class MainFrameController(MainFrameView):
     def on_column_move_down(self, event):
         self.controller_list_table_columns.on_column_move_down()
 
-    def on_insert_table(self, event):
-        NEW_TABLE.set_value(None)
-        CURRENT_TABLE.set_value(None)
+    # INDEXES
+    def _on_current_index(self, index: SQLIndex):
+        # self.btn_index_delete.Enable(index is not None)
+        # self.btn_index_move_up.Enable(index is not None)
+        # self.btn_index_move_down.Enable(index is not None)
+        pass
 
-        self._toggle_panel(2, True)
-        self.MainFrameNotebook.SetSelection(2)
-        self.table_name.SetFocus()
+    # FOREIGN KEYS
+    def _on_current_foreign_key(self, foreign_key: SQLForeignKey):
+        self.btn_foreign_key_delete.Enable(foreign_key is not None)
 
-        self.edit_table_model.build_table()
+    def on_foreign_key_insert(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_insert()
+
+    def on_foreign_key_delete(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_delete()
+
+    def on_foreign_key_clear(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_clear()
 
     def show_panel_session(self, session: Session):
         self._toggle_panel(0, True)
@@ -204,11 +255,6 @@ class MainFrameController(MainFrameView):
             self.table_name.SetFocus()
 
         self.btn_table_delete.Enable(table is not None)
-
-    def _on_current_column(self, column: SQLColumn):
-        self.btn_column_delete.Enable(column is not None)
-        self.btn_column_move_up.Enable(column is not None)
-        self.btn_column_move_down.Enable(column is not None)
 
     def on_page_changed(self, event: wx.BookCtrlEvent):
         if event.GetEventObject() != self.MainFrameNotebook:
@@ -232,19 +278,27 @@ class MainFrameController(MainFrameView):
         if not table.is_valid():
             return
 
-        if table.id == -1:
-            method = session.statement.create_table
-        else:
-            method = session.statement.update_table
-
-        if method(database, table):
+        if session.statement(database, table):
             NEW_TABLE.set_value(None)
+
+            if updated_table := next((t for t in database.tables if t.name == table.name), None):
+                CURRENT_TABLE.set_value(updated_table)
+
             wx.CallAfter(self._select_tree_item, **{"name": database.name})
 
             wx.CallAfter(self._select_tree_item, **{"name": table.name})
 
     def do_cancel_table(self, event: wx.Event):
+        database = CURRENT_DATABASE.get_value()
+        table = CURRENT_TABLE.get_value()
+
         NEW_TABLE.set_value(None)
+
+        if table := next((t for t in database.tables if t.name == table.name), None):
+            print("set table", None)
+            CURRENT_TABLE.set_value(None)
+            print("set table", table)
+            CURRENT_TABLE.set_value(table)
 
     def on_delete_table(self, event):
         table = CURRENT_TABLE.get_value()
