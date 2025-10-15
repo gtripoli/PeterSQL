@@ -5,7 +5,7 @@ T = TypeVar('T')
 
 
 class LazyList(List[T]):
-    def __init__(self, loader: Callable[[], Iterator[T]]) -> None:
+    def __init__(self, loader: Callable[[], List[T]]) -> None:
         super().__init__()
         self._loader = loader
         self._loaded = False

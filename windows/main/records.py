@@ -20,6 +20,13 @@ class RecordsModel(wx.dataview.DataViewIndexListModel):
         return len(self.table.columns)
 
     def GetValueByRow(self, row, col):
+        if row >= len(self.records) or col >= len(self.table.columns):
+            return ""
+        # print("#############################################################################################################")
+        # print("COL", col)
+        # print("COLUMNS", self.table.columns)
+        # print("COLUMNS[COL]", self.table.columns[col])
+        # print("#############################################################################################################")
         column = self.table.columns[col]
         column_name = self.table.columns[col].name
 
@@ -39,6 +46,9 @@ class RecordsModel(wx.dataview.DataViewIndexListModel):
                 return float(value)
 
         return str(value)
+
+    def GetNumberRows(self):
+        return len(self.records)
 
     def SetValueByRow(self, value, row, col):
         column_name = self.table.columns[col].name

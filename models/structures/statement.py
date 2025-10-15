@@ -1,12 +1,13 @@
 import re
 import abc
+import uuid
 
-from typing import Dict, Iterator, Any, Optional, Union, List, NamedTuple
+from typing import Dict, Any, Optional, List, NamedTuple
 
 from helpers.logger import logger
-
 from helpers.observables import ObservableArray
-from models.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex
+
+from models.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey
 
 LOG_QUERY: ObservableArray[str] = ObservableArray()
 
@@ -60,13 +61,13 @@ class AbstractStatement(abc.ABC):
         self.disconnect()
 
     def _on_connect(self, *args, **kwargs):
-        print("CONNECTED", args, kwargs)
+        logger.debug("connected")
 
     def _on_disconnect(self, *args, **kwargs):
-        print("DISCONNECTED", args, kwargs)
+        logger.debug("disconnected")
 
     @staticmethod
-    def _parse_type(column_definition: str) -> ParsedColumnType:
+    def parse_type(column_definition: str) -> ParsedColumnType:
         match = re.search(r'(\w+)\s*\((\d+)(,\s*(\d+))?(\s*zerofill)?\)', column_definition)
         if match:
             return ParsedColumnType(
@@ -84,51 +85,12 @@ class AbstractStatement(abc.ABC):
 
         return ParsedColumnType(name=column_definition.upper())
 
-    @abc.abstractmethod
-    def get_server_version(self) -> str:
-        raise NotImplementedError
+    @staticmethod
+    def generate_uuid(length: int = 8) -> str:
+        return str(uuid.uuid4())[::-1][:length]
 
-    @abc.abstractmethod
-    def get_server_uptime(self) -> Optional[int]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_databases(self) -> Iterator[SQLDatabase]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_tables(self, database: SQLDatabase) -> Iterator[SQLTable]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_columns(self, table: SQLTable) -> Iterator[SQLColumn]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_indexes(self, table: SQLTable) -> Iterator[SQLIndex]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_records(self, database: SQLDatabase, table: SQLTable, limit: int = 1000, offset: int = 0) -> Iterator[Dict]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def create_table(self, database: SQLDatabase, table: SQLTable) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def update_table(self, database: SQLDatabase, table: SQLTable) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def drop_table(self, database: SQLDatabase, table: SQLTable) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def build_new_table(self, database: SQLDatabase) -> SQLTable:
-        raise NotImplementedError
-
-    def build_column_definition(self, table: SQLTable, column: SQLColumn) -> str:
+    @staticmethod
+    def build_column_definition(table: SQLTable, column: SQLColumn) -> str:
         d = column.get_definition()
         parts = [d['name'], d['datatype'], d['nullable']]
         if 'default' in d:
@@ -141,32 +103,74 @@ class AbstractStatement(abc.ABC):
             parts.append(d['virtual'])
         return ' '.join(parts)
 
-    def _execute_transaction(self, sql: str, operation_name: str) -> bool:
-        try:
-            with Transaction(self):
-                self.execute(sql)
-        except Exception as ex:
-            log = f"Failed to {operation_name}: {ex}"
-            logger.error(log)
-            LOG_QUERY.append(log)
-            return False
-        return True
+    # General abstract methods
+    @abc.abstractmethod
+    def get_server_version(self) -> str:
+        raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_server_uptime(self) -> Optional[int]:
+        raise NotImplementedError
+
+    # Database abstract methods
+    @abc.abstractmethod
+    def get_databases(self) -> List[SQLDatabase]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_records(self, database: SQLDatabase, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[Dict]:
+        raise NotImplementedError
+
+    # Table abstract methods
+    @abc.abstractmethod
+    def build_empty_table(self, database: SQLDatabase) -> SQLTable:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def create_table(self, database: SQLDatabase, table: SQLTable) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter_table(self, database: SQLDatabase, table: SQLTable) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop_table(self, database: SQLDatabase, table: SQLTable) -> bool:
+        raise NotImplementedError
+
+    # General column methods
     def _add_column(self, table: SQLTable, column: SQLColumn) -> None:
-        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` ADD COLUMN {self._get_column_definition(table, column)}"
+        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` ADD COLUMN {self.build_column_definition(table, column)}"
         if hasattr(column, 'after') and column.after:
             sql += f" AFTER `{column.after}`"
         self.execute(sql)
 
     def _modify_column(self, table: SQLTable, column: SQLColumn) -> None:
-        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` MODIFY COLUMN {self._get_column_definition(table, column)}"
+        sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` MODIFY COLUMN {self.build_column_definition(table, column)}"
         self.execute(sql)
 
     def _drop_column(self, table: SQLTable, column: SQLColumn) -> None:
         sql = f"ALTER TABLE `{table.database.name}`.`{table.name}` DROP COLUMN `{column.name}`"
         self.execute(sql)
 
-    def execute(self, query: str, params=None, **kwargs) -> Any:
+    # Execution
+    def execute(self, query: str, params=None, **kwargs) -> bool:
         query = re.sub(r'\s+', ' ', str(query)).strip()
 
         LOG_QUERY.append(query)
@@ -176,12 +180,23 @@ class AbstractStatement(abc.ABC):
                 self.cursor.execute(query, params)
             else:
                 self.cursor.execute(query, **kwargs)
+
         except Exception as ex:
             logger.error(ex, exc_info=True)
-            LOG_QUERY.append(str(ex))
+            LOG_QUERY.append(f"/* {str(ex)} */")
             raise
 
-        return self.cursor
+        return True
+
+    def __call__(self, database: SQLDatabase, table: SQLTable):
+        if not table :
+            return
+        if table.id == -1:
+            method = self.create_table
+        else:
+            method = self.alter_table
+
+        return method(database, table)
 
 
 class Transaction:

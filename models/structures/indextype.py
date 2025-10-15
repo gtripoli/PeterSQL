@@ -1,6 +1,6 @@
 import dataclasses
 import functools
-from typing import List
+from typing import List, Self
 
 import wx
 
@@ -13,25 +13,33 @@ class SQLIndexType:
     bitmap: wx.Bitmap
     prefix: str
 
+    enable_append : bool = True
+    enable_condition : bool = True
+
     def __str__(self):
         return self.name
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other: Self):
+        if not isinstance(other, SQLIndexType):
+            return False
+
+        return self.name == other.name
+
 
 class StandardIndexType():
-    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk", bitmap=BitmapList.KEY_PRIMARY)
-    UNIQUE = SQLIndexType(name="UNIQUE", prefix="uq", bitmap=BitmapList.KEY_UNIQUE)
-    INDEX = SQLIndexType(name="INDEX", prefix="ix", bitmap=BitmapList.KEY_NORMAL)
+    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk_", bitmap=BitmapList.KEY_PRIMARY)
+    UNIQUE = SQLIndexType(name="UNIQUE", prefix="uq_", bitmap=BitmapList.KEY_UNIQUE)
+    NORMAL = SQLIndexType(name="NORMAL", prefix="ix_", bitmap=BitmapList.KEY_NORMAL)
 
     @classmethod
-    @functools.lru_cache(maxsize=1)
-    def get_all(cls) -> List[SQLIndexType]:
-        types = [
-            getattr(cls, name)
-            for name in dir(cls)
-            if isinstance(getattr(cls, name), SQLIndexType)
-        ]
-
-        # category_order = {cat: i for i, cat in enumerate(DataTypeCategory)}
-
-        # return sorted(types, key=lambda t: category_order[t.category])
+    @functools.lru_cache()
+    def get_all(cls) -> list[SQLIndexType]:
+        types = []
+        for base in reversed(cls.__mro__):
+            for key, value in base.__dict__.items():
+                if isinstance(value, SQLIndexType) and value not in types:
+                    types.append(value)
         return types

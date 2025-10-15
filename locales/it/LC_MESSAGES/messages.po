@@ -1,0 +1,322 @@
+#: main.py:98
+#, icu-format
+msgid ""
+"Connection error:\n"
+"{connection_error}?"
+msgstr "Errore di connessione: {connection_error}?"
+
+#: windows/__init__.py:25
+msgid "Session Manager"
+msgstr ""
+
+#: windows/__init__.py:56
+msgid "Session Name"
+msgstr ""
+
+#: windows/__init__.py:70
+msgid "Connection Type"
+msgstr ""
+
+#: windows/__init__.py:90
+msgid "Host Name / IP"
+msgstr ""
+
+#: windows/__init__.py:104
+msgid "Username"
+msgstr ""
+
+#: windows/__init__.py:118
+msgid "Password"
+msgstr ""
+
+#: windows/__init__.py:132
+msgid "Port"
+msgstr ""
+
+#: windows/__init__.py:156
+msgid "Filename"
+msgstr ""
+
+#: windows/__init__.py:161
+msgid "Select a file"
+msgstr ""
+
+#: windows/__init__.py:161
+msgid ""
+"Database "
+"(*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"
+msgstr ""
+
+#: windows/__init__.py:178 windows/__init__.py:573 windows/__init__.py:1060
+msgid "Comments"
+msgstr ""
+
+#: windows/__init__.py:192 windows/__init__.py:369
+msgid "Settings"
+msgstr ""
+
+#: windows/__init__.py:198
+msgid "Created at:"
+msgstr ""
+
+#: windows/__init__.py:215
+msgid "Last connection:"
+msgstr ""
+
+#: windows/__init__.py:232
+msgid "Successful connections:"
+msgstr ""
+
+#: windows/__init__.py:249
+msgid "Unsuccessful connections:"
+msgstr ""
+
+#: windows/__init__.py:268
+msgid "Statistics"
+msgstr ""
+
+#: windows/__init__.py:286
+msgid "Create"
+msgstr ""
+
+#: windows/__init__.py:289 windows/__init__.py:738 windows/__init__.py:1117
+msgid "Save"
+msgstr ""
+
+#: windows/__init__.py:294 windows/__init__.py:700
+msgid "Delete"
+msgstr ""
+
+#: windows/__init__.py:304 windows/__init__.py:733 windows/__init__.py:1107
+msgid "Cancel"
+msgstr ""
+
+#: windows/__init__.py:309
+msgid "Open"
+msgstr ""
+
+#: windows/__init__.py:381
+msgid "Language"
+msgstr ""
+
+#: windows/__init__.py:386
+msgid "English"
+msgstr ""
+
+#: windows/__init__.py:386
+msgid "Italian"
+msgstr ""
+
+#: windows/__init__.py:386
+msgid "French"
+msgstr ""
+
+#: windows/__init__.py:398
+msgid "Locale"
+msgstr ""
+
+#: windows/__init__.py:419
+msgid "PeterSQL"
+msgstr ""
+
+#: windows/__init__.py:425
+msgid "File"
+msgstr ""
+
+#: windows/__init__.py:428
+msgid "About"
+msgstr ""
+
+#: windows/__init__.py:433
+msgid "Open session manager"
+msgstr ""
+
+#: windows/__init__.py:435
+msgid "Disconnect from server"
+msgstr ""
+
+#: windows/__init__.py:439
+msgid "tool"
+msgstr ""
+
+#: windows/__init__.py:439
+msgid "Refresh"
+msgstr ""
+
+#: windows/__init__.py:443 windows/__init__.py:445
+msgid "Add"
+msgstr ""
+
+#: windows/__init__.py:476 windows/__init__.py:480 windows/__init__.py:837
+msgid "MyMenuItem"
+msgstr ""
+
+#: windows/__init__.py:483
+msgid "MyMenu"
+msgstr ""
+
+#: windows/__init__.py:498 windows/__init__.py:520
+msgid "MyLabel"
+msgstr ""
+
+#: windows/__init__.py:510
+msgid "System"
+msgstr ""
+
+#: windows/__init__.py:532
+msgid "Database"
+msgstr ""
+
+#: windows/__init__.py:559 windows/__init__.py:962
+#: windows/components/list_ctrl_table_columns/index.html:36
+#: windows/main/list_table_columns_wx.py:36
+msgid "Name"
+msgstr ""
+
+#: windows/__init__.py:588
+msgid "Base"
+msgstr ""
+
+#: windows/__init__.py:602
+msgid "Auto Increment"
+msgstr ""
+
+#: windows/__init__.py:616
+msgid "Engine"
+msgstr ""
+
+#: windows/__init__.py:631
+msgid "Default Collation"
+msgstr ""
+
+#: windows/__init__.py:650
+msgid "Options"
+msgstr ""
+
+#: windows/__init__.py:664
+msgid "Indexes"
+msgstr ""
+
+#: windows/__init__.py:685
+msgid "Columns:"
+msgstr ""
+
+#: windows/__init__.py:693
+msgid "Insert"
+msgstr ""
+
+#: windows/__init__.py:707
+msgid "Up"
+msgstr ""
+
+#: windows/__init__.py:714
+msgid "Down"
+msgstr ""
+
+#: windows/__init__.py:757
+msgid "Table"
+msgstr ""
+
+#: windows/__init__.py:775
+msgid "Data"
+msgstr ""
+
+#: windows/__init__.py:788 windows/__init__.py:818
+msgid "New"
+msgstr ""
+
+#: windows/__init__.py:795
+msgid "Query"
+msgstr ""
+
+#: windows/__init__.py:815
+msgid "Close"
+msgstr ""
+
+#: windows/__init__.py:828
+msgid "Query #2"
+msgstr ""
+
+#: windows/__init__.py:954
+msgid "Edit Column"
+msgstr ""
+
+#: windows/__init__.py:970
+#: windows/components/list_ctrl_table_columns/index.html:37
+#: windows/main/list_table_columns_wx.py:37
+msgid "Datatype"
+msgstr ""
+
+#: windows/__init__.py:985
+#: windows/components/list_ctrl_table_columns/index.html:38
+#: windows/main/list_table_columns_wx.py:38
+msgid "Length/Set"
+msgstr ""
+
+#: windows/__init__.py:1006
+#: windows/components/list_ctrl_table_columns/index.html:43
+#: windows/main/list_table_columns_wx.py:44
+msgid "Collation"
+msgstr ""
+
+#: windows/__init__.py:1024
+#: windows/components/list_ctrl_table_columns/index.html:40
+#: windows/main/list_table_columns_wx.py:40
+msgid "Unsigned"
+msgstr ""
+
+#: windows/__init__.py:1030
+#: windows/components/list_ctrl_table_columns/index.html:39
+#: windows/main/list_table_columns_wx.py:39
+msgid "Allow NULL"
+msgstr "Autorizza NULL"
+
+#: windows/__init__.py:1036
+msgid "Zero Fill"
+msgstr ""
+
+#: windows/__init__.py:1047
+#: windows/components/list_ctrl_table_columns/index.html:42
+#: windows/main/list_table_columns_wx.py:42
+msgid "Default"
+msgstr ""
+
+#: windows/__init__.py:1073
+#: windows/components/list_ctrl_table_columns/index.html:44
+#: windows/main/list_table_columns_wx.py:45
+msgid "Virtuality"
+msgstr "Virtuale"
+
+#: windows/__init__.py:1088
+#: windows/components/list_ctrl_table_columns/index.html:45
+#: windows/main/list_table_columns_wx.py:46
+msgid "Expression"
+msgstr "Espressione"
+
+#: windows/session_manager.py:276
+msgid "New Session"
+msgstr "Nuova Sessione"
+
+#: windows/session_manager.py:293
+#, icu-format
+msgid "Do you want save the session {session_name}?"
+msgstr ""
+
+#: windows/session_manager.py:329
+#, icu-format
+msgid "Do you want delete the session {session_name}?"
+msgstr ""
+
+#: windows/components/list_ctrl_table_columns/index.html:41
+#: windows/main/list_table_columns_wx.py:41
+msgid "Zerofill"
+msgstr "Riempi con 0"
+
+#: windows/main/list_table_columns_wx.py:35
+msgid "#"
+msgstr ""
+
+#: windows/main/list_table_columns_wx.py:43
+msgid "Comment"
+msgstr "Commenti"
+
