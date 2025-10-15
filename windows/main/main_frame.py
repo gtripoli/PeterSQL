@@ -218,10 +218,13 @@ class MainFrameController(MainFrameView):
 
     # INDEXES
     def _on_current_index(self, index: SQLIndex):
-        # self.btn_index_delete.Enable(index is not None)
-        # self.btn_index_move_up.Enable(index is not None)
-        # self.btn_index_move_down.Enable(index is not None)
-        pass
+        self.btn_index_delete.Enable(index is not None)
+
+    def on_index_delete(self, event):
+        self.controller_list_table_index.on_index_delete()
+
+    def on_index_clear(self, event):
+        self.controller_list_table_index.on_index_clear()
 
     # FOREIGN KEYS
     def _on_current_foreign_key(self, foreign_key: SQLForeignKey):

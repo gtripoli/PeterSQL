@@ -88,5 +88,10 @@ uv run --group dev mypy
 ## 📸 Screenshot
 <p align="center">
   <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
-  <img src="screenshot/main_frame.png" alt="Main Frame" height="200"/>
+  <img src="screenshot/main_frame_columns.png" alt="Main Frame - Columns" height="200"/>
+  <img src="screenshot/main_frame_datatypes.png" alt="Main Frame - Datatypes" height="200"/>
+  <img src="screenshot/main_frame_default.png" alt="Main Frame - Default" height="200"/>
+  <img src="screenshot/main_frame_indexes.png" alt="Main Frame - Indexes" height="200"/>
+  <img src="screenshot/main_frame_foreign_keys.png" alt="Main Frame - Foreign Keys" height="200"/>
+  <img src="screenshot/main_frame_foreign_keys_columns.png" alt="Main Frame - Foreign Keys Columns" height="200"/>
 </p>

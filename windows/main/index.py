@@ -3,7 +3,7 @@ import wx.dataview
 
 from typing import List
 
-from windows.main import CURRENT_TABLE, CURRENT_SESSION
+from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_INDEX
 from windows.main.column import NEW_TABLE
 
 from models.structures.database import SQLTable, SQLIndex
@@ -51,11 +51,10 @@ class TableIndexModel(wx.dataview.DataViewIndexListModel):
             index.name = value
             # NEW_INDEX.set_value(index)
         elif col == 1:
-            if index.expression :
+            if index.expression:
                 index.expression = list(map(str.strip, value.split(", ")))
-            else :
+            else:
                 index.columns = value.split(", ")
-
 
             # NEW_INDEX.set_value(index)
         elif col == 2:
@@ -65,12 +64,9 @@ class TableIndexModel(wx.dataview.DataViewIndexListModel):
 
         return True
 
-
-
     def set_data(self, data: List[SQLIndex]):
         self.data = data
         self.Reset(len(data))
-
 
     def add_row(self, data: SQLIndex) -> wx.dataview.DataViewItem:
         self.data.append(data)
@@ -102,6 +98,7 @@ class TableIndexController:
         self.model = TableIndexModel()
         self.list_ctrl_index.AssociateModel(self.model)
 
+        self.list_ctrl_index.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_index.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)
 
         CURRENT_TABLE.subscribe(self._load_table)
@@ -111,6 +108,19 @@ class TableIndexController:
 
         if table:
             self.model.set_data(list(table.indexes))
+
+    def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
+        item = event.GetItem()
+
+        if not item.IsOk():
+            CURRENT_INDEX.set_value(None)
+
+        else:
+            row = self.model.GetRow(item)
+            index = self.model.data[row]
+            CURRENT_INDEX.set_value(index)
+
+        event.Skip()
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
         print("#" * 10, "ON INDEX EDITING DONE", "#" * 10)
@@ -133,5 +143,37 @@ class TableIndexController:
         index: SQLIndex = self.model.data[row]
 
         table.indexes.append(index, replace_existing=True)
+
+        NEW_TABLE.set_value(table)
+
+    # def on_index_insert(self):
+    #     item = self.model.add_empty_row()
+    #     self.list_ctrl_foreign_key.Select(item)
+    #
+    #     self._do_edit(item, 1)
+
+    def on_index_delete(self):
+        selected = self.list_ctrl_index.GetSelection()
+        if not selected.IsOk():
+            return
+
+        row = self.model.GetRow(selected)
+        index = self.model.data[row]
+
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+        if index in table.indexes:
+            table.indexes.remove(index)
+
+        del self.model.data[row]
+        self.model.RowDeleted(row)
+
+        NEW_TABLE.set_value(table)
+
+    def on_index_clear(self):
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+
+        self.model.clear()
+
+        table.indexes.clear()
 
         NEW_TABLE.set_value(table)
