@@ -20,17 +20,6 @@ class SQLiteStatement(AbstractStatement):
 
         super().__init__(self.connection_url)
 
-    def connect(self, **connect_kwargs) -> None:
-        if self._connection is None:
-            try:
-                self._connection = sqlite3.connect(self.filename)
-                self._connection.row_factory = sqlite3.Row
-                self._cursor = self._connection.cursor()
-                self._on_connect()
-            except Exception as e:
-                logger.error(f"Failed to connect to SQLite: {e}")
-                raise
-
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
         self.execute("PRAGMA foreign_keys = ON")
@@ -42,6 +31,17 @@ class SQLiteStatement(AbstractStatement):
         # self.execute("PRAGMA temp_store = MEMORY")
         # self.execute("PRAGMA threads = 4")
         # self.execute("PRAGMA page_size = 4096")
+
+    def connect(self, **connect_kwargs) -> None:
+        if self._connection is None:
+            try:
+                self._connection = sqlite3.connect(self.filename)
+                self._connection.row_factory = sqlite3.Row
+                self._cursor = self._connection.cursor()
+                self._on_connect()
+            except Exception as e:
+                logger.error(f"Failed to connect to SQLite: {e}")
+                raise
 
     def get_server_version(self) -> str:
         self.execute("SELECT sqlite_version()")
@@ -55,14 +55,10 @@ class SQLiteStatement(AbstractStatement):
         return [SQLDatabase(id=0, name='main', get_tables_handler=self.get_tables)]
 
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
-        logger.debug("get_tables")
-
-        LOG_QUERY.append(f"/* get_tables */")
-        self.execute("SELECT * FROM sqlite_master WHERE type IN('table', 'view', 'trigger') AND name NOT LIKE 'sqlite_%'")
-        tables_result = self.cursor.fetchall()
+        self.execute("SELECT * FROM sqlite_master WHERE type IN('table', 'view', 'trigger') AND name NOT LIKE 'sqlite_%' ORDER BY name")
 
         results = []
-        for row in tables_result:
+        for row in self.cursor.fetchall():
             results.append(
                 SQLTable(
                     id=row['rootpage'],
@@ -98,7 +94,6 @@ class SQLiteStatement(AbstractStatement):
                     datatype=SQLiteDataType.get_by_name(parsed_type.name),
                     is_nullable=not col['notnull'],
                     table=table,
-                    is_primary_key=bool(col['pk']),
 
                     server_default=col['dflt_value'],
                     is_auto_increment=False,
@@ -375,118 +370,6 @@ class SQLiteStatement(AbstractStatement):
         sql = f"DROP TABLE `{database.name}`.`{table.name}`"
         return self.execute(sql)
 
-    # def update_table(self, database: SQLDatabase, table: SQLTable) -> bool:
-    #     columns_to_add = []
-    #     columns_to_drop = []
-    #     columns_to_modify = []
-    #
-    #     current_columns_map = {col.id: col for col in table.columns}
-    #     existing_columns_map = {col.id: col for col in list(self.get_columns(table))}
-    #
-    #     for col_id, new_col in current_columns_map.items():
-    #         if col_id not in existing_columns_map.keys():
-    #             columns_to_add.append(new_col)
-    #         elif new_col != existing_columns_map[col_id]:
-    #             columns_to_modify.append(new_col)
-    #
-    #     for col_id, old_col in existing_columns_map.items():
-    #         if col_id not in current_columns_map.keys():
-    #             columns_to_drop.append(old_col)
-    #
-    #     indexes_to_add = []
-    #     indexes_to_drop = []
-    #     indexes_to_modify = []
-    #
-    #     primary_keys_to_add = []
-    #     primary_keys_to_drop = []
-    #     primary_keys_to_modify = []
-    #
-    #     foreign_keys_to_add = []
-    #     foreign_keys_to_drop = []
-    #     foreign_keys_to_modify = []
-    #
-    #     try:
-    #         with Transaction(self):
-    #             # Columns
-    #             for col in columns_to_add:
-    #                 self._add_column(table, col)
-    #
-    #             for col in columns_to_modify:
-    #                 self._modify_column(table, col)
-    #
-    #             for col in columns_to_drop:
-    #                 self._drop_column(table, col)
-    #
-    #             # Indexes
-    #             indexes = list(self.get_indexes(table))
-    #             existing_indexes_map = {idx.id: idx for idx in indexes}
-    #             current_indexes_map = {idx.id: idx for idx in table.indexes}
-    #
-    #             for idx_id, new_idx in current_indexes_map.items():
-    #                 if idx_id not in existing_indexes_map.keys():
-    #                     indexes_to_add.append(new_idx)
-    #                 elif new_idx != existing_indexes_map[idx_id]:
-    #                     indexes_to_modify.append(new_idx)
-    #
-    #             for idx_id, old_idx in existing_indexes_map.items():
-    #                 if idx_id not in current_indexes_map.keys():
-    #                     indexes_to_drop.append(old_idx)
-    #
-    #             # Primary Key
-    #             current_primary_keys_map = {pk.id: pk for pk in table.indexes if pk.type == SQLiteIndexType.PRIMARY}
-    #             existing_primary_keys_map = {pk.id: pk for pk in indexes if pk.type == SQLiteIndexType.PRIMARY}
-    #
-    #             for pk_id, new_pk in current_primary_keys_map.items():
-    #                 if pk_id not in existing_primary_keys_map.keys():
-    #                     primary_keys_to_add.append(new_pk)
-    #                 elif new_pk != existing_primary_keys_map[pk_id]:
-    #                     primary_keys_to_modify.append(new_pk)
-    #
-    #             for pk_id, old_pk in existing_primary_keys_map.items():
-    #                 if pk_id not in current_primary_keys_map.keys():
-    #                     primary_keys_to_drop.append(old_pk)
-    #
-    #             # Foreign Key
-    #             current_foreign_keys_map = {fk.id: fk for fk in table.foreign_keys}
-    #             existing_foreign_keys_map = {fk.id: fk for fk in list(self.get_foreign_keys(table))}
-    #
-    #             for fk_id, new_fk in current_foreign_keys_map.items():
-    #                 if fk_id not in existing_foreign_keys_map.keys():
-    #                     foreign_keys_to_add.append(new_fk)
-    #                 elif new_fk != existing_foreign_keys_map[fk_id]:
-    #                     foreign_keys_to_modify.append(new_fk)
-    #
-    #             for fk_id, old_fk in existing_foreign_keys_map.items():
-    #                 if fk_id not in current_foreign_keys_map.keys():
-    #                     foreign_keys_to_drop.append(old_fk)
-    #
-    #             for pk in primary_keys_to_add + primary_keys_to_modify + primary_keys_to_drop:
-    #                 self._drop_index(table, pk)
-    #
-    #             for idx in indexes_to_drop:
-    #                 self._drop_index(table, idx)
-    #
-    #             for idx in indexes_to_add:
-    #                 self._create_index(table, idx)
-    #
-    #             for idx in indexes_to_modify:
-    #                 self._drop_index(table, idx)
-    #                 self._create_index(table, idx)
-    #
-    #             if foreign_keys_to_add or foreign_keys_to_modify or foreign_keys_to_drop:
-    #                 self._recreate_table_for_foreign_keys(table)
-    #
-    #
-    #
-    #
-    #     except Exception as ex:
-    #         log = f"Error altering table name={table.name}: {str(ex)}"
-    #         logger.error(log)
-    #         LOG_QUERY.append(log)
-    #         return False
-    #
-    #     return True
-
     # COLUMNS
     def _add_column(self, table: SQLTable, column: SQLColumn) -> bool:
         sql = f"ALTER TABLE `{table.name}` ADD COLUMN {SQLiteStatement.build_column_definition(table, column)}"
@@ -495,7 +378,7 @@ class SQLiteStatement(AbstractStatement):
     def _modify_column(self, table: SQLTable, column: SQLColumn):
         new_name = f"_{table.name}_{self.generate_uuid()}"
 
-        self._rename_table(table, new_name)
+        self.rename_table(table, new_name)
 
         for i, c in enumerate(table.columns):
             if c.name == column.name:
@@ -519,7 +402,7 @@ class SQLiteStatement(AbstractStatement):
     def _recreate_table_for_foreign_keys(self, table: SQLTable):
         new_name = f"_{table.name}_{self.generate_uuid()}"
 
-        self._rename_table(table, new_name)
+        self.rename_table(table, new_name)
 
         self.create_table(table.database, table)
 
@@ -550,11 +433,6 @@ class SQLiteStatement(AbstractStatement):
         where_str = f"WHERE {index.condition}" if index.condition else ""
 
         return self.execute(f"CREATE {unique_index} IF NOT EXISTS {index.name} ON {table.name}({expression}) {where_str}")
-
-    # def _create_index(self, table: SQLTable, index: SQLIndex):
-    #     sql = self._build_create_index_sql(table, index)
-    #     if sql:
-    #         self.execute(sql)
 
     def _drop_index(self, table: SQLTable, index: SQLIndex) -> bool:
         sql = f"DROP INDEX IF EXISTS {index.name}"

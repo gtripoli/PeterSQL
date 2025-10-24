@@ -74,8 +74,6 @@ class SessionManagerModel(AbstractModel):
         if self.engine.is_empty:
             return
 
-        print("build_session", self.engine.get_value())
-
         new_session = None
         session_engine = SessionEngine(self.engine.get_value())
 
@@ -191,9 +189,12 @@ class SessionTreeController():
             self.on_active(session)
 
     def _on_current_session_changed(self, session: Session):
+        if session is None:
+            self.session_tree_ctrl.UnselectAll()
+            return
+
         # item = self.find_by_data(name=session.name)
         # self.session_tree_ctrl.Select(item)
-        pass
 
     def find_by_data(self, **filters) -> wx.TreeItemId:
         def _matches(data):
@@ -365,9 +366,24 @@ class SessionManagerController(SessionManagerView):
         NEW_SESSION.set_value(None)
         CURRENT_SESSION.set_value(session)
 
-        # self.app.settings.set_value("sessions", value=self.session_tree_controller.sessions.get_value())
-
         return True
+
+    def on_create(self, event):
+        self.session_manager_model.clear()
+
+        CURRENT_SESSION.set_value(None)
+
+        session = Session(
+            name="New Session",
+            engine=SessionEngine.MYSQL,
+            configuration=CredentialsConfiguration(
+                hostname="localhost",
+                username="root",
+                password="",
+                port=3306
+            )
+        )
+        NEW_SESSION.set_value(session)
 
     def on_open(self, event):
         if NEW_SESSION.get_value() and not self.on_save(event):

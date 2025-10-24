@@ -66,11 +66,16 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
         if self.data[row].table:
             if col == 0:
                 try:
-                    indexes = [i for i in self.data[row].table.indexes if data.name in i.columns + i.expression]
+                    indexes = [i.type for i in self.data[row].table.indexes if data.name in i.columns + i.expression]
                 except Exception as ex:
                     logger.error(ex)
 
-                bitmaps = combine_bitmaps(*[i.type.bitmap for i in indexes])
+                try:
+                    indexes += [i for i in self.data[row].table.foreign_keys if data.name in i.columns]
+                except Exception as ex:
+                    logger.error(ex)
+
+                bitmaps = combine_bitmaps(*set([i.bitmap for i in indexes]))
                 return wx.dataview.DataViewIconText(value, bitmaps)
 
         return value

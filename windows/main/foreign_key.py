@@ -66,7 +66,8 @@ class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):
             fk.on_delete = value
 
         if fk.name == "" and len(fk.columns) > 0 and fk.reference_table != "" and len(fk.reference_columns) > 0:
-            fk.name = f"fk_{CURRENT_TABLE.get_value().name}_{'_'.join(fk.columns)}-{fk.reference_table}_{'_'.join(fk.reference_columns)}"
+            table = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
+            fk.name = f"fk_{table.name}_{'_'.join(fk.columns)}-{fk.reference_table}_{'_'.join(fk.reference_columns)}"
             self.ValueChanged(self.GetItem(row), 0)
 
         self.ValueChanged(self.GetItem(row), col)

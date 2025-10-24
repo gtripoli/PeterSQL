@@ -5,9 +5,12 @@ from typing import Optional, Callable, Literal, List, Any, Iterator, Self
 
 import wx
 
+from icons import BitmapList
+
 from helpers.lazylist import LazyList
 from models.structures.indextype import SQLIndexType
 from models.structures.datatype import SQLDataType
+from models.structures.sqlite.indextype import SQLiteIndexType
 
 
 @dataclasses.dataclass
@@ -119,7 +122,7 @@ class SQLColumn:
     is_unsigned: bool = False
     is_zerofill: bool = False
     is_auto_increment: bool = False
-    is_primary_key: bool = False
+    # is_primary_key: bool = False
 
     set: Optional[List[str]] = None
     length: Optional[int] = None
@@ -140,6 +143,10 @@ class SQLColumn:
             for field in dataclasses.fields(self)
             if field.default_factory is dataclasses.MISSING and field.type != SQLTable
         ])
+
+    @property
+    def is_primary_key(self):
+        return any([i.type == SQLiteIndexType.PRIMARY for i in self.table.indexes if self.name in i.columns])
 
     @property
     def is_valid(self):
@@ -272,6 +279,7 @@ class SQLForeignKey:
     id: int
     name: str
     columns: List[str]
+    bitmap: wx.Bitmap = BitmapList.KEY_FOREIGN
     reference_table: str = dataclasses.field(default_factory=str)
     reference_columns: List[str] = dataclasses.field(default_factory=list)
 

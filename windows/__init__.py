@@ -734,7 +734,7 @@ class MainFrameView ( wx.Frame ):
 		self.PanelTableIndex = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
 
- 		bSizer791 = wx.BoxSizer( wx.VERTICAL )
+		bSizer791 = wx.BoxSizer( wx.VERTICAL )
 
 		self.btn_index_insert = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 

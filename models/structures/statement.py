@@ -18,6 +18,8 @@ class ParsedColumnType(NamedTuple):
     scale: Optional[int] = None
     length: Optional[int] = None
     set: Optional[List[str]] = None
+    is_unsigned: Optional[bool] = False
+    is_zerofill: Optional[bool] = False
 
 
 class AbstractStatement(abc.ABC):
@@ -68,12 +70,14 @@ class AbstractStatement(abc.ABC):
 
     @staticmethod
     def parse_type(column_definition: str) -> ParsedColumnType:
-        match = re.search(r'(\w+)\s*\((\d+)(,\s*(\d+))?(\s*zerofill)?\)', column_definition)
+        match = re.search(r'(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?', column_definition)
         if match:
             return ParsedColumnType(
                 name=match.group(1).upper(),
                 precision=int(match.group(2)),
-                scale=int(match.group(4)) if match.group(4) else None,
+                scale=int(match.group(3)) if match.group(3) else None,
+                is_unsigned=bool(match.group(4)),
+                is_zerofill=bool(match.group(5))
             )
 
         match = re.search(r'^(enum|set)\((.*)\)$', column_definition)
@@ -188,15 +192,20 @@ class AbstractStatement(abc.ABC):
 
         return True
 
-    def __call__(self, database: SQLDatabase, table: SQLTable):
+    def __call__(self, database: SQLDatabase, table: SQLTable) -> Optional[bool]:
         if not table :
             return
+
         if table.id == -1:
             method = self.create_table
         else:
             method = self.alter_table
 
-        return method(database, table)
+        result = method(database, table)
+        database.tables.clear()
+
+        return result
+
 
 
 class Transaction:

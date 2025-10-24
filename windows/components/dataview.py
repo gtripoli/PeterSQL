@@ -14,6 +14,7 @@ from models.structures.database import SQLColumn, SQLTable, SQLIndex, SQLDatabas
 from models.structures.datatype import SQLDataType, DataTypeCategory
 
 from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
+from windows.main.table import NEW_TABLE
 
 
 class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
@@ -594,7 +595,7 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         from icons import BitmapList
 
         session = CURRENT_SESSION.get_value()
-        table = CURRENT_TABLE.get_value()
+        table = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
 
         selected = self.GetSelection()
         model = self.GetModel()
@@ -748,7 +749,7 @@ class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
 
         # Colonna 1: Column(s) - larghezza minima 150px
         popup_render_column_1 = PopupRenderer(PopupCheckList)
-        popup_render_column_1.on_open = lambda popup: popup.set_choices([c.name for c in list(CURRENT_TABLE.get_value().columns)])
+        popup_render_column_1.on_open = lambda popup: popup.set_choices([c.name for c in list((CURRENT_TABLE.get_value() or NEW_TABLE.get_value()).columns)])
         column1 = wx.dataview.DataViewColumn(_(u"Column(s)"), popup_render_column_1, 1, width=150, flags=wx.dataview.DATAVIEW_COL_RESIZABLE, align=wx.ALIGN_LEFT)
         column1.SetMinWidth(150)
         self.AppendColumn(column1)

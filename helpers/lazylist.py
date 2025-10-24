@@ -73,3 +73,7 @@ class LazyList(List[T]):
         self.clear()
         self.extend(items)
         self._loaded = True
+
+    def clear(self) -> None:
+        self._loaded = False
+        super().clear()
