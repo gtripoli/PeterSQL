@@ -42,10 +42,10 @@ class SessionManagerModel(AbstractModel):
 
     def _set_default_port(self, engine_value):
         if engine_value == SessionEngine.POSTGRESQL.value:
-            if self.port.get_value() == 3306:  # Only change if it's the default MySQL port
+            if self.port.get_value() != 5432:
                 self.port.set_value(5432)
         elif engine_value in [SessionEngine.MYSQL.value, SessionEngine.MARIADB.value]:
-            if self.port.get_value() == 5432:  # Only change if it's the PostgreSQL port
+            if self.port.get_value() != 3306:
                 self.port.set_value(3306)
 
     def clear(self, *args):

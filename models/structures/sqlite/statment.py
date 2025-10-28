@@ -1,17 +1,76 @@
 import re
 import sqlite3
-
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any, NamedTuple
 
 from helpers.logger import logger
 
-from models.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey
+from models.structures.statement import LOG_QUERY, AbstractColumnBuilder, AbstractStatement, Transaction
+from models.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord
+
 from models.structures.sqlite.datatype import SQLiteDataType
 from models.structures.sqlite.indextype import SQLiteIndexType
-from models.structures.statement import AbstractStatement, Transaction, LOG_QUERY
+
+#     column_name data_type
+#         [PRIMARY KEY [ASC|DESC] [AUTOINCREMENT]]
+#         [NOT NULL]
+#         [UNIQUE]
+#         [CHECK (expression)]
+#         [DEFAULT default_value]
+#         [COLLATE collation_name]
+#         [REFERENCES foreign_table(column_name)
+#             [ON DELETE {SET NULL | SET DEFAULT | CASCADE | RESTRICT | NO ACTION}]
+#             [ON UPDATE {SET NULL | SET DEFAULT | CASCADE | RESTRICT | NO ACTION}]
+#         ]
+#         [GENERATED ALWAYS AS (expression) [VIRTUAL | STORED]]
+# https://sqlite.org/syntax/column-constraint.html
+
+COLUMN_PATTERN = re.compile(r"""
+^\s*
+(?:`|\"|\[)?(?P<name>\w+)(?:`|\"|\])?                                                       # column name
+\s+
+(?P<datatype>\w+)                                                                           # data type (ex. VARCHAR, INT)
+(?:\s*\((?P<length>\d+)|(?P<precision>\d+),(?P<scale>\d+)|(?P<set>.*)\))?                   # length or precision and scale or set
+(?:\s+(?P<primary>PRIMARY\s+KEY)(?:\s+(ASC|DESC)?)?)?                                       # PK inline
+(?:\s+(?P<conflict_clause_pk>ON\s+CONFLICT\s+(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)))?        # conflict clause primary key
+(?:\s+(?P<auto>AUTOINCREMENT))?                                                             # auto increment
+(?:\s+(?P<null>NOT\s+NULL|NULL))?                                                           # nullability
+(?:\s+(?P<conflict_clause_null>ON\s+CONFLICT\s+(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)))?      # conflict clause nullability
+(?:\s+(?P<unique>UNIQUE))?                                                                  # UNIQUE inline
+(?:\s+(?P<conflict_clause_unique>ON\s+CONFLICT\s+(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)))?    # conflict clause unique
+(?:\s+(?P<check>CHECK\s*\(.*?\)))?                                                          # CHECK constraint
+(?:\s+(?P<conflict_clause_check>ON\s+CONFLICT\s+(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)))?     # conflict clause check
+(?:\s+(?P<default>DEFAULT\s+(?:NULL|CURRENT_TIMESTAMP|'.*?'|".*?"|[^\s,]+)))?               # default value
+(?:\s+(?P<collate>COLLATE\s+\w+))?                                                          # COLLATE
+(?:\s+(?P<generated>GENERATED\s+ALWAYS\s+AS\s*\(.*?\)\s*(?:VIRTUAL|STORED)?))?              # colonne generate
+\s*(?=,|\)|$)                                                                               # lookahead: end before , ) or end of string
+""", re.IGNORECASE | re.VERBOSE)
+
+
+class SQLiteColumnBuilder(AbstractColumnBuilder):
+    TEMPLATE = ["%(name)s", "%(datatype)s", "%(primary_key)s", "%(auto_increment)s", "%(nullable)s", "%(check)s", "%(default)s", "%(collate)s", "%(generated)s"]
+
+    def __init__(self, column: SQLColumn):
+        super().__init__(column)
+
+        self.parts.update({
+            'generated': self.generated,
+        })
+
+    @property
+    def primary_key(self):
+        return 'PRIMARY KEY' if self.column.is_primary_key or self.column.is_auto_increment else ''
+
+    @property
+    def auto_increment(self):
+        return 'AUTOINCREMENT' if self.column.is_auto_increment else ''
+
+    @property
+    def generated(self):
+        return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality is not None else ''
 
 
 class SQLiteStatement(AbstractStatement):
+    _column_builder = SQLiteColumnBuilder
 
     def __init__(self, session):
         self.filename = session.configuration.filename
@@ -68,40 +127,56 @@ class SQLiteStatement(AbstractStatement):
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
+                    get_records_handler=self.get_records,
                 )
             )
 
         return results
 
+    def parse_create_table(self, sql_create_table: str) -> List[Dict[str, Any]]:
+        results = []
+
+        return results
+
     def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+        results = []
         if table.id == -1:
-            return []
-        logger.debug("get columns")
+            return results
+
         LOG_QUERY.append(f"/* get_columns */")
 
-        self.execute(f"SELECT * FROM `{table.database.name}`.pragma_table_info('{table.name}')")
-        columns_result = self.cursor.fetchall()
+        self.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table.name}'")
+        if not (sql_table_result := self.cursor.fetchone()):
+            return results
 
-        results = []
-        for col in columns_result:
-            type_str = col['type']
-            parsed_type = SQLiteStatement.parse_type(type_str)
+        sql_create_table = sql_table_result['sql']
+
+        if not (table_match := re.search(r'CREATE\s+TABLE\s+(?:`?\w+`?\s+)?\((?P<columns>.*)\)', sql_create_table, re.IGNORECASE | re.DOTALL).groupdict()):
+            return results
+
+        columns = [c.strip() for c in table_match['columns'].split(", ")]
+        for i, column in enumerate(columns):
+            if not (columns_match := COLUMN_PATTERN.match(column)):
+                continue
+
+            if column.startswith("PRIMARY KEY") or column.startswith("UNIQUE") or column.startswith("FOREIGN KEY"):
+                continue
+
+            column_dict = columns_match.groupdict()
 
             results.append(
                 SQLColumn(
-                    id=col['cid'] + 1,
-                    name=col['name'],
-                    datatype=SQLiteDataType.get_by_name(parsed_type.name),
-                    is_nullable=not col['notnull'],
+                    id=i,
+                    name=column_dict["name"],
+                    datatype=SQLiteDataType.get_by_name(column_dict['datatype']),
+                    is_nullable=column_dict.get('null', "NULL") == "NULL",
                     table=table,
-
-                    server_default=col['dflt_value'],
-                    is_auto_increment=False,
-
-                    length=parsed_type.length,
-
-                    numeric_precision=parsed_type.precision,
-                    numeric_scale=parsed_type.scale,
+                    server_default=column_dict['default'],
+                    is_auto_increment=column_dict["auto"] == "AUTOINCREMENT",
+                    length=column_dict['length'],
+                    numeric_precision=column_dict['precision'],
+                    numeric_scale=column_dict['scale'],
+                    set=column_dict['set'],
                 )
             )
 
@@ -200,8 +275,8 @@ class SQLiteStatement(AbstractStatement):
         LOG_QUERY.append("/* get_foreign_keys */")
 
         self.execute(f"SELECT"
-                     f"`id`, `table`, GROUP_CONCAT(`from`) as `from`, GROUP_CONCAT(`to`) as `to`, `on_update`, `on_delete`"
-                     f"FROM `{table.database.name}`.pragma_foreign_key_list('{table.name}') GROUP BY id;")
+                     f" `id`, `table`, GROUP_CONCAT(`from`) as `from`, GROUP_CONCAT(`to`) as `to`, `on_update`, `on_delete`"
+                     f" FROM `{table.database.name}`.pragma_foreign_key_list('{table.name}') GROUP BY id;")
         foreign_keys = [dict(row) for row in self.cursor.fetchall()]
 
         results = []
@@ -226,13 +301,17 @@ class SQLiteStatement(AbstractStatement):
 
         return results
 
-    def get_records(self, database: SQLDatabase, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[Dict]:
+    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLRecord]:
         LOG_QUERY.append("/* get_records */")
-        query = f"SELECT * FROM `{database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
+        query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
         self.execute(query)
-        results = self.cursor.fetchall()
 
-        return [dict(row) for row in results]
+        results = []
+        for i, record in enumerate(self.cursor.fetchall(), start=offset):
+            results.append(
+                SQLRecord(_id=i, table=table, **dict(record))
+            )
+        return results
 
     def build_empty_table(self, database: SQLDatabase):
         return SQLTable(
@@ -245,31 +324,37 @@ class SQLiteStatement(AbstractStatement):
             get_foreign_keys_handler=self.get_foreign_keys,
         )
 
+    # TABLES
     def rename_table(self, table: SQLTable, name: str) -> bool:
         sql = f"ALTER TABLE `{table.name}` RENAME TO `{name}`;"
         self.execute(sql)
         return True
 
     def create_table(self, database: SQLDatabase, table: SQLTable) -> bool:
-        column_definition = [SQLiteStatement.build_column_definition(table, c) for c in table.columns]
-
-        pk = next((idx for idx in table.indexes if idx.type == SQLiteIndexType.PRIMARY), None)
         constraints = []
-        if pk and pk.columns:
-            cols = ", ".join([f"`{c}`" for c in pk.columns])
-            constraints.append(f"PRIMARY KEY ({cols})")
+        columns_definitions = [str(self._column_builder(c)) for c in table.columns]
 
-        for fk in table.foreign_keys:
-            cols = ", ".join([f"`{c}`" for c in fk.columns])
-            ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
-            constraint = f"FOREIGN KEY ({cols}) REFERENCES {fk.reference_table} ({ref_cols})"
-            if fk.on_update and fk.on_update != "NO ACTION":
-                constraint += f" ON UPDATE {fk.on_update}"
-            if fk.on_delete and fk.on_delete != "NO ACTION":
-                constraint += f" ON DELETE {fk.on_delete}"
-            constraints.append(constraint)
+        primary_key_is_already_present = any(['PRIMARY KEY' in column_definition for column_definition in columns_definitions])
+        foreign_key_is_already_present = any(['FOREIGN KEY' in column_definition for column_definition in columns_definitions])
 
-        sql = f"CREATE TABLE `{table.name}` ({', '.join(column_definition + constraints)})"
+        if not primary_key_is_already_present:
+            pk = next((idx for idx in table.indexes if idx.type == SQLiteIndexType.PRIMARY), None)
+            if pk and pk.columns:
+                cols = ", ".join([f"`{c}`" for c in pk.columns])
+                constraints.append(f"PRIMARY KEY ({cols})")
+
+        if not foreign_key_is_already_present:
+            for fk in table.foreign_keys:
+                cols = ", ".join([f"`{c}`" for c in fk.columns])
+                ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
+                constraint = f"FOREIGN KEY ({cols}) REFERENCES {fk.reference_table} ({ref_cols})"
+                if fk.on_update and fk.on_update != "NO ACTION":
+                    constraint += f" ON UPDATE {fk.on_update}"
+                if fk.on_delete and fk.on_delete != "NO ACTION":
+                    constraint += f" ON DELETE {fk.on_delete}"
+                constraints.append(constraint)
+
+        sql = f"CREATE TABLE `{table.name}` ({', '.join(columns_definitions + constraints)})"
 
         return self.execute(sql)
 
@@ -287,7 +372,6 @@ class SQLiteStatement(AbstractStatement):
 
         original_column_map = {col.id: col for col in original_columns}
         table_column_map = {col.id: col for col in table_columns}
-
         original_index_map = {idx.id: idx for idx in original_indexes}
         table_index_map = {idx.id: idx for idx in table_indexes}
 
@@ -317,11 +401,11 @@ class SQLiteStatement(AbstractStatement):
                     for col_id, col in table_column_map.items():
                         if col_id in original_column_map.keys():
                             if col.name == original_column_map[col_id].name:
-                                columns.append(col.name)
+                                columns.append(f"{col.name}")
                             else:
-                                columns.append(f"{original_column_map[col_id].name} as {col.name}")
+                                columns.append(f"{original_column_map[col_id].name} as `{col.name}`")
                         else:
-                            columns.append(f"'' as {col.name}")
+                            columns.append(f"'' as `{col.name}`")
 
                     self.rename_table(table, temp_name)
 
@@ -332,7 +416,7 @@ class SQLiteStatement(AbstractStatement):
 
                     self.execute(f"DROP TABLE {temp_name};")
 
-                    for index in table_indexes:
+                    for index in [i for i in table_indexes if i.type != SQLiteIndexType.PRIMARY]:
                         self._create_index(table, index)
 
                 else:
@@ -361,7 +445,10 @@ class SQLiteStatement(AbstractStatement):
                         if idx_id not in table_index_map:
                             self._drop_index(table, idx)
 
-        except:
+        except Exception as ex:
+            LOG_QUERY.append(f"/* alter_table */ {ex}")
+            logger.error(ex, exc_info=True)
+
             return False
 
         return True
@@ -437,3 +524,27 @@ class SQLiteStatement(AbstractStatement):
     def _drop_index(self, table: SQLTable, index: SQLIndex) -> bool:
         sql = f"DROP INDEX IF EXISTS {index.name}"
         return self.execute(sql)
+
+    # RECORDS
+    def insert_record(self, database: SQLDatabase, table: SQLTable, record: SQLRecord) -> bool:
+        with Transaction(self):
+            if raw_insert_record := self.raw_insert_record(database, table, record):
+                return self.execute(raw_insert_record)
+
+            return False
+
+    def update_record(self, database: SQLDatabase, table: SQLTable, record: SQLRecord) -> bool:
+        with Transaction(self):
+            if raw_update_record := self.raw_update_record(database, table, record):
+                return self.execute(raw_update_record)
+
+            return False
+
+    def delete_records(self, database: SQLDatabase, table: SQLTable, records: List[SQLRecord]) -> bool:
+        results = []
+        with Transaction(self):
+            for record in records:
+                if raw_delete_record := self.raw_delete_record(database, table, record):
+                    results.append(self.execute(raw_delete_record))
+
+        return all(results)

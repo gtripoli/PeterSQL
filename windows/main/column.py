@@ -18,7 +18,7 @@ from models.structures.indextype import SQLIndexType
 
 class ColumnModel(wx.dataview.DataViewIndexListModel):
     MAP_COLUMN_FIELDS = {
-        0: {"attr": "id", "transform": str},
+        0: {"attr": "id", "transform": lambda v: str(v + 1 if v > 0 else '')},
         1: {"attr": "name", "transform": str},
         2: {"attr": "datatype", "transform": str},
         3: {"attr": "length_scale_set", "transform": str},
@@ -75,13 +75,20 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
                 except Exception as ex:
                     logger.error(ex)
 
-                bitmaps = combine_bitmaps(*set([i.bitmap for i in indexes]))
+                if len(indexes):
+                    bitmaps = combine_bitmaps(*set([i.bitmap for i in indexes]))
+                else:
+                    bitmaps = wx.NullBitmap
+
                 return wx.dataview.DataViewIconText(value, bitmaps)
 
         return value
 
     def SetValueByRow(self, value, row, col):
         item = self.GetItem(row)
+
+        if row == 4 and col == 3:
+            print("qsdf")
 
         column_field = ColumnModel.MAP_COLUMN_FIELDS[col]
 
@@ -102,15 +109,18 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
 
         if col == 0:
             attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
-            return True
 
         if col in [2, 7]:
             color = column.datatype.category.value.color
 
             attr.SetColour(wx.Colour(color))
-            return True
 
-        return super().GetAttrByRow(row, col, attr)
+        if col == 3:
+            datatype = column.datatype
+            if not any([datatype.has_length, datatype.has_precision, datatype.has_scale, datatype.has_set]):
+                attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+
+        return True
 
     def update_columns(self, col, row):
         item = self.GetItem(row)
@@ -136,9 +146,10 @@ class ColumnModel(wx.dataview.DataViewIndexListModel):
     def add_empty_row(self) -> wx.dataview.DataViewItem:
         session = CURRENT_SESSION.get_value()
 
+        print(min([r.id for r in self.data]) - 1)
         column = SQLColumn(
-            id=len(self.data) + 1,
-            name="",
+            id=min([r.id for r in self.data]) - 1,
+            name="New column",
             datatype=session.datatype.VARCHAR,
             table=CURRENT_TABLE.get_value()
         )

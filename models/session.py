@@ -6,9 +6,9 @@ from models.structures.indextype import StandardIndexType
 from models.structures.datatype import StandardDataType
 from models.structures.statement import AbstractStatement
 
-# from models.structures.mariadb.statement import MariaDBStatement
-# from models.structures.mariadb.datatype import MariaDBDataType
-# from models.structures.mariadb.indextype import MariaDBIndexType
+from models.structures.mariadb.statement import MariaDBStatement
+from models.structures.mariadb.datatype import MariaDBDataType
+from models.structures.mariadb.indextype import MariaDBIndexType
 #
 # from models.structures.mysql.statement import MySQLStatement
 # from models.structures.mysql.datatype import MySQLDataType
@@ -57,10 +57,9 @@ class Session:
             # self.indextype = MySQLIndexType()
             pass
         elif self.engine == SessionEngine.MARIADB:
-            # self.statement = MariaDBStatement(self)
-            # self.datatype = MariaDBDataType()
-            # self.indextype = MariaDBIndexType()
-            pass
+            self.statement = MariaDBStatement(self)
+            self.datatype = MariaDBDataType()
+            self.indextype = MariaDBIndexType()
         elif self.engine == SessionEngine.POSTGRESQL:
             pass
         #     self.statement = PostgreSQLStatement(self)

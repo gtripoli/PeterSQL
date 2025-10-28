@@ -3,7 +3,7 @@ import datetime
 import psutil
 import os
 
-from typing import Optional
+from typing import Optional, List
 
 import wx.stc
 import wx.html2
@@ -12,11 +12,11 @@ from gettext import gettext as _
 
 from helpers.observables import ObservableArray
 from models.session import Session
-from models.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey
+from models.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord
 from models.structures.statement import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_SESSION, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY
+from windows.main import SESSIONS, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY
 from windows.main.sessions import TreeSessionsController
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
@@ -60,7 +60,7 @@ class MainFrameController(MainFrameView):
         self.query_logs.SetLexer(wx.stc.STC_LEX_SQL)
         self.query_logs.SetKeyWords(0, (
             "select from where insert into update delete create alter drop table view "
-            "index primary key unique not null default auto_increment values set pragma"
+            "index primary key unique not null default auto_increment autoincrement values set pragma"
             "and or as distinct order by group having join left right inner outer on "
             "if exists like in is between limit offset case when then else end show describe"
             "modify add drop column"
@@ -124,13 +124,16 @@ class MainFrameController(MainFrameView):
 
         CURRENT_FOREIGN_KEY.subscribe(self._on_current_foreign_key)
 
+        CURRENT_RECORDS.subscribe(self._on_current_records)
+
         NEW_TABLE.subscribe(self._on_new_table)
+
+        AUTO_APPLY.subscribe(self._on_auto_apply)
 
         # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
         self.query_logs.AppendText(f"{text}\n")
-        # self.query_logs.EnsureCaretVisible()
         self.query_logs.GotoLine(self.query_logs.GetLineCount() - 1)
 
     def _toggle_panel(self, index: int, visible: bool):
@@ -149,7 +152,6 @@ class MainFrameController(MainFrameView):
     #     CURRENT_DATABASE.set_value(db)
 
     def _select_tree_item(self, **filters):
-        print("filters", filters)
         if table_item := self.controller_tree_sessions.find_by_data(**filters):
             print("select", table_item)
             tree = self.controller_tree_sessions.tree_ctrl_sessions
@@ -183,61 +185,10 @@ class MainFrameController(MainFrameView):
         wx.GetApp().ExitMainLoop()
 
     def do_open_session_manager(self, event):
-        from windows.session_manager import SessionManagerController
+        from windows.sessions.controller import SessionManagerController
 
-        sm = SessionManagerController(self, sessions=self.app.settings.get_value("sessions"))
+        sm = SessionManagerController(self)
         sm.Show()
-
-    def on_insert_table(self, event):
-        NEW_TABLE.set_value(None)
-        CURRENT_TABLE.set_value(None)
-
-        self._toggle_panel(2, True)
-        self.MainFrameNotebook.SetSelection(2)
-        self.table_name.SetFocus()
-
-        self.controller_list_table_columns.model.clear()
-
-    # COLUMNS
-    def _on_current_column(self, column: SQLColumn):
-        self.btn_column_delete.Enable(column is not None)
-        self.btn_column_move_up.Enable(column is not None)
-        self.btn_column_move_down.Enable(column is not None)
-
-    def on_column_insert(self, event):
-        self.controller_list_table_columns.on_column_insert()
-
-    def on_column_delete(self, event):
-        self.controller_list_table_columns.on_column_delete()
-
-    def on_column_move_up(self, event):
-        self.controller_list_table_columns.on_column_move_up()
-
-    def on_column_move_down(self, event):
-        self.controller_list_table_columns.on_column_move_down()
-
-    # INDEXES
-    def _on_current_index(self, index: SQLIndex):
-        self.btn_index_delete.Enable(index is not None)
-
-    def on_index_delete(self, event):
-        self.controller_list_table_index.on_index_delete()
-
-    def on_index_clear(self, event):
-        self.controller_list_table_index.on_index_clear()
-
-    # FOREIGN KEYS
-    def _on_current_foreign_key(self, foreign_key: SQLForeignKey):
-        self.btn_foreign_key_delete.Enable(foreign_key is not None)
-
-    def on_foreign_key_insert(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_insert()
-
-    def on_foreign_key_delete(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_delete()
-
-    def on_foreign_key_clear(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_clear()
 
     def show_panel_session(self, session: Session):
         self._toggle_panel(0, True)
@@ -251,14 +202,6 @@ class MainFrameController(MainFrameView):
         self._toggle_panel(1, True)
         self.MainFrameNotebook.SetSelection(1)
 
-    def _on_current_table(self, table: SQLTable):
-        self._toggle_edit_table(True)
-        if self.MainFrameNotebook.GetSelection() == 1:
-            self.MainFrameNotebook.SetSelection(2)
-            self.table_name.SetFocus()
-
-        self.btn_table_delete.Enable(table is not None)
-
     def on_page_changed(self, event: wx.BookCtrlEvent):
         if event.GetEventObject() != self.MainFrameNotebook:
             event.Skip()
@@ -266,11 +209,30 @@ class MainFrameController(MainFrameView):
         if event.GetSelection() == 1 and not CURRENT_TABLE.get_value() and not NEW_TABLE.get_value():
             self._toggle_edit_table(False)
 
-    def _on_new_table(self, new_table: SQLTable):
-        self.btn_table_save.Enable(bool(new_table is not None and new_table.is_valid()))
-        self.btn_table_cancel.Enable(bool(new_table is not None))
+    # TABLE
+    def _on_current_table(self, table: SQLTable):
+        self._toggle_edit_table(True)
+        if self.MainFrameNotebook.GetSelection() == 1:
+            self.MainFrameNotebook.SetSelection(2)
+            self.table_name.SetFocus()
 
-    def do_save_table(self, event: wx.Event):
+        self.btn_delete_table.Enable(table is not None)
+
+    def _on_new_table(self, new_table: SQLTable):
+        self.btn_apply_table.Enable(bool(new_table is not None and new_table.is_valid()))
+        self.btn_cancel_table.Enable(bool(new_table is not None))
+
+    def on_insert_table(self, event):
+        NEW_TABLE.set_value(None)
+        CURRENT_TABLE.set_value(None)
+
+        self._toggle_panel(2, True)
+        self.MainFrameNotebook.SetSelection(2)
+        self.table_name.SetFocus()
+
+        self.controller_list_table_columns.model.clear()
+
+    def do_apply_table(self, event: wx.Event):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = NEW_TABLE.get_value()
@@ -281,7 +243,14 @@ class MainFrameController(MainFrameView):
         if not table.is_valid():
             return
 
-        if session.statement(database, table):
+        try :
+            session.statement.save_table(database, table)
+
+
+        except Exception as ex :
+            wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
+
+        else :
             NEW_TABLE.set_value(None)
 
             if updated_table := next((t for t in database.tables if t.name == table.name), None):
@@ -323,3 +292,87 @@ class MainFrameController(MainFrameView):
             # self._refresh_database()
 
             self._select_tree_item(name=database.name)
+
+    # COLUMNS
+    def _on_current_column(self, column: SQLColumn):
+        self.btn_delete_column.Enable(column is not None)
+        self.btn_move_up_column.Enable(column is not None)
+        self.btn_move_down_column.Enable(column is not None)
+
+    def on_insert_column(self, event):
+        self.controller_list_table_columns.on_column_insert()
+
+    def on_delete_column(self, event):
+        self.controller_list_table_columns.on_column_delete()
+
+    def on_move_up_column(self, event):
+        self.controller_list_table_columns.on_column_move_up()
+
+    def on_move_down_column(self, event):
+        self.controller_list_table_columns.on_column_move_down()
+
+    # INDEXES
+    def _on_current_index(self, index: SQLIndex):
+        self.btn_delete_index.Enable(index is not None)
+
+    def on_delete_index(self, event):
+        self.controller_list_table_index.on_index_delete()
+
+    def on_clear_index(self, event):
+        self.controller_list_table_index.on_index_clear()
+
+    # FOREIGN KEYS
+    def _on_current_foreign_key(self, foreign_key: SQLForeignKey):
+        self.btn_delete_foreign_key.Enable(foreign_key is not None)
+
+    def on_insert_foreign_key(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_insert()
+
+    def on_delete_foreign_key(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_delete()
+
+    def on_clear_foreign_key(self, event):
+        self.controller_list_table_foreign_key.on_foreign_key_clear()
+
+    # RECORDS
+
+    def _on_auto_apply(self, value: bool):
+        self.btn_cancel_record.Enable(not self.chb_auto_apply.GetValue())
+        self.btn_apply_record.Enable(not self.chb_auto_apply.GetValue())
+
+    def on_auto_apply(self, event):
+        AUTO_APPLY.set_value(self.chb_auto_apply.GetValue())
+
+    def _on_current_records(self, records: List[SQLRecord]):
+        print("_on_current_records", records)
+        self.btn_duplicate_record.Enable(len(records) == 1)
+        self.btn_delete_record.Enable(len(records) > 0)
+
+    def on_insert_record(self, event):
+        self.controller_list_table_records.on_insert_record()
+
+    def on_delete_record(self, event):
+        dialog = wx.MessageDialog(None,
+                                  message=_(f'Do you want delete the records?'),
+                                  style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION
+                                  )
+
+        if dialog.ShowModal() == wx.ID_YES:
+            self.do_delete_records()
+
+    def do_delete_records(self):
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        table = CURRENT_TABLE.get_value()
+        records = CURRENT_RECORDS.get_value()
+
+        if session.statement.delete_records(database, table, records):
+            for record in records:
+                index = self.controller_list_table_records.model.data.index(record)
+                item = self.controller_list_table_records.model.GetItem(index)
+                self.controller_list_table_records.model.del_row(item)
+
+        self.controller_list_table_records.list_ctrl_records.refresh()
+
+    # def on_clear_record(self, event):
+    #     self.controller_list_table_records.on_row_clear()

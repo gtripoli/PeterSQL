@@ -50,10 +50,7 @@ class EditTableModel(AbstractModel):
         new_table.collation = self.collation.get_value()
         new_table.auto_increment = self.auto_increment.get_value()
 
-        logger.info(f"Building table: {new_table}")
-
         if new_table == current_table:
-            logger.debug(f"{new_table} == {current_table}")
             return
 
         NEW_TABLE.set_value(new_table)

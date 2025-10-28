@@ -2,7 +2,7 @@ import enum
 import functools
 import dataclasses
 
-from typing import List, Callable, NamedTuple, Tuple, Dict, Optional
+from typing import List, Callable, NamedTuple, Tuple, Dict, Optional, Any
 
 
 class Category(NamedTuple):
@@ -29,7 +29,7 @@ class SQLDataType:
     alias: List[str] = dataclasses.field(default_factory=list)
     max_size: Optional[int] = None
 
-    format: Optional[str] = None
+    format: Optional[Callable[[Any], Any]] = dataclasses.field(default_factory=lambda: lambda value: value)
 
     default_set: List[str] = dataclasses.field(default_factory=list)
     default_length: int = 50  # for the text
@@ -37,14 +37,14 @@ class SQLDataType:
     default_scale: int = 5  # for the real
     default_collation: Optional[str] = None
 
-    has_set: Optional[bool] = dataclasses.field(default=None)  # for the enum and set
-    has_length: Optional[bool] = dataclasses.field(default=None)  # for the text
-    has_scale: Optional[bool] = dataclasses.field(default=None)  # for the real
-    has_precision: Optional[bool] = dataclasses.field(default=None)  # for the integer
-    has_collation: Optional[bool] = dataclasses.field(default=None)  # for the text
+    has_set: bool = dataclasses.field(default=False)  # for the enum and set
+    has_length: bool = dataclasses.field(default=False)  # for the text
+    has_scale: bool = dataclasses.field(default=False)  # for the real
+    has_precision: bool = dataclasses.field(default=False)  # for the integer
+    has_collation: bool = dataclasses.field(default=False)  # for the text
 
-    has_zerofill: Optional[bool] = dataclasses.field(default=None)  # for the integer and real
-    has_unsigned: Optional[bool] = dataclasses.field(default=None)  # for the integer and real
+    has_zerofill: bool = dataclasses.field(default=False)  # for the integer and real
+    has_unsigned: bool = dataclasses.field(default=False)  # for the integer and real
 
     def __post_init__(self):
         if self.has_set is None:
@@ -73,15 +73,16 @@ class SQLDataType:
 
 
 class StandardDataType():
+    BOOLEAN = SQLDataType(name="BOOLEAN", category=DataTypeCategory.INTEGER, format=lambda value: 1 if bool(value == 1) else 0)
     INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER)
-    BOOLEAN = SQLDataType(name="BOOLEAN", category=DataTypeCategory.INTEGER, has_precision=False, has_unsigned=False)
 
-    REAL = SQLDataType(name="REAL", category=DataTypeCategory.REAL)
-    NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.REAL)
+    DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_precision=True, has_scale=True)
+    NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.REAL, has_precision=False, has_scale=False, alias=["DECIMAL", "NUM"])
 
-    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT)
-    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT)
-    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT)
+    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'")
+    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'", has_length=True)
+    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'")
+    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=lambda value: f"'{value}'")
 
     BLOB = SQLDataType(name="BLOB", category=DataTypeCategory.BINARY)
 

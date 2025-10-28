@@ -1,10 +1,16 @@
+import enum
 import os
+import string
 from typing import Type, List, Self, Any, Callable, Dict, Optional
+from wsgiref.validate import validator
 
 import wx
 import wx.dataview
+import wx.lib.masked
 
 from gettext import gettext as _
+
+from wx.lib.masked import controlTypes
 
 from helpers.logger import logger
 from models.structures.indextype import SQLIndexType, StandardIndexType
@@ -45,7 +51,6 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
     def RenderText(self, text, x, rect, dc, state):
         x, y = rect.GetTopLeft()
 
-        # dc.DrawText(str(text), x, self.get_draw_x(rect))
         super().RenderText(str(text), 0, rect, dc, state)
 
         return True
@@ -277,7 +282,7 @@ class PopupCheckList(BasePopup):
         super().open(value, position, size)
 
         if value := self.get_value():
-            self.check_list_box.SetCheckedStrings(value.split(', '))
+            self.check_list_box.SetCheckedStrings(value.split(','))
 
         if self.check_list_box.GetCount() > 0:
             self.check_list_box.SetSelection(0)
@@ -287,7 +292,7 @@ class PopupCheckList(BasePopup):
         return self
 
     def _on_select(self, event):
-        self._value = ", ".join(self.check_list_box.GetCheckedStrings())
+        self._value = ",".join(self.check_list_box.GetCheckedStrings())
         event.Skip()
 
     def _on_char_hook(self, event):
@@ -300,7 +305,7 @@ class PopupCheckList(BasePopup):
             if selection != wx.NOT_FOUND:
                 current_state = self.check_list_box.IsChecked(selection)
                 self.check_list_box.Check(selection, not current_state)
-                self._value = ", ".join(self.check_list_box.GetCheckedStrings())
+                self._value = ",".join(self.check_list_box.GetCheckedStrings())
                 logger.debug(f"Space pressed, toggled item {selection}")
         elif key_code == wx.WXK_UP:
             current = self.check_list_box.GetSelection()
@@ -372,58 +377,108 @@ class ChoiceRenderer(wx.dataview.DataViewChoiceRenderer):
         super().__init__(choices, wx.dataview.DATAVIEW_CELL_EDITABLE, wx.ALIGN_LEFT)
 
 
-class IntegerRenderer(BaseDataViewCustomRenderer):
-    """Renderer for integer columns with validation"""
+class LengthSetRender(BaseDataViewCustomRenderer):
 
     def __init__(self):
-        super().__init__(varianttype="long", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
 
-    def Validate(self, value):
-        """Validate integer input"""
-        try:
-            int(value)
-            return True
-        except ValueError:
-            logger.error("Invalid integer value: %s", value)
-            return False
+    def HasEditorCtrl(self):
+        return True
 
     def CreateEditorCtrl(self, parent, rect, value):
-        """Create text control with validator"""
-        text_ctrl = wx.TextCtrl(parent, value=value, style=wx.TE_PROCESS_ENTER)
-        text_ctrl.SetValidator(wx.TextValidator(wx.FILTER_DIGITS))
+        text_ctrl = wx.TextCtrl(parent, value=str(value or ""), style=wx.TE_PROCESS_ENTER)
+        text_ctrl.SetSize(rect.GetSize())
+
+        view = self.GetView()
+        selected = view.GetSelection()
+        model = view.GetModel()
+        row = model.GetRow(selected)
+        datatype = model.data[row].datatype
+
+        # if not any([datatype.has_length, datatype.has_precision, datatype.has_scale, datatype.has_set]):
+        #     text_ctrl.Enable(False)
+
+
+        return text_ctrl
+
+    def GetValueFromEditorCtrl(self, editor):
+        return self.GetEditorCtrl().GetValue()
+
+class IntegerRenderer(BaseDataViewCustomRenderer):
+
+    def __init__(self):
+        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+
+    def HasEditorCtrl(self):
+        return True
+
+    def OnChar(self, event):
+        unicode = event.GetUnicodeKey()
+
+        if unicode > 0:
+            char = chr(unicode)
+            if char in string.digits:
+                event.Skip()
+                return
+        else:
+            key = event.GetKeyCode()
+            if key in [wx.WXK_DELETE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
+                event.Skip()
+                return
+
+        wx.Bell()
+
+        return
+
+    def CreateEditorCtrl(self, parent, rect, value):
+        text_ctrl = wx.TextCtrl(parent, value=str(value or ""), style=wx.TE_PROCESS_ENTER)
+        text_ctrl.Bind(wx.EVT_CHAR, self.OnChar)
         text_ctrl.SetSize(rect.GetSize())
         return text_ctrl
+
+    def GetValueFromEditorCtrl(self, editor):
+        return self.GetEditorCtrl().GetValue()
 
 
 class FloatRenderer(BaseDataViewCustomRenderer):
 
     def __init__(self):
-        super().__init__(varianttype="double", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
 
-    def Validate(self, value):
-        """Validate integer input"""
-        try:
-            float(value)
-            return True
-        except ValueError:
-            logger.error("Invalid float value: %s", value)
-            return False
+    def HasEditorCtrl(self):
+        return True
+
+    def OnChar(self, event):
+        unicode = event.GetUnicodeKey()
+
+        if unicode > 0:
+            char = chr(unicode)
+            if char in string.digits or char == '.':
+                event.Skip()
+                return
+        else:
+            key = event.GetKeyCode()
+            if key in [wx.WXK_DELETE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
+                event.Skip()
+                return
+
+        wx.Bell()
+
+        return
 
     def CreateEditorCtrl(self, parent, rect, value):
-        """Create text control with validator"""
-        text_ctrl = wx.TextCtrl(parent, value=value, style=wx.TE_PROCESS_ENTER)
-        text_ctrl.SetValidator(wx.TextValidator(wx.FILTER_FLOAT))
+        text_ctrl = wx.TextCtrl(parent, value=str(value or ""))
+        text_ctrl.Bind(wx.EVT_CHAR, self.OnChar)
         text_ctrl.SetSize(rect.GetSize())
         return text_ctrl
 
+    def GetValueFromEditorCtrl(self, editor):
+        return self.GetEditorCtrl().GetValue()
+
 
 class DateRenderer(wx.dataview.DataViewDateRenderer):
-    """Renderer for date columns"""
-
     def __init__(self):
         super().__init__(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-        # self.SetOwner(self.GetView())
 
 
 class DateTimeRenderer(BaseDataViewCustomRenderer):
@@ -497,47 +552,6 @@ class TimeRenderer(BaseDataViewCustomRenderer):
         return True
 
 
-class BooleanRenderer(BaseDataViewCustomRenderer):
-    """Renderer for boolean columns"""
-
-    def __init__(self):
-        super().__init__(varianttype="bool", mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
-        self.editor_ctrl = None
-
-    def Render(self, rect, dc, state):
-        # Draw checkbox box
-        dc.SetPen(wx.Pen(wx.BLACK, 1))
-        dc.SetBrush(wx.Brush(wx.WHITE))
-        dc.DrawRectangle(rect.x, rect.y, rect.width, rect.height)
-        if self.GetValue():
-            # Draw checkmark
-            dc.SetPen(wx.Pen(wx.BLACK, 2))
-            dc.DrawLine(rect.x + 3, rect.y + rect.height // 2, rect.x + rect.width // 2 - 2, rect.y + rect.height - 3)
-            dc.DrawLine(rect.x + rect.width // 2 - 2, rect.y + rect.height - 3, rect.x + rect.width - 3, rect.y + 3)
-        return True
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        """Create boolean picker control"""
-        self.editor_ctrl = wx.CheckBox(parent)
-        self.editor_ctrl.SetValue(value)
-        self.editor_ctrl.SetSize(rect.GetSize())
-        return self.editor_ctrl
-
-    def GetEditorCtrl(self):
-        """Get the editor control for disabling"""
-        return self.editor_ctrl
-
-    def GetValueFromEditorCtrl(self, editor):
-        """Get boolean value from picker control"""
-        return editor.GetValue()
-
-    def Activate(self, *args, **kwargs):
-        print(args, kwargs)
-        print("Activate", not self.GetValue())
-        self.SetValue(not self.GetValue())
-        return True
-
-
 class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
     on_column_insert: Callable[[...], Optional[bool]]
     on_column_delete: Callable[[...], Optional[bool]]
@@ -561,7 +575,9 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         column = wx.dataview.DataViewColumn(_(u"Data type"), column_datatype_renderer, 2, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
-        self.AppendTextColumn(_(u"Length/Set"), 3, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        column_lengthset_renderer = LengthSetRender()
+        column = wx.dataview.DataViewColumn(_(u"Length/Set"), column_lengthset_renderer, 3, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column)
 
         self.AppendToggleColumn(_(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
         self.AppendToggleColumn(_(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
@@ -668,58 +684,6 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         self.PopupMenu(menu)
 
 
-class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        CURRENT_TABLE.subscribe(self._load_table)
-
-    def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
-        if column.datatype.name == 'ENUM' and column.set:
-            return ChoiceRenderer(column.set)
-
-        elif column.datatype.name == 'SET' and column.set:
-            popoup_render = PopupRenderer(PopupCheckList)
-            popoup_render.on_open = lambda popup: popup.set_choices(column.set)
-            return popoup_render
-
-        elif column.datatype.name == 'BOOLEAN':
-            return wx.dataview.DataViewToggleRenderer(mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
-            # return BooleanRenderer()
-
-
-        elif column.datatype.category == DataTypeCategory.INTEGER:
-            return IntegerRenderer()
-
-        elif column.datatype.category == DataTypeCategory.REAL:
-            return FloatRenderer()
-
-        elif column.datatype.name == 'DATE':
-            return DateRenderer()
-
-        elif column.datatype.name in ['DATETIME', 'TIMESTAMP']:
-            return DateTimeRenderer()
-
-        elif column.datatype.name == 'TIME':
-            return TimeRenderer()
-        else:
-            return wx.dataview.DataViewTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
-
-    def _load_table(self, table: SQLTable):
-        while self.GetColumnCount() > 0:
-            self.DeleteColumn(self.GetColumn(0))
-
-        if table is not None:
-            for i, column in enumerate(table.columns):
-                renderer = self._get_column_renderer(column)
-
-                # print("index", i, "column", column.name, column.datatype.name, "renderer", renderer)
-
-                col = wx.dataview.DataViewColumn(column.name, renderer, i, width=-1, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
-                self.AppendColumn(col)
-
-
 class TableIndexesDataViewCtrl(wx.dataview.DataViewCtrl):
 
     def __init__(self, *args, **kwargs):
@@ -734,7 +698,6 @@ class TableIndexesDataViewCtrl(wx.dataview.DataViewCtrl):
 
 
 class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
-
     on_foreign_key_insert: Callable[[...], Optional[bool]]
     on_foreign_key_delete: Callable[[...], Optional[bool]]
     on_foreign_key_update: Callable[[...], Optional[bool]]
@@ -834,3 +797,59 @@ class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
             if table:
                 columns = [c.name for c in list(table.columns)]
                 popup.set_choices(columns)
+
+
+class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        CURRENT_TABLE.subscribe(self._load_table)
+
+    def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
+        if column.datatype.name == 'ENUM':
+            return ChoiceRenderer(column.set)
+
+        elif column.datatype.name == 'SET':
+            popoup_render = PopupRenderer(PopupCheckList)
+            popoup_render.on_open = lambda popup: popup.set_choices(column.set)
+            return popoup_render
+
+        elif column.datatype.name == 'BOOLEAN':
+            return wx.dataview.DataViewToggleRenderer(
+                mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
+
+        elif column.datatype.category == DataTypeCategory.INTEGER:
+            return IntegerRenderer()
+
+        elif column.datatype.category == DataTypeCategory.REAL:
+            return FloatRenderer()
+
+        elif column.datatype.name == 'DATE':
+            return DateRenderer()
+
+        elif column.datatype.name in ['DATETIME', 'TIMESTAMP']:
+            return DateTimeRenderer()
+
+        elif column.datatype.name == 'TIME':
+            return TimeRenderer()
+        else:
+            return wx.dataview.DataViewTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
+
+    def _load_table(self, table: SQLTable):
+        while self.GetColumnCount() > 0:
+            self.DeleteColumn(self.GetColumn(0))
+
+        if table is not None:
+            for i, column in enumerate(table.columns):
+                renderer = self._get_column_renderer(column)
+
+                print("index", i, "column", column.name, column.datatype.name, "renderer", renderer)
+
+                col = wx.dataview.DataViewColumn(column.name, renderer, i, width=-1, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
+                self.AppendColumn(col)
+
+    def refresh(self):
+        model = self.GetModel()
+        model.Reset(len(model.data))
+        self.Refresh()

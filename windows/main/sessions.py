@@ -24,7 +24,6 @@ class TreeSessionsController:
 
     def load_child(self, parent: wx.TreeItemId, childrens: Union[Iterator[SQLDatabase], List[SQLTable]]):
         with Loader.cursor_wait():
-            print("Load children", childrens)
             self.tree_ctrl_sessions.DeleteChildren(parent)
 
             for children in childrens:

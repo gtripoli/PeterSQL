@@ -174,6 +174,6 @@ class TableIndexController:
 
         self.model.clear()
 
-        table.indexes.clear()
+        table.indexes = []
 
         NEW_TABLE.set_value(table)

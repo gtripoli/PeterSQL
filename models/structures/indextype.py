@@ -13,8 +13,10 @@ class SQLIndexType:
     bitmap: wx.Bitmap
     prefix: str
 
-    enable_append : bool = True
-    enable_condition : bool = True
+    is_unique: bool = False
+    is_primary: bool = False
+    enable_append: bool = True
+    enable_condition: bool = True
 
     def __str__(self):
         return self.name
@@ -30,8 +32,8 @@ class SQLIndexType:
 
 
 class StandardIndexType():
-    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk_", bitmap=BitmapList.KEY_PRIMARY)
-    UNIQUE = SQLIndexType(name="UNIQUE", prefix="uq_", bitmap=BitmapList.KEY_UNIQUE)
+    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk_", bitmap=BitmapList.KEY_PRIMARY, is_primary=True)
+    UNIQUE = SQLIndexType(name="UNIQUE", prefix="uq_", bitmap=BitmapList.KEY_UNIQUE, is_unique=True)
     NORMAL = SQLIndexType(name="NORMAL", prefix="ix_", bitmap=BitmapList.KEY_NORMAL)
 
     @classmethod

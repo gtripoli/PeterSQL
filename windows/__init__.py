@@ -562,9 +562,13 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer27 = wx.BoxSizer( wx.VERTICAL )
 
+		self.m_notebook6 = wx.Notebook( self.panel_database, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_panel30 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer80 = wx.BoxSizer( wx.VERTICAL )
+
 		bSizer531 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText391 = wx.StaticText( self.panel_database, wx.ID_ANY, _(u"Table:"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText391 = wx.StaticText( self.m_panel30, wx.ID_ANY, _(u"Table:"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText391.Wrap( -1 )
 
 		bSizer531.Add( self.m_staticText391, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
@@ -572,12 +576,12 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer531.Add( ( 100, 0), 0, wx.EXPAND, 5 )
 
-		self.btn_insert_table = wx.Button( self.panel_database, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_insert_table = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
 		self.btn_insert_table.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
 		bSizer531.Add( self.btn_insert_table, 0, wx.LEFT|wx.RIGHT, 2 )
 
-		self.btn_delete_table = wx.Button( self.panel_database, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_delete_table = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
 		self.btn_delete_table.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
 		self.btn_delete_table.Enable( False )
@@ -588,9 +592,9 @@ class MainFrameView ( wx.Frame ):
 		bSizer531.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
 
-		bSizer27.Add( bSizer531, 0, wx.EXPAND, 5 )
+		bSizer80.Add( bSizer531, 0, wx.EXPAND, 5 )
 
-		self.m_dataViewListCtrl2 = wx.dataview.DataViewListCtrl( self.panel_database, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_dataViewListCtrl2 = wx.dataview.DataViewListCtrl( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_dataViewListColumn6 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Name"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewListColumn7 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Lines"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewListColumn8 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Size"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
@@ -598,7 +602,23 @@ class MainFrameView ( wx.Frame ):
 		self.m_dataViewListColumn10 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Updated at"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewListColumn11 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Engine"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewListColumn12 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Comments"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		bSizer27.Add( self.m_dataViewListCtrl2, 1, wx.ALL|wx.EXPAND, 5 )
+		bSizer80.Add( self.m_dataViewListCtrl2, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.m_panel30.SetSizer( bSizer80 )
+		self.m_panel30.Layout()
+		bSizer80.Fit( self.m_panel30 )
+		self.m_notebook6.AddPage( self.m_panel30, _(u"Tables"), False )
+		self.m_panel31 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer82 = wx.BoxSizer( wx.VERTICAL )
+
+
+		self.m_panel31.SetSizer( bSizer82 )
+		self.m_panel31.Layout()
+		bSizer82.Fit( self.m_panel31 )
+		self.m_notebook6.AddPage( self.m_panel31, _(u"Diagram"), False )
+
+		bSizer27.Add( self.m_notebook6, 1, wx.EXPAND | wx.ALL, 5 )
 
 
 		self.panel_database.SetSizer( bSizer27 )
@@ -736,24 +756,17 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer791 = wx.BoxSizer( wx.VERTICAL )
 
-		self.btn_index_insert = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_delete_index = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_index_insert.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_index_insert.Hide()
+		self.btn_delete_index.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_delete_index.Enable( False )
 
-		bSizer791.Add( self.btn_index_insert, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizer791.Add( self.btn_delete_index, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.btn_index_delete = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_clear_index = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_index_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_index_delete.Enable( False )
-
-		bSizer791.Add( self.btn_index_delete, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.btn_index_clear = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-		self.btn_index_clear.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
-		bSizer791.Add( self.btn_index_clear, 0, wx.ALL|wx.EXPAND, 5 )
+		self.btn_clear_index.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer791.Add( self.btn_clear_index, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		bSizer28.Add( bSizer791, 0, wx.ALIGN_CENTER, 5 )
@@ -779,22 +792,22 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer79 = wx.BoxSizer( wx.VERTICAL )
 
-		self.btn_foreign_key_insert = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_insert_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_foreign_key_insert.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-		bSizer79.Add( self.btn_foreign_key_insert, 0, wx.ALL|wx.EXPAND, 5 )
+		self.btn_insert_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer79.Add( self.btn_insert_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.btn_foreign_key_delete = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_delete_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_foreign_key_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_foreign_key_delete.Enable( False )
+		self.btn_delete_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_delete_foreign_key.Enable( False )
 
-		bSizer79.Add( self.btn_foreign_key_delete, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizer79.Add( self.btn_delete_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.btn_foreign_key_clear = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_clear_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_foreign_key_clear.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
-		bSizer79.Add( self.btn_foreign_key_clear, 0, wx.ALL|wx.EXPAND, 5 )
+		self.btn_clear_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer79.Add( self.btn_clear_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		bSizer78.Add( bSizer79, 0, wx.ALIGN_CENTER, 5 )
@@ -843,26 +856,26 @@ class MainFrameView ( wx.Frame ):
 		self.btn_insert_column.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
 		bSizer53.Add( self.btn_insert_column, 0, wx.LEFT|wx.RIGHT, 2 )
 
-		self.btn_column_delete = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_delete_column = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_column_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_column_delete.Enable( False )
+		self.btn_delete_column.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_delete_column.Enable( False )
 
-		bSizer53.Add( self.btn_column_delete, 0, wx.LEFT|wx.RIGHT, 2 )
+		bSizer53.Add( self.btn_delete_column, 0, wx.LEFT|wx.RIGHT, 2 )
 
-		self.btn_column_move_up = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Up"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_move_up_column = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Up"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_column_move_up.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_up.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_column_move_up.Enable( False )
+		self.btn_move_up_column.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_up.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_move_up_column.Enable( False )
 
-		bSizer53.Add( self.btn_column_move_up, 0, wx.LEFT|wx.RIGHT, 2 )
+		bSizer53.Add( self.btn_move_up_column, 0, wx.LEFT|wx.RIGHT, 2 )
 
-		self.btn_column_move_down = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Down"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+		self.btn_move_down_column = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Down"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
-		self.btn_column_move_down.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_down.png", wx.BITMAP_TYPE_ANY ) )
-		self.btn_column_move_down.Enable( False )
+		self.btn_move_down_column.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_down.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_move_down_column.Enable( False )
 
-		bSizer53.Add( self.btn_column_move_down, 0, wx.LEFT|wx.RIGHT, 2 )
+		bSizer53.Add( self.btn_move_down_column, 0, wx.LEFT|wx.RIGHT, 2 )
 
 
 		bSizer53.Add( ( 0, 0), 1, wx.EXPAND, 5 )
@@ -875,18 +888,18 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer52 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.btn_table_delete = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer52.Add( self.btn_table_delete, 0, wx.ALL, 5 )
+		self.btn_delete_table = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer52.Add( self.btn_delete_table, 0, wx.ALL, 5 )
 
-		self.btn_table_cancel = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.btn_table_cancel.Enable( False )
+		self.btn_cancel_table = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.btn_cancel_table.Enable( False )
 
-		bSizer52.Add( self.btn_table_cancel, 0, wx.ALL, 5 )
+		bSizer52.Add( self.btn_cancel_table, 0, wx.ALL, 5 )
 
-		self.btn_table_save = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.btn_table_save.Enable( False )
+		self.btn_apply_table = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.btn_apply_table.Enable( False )
 
-		bSizer52.Add( self.btn_table_save, 0, wx.ALL, 5 )
+		bSizer52.Add( self.btn_apply_table, 0, wx.ALL, 5 )
 
 
 		bSizer54.Add( bSizer52, 0, wx.EXPAND, 5 )
@@ -929,13 +942,84 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer61 = wx.BoxSizer( wx.VERTICAL )
 
-		self.list_ctrl_table_records = TableRecordsDataViewCtrl( self.panel_records, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE )
+		self.m_collapsiblePane1.Collapse( True )
+
+		bSizer831 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_textCtrl21 = wx.TextCtrl( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+		bSizer831.Add( self.m_textCtrl21, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
+		self.m_collapsiblePane1.GetPane().Layout()
+		bSizer831.Fit( self.m_collapsiblePane1.GetPane() )
+		bSizer61.Add( self.m_collapsiblePane1, 0, wx.EXPAND | wx.ALL, 5 )
+
+		bSizer83 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.btn_insert_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Insert record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_insert_record.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer83.Add( self.btn_insert_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.btn_duplicate_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Duplicate record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_duplicate_record.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_duplicate_record.Enable( False )
+
+		bSizer83.Add( self.btn_duplicate_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.btn_delete_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Delete record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_delete_record.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_delete_record.Enable( False )
+
+		bSizer83.Add( self.btn_delete_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_staticline3 = wx.StaticLine( self.panel_records, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
+		bSizer83.Add( self.m_staticline3, 0, wx.EXPAND | wx.ALL, 5 )
+
+		self.chb_auto_apply = wx.CheckBox( self.panel_records, wx.ID_ANY, _(u"Apply changes automatically"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.chb_auto_apply.SetValue(True)
+		self.chb_auto_apply.SetToolTip( _(u"If enabled, table edits are applied immediately without pressing Apply or Cancel") )
+		self.chb_auto_apply.SetHelpText( _(u"If enabled, table edits are applied immediately without pressing Apply or Cancel") )
+
+		bSizer83.Add( self.chb_auto_apply, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.btn_cancel_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_cancel_record.SetBitmap( wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_cancel_record.Enable( False )
+
+		bSizer83.Add( self.btn_cancel_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.btn_apply_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_apply_record.SetBitmap( wx.Bitmap( u"icons/16x16/disk.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_apply_record.Enable( False )
+
+		bSizer83.Add( self.btn_apply_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer61.Add( bSizer83, 0, wx.EXPAND, 5 )
+
+		self.list_ctrl_table_records = TableRecordsDataViewCtrl( self.panel_records, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_MULTIPLE )
 		bSizer61.Add( self.list_ctrl_table_records, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.panel_records.SetSizer( bSizer61 )
 		self.panel_records.Layout()
 		bSizer61.Fit( self.panel_records )
+		self.m_menu10 = wx.Menu()
+		self.m_menuItem13 = wx.MenuItem( self.m_menu10, wx.ID_ANY, _(u"Insert row")+ u"\t" + u"Ins", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu10.Append( self.m_menuItem13 )
+
+		self.m_menuItem14 = wx.MenuItem( self.m_menu10, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu10.Append( self.m_menuItem14 )
+
+		self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
+
 		self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
 		MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
 		if ( MainFrameNotebookBitmap.IsOk() ):
@@ -1075,19 +1159,23 @@ class MainFrameView ( wx.Frame ):
 		self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 		self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
 		self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
-		self.btn_index_insert.Bind( wx.EVT_BUTTON, self.on_foreign_key_insert )
-		self.btn_index_delete.Bind( wx.EVT_BUTTON, self.on_index_delete )
-		self.btn_index_clear.Bind( wx.EVT_BUTTON, self.on_index_clear )
-		self.btn_foreign_key_insert.Bind( wx.EVT_BUTTON, self.on_foreign_key_insert )
-		self.btn_foreign_key_delete.Bind( wx.EVT_BUTTON, self.on_foreign_key_delete )
-		self.btn_foreign_key_clear.Bind( wx.EVT_BUTTON, self.on_foreign_key_clear )
-		self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_column_insert )
-		self.btn_column_delete.Bind( wx.EVT_BUTTON, self.on_column_delete )
-		self.btn_column_move_up.Bind( wx.EVT_BUTTON, self.on_column_move_up )
-		self.btn_column_move_down.Bind( wx.EVT_BUTTON, self.on_column_move_down )
-		self.btn_table_delete.Bind( wx.EVT_BUTTON, self.on_delete_table )
-		self.btn_table_cancel.Bind( wx.EVT_BUTTON, self.do_cancel_table )
-		self.btn_table_save.Bind( wx.EVT_BUTTON, self.do_save_table )
+		self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
+		self.btn_delete_index.Bind( wx.EVT_BUTTON, self.on_delete_index )
+		self.btn_clear_index.Bind( wx.EVT_BUTTON, self.on_clear_index )
+		self.btn_insert_foreign_key.Bind( wx.EVT_BUTTON, self.on_insert_foreign_key )
+		self.btn_delete_foreign_key.Bind( wx.EVT_BUTTON, self.on_delete_foreign_key )
+		self.btn_clear_foreign_key.Bind( wx.EVT_BUTTON, self.on_clear_foreign_key )
+		self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_insert_column )
+		self.btn_delete_column.Bind( wx.EVT_BUTTON, self.on_delete_column )
+		self.btn_move_up_column.Bind( wx.EVT_BUTTON, self.on_move_up_column )
+		self.btn_move_down_column.Bind( wx.EVT_BUTTON, self.on_move_down_column )
+		self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
+		self.btn_cancel_table.Bind( wx.EVT_BUTTON, self.do_cancel_table )
+		self.btn_apply_table.Bind( wx.EVT_BUTTON, self.do_apply_table )
+		self.btn_insert_record.Bind( wx.EVT_BUTTON, self.on_insert_record )
+		self.btn_duplicate_record.Bind( wx.EVT_BUTTON, self.on_duplicate_record )
+		self.btn_delete_record.Bind( wx.EVT_BUTTON, self.on_delete_record )
+		self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
 
 	def __del__( self ):
 		pass
@@ -1112,41 +1200,53 @@ class MainFrameView ( wx.Frame ):
 	def on_insert_table( self, event ):
 		event.Skip()
 
-	def on_foreign_key_insert( self, event ):
-		event.Skip()
-
-	def on_index_delete( self, event ):
-		event.Skip()
-
-	def on_index_clear( self, event ):
-		event.Skip()
-
-
-	def on_foreign_key_delete( self, event ):
-		event.Skip()
-
-	def on_foreign_key_clear( self, event ):
-		event.Skip()
-
-	def on_column_insert( self, event ):
-		event.Skip()
-
-	def on_column_delete( self, event ):
-		event.Skip()
-
-	def on_column_move_up( self, event ):
-		event.Skip()
-
-	def on_column_move_down( self, event ):
-		event.Skip()
-
 	def on_delete_table( self, event ):
 		event.Skip()
+
+	def on_delete_index( self, event ):
+		event.Skip()
+
+	def on_clear_index( self, event ):
+		event.Skip()
+
+	def on_insert_foreign_key( self, event ):
+		event.Skip()
+
+	def on_delete_foreign_key( self, event ):
+		event.Skip()
+
+	def on_clear_foreign_key( self, event ):
+		event.Skip()
+
+	def on_insert_column( self, event ):
+		event.Skip()
+
+	def on_delete_column( self, event ):
+		event.Skip()
+
+	def on_move_up_column( self, event ):
+		event.Skip()
+
+	def on_move_down_column( self, event ):
+		event.Skip()
+
 
 	def do_cancel_table( self, event ):
 		event.Skip()
 
-	def do_save_table( self, event ):
+	def do_apply_table( self, event ):
+		event.Skip()
+
+	def on_insert_record( self, event ):
+		event.Skip()
+
+	def on_duplicate_record( self, event ):
+		event.Skip()
+
+	def on_delete_record( self, event ):
+		event.Skip()
+
+	def on_auto_apply( self, event ):
 		event.Skip()
 
 	def m_splitter51OnIdle( self, event ):
@@ -1172,6 +1272,9 @@ class MainFrameView ( wx.Frame ):
 
 	def panel_table_columnsOnContextMenu( self, event ):
 		self.panel_table_columns.PopupMenu( self.menu_table_columns, event.GetPosition() )
+
+	def panel_recordsOnContextMenu( self, event ):
+		self.panel_records.PopupMenu( self.m_menu10, event.GetPosition() )
 
 	def m_panel15OnContextMenu( self, event ):
 		self.m_panel15.PopupMenu( self.m_menu3, event.GetPosition() )
