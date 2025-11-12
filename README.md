@@ -2,8 +2,13 @@
 ![Coverage](https://img.shields.io/badge/coverage-44%25-brightgreen)
 
 # PeterSQL
+<p align="center">
+  <img src="petersql_large.png" alt="PeterSQL"/>
+</p>
 
 > Heidi's (silly?) friend - a wxPython porting of HeidiSQL
+
+
 
 **PeterSQL** is a graphical client for database management, inspired by the
 excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python** with **wxPython**, and designed to
