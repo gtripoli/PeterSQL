@@ -1,8 +1,8 @@
-from models.structures.datatype import SQLDataType, StandardDataType, DataTypeCategory
+from engines.structures.datatype import SQLDataType, StandardDataType, DataTypeCategory, DataTypeFormat
 
 
 class SQLiteDataType(StandardDataType):
-    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, alias=["INT"])
+    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, alias=["INT"], has_precision=False)
 
     TINYINT = SQLDataType(name="TINYINT", category=DataTypeCategory.INTEGER)
     SMALLINT = SQLDataType(name="SMALLINT", category=DataTypeCategory.INTEGER)
@@ -12,10 +12,11 @@ class SQLiteDataType(StandardDataType):
     INTEGER8 = SQLDataType(name="INT8", category=DataTypeCategory.INTEGER)
 
     CHARACTER = SQLDataType(name="CHARACTER", category=DataTypeCategory.TEXT, has_length=True, max_size=20)
-    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=255)
-    NCHAR = SQLDataType(name="NCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=55)
-    NVARCHAR = SQLDataType(name="NVARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=100)
-    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT)
+
+    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=255, format=DataTypeFormat.TEXT)
+    NCHAR = SQLDataType(name="NCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=55, format=DataTypeFormat.TEXT)
+    NVARCHAR = SQLDataType(name="NVARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=100, format=DataTypeFormat.TEXT)
+    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
     CLOB = SQLDataType(name="CLOB", category=DataTypeCategory.TEXT)
 
     REAL = SQLDataType(name="REAL", category=DataTypeCategory.REAL)

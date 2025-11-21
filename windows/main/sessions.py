@@ -1,17 +1,21 @@
 import wx
 
-from typing import Iterator, Union, List
+from typing import Iterator, Union, List, Callable
 
 from helpers.observables import Loader
 from icons import ImageList, IconList
 
-from models.session import Session, SessionEngine
-from models.structures.database import SQLDatabase, SQLTable
+from engines.session import Session, SessionEngine
+from engines.structures.database import SQLDatabase, SQLTable, SQLView, SQLTrigger
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER
+from windows.main.table import NEW_TABLE
 
 
 class TreeSessionsController:
+    on_cancel_table: Callable
+    do_cancel_table: Callable
+
     def __init__(self, tree_ctrl_sessions: wx.TreeCtrl):
         self.app = wx.GetApp()
 
@@ -34,6 +38,10 @@ class TreeSessionsController:
                     self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_DATABASE, wx.TreeItemIcon_Normal)
                 elif type(children) is SQLTable:
                     self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TABLE, wx.TreeItemIcon_Normal)
+                elif type(children) is SQLView:
+                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_VIEW, wx.TreeItemIcon_Normal)
+                elif type(children) is SQLTrigger:
+                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TRIGGER, wx.TreeItemIcon_Normal)
 
             self.tree_ctrl_sessions.Expand(parent)
 
@@ -54,33 +62,55 @@ class TreeSessionsController:
 
         self.tree_ctrl_sessions.SelectItem(session_tree_item)
 
-        self.load_child(session_tree_item, session.statement.get_databases())
+        self.load_child(session_tree_item, session.context.get_databases())
 
     def on_select_item(self, event: wx.TreeEvent):
         item = event.GetItem()
         data = self.tree_ctrl_sessions.GetItemData(item)
         parent = self.tree_ctrl_sessions.GetItemParent(item)
 
-        if isinstance(data, Session):
+        if NEW_TABLE.get_value() and not self.on_cancel_table(event):
+            event.Veto()
+            return
+
+        CURRENT_TABLE.set_value(None)
+        CURRENT_VIEW.set_value(None)
+        CURRENT_TRIGGER.set_value(None)
+
+        if isinstance(data, Session) and (not CURRENT_DATABASE.get_value() or data.id != CURRENT_SESSION.get_value().id):
+            # if CURRENT_SESSION.get_value() and data != CURRENT_SESSION.get_value() :
             CURRENT_SESSION.set_value(data)
+
             CURRENT_DATABASE.set_value(None)
-            CURRENT_TABLE.set_value(None)
 
-        if isinstance(data, SQLDatabase):
+        elif isinstance(data, SQLDatabase) and (not CURRENT_DATABASE.get_value() or data.id != CURRENT_DATABASE.get_value().id):
             session = self.tree_ctrl_sessions.GetItemData(parent)
-            CURRENT_SESSION.set_value(session)
-
             database = data
+
+            if session.id != CURRENT_SESSION.get_value().id:
+                CURRENT_SESSION.set_value(session)
+
             CURRENT_DATABASE.set_value(database)
 
-            CURRENT_TABLE.set_value(None)
+            self.load_child(data.control, childrens=list(database.tables) + list(database.views) + list(database.triggers))
 
-            self.load_child(data.control, childrens=session.statement.get_tables(database=database))
+        else:
+            session = self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent))
+            if session.id != CURRENT_SESSION.get_value().id:
+                CURRENT_SESSION.set_value(session)
 
-        elif isinstance(data, SQLTable):
-            CURRENT_SESSION.set_value(self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent)))
-            CURRENT_DATABASE.set_value(self.tree_ctrl_sessions.GetItemData(parent))
-            CURRENT_TABLE.set_value(data)
+            database = self.tree_ctrl_sessions.GetItemData(parent)
+            if database.id != CURRENT_DATABASE.get_value().id:
+                CURRENT_DATABASE.set_value(database)
+
+            if isinstance(data, SQLTable) and (not CURRENT_TABLE.get_value() or data.id != CURRENT_TABLE.get_value().id):
+                CURRENT_TABLE.set_value(data.copy())
+
+            elif isinstance(data, SQLView) and (not CURRENT_VIEW.get_value() or data.id != CURRENT_VIEW.get_value().id):
+                CURRENT_VIEW.set_value(data.copy())
+
+            if isinstance(data, SQLTrigger) and not (CURRENT_TRIGGER.get_value() or data.id != CURRENT_TRIGGER.get_value().id):
+                CURRENT_TRIGGER.set_value(data.copy())
 
     def find_by_data(self, **filters) -> wx.TreeItemId:
         def _matches(data):

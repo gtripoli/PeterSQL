@@ -635,8 +635,6 @@ class MainFrameView ( wx.Frame ):
 			MainFrameNotebookIndex += 1
 
 		self.panel_table = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.panel_table.Enable( False )
-
 		bSizer251 = wx.BoxSizer( wx.VERTICAL )
 
 		self.m_splitter41 = wx.SplitterWindow( self.panel_table, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_LIVE_UPDATE )
@@ -937,9 +935,128 @@ class MainFrameView ( wx.Frame ):
 			self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
 			MainFrameNotebookIndex += 1
 
-		self.panel_records = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.panel_records.Enable( False )
+		self.panel_views = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer84 = wx.BoxSizer( wx.VERTICAL )
 
+		self.m_notebook7 = wx.Notebook( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_panel34 = wx.Panel( self.m_notebook7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer85 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer86 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer89 = wx.BoxSizer( wx.HORIZONTAL )
+
+		bSizer87 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText40 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.Wrap( -1 )
+
+		bSizer87.Add( self.m_staticText40, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_textCtrl22 = wx.TextCtrl( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer87.Add( self.m_textCtrl22, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		bSizer89.Add( bSizer87, 1, wx.EXPAND, 5 )
+
+		bSizer871 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText401 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Temporary"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText401.Wrap( -1 )
+
+		bSizer871.Add( self.m_staticText401, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_checkBox5 = wx.CheckBox( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer871.Add( self.m_checkBox5, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer89.Add( bSizer871, 1, wx.EXPAND, 5 )
+
+
+		bSizer86.Add( bSizer89, 0, wx.EXPAND, 5 )
+
+
+		bSizer85.Add( bSizer86, 1, wx.EXPAND, 5 )
+
+
+		self.m_panel34.SetSizer( bSizer85 )
+		self.m_panel34.Layout()
+		bSizer85.Fit( self.m_panel34 )
+		self.m_notebook7.AddPage( self.m_panel34, _(u"Options"), False )
+
+		bSizer84.Add( self.m_notebook7, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.sql_view = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+		self.sql_view.SetUseTabs ( True )
+		self.sql_view.SetTabWidth ( 4 )
+		self.sql_view.SetIndent ( 4 )
+		self.sql_view.SetTabIndents( True )
+		self.sql_view.SetBackSpaceUnIndents( True )
+		self.sql_view.SetViewEOL( False )
+		self.sql_view.SetViewWhiteSpace( False )
+		self.sql_view.SetMarginWidth( 2, 0 )
+		self.sql_view.SetIndentationGuides( True )
+		self.sql_view.SetReadOnly( False )
+		self.sql_view.SetMarginWidth( 1, 0 )
+		self.sql_view.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+		self.sql_view.SetMarginWidth( 0, self.sql_view.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+		self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+		self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+		self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+		self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_view.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+		self.sql_view.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+		bSizer84.Add( self.sql_view, 1, wx.EXPAND | wx.ALL, 5 )
+
+		bSizer91 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.btn_delete_view = wx.Button( self.panel_views, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer91.Add( self.btn_delete_view, 0, wx.ALL, 5 )
+
+		self.btn_cancel_view = wx.Button( self.panel_views, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.btn_cancel_view.Enable( False )
+
+		bSizer91.Add( self.btn_cancel_view, 0, wx.ALL, 5 )
+
+		self.btn_save_view = wx.Button( self.panel_views, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.btn_save_view.Enable( False )
+
+		bSizer91.Add( self.btn_save_view, 0, wx.ALL, 5 )
+
+
+		bSizer84.Add( bSizer91, 0, wx.EXPAND, 5 )
+
+
+		self.panel_views.SetSizer( bSizer84 )
+		self.panel_views.Layout()
+		bSizer84.Fit( self.panel_views )
+		self.MainFrameNotebook.AddPage( self.panel_views, _(u"Views"), False )
+		MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/view.png", wx.BITMAP_TYPE_ANY )
+		if ( MainFrameNotebookBitmap.IsOk() ):
+			MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
+			self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
+			MainFrameNotebookIndex += 1
+
+		self.panel_triggers = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		self.MainFrameNotebook.AddPage( self.panel_triggers, _(u"Triggers"), False )
+		MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/cog.png", wx.BITMAP_TYPE_ANY )
+		if ( MainFrameNotebookBitmap.IsOk() ):
+			MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
+			self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
+			MainFrameNotebookIndex += 1
+
+		self.panel_records = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer61 = wx.BoxSizer( wx.VERTICAL )
 
 		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE )
@@ -1099,38 +1216,38 @@ class MainFrameView ( wx.Frame ):
 		self.LogSQLPanel = wx.Panel( self.m_splitter51, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
 		sizer_log_sql = wx.BoxSizer( wx.VERTICAL )
 
-		self.query_logs = wx.stc.StyledTextCtrl( self.LogSQLPanel, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
-		self.query_logs.SetUseTabs ( True )
-		self.query_logs.SetTabWidth ( 4 )
-		self.query_logs.SetIndent ( 4 )
-		self.query_logs.SetTabIndents( True )
-		self.query_logs.SetBackSpaceUnIndents( True )
-		self.query_logs.SetViewEOL( False )
-		self.query_logs.SetViewWhiteSpace( False )
-		self.query_logs.SetMarginWidth( 2, 0 )
-		self.query_logs.SetIndentationGuides( True )
-		self.query_logs.SetReadOnly( False )
-		self.query_logs.SetMarginWidth( 1, 0 )
-		self.query_logs.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-		self.query_logs.SetMarginWidth( 0, self.query_logs.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
-		self.query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
-		self.query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
-		self.query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
-		self.query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
-		self.query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
-		self.query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
-		self.query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
-		self.query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
-		self.query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
-		self.query_logs.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
-		self.query_logs.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-		sizer_log_sql.Add( self.query_logs, 1, wx.EXPAND | wx.ALL, 5 )
+		self.sql_logs_query = wx.stc.StyledTextCtrl( self.LogSQLPanel, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+		self.sql_logs_query.SetUseTabs ( True )
+		self.sql_logs_query.SetTabWidth ( 4 )
+		self.sql_logs_query.SetIndent ( 4 )
+		self.sql_logs_query.SetTabIndents( True )
+		self.sql_logs_query.SetBackSpaceUnIndents( True )
+		self.sql_logs_query.SetViewEOL( False )
+		self.sql_logs_query.SetViewWhiteSpace( False )
+		self.sql_logs_query.SetMarginWidth( 2, 0 )
+		self.sql_logs_query.SetIndentationGuides( True )
+		self.sql_logs_query.SetReadOnly( False )
+		self.sql_logs_query.SetMarginWidth( 1, 0 )
+		self.sql_logs_query.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+		self.sql_logs_query.SetMarginWidth( 0, self.sql_logs_query.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_logs_query.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+		self.sql_logs_query.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+		sizer_log_sql.Add( self.sql_logs_query, 1, wx.EXPAND | wx.ALL, 5 )
 
 
 		self.LogSQLPanel.SetSizer( sizer_log_sql )
@@ -1170,7 +1287,7 @@ class MainFrameView ( wx.Frame ):
 		self.btn_move_up_column.Bind( wx.EVT_BUTTON, self.on_move_up_column )
 		self.btn_move_down_column.Bind( wx.EVT_BUTTON, self.on_move_down_column )
 		self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
-		self.btn_cancel_table.Bind( wx.EVT_BUTTON, self.do_cancel_table )
+		self.btn_cancel_table.Bind( wx.EVT_BUTTON, self.on_cancel_table )
 		self.btn_apply_table.Bind( wx.EVT_BUTTON, self.do_apply_table )
 		self.btn_insert_record.Bind( wx.EVT_BUTTON, self.on_insert_record )
 		self.btn_duplicate_record.Bind( wx.EVT_BUTTON, self.on_duplicate_record )
@@ -1231,7 +1348,7 @@ class MainFrameView ( wx.Frame ):
 		event.Skip()
 
 
-	def do_cancel_table( self, event ):
+	def on_cancel_table( self, event ):
 		event.Skip()
 
 	def do_apply_table( self, event ):
@@ -1278,6 +1395,28 @@ class MainFrameView ( wx.Frame ):
 
 	def m_panel15OnContextMenu( self, event ):
 		self.m_panel15.PopupMenu( self.m_menu3, event.GetPosition() )
+
+
+###########################################################################
+## Class MyPanel3
+###########################################################################
+
+class MyPanel3 ( wx.Panel ):
+
+	def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
+		wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
+
+		bSizer90 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_textCtrl221 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer90.Add( self.m_textCtrl221, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.SetSizer( bSizer90 )
+		self.Layout()
+
+	def __del__( self ):
+		pass
 
 
 ###########################################################################

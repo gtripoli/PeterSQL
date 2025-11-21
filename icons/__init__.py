@@ -5,12 +5,14 @@ import enum
 ImageList = wx.ImageList(16, 16)
 
 
-class BitmapList(object):
+class BitmapList:
     NOT_FOUND = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "cross.png"), wx.BITMAP_TYPE_PNG)
 
     SYSTEM_FOLDER = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "folder.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_TABLE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "table.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_DATABASE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "database.png"), wx.BITMAP_TYPE_PNG)
+    SYSTEM_VIEW = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "view.png"), wx.BITMAP_TYPE_PNG)
+    SYSTEM_TRIGGER = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "cog.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_CHECKBOX_CHECKED = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_checked.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_CHECKBOX_UNCHECKED = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_unchecked.png"), wx.BITMAP_TYPE_PNG)
 
@@ -39,9 +41,9 @@ class IconList(object):
 
     SYSTEM_FOLDER = ImageList.Add(BitmapList.SYSTEM_FOLDER)
     SYSTEM_TABLE = ImageList.Add(BitmapList.SYSTEM_TABLE)
+    SYSTEM_VIEW = ImageList.Add(BitmapList.SYSTEM_VIEW)
+    SYSTEM_TRIGGER = ImageList.Add(BitmapList.SYSTEM_TRIGGER)
     SYSTEM_DATABASE = ImageList.Add(BitmapList.SYSTEM_DATABASE)
-    # SYSTEM_CHECKBOX_CHECKED = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_checked.png"), wx.BITMAP_TYPE_PNG))
-    # SYSTEM_CHECKBOX_UNCHECKED = ImageList.Add(wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_unchecked.png"), wx.BITMAP_TYPE_PNG))
 
     ENGINE_SQLITE = ImageList.Add(BitmapList.ENGINE_SQLITE)
     ENGINE_MYSQL = ImageList.Add(BitmapList.ENGINE_MYSQL)

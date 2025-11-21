@@ -1,0 +1,283 @@
+import contextlib
+import re
+import abc
+
+from typing import Dict, Any, Optional, List, Type, Union, TypeAlias
+
+from helpers.logger import logger
+from helpers.observables import ObservableList
+
+from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
+from engines.structures.indextype import SQLIndexType
+
+LOG_QUERY: ObservableList[str] = ObservableList()
+
+SQLTypeAlias: TypeAlias = Union['SQLView', 'SQLTrigger', 'SQLTable', 'SQLColumn', 'SQLIndex', 'SQLForeignKey', 'SQLRecord']
+
+
+class AbstractColumnBuilder(abc.ABC):
+    TEMPLATE: str
+
+    parts: Dict[str, str]
+
+    def __init__(self, column: 'SQLColumn', exclude: Optional[List[str]] = None):
+        self.column = column
+        self.exclude = exclude
+
+        self.parts = {
+            'name': self.name,
+            'datatype': self.datatype,
+            'primary_key': self.primary_key,
+            'auto_increment': self.auto_increment,
+            'nullable': self.nullable,
+            # 'unique': self.unique,
+            # 'check': self.check,
+            'default': self.default,
+            'collate': self.collate,
+            # 'generated': self.generated,
+            # 'references': self.references,
+            # 'references': self.references,
+            # 'constraint': self.constraint,
+        }
+
+    @property
+    def name(self):
+        return f"`{self.column.name}`"
+
+    @property
+    def datatype(self):
+        datatype_str = str(self.column.datatype.name)
+
+        if self.column.datatype.has_length:
+            datatype_str += f"({self.column.length or self.column.datatype.default_length})"
+
+        if self.column.datatype.has_precision:
+            if self.column.datatype.has_scale:
+                datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision},{self.column.numeric_scale or self.column.datatype.default_scale})"
+            else:
+                datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision})"
+
+        return datatype_str
+
+    @property
+    def primary_key(self):
+        return 'PRIMARY KEY' if self.column.is_primary_key else ''
+
+    @property
+    def auto_increment(self):
+        return 'AUTO_INCREMENT' if self.column.is_auto_increment else ''
+
+    @property
+    def nullable(self):
+        return 'NOT NULL' if not self.column.is_nullable or self.column.is_auto_increment else 'NULL'
+
+    @property
+    def default(self):
+        return f"DEFAULT {self.column.server_default}" if self.column.server_default and self.column.server_default != '' else ''
+
+    @property
+    def collate(self):
+        return f"COLLATE {self.column.collation_name}" if self.column.collation_name else ''
+
+    @property
+    def virtual(self):
+        return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality and self.column.expression else ''
+
+    # def unique(self):
+    #     return 'UNIQUE' if self.column.is_unique else ''
+
+    # @property
+    # def references(self):
+    #     return f"REFERENCES {self.column.references}" if self.column.references else ''
+
+    # @property
+    # def constraint(self):
+    #     return f"CONSTRAINT {self.column.constraint}" if self.column.constraint else ''
+
+    def __str__(self) -> str:
+        formatted_parts = []
+        for template_part in self.TEMPLATE:
+            if self.exclude and any(part in template_part for part in self.exclude):
+                continue
+            formatted = template_part % self.parts
+            if formatted_strip := formatted.strip():  # Only include non-empty parts
+                formatted_parts.append(formatted_strip)
+
+        return " ".join(formatted_parts)
+
+
+class AbstractContext(abc.ABC):
+    _connection: Any = None
+    _cursor: Any = None
+
+    COLLATIONS: List[str]
+
+    def __init__(self, connection_url):
+        self.connection_url = connection_url
+
+    @abc.abstractmethod
+    def connect(self, **connect_kwargs) -> None:
+        """Establish connection to the database using native driver"""
+        raise NotImplementedError
+
+    def disconnect(self) -> None:
+        if self._cursor is not None:
+            self._cursor.close()
+            self._cursor = None
+
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
+
+    @property
+    def connection(self) -> Any:
+        if self._connection is None:
+            raise RuntimeError("Not connected to the database. Call connect() first.")
+        return self._connection
+
+    @property
+    def cursor(self) -> Any:
+        if self._cursor is None:
+            raise RuntimeError("Not connected to the database. Call connect() first.")
+        return self._cursor
+
+    # def __enter__(self):
+    #     self.connect()
+    #     return self
+    #
+    # def __exit__(self, exc_type, exc_val, exc_tb):
+    #     self.disconnect()
+
+    def _on_connect(self, *args, **kwargs):
+        logger.debug("connected")
+
+    def _on_disconnect(self, *args, **kwargs):
+        logger.debug("disconnected")
+
+    @staticmethod
+    def get_temporary_id(container: Union[List[SQLTypeAlias]]):
+        id = min([0] + [t.id for t in container]) - 1
+        # if len(container):
+        #     id = min([id] + [t.id for t in container]) - 1
+
+        return id
+
+    @abc.abstractmethod
+    def get_server_version(self) -> str:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_server_uptime(self) -> Optional[int]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_databases(self) -> List[SQLDatabase]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_views(self, database: SQLDatabase) -> List[SQLView]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_triggers(self, database: SQLDatabase) -> List[SQLTrigger]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLRecord]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_table(self, database: SQLDatabase) -> SQLTable:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_column(self, id: int, name: str, table: SQLTable, datatype, **default_values) -> SQLColumn:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLTable, columns: List[str]) -> SQLIndex:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_record(self, table: SQLTable, values: Dict[str, Any]) -> SQLRecord:
+        raise NotImplementedError
+
+    # EXECUTION
+    def execute(self, query: str, params=None, **kwargs) -> bool:
+        query = re.sub(r'\s+', ' ', str(query)).strip()
+
+        LOG_QUERY.append(query)
+
+        try:
+            if params is not None:
+                self.cursor.execute(query, params)
+            else:
+                self.cursor.execute(query, **kwargs)
+
+        except Exception as ex:
+            logger.error(ex, exc_info=True)
+            LOG_QUERY.append(f"/* {str(ex)} */")
+            raise
+
+        return True
+
+    def fetchone(self) -> Any:
+        try:
+            return self.cursor.fetchone()
+        except Exception as ex:
+            logger.error(ex, exc_info=True)
+            raise
+
+    def fetchall(self) -> List[Any]:
+        try:
+            return self.cursor.fetchall()
+        except Exception as ex:
+            logger.error(ex, exc_info=True)
+            raise
+
+    @contextlib.contextmanager
+    def transaction(self):
+        try:
+            self.execute("BEGIN")
+            yield self
+            self.execute("COMMIT")
+        except Exception as ex:
+            self.execute("ROLLBACK")
+            raise
+
+
+class Transaction:
+    def __init__(self, context: AbstractContext):
+        self.context = context
+
+    def __enter__(self):
+        self.context.execute("BEGIN")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.context.execute("COMMIT")
+            logger.info("Transaction committed")
+        else:
+            self.context.execute("ROLLBACK")
+            logger.error(f"Transaction failed: {exc_val}")
+            LOG_QUERY.append(f"/* {str(exc_val)} */")
+
+    def execute(self, query: str, params=None, **kwargs) -> bool:
+        return self.context.execute(query, params, **kwargs)

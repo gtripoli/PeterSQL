@@ -2,7 +2,8 @@ import copy
 import enum
 import inspect
 import weakref
-from typing import Any, Dict, List, Callable, Union, Optional, Self, TypeVar, Generic, SupportsIndex, cast
+from typing import List, Callable, TypeVar, Generic, Any, overload, Union, Tuple, Optional, Dict, cast, Self
+from typing import SupportsIndex
 from contextlib import contextmanager
 
 import wx
@@ -74,7 +75,7 @@ class Observable(Generic[T]):
             self._callbacks[callback_event.value].append(ref)
 
             if self.is_dirty or execute_immediately:
-                callback(self._value)
+                self.execute_callback(event=callback_event)
 
         return self
 
@@ -100,18 +101,27 @@ class Observable(Generic[T]):
         return self._value != self._initial
 
 
-class ObservableArray(Observable[List[T]]):
+class ObservableList(Observable[List[T]]):
     class CallbackEvent(enum.Enum):
         BEFORE_CHANGE = "before"
         AFTER_CHANGE = "after"
+
         ON_APPEND = "append"
         ON_INSERT = "insert"
+        ON_POP = "pop"
+        ON_EXTEND = "extend"
+        ON_REMOVE = "remove"
+        ON_REVERSE = "reverse"
 
     def __init__(self, default: Any = None):
         super().__init__(default)
 
-        self._callbacks[ObservableArray.CallbackEvent.ON_APPEND.value] = []
-        self._callbacks[ObservableArray.CallbackEvent.ON_INSERT.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_APPEND.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_INSERT.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_REMOVE.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_POP.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_EXTEND.value] = []
+        self._callbacks[ObservableList.CallbackEvent.ON_REVERSE.value] = []
 
     def _ensure_list(self) -> List:
         value = super().get_value() or []
@@ -125,48 +135,77 @@ class ObservableArray(Observable[List[T]]):
     def __iter__(self):
         return iter(self._ensure_list())
 
+    def __contains__(self, item):
+        return item in self._ensure_list()
+
+    def __getitem__(self, key):
+        return self._ensure_list()[key]
+
+    def __setitem__(self, key, value):
+        self._ensure_list()[key] = value
+
+    def __delitem__(self, key):
+        del self._ensure_list()[key]
+
     def get_value(self) -> List:
         return self._ensure_list()
 
-    def append(self, value: Any) -> Self:
-        values = self._ensure_list()
-        values.append(value)
+    def append(self, value: Any, replace_existing: bool = False) -> Self:
+        values = self.get_value()
 
-        self.execute_callback(ObservableArray.CallbackEvent.ON_APPEND, value=value)  # type: ignore[arg-type]
+        if replace_existing and value in values:
+            idx = self.index(value)
+            values[idx] = value
+        else:
+            values.append(value)
 
-        return self.set_value(values)
+        self._value = values
+        self.execute_callback(ObservableList.CallbackEvent.ON_APPEND, value=value)
+
+        return values
 
     def insert(self, index: int, value: Any) -> Self:
-        values = self._ensure_list()
+        values = self.get_value()
         values.insert(index, value)
 
-        self.execute_callback(ObservableArray.CallbackEvent.ON_INSERT, value=value)  # type: ignore[arg-type]
-
-        return self.set_value(values)
+        self._value = values
+        self.execute_callback(ObservableList.CallbackEvent.ON_INSERT, value=value, index=index)
+        return values
 
     def extend(self, other: List[Any]) -> Self:
-        values = self._ensure_list()
+        values = self.get_value()
         values.extend(other)
-        return self.set_value(values)
+
+        self._value = values
+        self.execute_callback(ObservableList.CallbackEvent.ON_EXTEND, value=other)
+        return values
 
     def pop(self, index: int = -1) -> Any:
-        values = self._ensure_list()
+        values = self.get_value()
         value = values.pop(index)
-        self.set_value(values)
+
+        self._value = values
+        self.execute_callback(ObservableList.CallbackEvent.ON_POP, value=value)
+
         return value
 
     def reverse(self) -> Self:
-        values = self._ensure_list()
+        values = self.get_value()
         values.reverse()
+
         return self.set_value(values)
 
     def remove(self, value: Any) -> Self:
-        values = self._ensure_list()
+        values = self.get_value()
         values.remove(value)
-        return self.set_value(values)
+
+        self._value = values
+        self.execute_callback(ObservableList.CallbackEvent.ON_REMOVE, value=value)
+
+        return values
 
     def sort(self, key: Optional[Callable] = None, reverse: bool = False) -> Self:
-        values = self._ensure_list()
+        values = self.get_value()
         values.sort(key=key, reverse=reverse)
         return self.set_value(values)
 
@@ -189,6 +228,21 @@ class ObservableArray(Observable[List[T]]):
                 return i
         return None
 
+    def move_up(self, value):
+        values = self._ensure_list()
+        idx = values.index(value)
+        if idx > 0:
+            values[idx], values[idx - 1] = values[idx - 1], values[idx]
+
+        return self.set_value(values)
+
+    def move_down(self, value):
+        values = self._ensure_list()
+        idx = values.index(value)
+        if idx < len(values) - 1:
+            values[idx], values[idx + 1] = values[idx + 1], values[idx]
+
+        return self.set_value(values)
 
 class ObservableObject(Observable):
     def _get_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex]):

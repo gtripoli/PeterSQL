@@ -1,4 +1,4 @@
-from typing import List, Callable, Iterator, TypeVar, Generic, Type, Any, overload, Union, Tuple
+from typing import List, Callable, Iterator, TypeVar, Any, overload, Union, Self
 from typing import SupportsIndex
 
 T = TypeVar('T')
@@ -10,8 +10,8 @@ class LazyList(List[T]):
         self._loader = loader
         self._loaded = False
 
-    def _ensure_loaded(self) -> None:
-        if not self._loaded:
+    def _ensure_loaded(self, force: bool = False) -> None:
+        if not self._loaded or force:
             items = self._loader()
             self.clear()
             self.extend(items)
@@ -74,6 +74,13 @@ class LazyList(List[T]):
         self.extend(items)
         self._loaded = True
 
-    def clear(self) -> None:
+    def clear(self) -> Self:
         self._loaded = False
         super().clear()
+
+        return self
+
+    def refresh(self) -> Self:
+        self._ensure_loaded(force=True)
+
+        return self

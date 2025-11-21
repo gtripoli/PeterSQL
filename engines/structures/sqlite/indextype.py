@@ -1,5 +1,5 @@
 from icons import BitmapList
-from models.structures.indextype import SQLIndexType, StandardIndexType
+from engines.structures.indextype import SQLIndexType, StandardIndexType
 
 
 class SQLiteIndexType(StandardIndexType):

@@ -2,21 +2,21 @@ import enum
 import dataclasses
 from typing import NamedTuple, Union, Optional
 
-from models.structures.indextype import StandardIndexType
-from models.structures.datatype import StandardDataType
-from models.structures.statement import AbstractStatement
+from engines.structures.context import AbstractContext
+from engines.structures.indextype import StandardIndexType
+from engines.structures.datatype import StandardDataType
 
-from models.structures.mariadb.statement import MariaDBStatement
-from models.structures.mariadb.datatype import MariaDBDataType
-from models.structures.mariadb.indextype import MariaDBIndexType
+from engines.structures.mariadb.context import MariaDBContext
+from engines.structures.mariadb.datatype import MariaDBDataType
+from engines.structures.mariadb.indextype import MariaDBIndexType
 #
-# from models.structures.mysql.statement import MySQLStatement
-# from models.structures.mysql.datatype import MySQLDataType
-# from models.structures.mysql.indextype import MySQLIndexType
+# from engines.structures.mysql.statement import MySQLStatement
+# from engines.structures.mysql.datatype import MySQLDataType
+# from engines.structures.mysql.indextype import MySQLIndexType
 
-from models.structures.sqlite.statment import SQLiteStatement
-from models.structures.sqlite.datatype import SQLiteDataType
-from models.structures.sqlite.indextype import SQLiteIndexType
+from engines.structures.sqlite.context import SQLiteContext
+from engines.structures.sqlite.datatype import SQLiteDataType
+from engines.structures.sqlite.indextype import SQLiteIndexType
 
 
 class SessionEngine(enum.Enum):
@@ -39,14 +39,14 @@ class SourceConfiguration(NamedTuple):
 
 @dataclasses.dataclass
 class Session:
+    id: Union[int, str]
     name: str
     engine: SessionEngine | None
     configuration: Union[CredentialsConfiguration, SourceConfiguration] | None
     comments: Optional[str] = None
 
-    _id: Optional[str] = None
-    statement: Optional[AbstractStatement] = dataclasses.field(init=False)
 
+    context: Optional[AbstractContext] = dataclasses.field(init=False)
     datatype: Optional[StandardDataType] = dataclasses.field(init=False)
     indextype: Optional[StandardIndexType] = dataclasses.field(init=False)
 
@@ -57,7 +57,7 @@ class Session:
             # self.indextype = MySQLIndexType()
             pass
         elif self.engine == SessionEngine.MARIADB:
-            self.statement = MariaDBStatement(self)
+            self.context = MariaDBContext(self)
             self.datatype = MariaDBDataType()
             self.indextype = MariaDBIndexType()
         elif self.engine == SessionEngine.POSTGRESQL:
@@ -66,7 +66,7 @@ class Session:
         #     self.datatype = PostgreSQLDataType()
             # self.indextype = PostgreSQLIndexType()
         elif self.engine == SessionEngine.SQLITE:
-            self.statement = SQLiteStatement(self)
+            self.context = SQLiteContext(self)
             self.datatype = SQLiteDataType()
             self.indextype = SQLiteIndexType()
 

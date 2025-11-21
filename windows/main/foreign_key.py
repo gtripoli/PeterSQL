@@ -8,7 +8,7 @@ from icons import BitmapList
 from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY
 from windows.main.table import NEW_TABLE
 
-from models.structures.database import SQLForeignKey, SQLTable
+from engines.structures.database import SQLForeignKey, SQLTable
 
 
 class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):

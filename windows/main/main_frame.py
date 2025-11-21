@@ -3,20 +3,20 @@ import datetime
 import psutil
 import os
 
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import wx.stc
 import wx.html2
 
 from gettext import gettext as _
 
-from helpers.observables import ObservableArray
-from models.session import Session
-from models.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord
-from models.structures.statement import LOG_QUERY
+from helpers.observables import ObservableList
+from engines.session import Session
+from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from engines.structures.context import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY
+from windows.main import SESSIONS, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
 from windows.main.sessions import TreeSessionsController
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
@@ -41,6 +41,8 @@ class MainFrameController(MainFrameView):
         )
 
         self.controller_tree_sessions = TreeSessionsController(self.tree_ctrl_sessions)
+        self.controller_tree_sessions.on_cancel_table = self.on_cancel_table
+
         self.controller_list_table_columns = TableColumnsController(self.list_ctrl_table_columns)
         self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
 
@@ -57,64 +59,74 @@ class MainFrameController(MainFrameView):
         self.memory_timer.Start(5000)  # Update every 5 seconds
 
     def _setup_query_logs(self):
-        self.query_logs.SetLexer(wx.stc.STC_LEX_SQL)
-        self.query_logs.SetKeyWords(0, (
-            "select from where insert into update delete create alter drop table view "
-            "index primary key unique not null default auto_increment autoincrement values set pragma"
-            "and or as distinct order by group having join left right inner outer on "
-            "if exists like in is between limit offset case when then else end show describe"
-            "modify add drop column"
-            "sqlite_master begin rollback"
-        ))
+        for name_styled_text_ctrl in ["sql_logs_query", "sql_view"]:
+            styled_text_ctrl = getattr(self, name_styled_text_ctrl)
 
-        self.query_logs.StyleClearAll()
-        font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-        self.query_logs.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
-        self.query_logs.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#000000"))
-        self.query_logs.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#ffffff"))
-        self.query_logs.StyleClearAll()
+            font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
-        # Numbers
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_NUMBER, "fore:#ff6600")
+            styled_text_ctrl.SetLexer(wx.stc.STC_LEX_SQL)
+            styled_text_ctrl.SetKeyWords(0, (
+                "select from where insert into update delete create alter drop table view "
+                "index primary key unique not null default auto_increment autoincrement values set pragma"
+                "and or as distinct order by group having join left right inner outer on "
+                "if exists like in is between limit offset case when then else end show describe"
+                "modify add drop column"
+                "sqlite_master begin rollback"
+            ))
 
-        # Comments
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_COMMENT, "fore:#007f00,italic")
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_COMMENTLINE, "fore:#007f00,italic")
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_COMMENTDOC, "fore:#007f00,italic")
+            styled_text_ctrl.StyleClearAll()
+            styled_text_ctrl.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
+            styled_text_ctrl.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#000000"))
+            styled_text_ctrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#ffffff"))
+            # styled_text_ctrl.StyleClearAll()
 
-        # Keys
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_WORD, "fore:#0000ff,bold")
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_WORD2, "fore:#0000ff,bold")
+            # Numbers
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_NUMBER, "fore:#ff6600")
 
-        # String
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, "fore:#990099")
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_STRING, "fore:#990099")
+            # Comments
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENT, "fore:#007f00,italic")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTLINE, "fore:#007f00,italic")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTDOC, "fore:#007f00,italic")
 
-        # Operator
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_OPERATOR, "fore:#000000,bold")
+            # Keys
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD, "fore:#0000ff,bold")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, "fore:#0000ff,bold")
 
-        # Table name, Columns, etc.
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_IDENTIFIER, "fore:#333333")
-        self.query_logs.StyleSetSpec(wx.stc.STC_SQL_QUOTEDIDENTIFIER, "fore:#333333")
+            # String
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, "fore:#990099")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_STRING, "fore:#990099")
 
-        # Line numbers
-        self.query_logs.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
-        self.query_logs.SetMarginWidth(0, 40)
-        self.query_logs.StyleSetSpec(wx.stc.STC_STYLE_LINENUMBER, "back:#e0e0e0,fore:#555555")
+            # Operator
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_OPERATOR, "fore:#000000,bold")
 
-        # Caret e selection
-        self.query_logs.SetCaretForeground(wx.Colour("#000000"))
-        self.query_logs.SetSelBackground(True, wx.Colour("#cce8ff"))
-        self.query_logs.SetSelForeground(True, wx.Colour("#000000"))
+            # Table name, Columns, etc.
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_IDENTIFIER, "fore:#333333")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_QUOTEDIDENTIFIER, "fore:#333333")
+
+            # Line numbers
+            styled_text_ctrl.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
+            styled_text_ctrl.SetMarginWidth(0, 40)
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_STYLE_LINENUMBER, "back:#e0e0e0,fore:#555555")
+
+            # Caret e selection
+            styled_text_ctrl.SetCaretForeground(wx.Colour("#000000"))
+            styled_text_ctrl.SetSelBackground(True, wx.Colour("#cce8ff"))
+            styled_text_ctrl.SetSelForeground(True, wx.Colour("#000000"))
 
     def _setup_subscribers(self):
-        LOG_QUERY.subscribe(self._write_query_log, ObservableArray.CallbackEvent.ON_APPEND)
+        self.toggle_panel()
 
-        SESSIONS.subscribe(self._load_session, ObservableArray.CallbackEvent.ON_APPEND)
+        LOG_QUERY.subscribe(self._write_query_log, ObservableList.CallbackEvent.ON_APPEND)
 
-        CURRENT_SESSION.subscribe(self.show_panel_session)
+        SESSIONS.subscribe(self._load_session, ObservableList.CallbackEvent.ON_APPEND)
 
-        CURRENT_DATABASE.subscribe(self.show_panel_database)
+        CURRENT_SESSION.subscribe(self._on_current_session)
+
+        CURRENT_DATABASE.subscribe(self._on_current_database)
+
+        CURRENT_VIEW.subscribe(self._on_current_view)
+
+        CURRENT_TRIGGER.subscribe(self._on_current_trigger)
 
         CURRENT_TABLE.subscribe(self._on_current_table)
 
@@ -133,8 +145,8 @@ class MainFrameController(MainFrameView):
         # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
-        self.query_logs.AppendText(f"{text}\n")
-        self.query_logs.GotoLine(self.query_logs.GetLineCount() - 1)
+        self.sql_logs_query.AppendText(f"{text}\n")
+        self.sql_logs_query.GotoLine(self.sql_logs_query.GetLineCount() - 1)
 
     def _toggle_panel(self, index: int, visible: bool):
         panel = self.MainFrameNotebook.GetPage(index)
@@ -190,37 +202,124 @@ class MainFrameController(MainFrameView):
         sm = SessionManagerController(self)
         sm.Show()
 
-    def show_panel_session(self, session: Session):
-        self._toggle_panel(0, True)
+    def toggle_panel(self, current: Optional[Union[Session, SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
+
+        current_session = CURRENT_SESSION.get_value()
+        current_database = CURRENT_DATABASE.get_value()
+        current_table = CURRENT_TABLE.get_value()
+        current_view = CURRENT_VIEW.get_value()
+        current_trigger = CURRENT_TRIGGER.get_value()
+
         self.MainFrameNotebook.SetSelection(0)
 
-        self.status_bar.SetStatusText(f"{_('Version')}: {session.statement.get_server_version()}", 1)
+        if not current_database:
+            self.MainFrameNotebook.GetPage(1).Hide()
 
-        self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.statement.get_server_uptime())}", 2)
+        if not current_table:
+            self.MainFrameNotebook.GetPage(2).Hide()
 
-    def show_panel_database(self, *args):
-        self._toggle_panel(1, True)
-        self.MainFrameNotebook.SetSelection(1)
+        if not current_view:
+            self.MainFrameNotebook.GetPage(3).Hide()
 
-    def on_page_changed(self, event: wx.BookCtrlEvent):
-        if event.GetEventObject() != self.MainFrameNotebook:
-            event.Skip()
-            return
-        if event.GetSelection() == 1 and not CURRENT_TABLE.get_value() and not NEW_TABLE.get_value():
-            self._toggle_edit_table(False)
+        if not current_trigger:
+            self.MainFrameNotebook.GetPage(4).Hide()
+
+        if not current_table and not current_view:
+            self.MainFrameNotebook.GetPage(5).Hide()
+
+        if isinstance(current, Session):
+            self.MainFrameNotebook.SetSelection(0)
+
+        elif isinstance(current, SQLDatabase):
+            self.MainFrameNotebook.GetPage(1).Show()
+            self.MainFrameNotebook.SetSelection(1)
+
+        elif isinstance(current, SQLTable) or isinstance(current, SQLView):
+            if isinstance(current, SQLTable):
+                self.MainFrameNotebook.GetPage(2).Show()
+                self.MainFrameNotebook.SetSelection(2)
+
+            if isinstance(current, SQLView):
+                self.MainFrameNotebook.GetPage(3).Show()
+                self.MainFrameNotebook.SetSelection(3)
+
+            self.MainFrameNotebook.GetPage(5).Show()
+
+        elif isinstance(current, SQLTrigger):
+            self.MainFrameNotebook.GetPage(4).Show()
+            self.MainFrameNotebook.SetSelection(3)
+
+    def _on_current_session(self, session: Session):
+        self.toggle_panel(session)
+
+        self.status_bar.SetStatusText(f"{_('Session')}: {session.name}", 0)
+
+        self.status_bar.SetStatusText(f"{_('Version')}: {session.context.get_server_version()}", 1)
+
+        self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+
+    def _on_current_database(self, database: SQLDatabase):
+        self.toggle_panel(database)
+
+    # VIEW
+    def _on_current_view(self, current: SQLView):
+        # if NEW_TABLE.get_value() and not self.on_cancel_table(None):
+        #     return
+
+        self.toggle_panel(current)
+
+        # if self.MainFrameNotebook.GetSelection() < 2:
+        #     self.MainFrameNotebook.SetSelection(2)
+        #     self.table_name.SetFocus()
+
+        # CURRENT_COLUMN.set_value(None)
+        # CURRENT_RECORDS.set_value([])
+        # CURRENT_INDEX.set_value(None)
+        # CURRENT_FOREIGN_KEY.set_value(None)
+
+        self.btn_delete_view.Enable(current is not None)
+
+    # TRIGGER
+    def _on_current_trigger(self, current: SQLTrigger):
+        # if NEW_TABLE.get_value() and not self.on_cancel_table(None):
+        #     return
+
+        self.toggle_panel(current)
+
+        # if self.MainFrameNotebook.GetSelection() < 2:
+        #     self.MainFrameNotebook.SetSelection(2)
+        #     self.table_name.SetFocus()
+
+        # CURRENT_COLUMN.set_value(None)
+        # CURRENT_RECORDS.set_value([])
+        # CURRENT_INDEX.set_value(None)
+        # CURRENT_FOREIGN_KEY.set_value(None)
+
+        # self.btn_delete_view.Enable(view is not None)
 
     # TABLE
-    def _on_current_table(self, table: SQLTable):
-        self._toggle_edit_table(True)
-        if self.MainFrameNotebook.GetSelection() == 1:
-            self.MainFrameNotebook.SetSelection(2)
-            self.table_name.SetFocus()
+    def _on_current_table(self, current: SQLTable):
+        if NEW_TABLE.get_value() and not self.on_cancel_table(None):
+            return
 
-        self.btn_delete_table.Enable(table is not None)
+        self.toggle_panel(current)
 
-    def _on_new_table(self, new_table: SQLTable):
-        self.btn_apply_table.Enable(bool(new_table is not None and new_table.is_valid()))
-        self.btn_cancel_table.Enable(bool(new_table is not None))
+        # print("MainFrameNotebook", self.MainFrameNotebook.GetSelection())
+        # self._toggle_edit_table(True)
+        # if self.MainFrameNotebook.GetSelection() < 2:
+        #     self.MainFrameNotebook.SetSelection(2)
+        #     self.table_name.SetFocus()
+
+        CURRENT_COLUMN.set_value(None)
+        CURRENT_RECORDS.set_value([])
+        CURRENT_INDEX.set_value(None)
+        CURRENT_FOREIGN_KEY.set_value(None)
+
+        self.btn_delete_table.Enable(current is not None)
+
+    def _on_new_table(self, current: SQLTable):
+        self.btn_apply_table.Enable(bool(current is not None and current.is_valid()))
+        self.btn_cancel_table.Enable(bool(current is not None))
 
     def on_insert_table(self, event):
         NEW_TABLE.set_value(None)
@@ -243,22 +342,40 @@ class MainFrameController(MainFrameView):
         if not table.is_valid():
             return
 
-        try :
-            session.statement.save_table(database, table)
+        try:
+            table.save()
 
-
-        except Exception as ex :
+        except Exception as ex:
             wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
 
-        else :
+        else:
             NEW_TABLE.set_value(None)
+            # database.tables.refresh()
 
-            if updated_table := next((t for t in database.tables if t.name == table.name), None):
-                CURRENT_TABLE.set_value(updated_table)
+            if updated_table := next((t for t in list(database.tables) if t.id == table.id), None):
+                updated_table.columns.refresh()
+                updated_table.indexes.refresh()
+                updated_table.foreign_keys.refresh()
+
+                # Update the tree item data with the updated table
+                if item := self.controller_tree_sessions.find_by_data(name=table.name):
+                    self.tree_ctrl_sessions.SetItemData(item, updated_table)
+
+            # CURRENT_TABLE.set_value(updated_table.copy())
 
             wx.CallAfter(self._select_tree_item, **{"name": database.name})
 
             wx.CallAfter(self._select_tree_item, **{"name": table.name})
+
+    def on_cancel_table(self, event: wx.Event):
+        if new_table := NEW_TABLE.get_value():
+            if wx.MessageDialog(None,
+                                message=_(f'Do you want discard the change to {new_table.name}?'),
+                                style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
+                                ).ShowModal() == wx.ID_YES:
+                return self.do_cancel_table(event)
+
+        return False
 
     def do_cancel_table(self, event: wx.Event):
         database = CURRENT_DATABASE.get_value()
@@ -267,10 +384,9 @@ class MainFrameController(MainFrameView):
         NEW_TABLE.set_value(None)
 
         if table := next((t for t in database.tables if t.name == table.name), None):
-            print("set table", None)
-            CURRENT_TABLE.set_value(None)
-            print("set table", table)
-            CURRENT_TABLE.set_value(table)
+            CURRENT_TABLE.set_value(None).set_value(table.copy())
+
+        return True
 
     def on_delete_table(self, event):
         table = CURRENT_TABLE.get_value()
@@ -287,7 +403,7 @@ class MainFrameController(MainFrameView):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = CURRENT_TABLE.get_value()
-        if session.statement.drop_table(database, table):
+        if session.context.drop_table(database, table):
             CURRENT_TABLE.set_value(None)
             # self._refresh_database()
 
@@ -295,9 +411,21 @@ class MainFrameController(MainFrameView):
 
     # COLUMNS
     def _on_current_column(self, column: SQLColumn):
+        selected = self.controller_list_table_columns.list_ctrl_table_columns.GetSelection()
+        if not selected.IsOk():
+            self.btn_delete_column.Enable(False)
+            self.btn_move_up_column.Enable(False)
+            self.btn_move_down_column.Enable(False)
+            return
+
+        row = self.controller_list_table_columns.model.GetRow(selected)
+        total_rows = len(self.controller_list_table_columns.model.data) - 1
+
+        print("row, total_rows", row, total_rows)
+
         self.btn_delete_column.Enable(column is not None)
-        self.btn_move_up_column.Enable(column is not None)
-        self.btn_move_down_column.Enable(column is not None)
+        self.btn_move_up_column.Enable(column is not None and row > 0)
+        self.btn_move_down_column.Enable(column is not None and row < total_rows)
 
     def on_insert_column(self, event):
         self.controller_list_table_columns.on_column_insert()
@@ -335,7 +463,6 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_foreign_key.on_foreign_key_clear()
 
     # RECORDS
-
     def _on_auto_apply(self, value: bool):
         self.btn_cancel_record.Enable(not self.chb_auto_apply.GetValue())
         self.btn_apply_record.Enable(not self.chb_auto_apply.GetValue())
@@ -349,7 +476,10 @@ class MainFrameController(MainFrameView):
         self.btn_delete_record.Enable(len(records) > 0)
 
     def on_insert_record(self, event):
-        self.controller_list_table_records.on_insert_record()
+        self.controller_list_table_records.do_insert_record()
+
+    def on_duplicate_record(self, event):
+        self.controller_list_table_records.do_duplicate_record()
 
     def on_delete_record(self, event):
         dialog = wx.MessageDialog(None,
@@ -358,21 +488,7 @@ class MainFrameController(MainFrameView):
                                   )
 
         if dialog.ShowModal() == wx.ID_YES:
-            self.do_delete_records()
-
-    def do_delete_records(self):
-        session = CURRENT_SESSION.get_value()
-        database = CURRENT_DATABASE.get_value()
-        table = CURRENT_TABLE.get_value()
-        records = CURRENT_RECORDS.get_value()
-
-        if session.statement.delete_records(database, table, records):
-            for record in records:
-                index = self.controller_list_table_records.model.data.index(record)
-                item = self.controller_list_table_records.model.GetItem(index)
-                self.controller_list_table_records.model.del_row(item)
-
-        self.controller_list_table_records.list_ctrl_records.refresh()
+            self.controller_list_table_records.do_delete_record()
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()

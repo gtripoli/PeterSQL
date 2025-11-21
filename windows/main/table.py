@@ -2,11 +2,11 @@ import copy
 
 from helpers.bindings import AbstractModel
 from helpers.logger import logger
-from helpers.observables import Observable, debounce, ObservableArray, Loader
+from helpers.observables import Observable, debounce, ObservableList, Loader
 
 from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_COLUMN
 
-from models.structures.database import SQLTable
+from engines.structures.database import SQLTable
 
 NEW_TABLE: Observable[SQLTable] = Observable()
 
@@ -15,7 +15,7 @@ class EditTableModel(AbstractModel):
     def __init__(self):
         self.name = Observable()
         self.comment = Observable()
-        self.columns = ObservableArray()
+        self.columns = ObservableList()
 
         self.auto_increment = Observable()
         self.collation = Observable()
@@ -41,7 +41,7 @@ class EditTableModel(AbstractModel):
         if (current_table := CURRENT_TABLE.get_value()) is None:
             session = CURRENT_SESSION.get_value()
             database = CURRENT_DATABASE.get_value()
-            new_table = session.statement.build_empty_table(database)
+            new_table = session.context.build_empty_table(database)
         else:
             new_table = copy.copy(current_table)
 

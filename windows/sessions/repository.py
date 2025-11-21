@@ -2,7 +2,7 @@ import os
 import yaml
 from typing import List, Dict, Any, Optional, Union
 
-from models.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+from engines.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
 
 WORKDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -58,7 +58,7 @@ class SessionManagerRepository:
                 configuration = SourceConfiguration(**config_data)
 
         return Session(
-            _id=index,
+            id=index,
             name=data['name'],
             engine=engine,
             configuration=configuration,

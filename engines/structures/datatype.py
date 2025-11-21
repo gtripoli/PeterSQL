@@ -1,4 +1,5 @@
 import enum
+import datetime
 import functools
 import dataclasses
 
@@ -21,6 +22,17 @@ class DataTypeCategory(enum.Enum):
     OTHER = Category(name="Other", color=(148, 147, 29))
 
 
+class DataTypeFormat(enum.Enum):
+    TEXT = lambda value: f"'{value}'"
+    INTEGER = lambda value: int(value)
+    BOOLEAN = lambda value: 1 if bool(value == 1) else 0
+    REAL = lambda value: float(value)
+    DATE = lambda value: f"'{value}'"
+    DATETIME = lambda value: f"'{value}'"
+    TIMESTAMP = lambda value: f"'{value}'"
+    TIME = lambda value: f"'{value}'"
+
+
 @dataclasses.dataclass
 class SQLDataType:
     name: str
@@ -29,7 +41,7 @@ class SQLDataType:
     alias: List[str] = dataclasses.field(default_factory=list)
     max_size: Optional[int] = None
 
-    format: Optional[Callable[[Any], Any]] = dataclasses.field(default_factory=lambda: lambda value: value)
+    format: Optional[DataTypeFormat] = dataclasses.field(default=None)
 
     default_set: List[str] = dataclasses.field(default_factory=list)
     default_length: int = 50  # for the text
@@ -73,21 +85,23 @@ class SQLDataType:
 
 
 class StandardDataType():
-    BOOLEAN = SQLDataType(name="BOOLEAN", category=DataTypeCategory.INTEGER, format=lambda value: 1 if bool(value == 1) else 0)
-    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER)
+    BOOLEAN = SQLDataType(name="BOOLEAN", category=DataTypeCategory.INTEGER, format=DataTypeFormat.BOOLEAN)
+    INTEGER = SQLDataType(name="INTEGER", category=DataTypeCategory.INTEGER, format=DataTypeFormat.INTEGER)
 
-    DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_precision=True, has_scale=True)
-    NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.REAL, has_precision=False, has_scale=False, alias=["DECIMAL", "NUM"])
+    # NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.INTEGER, has_precision=False, has_scale=False, alias=["DECIMAL", "NUM"], format=SQLDataTypeFormat.INTEGER)
+    DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_precision=True, has_scale=True, format=DataTypeFormat.REAL)
 
-    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'")
-    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'", has_length=True)
-    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, format=lambda value: f"'{str(value)}'")
-    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=lambda value: f"'{value}'")
+    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
+    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, format=DataTypeFormat.TEXT)
+    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
+    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
 
     BLOB = SQLDataType(name="BLOB", category=DataTypeCategory.BINARY)
 
-    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL)
-    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL)
+    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.DATE)
+    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.DATETIME)
+    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.TIME)
+    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.TIMESTAMP)
 
     @classmethod
     @functools.lru_cache(maxsize=1)

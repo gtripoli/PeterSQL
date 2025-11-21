@@ -11,7 +11,7 @@ from helpers.bindings import AbstractModel
 from helpers.logger import logger
 from helpers.observables import Observable, debounce, Loader
 from icons import IconList, ImageList
-from models.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+from engines.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
 from windows import SessionManagerView
 from windows.main import CURRENT_SESSION, SESSIONS
 from windows.sessions.repository import SessionManagerRepository
@@ -374,6 +374,7 @@ class SessionManagerController(SessionManagerView):
         CURRENT_SESSION.set_value(None)
 
         session = Session(
+            id=-1,
             name="New Session",
             engine=SessionEngine.MYSQL,
             configuration=CredentialsConfiguration(
@@ -414,7 +415,7 @@ class SessionManagerController(SessionManagerView):
     def verify_connection(self, session: Session):
         with Loader.cursor_wait():
             try:
-                session.statement.connect(connect_timeout=5)
+                session.context.connect(connect_timeout=5)
             except Exception as ex:
                 logger.warning(ex)
                 wx.MessageDialog(None, message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))), style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()

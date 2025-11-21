@@ -1,555 +1,49 @@
-import enum
-import os
-import string
-from typing import Type, List, Self, Any, Callable, Dict, Optional
-from wsgiref.validate import validator
+from typing import Callable, Optional
 
 import wx
 import wx.dataview
-import wx.lib.masked
 
 from gettext import gettext as _
 
-from wx.lib.masked import controlTypes
-
 from helpers.logger import logger
-from models.structures.indextype import SQLIndexType, StandardIndexType
-from models.session import Session, SessionEngine
-from models.structures.charset import COLLATION_CHARSETS
-from models.structures.database import SQLColumn, SQLTable, SQLIndex, SQLDatabase
-from models.structures.datatype import SQLDataType, DataTypeCategory
+from engines.session import Session, SessionEngine
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
+from engines.structures.database import SQLColumn, SQLTable, SQLIndex, SQLDatabase
+from engines.structures.datatype import DataTypeCategory
+from engines.structures.indextype import SQLIndexType, StandardIndexType
+
+from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupTime, PopupCalendar, PopupCalendarTime
+from windows.components.renders import PopupRenderer, LengthSetRender, ChoiceRenderer, TimeRenderer, DateTimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer
+
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_COLUMN
 from windows.main.table import NEW_TABLE
 
 
-class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
-    def __init__(self, varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT):
-        super().__init__(varianttype=varianttype, mode=mode, align=align)
-
-        self._value = None
-
-    def SetValue(self, value):
-        self._value = value
-        return True
-
-    def GetValue(self):
-        return self._value
-
-    def GetSize(self):
-        return wx.Size(-1, -1)
-
-    def Render(self, rect, dc, state, default=""):
-        value = self.GetValue()
-        if not value:
-            value = default
-
-        self.RenderText(str(value), 0, rect, dc, state)
-
-        return True
-
-    def RenderText(self, text, x, rect, dc, state):
-        x, y = rect.GetTopLeft()
-
-        super().RenderText(str(text), 0, rect, dc, state)
-
-        return True
-
-    def get_draw_x(self, rect):
-        rect_height = rect.GetHeight()
-        chars_height = self.GetView().CharHeight
-        print(rect, chars_height)
-
-        return int((rect_height / 2) - (chars_height / 2))
-
-
-class BasePopup(wx.PopupTransientWindow):
-    """Base class for all DataView popup windows."""
-
-    def __init__(self, parent):
-        super().__init__(parent, flags=wx.BORDER_NONE)
-        self._value = None
-        self._initial = None
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-
-        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
-        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
-        self.SetSizer(self.sizer)
-
-    def get_value(self):
-        return self._value
-
-    def set_value(self, value):
-        self._value = value
-        return self
-
-    def get_initial(self):
-        return self._initial
-
-    @staticmethod
-    def render(value):
-        return value
-
-    def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
-        self._value = value
-        self._initial = value
-
-        self.SetPosition(position)
-        self.SetMinSize(size)
-        self.SetMaxSize(size)
-
-        self.Layout()
-        self.sizer.Fit(self)
-        self.Fit()
-
-        self.Popup()
-
-        return self
-
-    def close(self):
-        self.Destroy()
-
-
-class PopupColumnDefault(BasePopup):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self.rb_no_default = wx.RadioButton(self, wx.ID_ANY, _(u"No default value"), wx.DefaultPosition, wx.DefaultSize,
-                                            0)
-        self.rb_no_default.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
-        self.sizer.Add(self.rb_no_default, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_expression = wx.RadioButton(self, wx.ID_ANY, _(u"Expression"), wx.DefaultPosition, wx.DefaultSize, 0)
-        self.rb_expression.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
-        self.sizer.Add(self.rb_expression, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.txt_expression = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        self.txt_expression.Enable(False)
-        self.txt_expression.Bind(wx.EVT_TEXT, self._on_expression_changed)
-        self.sizer.Add(self.txt_expression, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_null = wx.RadioButton(self, wx.ID_ANY, _(u"NULL"), wx.DefaultPosition, wx.DefaultSize, 0)
-        self.rb_null.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
-        self.sizer.Add(self.rb_null, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.rb_auto_increment = wx.RadioButton(self, wx.ID_ANY, _(u"AUTO INCREMENT"), wx.DefaultPosition, wx.DefaultSize, 0)
-        self.rb_auto_increment.Bind(wx.EVT_RADIOBUTTON, self._on_radio_button)
-        self.sizer.Add(self.rb_auto_increment, 0, wx.ALL | wx.EXPAND, 5)
-
-    def _on_radio_button(self, event):
-        if self.rb_no_default.GetValue():
-            self._value = None
-        elif self.rb_null.GetValue():
-            self._value = "NULL"
-        elif self.rb_auto_increment.GetValue():
-            self._value = "AUTO_INCREMENT"
-        elif self.rb_expression.GetValue():
-            self.txt_expression.Enable(True)
-            self.txt_expression.SetFocus()
-            self._value = ""
-
-    def _on_expression_changed(self, event):
-        """Handle expression text changes."""
-        if self.rb_expression.GetValue():
-            self._value = self.txt_expression.GetValue()
-
-    @staticmethod
-    def render(value):
-        if not value:
-            return "No default"
-        return value
-
-    def set_value(self, value):
-        """Set the initial value and update UI accordingly."""
-        super().set_value(value)
-
-        if not value:
-            self.rb_no_default.SetValue(True)
-        elif value == "NULL":
-            self.rb_null.SetValue(True)
-        elif value == "AUTO_INCREMENT":
-            self.rb_auto_increment.SetValue(True)
-        else:
-            self.rb_expression.SetValue(True)
-            self.txt_expression.Enable(True)
-            self.txt_expression.SetValue(value)
-            self.txt_expression.SetFocus()
-
-        return self
-
-
-class PopupColumnDatatype(BasePopup):
-    session: Session
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.choices = []
-
-        self.parent = parent
-        self.tree_ctrl = None
-
-        self.tree_ctrl = wx.TreeCtrl(self, style=wx.TR_HIDE_ROOT | wx.TR_NO_BUTTONS | wx.TR_FULL_ROW_HIGHLIGHT |
-                                                 wx.TR_NO_LINES | wx.TR_SINGLE)
-
-        self.tree_ctrl.AddRoot("Root")
-
-        self.sizer.Add(self.tree_ctrl, 1, wx.ALL | wx.EXPAND, 0)
-
-        self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_select)
-        self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
-
-        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
-
-    def _load_session(self, session: Session):
-        self.session = session
-        self.set_choices(self.session.datatype.get_all())
-
-    def _on_select(self, event):
-        item = event.GetItem()
-        if item and item != self.tree_ctrl.GetRootItem():
-            parent = self.tree_ctrl.GetItemParent(item)
-            if parent != self.tree_ctrl.GetRootItem():  # Only leaf items
-                self._value = self.session.datatype.get_by_name(self.tree_ctrl.GetItemText(item))
-
-                self.OnDismiss()
-
-    def set_choices(self, choices: List[SQLDataType]) -> Self:
-        self.choices = choices
-
-        return self
-
-    def open(self, value: Any, position: wx.Point, size: wx.Size) -> Self:
-        groups: Dict[DataTypeCategory, List[str]] = {}
-
-        root = self.tree_ctrl.GetRootItem()
-        self.tree_ctrl.DeleteChildren(root)
-
-        for choice in self.choices:
-            groups.setdefault(choice.category, []).append(choice.name)
-
-        dc = wx.ClientDC(self.tree_ctrl)
-        max_width = 0
-        selected = None
-
-        for category, datatypes in groups.items():
-
-            category_item = self.tree_ctrl.AppendItem(root, category.value.name)
-            self.tree_ctrl.SetItemBold(category_item, True)
-
-            max_width = max(max_width, dc.GetTextExtent(category.value.name)[0])
-
-            for datatype in datatypes:
-                datatype_item = self.tree_ctrl.AppendItem(category_item, datatype)
-                self.tree_ctrl.SetItemTextColour(datatype_item, category.value.color)
-
-                max_width = max(max_width, dc.GetTextExtent(datatype)[0])
-
-                if datatype == value:
-                    selected = datatype_item
-
-        self.tree_ctrl.ExpandAll()
-
-        size = wx.Size(max(max_width + 100, size.width), 300)
-
-        if selected is not None:
-            self.tree_ctrl.SelectItem(selected)
-            self.tree_ctrl.EnsureVisible(selected)
-
-        return super().open(value, position, size)
-
-
-class PopupCheckList(BasePopup):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.choices = []
-        self.check_list_box = wx.CheckListBox(self)
-        self.sizer.Add(self.check_list_box, 0, wx.ALL | wx.EXPAND, 5)
-        self.check_list_box.Bind(wx.EVT_CHECKLISTBOX, self._on_select)
-
-        self.check_list_box.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
-        # self.check_list_box.Bind(wx.EVT_KEY_DOWN, self._on_char_hook)
-
-    def open(self, value: str, position: wx.Point, size: wx.Size) -> Self:
-        max_width = 0
-        dc = wx.ClientDC(self.check_list_box)
-        for choice in self.choices:
-            max_width = max(max_width, dc.GetTextExtent(choice)[0])
-
-        size = wx.Size(max(max_width + 100, size.width), -1)
-
-        self.check_list_box.AppendItems(self.choices)
-
-        super().open(value, position, size)
-
-        if value := self.get_value():
-            self.check_list_box.SetCheckedStrings(value.split(','))
-
-        if self.check_list_box.GetCount() > 0:
-            self.check_list_box.SetSelection(0)
-
-        wx.CallAfter(self.SetFocus)
-
-        return self
-
-    def _on_select(self, event):
-        self._value = ",".join(self.check_list_box.GetCheckedStrings())
-        event.Skip()
-
-    def _on_char_hook(self, event):
-        key_code = event.GetKeyCode()
-
-        print("PopupCheckList EVT_CHAR_HOOK key_code:", key_code, "ENTER:", wx.WXK_RETURN, "NUMPAD_ENTER:", wx.WXK_NUMPAD_ENTER)
-
-        if key_code == wx.WXK_SPACE:
-            selection = self.check_list_box.GetSelection()
-            if selection != wx.NOT_FOUND:
-                current_state = self.check_list_box.IsChecked(selection)
-                self.check_list_box.Check(selection, not current_state)
-                self._value = ",".join(self.check_list_box.GetCheckedStrings())
-                logger.debug(f"Space pressed, toggled item {selection}")
-        elif key_code == wx.WXK_UP:
-            current = self.check_list_box.GetSelection()
-            if current > 0:
-                self.check_list_box.SetSelection(current - 1)
-                logger.debug(f"Up arrow, selected item {current - 1}")
-        elif key_code == wx.WXK_DOWN:
-            current = self.check_list_box.GetSelection()
-            if current < self.check_list_box.GetCount() - 1:
-                self.check_list_box.SetSelection(current + 1)
-                logger.debug(f"Down arrow, selected item {current + 1}")
-        elif key_code == wx.WXK_RETURN or key_code == wx.WXK_NUMPAD_ENTER:
-            logger.debug("ENTER pressed, closing popup")
-            self.close()
-        elif key_code == wx.WXK_ESCAPE:
-            logger.debug("ESC pressed, reverting to initial value")
-            self.set_value(self.get_initial())
-            self.close()
-        else:
-            print("Other key, skipping")
-            event.Skip()
-
-    def set_choices(self, choices: List[str]) -> Self:
-        print("set_choices", choices)
-        self.choices = choices
-
-        return self
-
-
-class PopupRenderer(BaseDataViewCustomRenderer):
-    def __init__(self, popup_class: Type[BasePopup], on_open: Optional[Callable[[BasePopup], None]] = None):
-        super().__init__("string", wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
-
-        self._value = ""
-        self.popup_class = popup_class
-        self.on_open: Optional[Callable[[BasePopup], None]] = on_open
-
-    def Render(self, rect, dc, state):
-        self.RenderText(self.popup_class.render(self._value), 0, rect, dc, state)
-
-        return True
-
-    def ActivateCell(self, rect, model, item, col, mouseEvent):
-        view = self.GetView()
-
-        position = view.ClientToScreen(wx.Point(rect.x, int(rect.y + view.CharHeight + (view.CharHeight / 2))))
-
-        popup = self.popup_class(view)
-
-        def _on_dismiss():
-            new_value = popup.get_value()
-            if new_value != self._value:
-                self._value = new_value
-                model.SetValue(self._value, item, col)
-            popup.close()
-
-        if self.on_open:
-            self.on_open(popup)
-
-        popup.OnDismiss = _on_dismiss
-
-        popup.open(self._value, position, wx.Size(width=view.Columns[col].Width, height=-1))
-
-        return True
-
-
-class ChoiceRenderer(wx.dataview.DataViewChoiceRenderer):
-    def __init__(self, choices):
-        super().__init__(choices, wx.dataview.DATAVIEW_CELL_EDITABLE, wx.ALIGN_LEFT)
-
-
-class LengthSetRender(BaseDataViewCustomRenderer):
-
-    def __init__(self):
-        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-    def HasEditorCtrl(self):
-        return True
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        text_ctrl = wx.TextCtrl(parent, value=str(value or ""), style=wx.TE_PROCESS_ENTER)
-        text_ctrl.SetSize(rect.GetSize())
-
-        view = self.GetView()
-        selected = view.GetSelection()
-        model = view.GetModel()
-        row = model.GetRow(selected)
-        datatype = model.data[row].datatype
-
-        # if not any([datatype.has_length, datatype.has_precision, datatype.has_scale, datatype.has_set]):
-        #     text_ctrl.Enable(False)
-
-
-        return text_ctrl
-
-    def GetValueFromEditorCtrl(self, editor):
-        return self.GetEditorCtrl().GetValue()
-
-class IntegerRenderer(BaseDataViewCustomRenderer):
-
-    def __init__(self):
-        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-    def HasEditorCtrl(self):
-        return True
-
-    def OnChar(self, event):
-        unicode = event.GetUnicodeKey()
-
-        if unicode > 0:
-            char = chr(unicode)
-            if char in string.digits:
-                event.Skip()
-                return
-        else:
-            key = event.GetKeyCode()
-            if key in [wx.WXK_DELETE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
-                event.Skip()
-                return
-
-        wx.Bell()
-
-        return
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        text_ctrl = wx.TextCtrl(parent, value=str(value or ""), style=wx.TE_PROCESS_ENTER)
-        text_ctrl.Bind(wx.EVT_CHAR, self.OnChar)
-        text_ctrl.SetSize(rect.GetSize())
-        return text_ctrl
-
-    def GetValueFromEditorCtrl(self, editor):
-        return self.GetEditorCtrl().GetValue()
-
-
-class FloatRenderer(BaseDataViewCustomRenderer):
-
-    def __init__(self):
-        super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-    def HasEditorCtrl(self):
-        return True
-
-    def OnChar(self, event):
-        unicode = event.GetUnicodeKey()
-
-        if unicode > 0:
-            char = chr(unicode)
-            if char in string.digits or char == '.':
-                event.Skip()
-                return
-        else:
-            key = event.GetKeyCode()
-            if key in [wx.WXK_DELETE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
-                event.Skip()
-                return
-
-        wx.Bell()
-
-        return
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        text_ctrl = wx.TextCtrl(parent, value=str(value or ""))
-        text_ctrl.Bind(wx.EVT_CHAR, self.OnChar)
-        text_ctrl.SetSize(rect.GetSize())
-        return text_ctrl
-
-    def GetValueFromEditorCtrl(self, editor):
-        return self.GetEditorCtrl().GetValue()
-
-
-class DateRenderer(wx.dataview.DataViewDateRenderer):
-    def __init__(self):
-        super().__init__(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-
-class DateTimeRenderer(BaseDataViewCustomRenderer):
-    """Renderer for datetime columns"""
-
-    def __init__(self):
-        super().__init__(varianttype="datetime", mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
-
-    def Render(self, rect, dc, state):
-        """Render datetime value in locale format"""
-        value = self.GetValue()
-        if value:
-            text = value.Format('%x %X')
-            # dc.DrawText(text, rect.x, rect.y)
-
-            self.RenderText(text, 0, rect, dc, state)
-
-        return True
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        """Create date and time picker control"""
-        date_picker = wx.DatePickerCtrl(parent)
-        time_picker = wx.TimePickerCtrl(parent)
-
-        # Set current value if available
-        if value:
-            date_picker.SetValue(value)
-            time_picker.SetTime(value)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(date_picker)
-        sizer.Add(time_picker)
-
-        panel = wx.Panel(parent)
-        panel.SetSizer(sizer)
-        panel.SetSize(rect.GetSize())
-
-        return panel
-
-
-class TimeRenderer(BaseDataViewCustomRenderer):
-    """Renderer for time columns"""
-
-    def __init__(self):
-        super().__init__(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-
-    def CreateEditorCtrl(self, parent, rect, value):
-        """Create time picker control"""
-        time_picker = wx.TimePickerCtrl(parent, style=wx.TP_DEFAULT)
-        time_picker.SetSize(rect.GetSize())
-
-        # Set current value if available
-        if value:
-            try:
-                # Parse time string (HH:MM:SS)
-                hours, minutes, seconds = map(int, value.split(':'))
-                time_picker.SetTime(hours, minutes, seconds)
-            except (ValueError, AttributeError):
-                pass
-
-        return time_picker
-
-    def GetValueFromEditorCtrl(self, editor):
-        """Get formatted time string"""
-        hours, minutes, seconds = editor.GetTime()
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-    def Render(self, rect, dc, state):
-        self.RenderText(self.GetValue(), 0, rect, dc, state)
-
-        return True
+class SQLiteTableColumnsDataViewCtrl:
+    def __init__(self, dataview):
+        dataview.AppendToggleColumn(_(u"Allow NULL"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        column_check_render = TextRenderer()
+        column = wx.dataview.DataViewColumn(_(u"Check"), column_check_render, 5, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        column_default_renderer = PopupRenderer(PopupColumnDefault)
+        column = wx.dataview.DataViewColumn(_(u"Default"), column_default_renderer, 6, width=200, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "STORED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column = wx.dataview.DataViewColumn(_(u"Virtuality"), choice_virtuality_renderer, 7, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        dataview.AppendTextColumn(_(u"Expression"), 8, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        # self.column_collation_renderer = ChoiceRenderer([""])
+        column_collation_renderer = PopupRenderer(PopupChoice)
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION.get_value().context.COLLATIONS])
+        column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 9, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        # dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
 class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
@@ -561,15 +55,17 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
     insert_column_index: Callable[[wx.Event, SQLIndexType], Optional[bool]]
     append_column_index: Callable[[wx.Event, SQLIndex], Optional[bool]]
 
+    on_finish_editing: Callable[[...], Optional[bool]] = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        CURRENT_SESSION.subscribe(self._load_session)
 
         column = wx.dataview.DataViewColumn(_(u"#"), wx.dataview.DataViewIconTextRenderer(align=wx.ALIGN_LEFT), 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
-        self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        column_name_render = TextRenderer()
+        column = wx.dataview.DataViewColumn(_(u"Name"), column_name_render, 1, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column)
 
         column_datatype_renderer = PopupRenderer(PopupColumnDatatype)
         column = wx.dataview.DataViewColumn(_(u"Data type"), column_datatype_renderer, 2, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
@@ -579,33 +75,24 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
         column = wx.dataview.DataViewColumn(_(u"Length/Set"), column_lengthset_renderer, 3, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
         self.AppendColumn(column)
 
-        self.AppendToggleColumn(_(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
-        self.AppendToggleColumn(_(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
-        self.AppendToggleColumn(_(u"Zerofill"), 6, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
-
-        column_default_renderer = PopupRenderer(PopupColumnDefault)
-        column = wx.dataview.DataViewColumn(_(u"Default"), column_default_renderer, 7, width=200, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
-
-        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "STORED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn(_(u"Virtuality"), choice_virtuality_renderer, 8, width=-1, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
-
-        self.AppendTextColumn(_(u"Expression"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
-
-        column_collation_renderer = wx.dataview.DataViewChoiceRenderer([""] + [c for c in COLLATION_CHARSETS.keys()], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 10, width=-1, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
-
-        self.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
-
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_EDITING_STARTED, self._on_edit_start)
+        self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_START_EDITING, self._on_start_editing)
+        self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_active)
+
+        self._current_column: Optional[int] = None
+        self._current_dataview: Optional[int] = None
+
+        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
     def _load_session(self, session: Session):
-        if session.datatype == SessionEngine.SQLITE:
-            self.GetColumn(4).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-            self.GetColumn(6).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
-            self.GetColumn(8).SetFlag(wx.dataview.DATAVIEW_COL_HIDDEN)
+        if session.engine == SessionEngine.SQLITE:
+            if not self._current_dataview or not isinstance(self._current_dataview, SQLiteTableColumnsDataViewCtrl):
+                self._current_dataview = SQLiteTableColumnsDataViewCtrl(self)
+        elif session.engine == SessionEngine.MYSQL:
+            # self.DeleteColumn(self.GetColumn(7))
+            pass
 
     def _on_context_menu(self, event):
         from icons import BitmapList
@@ -683,6 +170,121 @@ class TableColumnsDataViewCtrl(wx.dataview.DataViewCtrl):
 
         self.PopupMenu(menu)
 
+    def _on_item_active(self, event):
+        item = event.GetItem()
+        column = event.GetColumn()
+        # row = self.GetModel().GetRow(item)
+        self._current_column = column
+        print("_on_item_active", self._current_column)
+        event.Skip()
+
+    def _on_edit_start(self, event):
+        item = event.GetItem()
+        column = event.GetColumn()
+        # row = self.GetModel().GetRow(item)
+        self._current_column = column
+        print("on_edit_start", self._current_column)
+        event.Skip()
+
+    def _on_start_editing(self, event):
+        item = event.GetItem()
+        column = event.GetColumn()
+        # row = self.GetModel().GetRow(item)
+        print("_on_start_editing", column)
+        event.Skip()
+
+    def _on_char_hook(self, event: wx.KeyEvent):
+        key_code = event.GetKeyCode()
+
+        # print(f"return={wx.WXK_RETURN}", f"tab={wx.WXK_TAB}")
+        # print("_on_char_hook", key_code, chr(key_code))
+
+        item = self.GetSelection()
+
+        if not item.IsOk():
+            event.Skip()
+            return
+
+        if key_code not in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_TAB, wx.WXK_ESCAPE):
+            event.Skip()
+            return
+
+        if not (current_column := self.GetColumn(self._current_column)):
+            event.Skip()
+            return
+
+        current_column_render = current_column.GetRenderer()
+        current_column_mode = current_column_render.GetMode()
+        current_model_column = current_column.GetModelColumn()
+
+        self.finish_editing(current_column)
+
+        navigable_columns = [
+            c.ModelColumn
+            for c in self.GetColumns()
+            if c.HasFlag(wx.dataview.DATAVIEW_CELL_EDITABLE | wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
+        ]
+
+        if key_code in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
+            return
+        elif key_code == wx.WXK_TAB:
+
+            shift_down = event.ShiftDown()
+
+            print("shift_down", shift_down)
+
+            next_column_model = current_model_column + (-1 if shift_down else 1)
+
+            next_column = self.GetColumn(next_column_model)
+
+            next_column_mode = next_column.GetRenderer().GetMode()
+
+            print("current_model_column", current_model_column, "next_model_column", next_column_model, "next_column_mode", next_column_mode)
+
+            if min(navigable_columns) < next_column_model > max(navigable_columns):
+                wx.Bell()
+            else:
+                self._current_column = next_column_model
+
+                print("_do_edit", next_column_model, item)
+
+                if next_column_mode == wx.dataview.DATAVIEW_CELL_ACTIVATABLE:
+                    next_column_renderer = next_column.GetRenderer()
+
+                    if not isinstance(next_column_renderer, wx.dataview.DataViewToggleRenderer):
+                        rect = self.GetItemRect(item, next_column)
+
+                        try:
+
+                            next_column_renderer.StartEditing(item, rect)
+                            next_column_renderer.ActivateCell(rect, self.GetModel(), item, next_column_model, None)
+                            # next_column.SetFocus()
+                        except Exception as ex:
+                            logger.error(ex)
+
+                elif next_column_mode == wx.dataview.DATAVIEW_CELL_EDITABLE:
+                    wx.CallAfter(
+                        self.EditItem, item, next_column
+                    )
+
+        #     if key == wx.WXK_TAB and self.current_edit:
+        #         row, col = self.current_edit
+        #         next_col = col + 1
+        #         if next_col >= self.GetColumnCount():
+        #             next_col = 0  # oppure vai alla prossima riga se vuoi
+        #         item = self.model.GetItem(row)
+        #         self.EditItem(item, next_col)
+        #     else:
+        #         evt.Skip()
+
+        event.Skip()
+
+    def finish_editing(self, current_column):
+        current_column.GetRenderer().FinishEditing()
+
+        if self.on_finish_editing:
+            self.on_finish_editing(self.GetSelection())
+
 
 class TableIndexesDataViewCtrl(wx.dataview.DataViewCtrl):
 
@@ -710,14 +312,12 @@ class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
         column.SetMinWidth(250)
         self.AppendColumn(column)
 
-        # Colonna 1: Column(s) - larghezza minima 150px
         popup_render_column_1 = PopupRenderer(PopupCheckList)
         popup_render_column_1.on_open = lambda popup: popup.set_choices([c.name for c in list((CURRENT_TABLE.get_value() or NEW_TABLE.get_value()).columns)])
         column1 = wx.dataview.DataViewColumn(_(u"Column(s)"), popup_render_column_1, 1, width=150, flags=wx.dataview.DATAVIEW_COL_RESIZABLE, align=wx.ALIGN_LEFT)
         column1.SetMinWidth(150)
         self.AppendColumn(column1)
 
-        # colonne 2-5 vengono caricate dopo il database
         CURRENT_DATABASE.subscribe(self._load_database)
 
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
@@ -800,6 +400,8 @@ class TableForeignKeysDataViewCtrl(wx.dataview.DataViewCtrl):
 
 
 class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
+    on_record_insert: Callable[[...], Optional[bool]]
+    on_record_delete: Callable[[...], Optional[bool]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -807,6 +409,30 @@ class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
         CURRENT_TABLE.subscribe(self._load_table)
 
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
+        for foreign_key in column.table.foreign_keys:
+            if column.name in foreign_key.columns:
+                session = CURRENT_SESSION.get_value()
+                database = CURRENT_DATABASE.get_value()
+
+                choices = []
+                records = []
+                references = []
+                if reference_table := next((table for table in database.tables if table.name == foreign_key.reference_table), None):
+                    records = session.context.get_records(reference_table)
+
+                for record in records:
+                    reference = [str(getattr(record, reference_column)) for reference_column in foreign_key.reference_columns]
+                    # if hasattr(record, "name"):
+                    #     reference.append(getattr(record, "name"))
+
+                    references.append(reference)
+
+                    choices = [
+                        f" ".join(reference) for reference in references
+                    ]
+
+                return ChoiceRenderer(choices)
+
         if column.datatype.name == 'ENUM':
             return ChoiceRenderer(column.set)
 
@@ -826,15 +452,22 @@ class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
             return FloatRenderer()
 
         elif column.datatype.name == 'DATE':
-            return DateRenderer()
+            popoup_render = PopupRenderer(PopupCalendar)
+            # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
+            return popoup_render
+        elif column.datatype.name == 'TIME':
+            # popoup_render = PopupRenderer(PopupTime)
+            # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
+            return TimeRenderer()
 
         elif column.datatype.name in ['DATETIME', 'TIMESTAMP']:
-            return DateTimeRenderer()
+            popoup_render = PopupRenderer(PopupCalendarTime)
+            # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
+            return popoup_render
 
-        elif column.datatype.name == 'TIME':
-            return TimeRenderer()
+
         else:
-            return wx.dataview.DataViewTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT)
+            return TextRenderer()
 
     def _load_table(self, table: SQLTable):
         while self.GetColumnCount() > 0:
@@ -844,7 +477,7 @@ class TableRecordsDataViewCtrl(wx.dataview.DataViewCtrl):
             for i, column in enumerate(table.columns):
                 renderer = self._get_column_renderer(column)
 
-                print("index", i, "column", column.name, column.datatype.name, "renderer", renderer)
+                # print("index", i, "column", column.name, column.datatype.name, "renderer", renderer)
 
                 col = wx.dataview.DataViewColumn(column.name, renderer, i, width=-1, flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
                 self.AppendColumn(col)

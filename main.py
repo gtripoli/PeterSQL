@@ -46,6 +46,7 @@ class PeterSQL(wx.App):
         from windows.sessions.controller import SessionManagerController
 
         self.session_manager = SessionManagerController(None)
+        self.session_manager.SetIcon(wx.Icon(os.path.join(WORKDIR, "icons", "petersql.ico")))
         self.session_manager.Show()
 
     def open_main_frame(self):
@@ -59,6 +60,7 @@ class PeterSQL(wx.App):
             position = wx.Point(*list(map(int, self.settings.get_value("window", "position").split(","))))
             self.main_frame.SetPosition(position)
             self.main_frame.Layout()
+            self.main_frame.SetIcon(wx.Icon(os.path.join(WORKDIR, "icons", "petersql.ico")))
             self.main_frame.Show()
 
             self.main_frame.Bind(wx.EVT_SIZE, self._on_size)
