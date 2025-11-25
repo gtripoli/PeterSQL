@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Self, Any, Dict, Optional
+from typing import List, Self, Any, Dict, Optional, Callable
 
 import wx
 import wx.adv
@@ -17,6 +17,9 @@ class BasePopup(wx.PopupTransientWindow):
     column_width: int = 100
     default_value: Optional[str] = None
 
+    # on_open: Callable[..., bool] = None
+    on_dismiss: Callable[..., bool]
+
     def __init__(self, parent):
         super().__init__(parent, flags=wx.BORDER_NONE)
         self._value = None
@@ -26,6 +29,8 @@ class BasePopup(wx.PopupTransientWindow):
         self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
         self.SetSizer(self.sizer)
+
+        # self.Bind(wx.EVT_CLOSE, self.close)
 
     def get_value(self):
         return self._value
@@ -55,8 +60,9 @@ class BasePopup(wx.PopupTransientWindow):
         return self
 
     def Dismiss(self):
-        if hasattr(self, 'OnDismiss') and self.OnDismiss:
-            self.OnDismiss()
+        if hasattr(self, 'on_dismiss') and self.on_dismiss:
+            self.on_dismiss()
+
         super().Dismiss()
 
 
@@ -181,9 +187,6 @@ class PopupColumnDatatype(BasePopup):
 
         # CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
-    # def _load_session(self, session: Session):
-
-
     def _on_active(self, event):
         item = event.GetItem()
         root = self.tree_ctrl.GetRootItem()
@@ -247,9 +250,46 @@ class PopupCheckList(BasePopup):
     def __init__(self, parent):
         super().__init__(parent)
         self.choices = []
-        self.check_list_box = wx.CheckListBox(self)
+        self.check_list_box = wx.CheckListBox(self, style=wx.WANTS_CHARS)
         self.sizer.Add(self.check_list_box, 0, wx.ALL | wx.EXPAND, 5)
         self.check_list_box.Bind(wx.EVT_CHECKLISTBOX, self._on_select)
+
+        # self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        self.check_list_box.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def _on_select(self, event):
+        self._value = ",".join(self.check_list_box.GetCheckedStrings())
+        event.Skip()
+
+        return self
+
+    def _on_char_hook(self, event : wx.KeyEvent = None):
+        key_code = event.GetKeyCode()
+        print(key_code)
+        if key_code == wx.WXK_ESCAPE:
+            self._on_select(event)
+            self.Dismiss()
+
+        if key_code == wx.WXK_RETURN:
+            print("PopupCheckList._on_char_hook", key_code)
+
+            self._on_select(event)
+            self.Dismiss()
+
+        if key_code in [wx.WXK_UP, wx.WXK_DOWN]:
+            selection = self.check_list_box.GetSelection()
+            if key_code == wx.WXK_UP:
+                if selection > 0:
+                    self.check_list_box.SetSelection(selection - 1)
+            elif key_code == wx.WXK_DOWN:
+                if selection < self.check_list_box.GetCount() - 1:
+                    self.check_list_box.SetSelection(selection + 1)
+
+        if key_code == wx.WXK_SPACE:
+            selection = self.check_list_box.GetSelection()
+            self.check_list_box.Check(selection, not self.check_list_box.IsChecked(selection))
+
+        event.Skip()
 
     def set_choices(self, choices: List[str]) -> Self:
         self.choices = choices
@@ -272,13 +312,8 @@ class PopupCheckList(BasePopup):
         if self.check_list_box.GetCount() > 0:
             self.check_list_box.SetSelection(0)
 
-        wx.CallAfter(self.SetFocus)
 
-        return self
-
-    def _on_select(self, event):
-        self._value = ",".join(self.check_list_box.GetCheckedStrings())
-        event.Skip()
+        self.check_list_box.SetFocus()
 
         return self
 
@@ -425,7 +460,6 @@ class PopupCalendarTime(BasePopup):
     # def Dismiss(self):
     #
     #     super().Dismiss()
-
 
 #
 # class PopupDateTime(BasePopup):

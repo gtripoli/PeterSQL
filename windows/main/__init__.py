@@ -89,7 +89,7 @@ class BaseDataViewIndexListModel(wx.dataview.DataViewIndexListModel):
         return len(self._data)
 
     def GetColumnCount(self):
-        return self._column_count
+        return self.column_count
 
     def GetColumnType(self, col):
         return "string"

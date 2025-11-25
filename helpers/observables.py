@@ -244,6 +244,11 @@ class ObservableList(Observable[List[T]]):
 
         return self.set_value(values)
 
+    def clear(self) -> Self:
+        self.set_value([])
+        return self
+
+
 class ObservableObject(Observable):
     def _get_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex]):
         if isinstance(ref, dict):

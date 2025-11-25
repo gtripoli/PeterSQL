@@ -5,25 +5,13 @@ import wx.dataview
 
 from icons import BitmapList
 
-from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY
+from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, BaseDataViewIndexListModel, CURRENT_SESSION
 from windows.main.table import NEW_TABLE
 
 from engines.structures.database import SQLForeignKey, SQLTable
 
 
-class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):
-    def __init__(self):
-        super().__init__(0)
-        self.data: List[SQLForeignKey] = []
-
-    def GetCount(self):
-        return len(self.data)
-
-    def GetColumnCount(self):
-        return 6
-
-    def GetColumnType(self, col):
-        return "string"
+class TableForeignKeyModel(BaseDataViewIndexListModel):
 
     def GetValueByRow(self, row, col):
         if row >= len(self.data):
@@ -53,7 +41,7 @@ class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):
         fk = self.data[row]
 
         if col == 0:
-            fk.name = value
+            fk.name = value.Text
         elif col == 1:
             fk.columns = [c.strip() for c in value.split(", ") if c.strip()]
         elif col == 2:
@@ -66,7 +54,7 @@ class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):
             fk.on_delete = value
 
         if fk.name == "" and len(fk.columns) > 0 and fk.reference_table != "" and len(fk.reference_columns) > 0:
-            table = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
+            table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
             fk.name = f"fk_{table.name}_{'_'.join(fk.columns)}-{fk.reference_table}_{'_'.join(fk.reference_columns)}"
             self.ValueChanged(self.GetItem(row), 0)
 
@@ -74,39 +62,12 @@ class TableForeignKeyModel(wx.dataview.DataViewIndexListModel):
 
         return True
 
-    def set_data(self, data: List[SQLForeignKey]):
-        self.data = data
-        self.Reset(len(data))
-
-    def add_row(self, data: SQLForeignKey) -> wx.dataview.DataViewItem:
-        self.data.append(data)
-        new_row_index = len(self.data) - 1
-        self.RowAppended()
-        return self.GetItem(new_row_index)
-
-    def add_empty_row(self) -> wx.dataview.DataViewItem:
-        column = SQLForeignKey(
-            id=-1,
-            name="",
-            columns=[],
-            reference_table="",
-            reference_columns=[],
-            on_update="",
-            on_delete=""
-        )
-        return self.add_row(column)
-
-    def clear(self):
-        self.data = []
-        self.Reset(0)
-        self.Cleared()
-
 
 class TableForeignKeyController:
     def __init__(self, list_ctrl_foreign_key: wx.dataview.DataViewCtrl):
         self.list_ctrl_foreign_key = list_ctrl_foreign_key
 
-        self.model = TableForeignKeyModel()
+        self.model = TableForeignKeyModel(6)
         self.list_ctrl_foreign_key.AssociateModel(self.model)
 
         self.list_ctrl_foreign_key.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
@@ -122,7 +83,7 @@ class TableForeignKeyController:
         self.model.clear()
 
         if table:
-            self.model.set_data(list(table.foreign_keys))
+            self.model.set_observable(table.foreign_keys)
 
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
@@ -137,18 +98,17 @@ class TableForeignKeyController:
         event.Skip()
 
     def _do_build(self, row: int):
-        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+        table: SQLTable = CURRENT_TABLE.get_value().copy()
 
-        foreign_key: SQLForeignKey = self.model.data[row]
+        foreign_keys: SQLForeignKey = self.model.data
 
-        table.foreign_keys.append(foreign_key, replace_existing=True)
+        table.foreign_keys.set_value(foreign_keys, replace_existing=True)
 
         NEW_TABLE.set_value(table)
 
     def _do_edit(self, item, column_index: int = 1):
-        wx.CallAfter(
-            self.list_ctrl_foreign_key.EditItem, item, self.list_ctrl_foreign_key.GetColumn(column_index)
-        )
+        column = self.list_ctrl_foreign_key.GetColumn(column_index)
+        self.list_ctrl_foreign_key.edit_item_smart(item, column)
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
         print("#" * 10, "ON FOREIGN KEY EDITING DONE", "#" * 10)
@@ -166,10 +126,25 @@ class TableForeignKeyController:
         event.Skip()
 
     def on_foreign_key_insert(self):
-        item = self.model.add_empty_row()
-        self.list_ctrl_foreign_key.Select(item)
+        session = CURRENT_SESSION.get_value()
+        table = CURRENT_TABLE.get_value()
 
-        self._do_edit(item, 1)
+        index = len(table.foreign_keys)
+
+        new_empty_foreign_key = session.context.build_empty_foreign_key(
+            name="",
+            table=table,
+            columns=[]
+        )
+
+        table.foreign_keys.append(new_empty_foreign_key)
+
+        new_empty_item = self.model.GetItem(index)
+
+        self.list_ctrl_foreign_key.Select(new_empty_item)
+
+        self._do_edit(new_empty_item, 1)
+
 
     def on_foreign_key_delete(self):
         selected = self.list_ctrl_foreign_key.GetSelection()
@@ -182,9 +157,6 @@ class TableForeignKeyController:
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
         if foreign_key in table.foreign_keys:
             table.foreign_keys.remove(foreign_key)
-
-        del self.model.data[row]
-        self.model.RowDeleted(row)
 
         NEW_TABLE.set_value(table)
 

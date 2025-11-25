@@ -218,6 +218,10 @@ class AbstractContext(abc.ABC):
     def build_empty_record(self, table: SQLTable, values: Dict[str, Any]) -> SQLRecord:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: List[str]) -> SQLRecord:
+        raise NotImplementedError
+
     # EXECUTION
     def execute(self, query: str, params=None, **kwargs) -> bool:
         query = re.sub(r'\s+', ' ', str(query)).strip()

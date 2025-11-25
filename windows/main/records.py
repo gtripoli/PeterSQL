@@ -134,13 +134,11 @@ class TableRecordsController:
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_records.GetColumn(model_column)
-
-        wx.CallAfter(
-            self.list_ctrl_records.EditItem, item, column
-        )
+        self.list_ctrl_records.edit_item(item, column)
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
         print("#" * 10, "ON RECORD EDITING DONE", "#" * 10)
+        table: SQLTable = CURRENT_TABLE.get_value()
 
         item = event.GetItem()
 
@@ -148,24 +146,22 @@ class TableRecordsController:
             event.Skip()
             return
 
-        record = self.model.data[self.model.GetRow(item)]
+        current_record = self.model.data[self.model.GetRow(item)]
+        original_record = next((r for r in list(table.records) if r.id == current_record.id), None)
 
-        if AUTO_APPLY.get_value() and record.is_valid():
-            try:
-                record.save()
-            except Exception as ex:
-                logger.error(f"Error saving record: {ex}", exc_info=True)
+        if current_record.id == -1 or current_record != original_record:
+            if AUTO_APPLY.get_value() and current_record.is_valid():
+                try:
+                    current_record.save()
+                except Exception as ex:
+                    logger.error(f"Error saving record: {ex}", exc_info=True)
 
-            else:
-                records = list(self.session.context.get_records(table=self.table))
+                else:
+                    records = list(self.session.context.get_records(table=self.table))
+
                 self.table.records.set_value(records)
-                # self.model.data = records
-                # self.list_ctrl_records.refresh()
-
-                # CURRENT_RECORDS.set_value(self.get_selected_records())
-
-        else:
-            NEW_RECORDS.append(record, replace_existing=True)
+            else:
+                NEW_RECORDS.append(current_record, replace_existing=True)
 
         event.Skip()
 
@@ -186,6 +182,47 @@ class TableRecordsController:
 
         return None
 
+    def _do_new_empty_record(self, index: int, copy_from_selected: bool = False, use_server_defaults: bool = True):
+        """Helper method to create a new empty record at the specified index."""
+        session = CURRENT_SESSION.get_value()
+        table = CURRENT_TABLE.get_value()
+
+        values = dict()
+        current_record = None
+
+        if copy_from_selected:
+            selected = self.list_ctrl_records.GetSelection()
+            if selected.IsOk():
+                current_record: SQLRecord = self.model.get_data_by_item(selected)
+
+        column_server_default = {}
+        for column in table.columns:
+            if column.is_auto_increment:
+                continue
+
+            if use_server_defaults and column.server_default:
+                if not column_server_default.get(column.server_default):
+                    if table.context.execute(f"SELECT {column.server_default} as column_default"):
+                        column_server_default[column.server_default] = table.context.fetchone()['column_default']
+
+                values[column.name] = column_server_default[column.server_default]
+            elif copy_from_selected and current_record:
+                values[column.name] = current_record.values.get(column.name)
+
+        new_empty_record = session.context.build_empty_record(
+            table=table,
+            values=values
+        )
+
+        table.records.insert(index, new_empty_record)
+
+        new_empty_item = self.model.GetItem(index)
+
+        self.list_ctrl_records.UnselectAll()
+        self.list_ctrl_records.Select(new_empty_item)
+
+        self._do_edit(new_empty_item, 1)
+
     def do_insert_record(self):
         session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
@@ -193,39 +230,11 @@ class TableRecordsController:
         selected = self.list_ctrl_records.GetSelection()
 
         index = len(table.records)
-        values = dict()
-
-        datatype = session.datatype.VARCHAR
-
-        if selected:
+        if selected.IsOk():
             current_record: SQLRecord = self.model.get_data_by_item(selected)
-            # datatype = current_column.datatype
             index = table.records.index(current_record) + 1
 
-        column_server_default = {}
-        for column in table.columns:
-            if column.is_auto_increment:
-                continue
-
-            if column.server_default:
-                if not column_server_default.get(column.server_default):
-                    if table.context.execute(f"SELECT {column.server_default} as column_default"):
-                        column_server_default[column.server_default] = table.context.fetchone()['column_default']
-
-                values[column.name] = column_server_default[column.server_default]
-
-        new_empty_record = session.context.build_empty_record(
-            table=table,
-            values=values
-        )
-
-        table.records.insert(index, new_empty_record)
-
-        new_empty_item = self.model.GetItem(index)
-
-        self.list_ctrl_records.Select(new_empty_item)
-
-        self._do_edit(new_empty_item, 1)
+        self._do_new_empty_record(index, copy_from_selected=False, use_server_defaults=True)
 
     def do_duplicate_record(self):
         session = CURRENT_SESSION.get_value()
@@ -233,47 +242,15 @@ class TableRecordsController:
 
         selected = self.list_ctrl_records.GetSelection()
 
-        if not selected.IsOk() :
+        if not selected.IsOk():
             return
 
         index = len(table.records)
-        values = dict()
-
-        if selected:
+        if selected.IsOk():
             current_record: SQLRecord = self.model.get_data_by_item(selected)
-            # datatype = current_column.datatype
             index = table.records.index(current_record) + 1
 
-        column_server_default = {}
-        for column in table.columns:
-            if column.is_auto_increment:
-                continue
-
-            # if column.server_default:
-            #     if not column_server_default.get(column.server_default):
-            #         if table.context.execute(f"SELECT {column.server_default} as column_default"):
-            #             column_server_default[column.server_default] = table.context.fetchone()['column_default']
-
-            values[column.name] = current_record.values.get(column.name)
-
-        new_empty_record = session.context.build_empty_record(
-            table=table,
-            values=values
-        )
-
-        table.records.insert(index, new_empty_record)
-
-        new_empty_item = self.model.GetItem(index)
-
-        self.list_ctrl_records.Select(new_empty_item)
-
-        self._do_edit(new_empty_item, 1)
-
-        # item = self.model.add_empty_row()
-        # self.list_ctrl_records.Refresh()
-        #
-        # column = self.list_ctrl_records.GetColumn(self.get_first_editable_column())
-        # self.list_ctrl_records.EditItem(item, column)
+        self._do_new_empty_record(index, copy_from_selected=True, use_server_defaults=False)
 
     def do_delete_record(self):
         table = CURRENT_TABLE.get_value()
@@ -282,7 +259,7 @@ class TableRecordsController:
 
         SQLRecord.delete_many(table, records)
 
-        CURRENT_RECORDS.set_value(None)
+        CURRENT_RECORDS.set_value([])
 
     # def update_record(self, row, record):
     #     if row < 0 or row >= len(self.list_ctrl_records.GetModel().records):

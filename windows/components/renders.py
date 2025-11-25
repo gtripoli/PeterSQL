@@ -42,40 +42,35 @@ class PopupRenderer(BaseDataViewCustomRenderer):
 
         x_scroll_offset = view.GetItemRect(item).left
 
-        position = view.ClientToScreen(wx.Point(rect.x + x_scroll_offset  , int(rect.y + view.CharHeight + (view.CharHeight / 2))))
+        position = view.ClientToScreen(wx.Point(rect.x + x_scroll_offset, int(rect.y + view.CharHeight + (view.CharHeight / 2))))
 
         self._popup = self.popup_class(view)
         if not hasattr(self._popup, "popup_size"):
             self._popup.popup_size = wx.Size(view.GetColumn(col).GetWidth(), -1)
 
         def _on_dismiss():
-            print("OnDismiss")
+            print("_on_dismiss")
             if self._popup is not None:
-
                 if str((new_value := self._popup.get_value())) != self._value:
                     self._value = new_value
                     model.SetValue(self._value, item, col)
-
-                self.FinishEditing()
             else:
                 raise ValueError("Popup is None")
 
-            print("PopupRenderer._value ", self._value)
+            return True
 
         if self.on_open:
             self.on_open(self._popup)
 
-        # self._popup.Bind(wx.EVT_CLOSE, _on_close)
-        self._popup.OnDismiss = _on_dismiss
-
         self._popup.open(self._value, position)
+        self._popup.on_dismiss = _on_dismiss
 
         return True
 
     def CancelEditing(self):
         print("CancelEditing")
         if self._popup is not None:
-            self._popup.Close()
+            self._popup.Dismiss()
             self._popup = None
 
         return True
@@ -83,14 +78,11 @@ class PopupRenderer(BaseDataViewCustomRenderer):
     def FinishEditing(self):
         print("FinishEditing")
         if self._popup is not None:
+            self._popup.Dismiss()
             self._popup.Close()
+            self._popup = None
 
         return True
-
-
-class ChoiceRenderer(wx.dataview.DataViewChoiceRenderer):
-    def __init__(self, choices, mode=DATAVIEW_CELL_EDITABLE, alignment=DVR_DEFAULT_ALIGNMENT):
-        super().__init__(choices, mode, alignment)
 
 
 class LengthSetRender(BaseTextRenderer):

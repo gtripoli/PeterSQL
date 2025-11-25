@@ -31,6 +31,7 @@ class DataTypeFormat(enum.Enum):
     DATETIME = lambda value: f"'{value}'"
     TIMESTAMP = lambda value: f"'{value}'"
     TIME = lambda value: f"'{value}'"
+    JSON = lambda value: f"'{value}'"
 
 
 @dataclasses.dataclass

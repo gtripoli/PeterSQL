@@ -179,16 +179,13 @@ class TableColumnsController:
         if selected.IsOk():
             column: SQLColumn = self.model.get_data_by_item(selected)
 
-        CURRENT_COLUMN.set_value(column)
+            CURRENT_COLUMN.set_value(column)
 
         event.Skip()
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_table_columns.GetColumn(model_column)
-
-        wx.CallAfter(
-            self.list_ctrl_table_columns.EditItem, item, column
-        )
+        self.list_ctrl_table_columns.edit_item_smart(item, column)
 
     def _update_table_columns(self):
         database: SQLDatabase = CURRENT_DATABASE.get_value()

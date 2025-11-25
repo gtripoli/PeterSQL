@@ -106,6 +106,9 @@ class SQLTable(abc.ABC):
         if any([i1 != i2 for i1, i2 in zip(self.indexes, other.indexes)]):
             return True
 
+        if any([f1 != f2 for f1, f2 in zip(self.foreign_keys, other.foreign_keys)]):
+            return True
+
         return False
 
     def copy(self):
@@ -130,8 +133,10 @@ class SQLTable(abc.ABC):
         return new_table
 
     def is_valid(self) -> bool:
-        # print("table is valid:", f"name: {self.name != ''}", len(self.columns) > 0, {c.name: c.is_valid for c in self.columns},
-        #
+        # print("table is valid:", f"name: {self.name != ''}",
+        #       "columns:", {c.name: c.is_valid for c in self.columns},
+        #       "indexes:", {i.name: i.is_valid for i in self.indexes},
+        #       "foreign_keys:", {fk.name: fk.is_valid for fk in self.foreign_keys},
         #       )
         return all([
             self.name.strip() != "",
@@ -173,7 +178,7 @@ class SQLTable(abc.ABC):
 
     def save(self) -> Optional[bool]:
 
-        if self.id == -1:
+        if self.id <= -1:
             method = self.create
         else:
             method = self.alter
@@ -355,6 +360,7 @@ class SQLIndex(abc.ABC):
 class SQLForeignKey(abc.ABC):
     id: int
     name: str
+    table: SQLTable = dataclasses.field(compare=False)
     columns: List[str]
     reference_table: str
     reference_columns: List[str]
@@ -368,10 +374,12 @@ class SQLForeignKey(abc.ABC):
         if not isinstance(other, SQLForeignKey):
             return False
 
+        # print([{field.name: [getattr(self, field.name), getattr(other, field.name)]} for field in dataclasses.fields(self)])
+
         return all([
             getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
-            if field.default_factory is dataclasses.MISSING
+            if field.compare
         ])
 
     @property
@@ -429,7 +437,7 @@ class SQLRecord(abc.ABC):
             original_record = next((r for r in list(original_table.records) if r.id == self.id), None)
 
             for column in columns:
-                if original_record is not None :
+                if original_record is not None:
                     identifier_conditions[column.name] = original_record.values.get(column.name)
 
                 if column.datatype.format is not None:

@@ -350,18 +350,10 @@ class MainFrameController(MainFrameView):
 
         else:
             NEW_TABLE.set_value(None)
-            # database.tables.refresh()
 
             if updated_table := next((t for t in list(database.tables) if t.id == table.id), None):
-                updated_table.columns.refresh()
-                updated_table.indexes.refresh()
-                updated_table.foreign_keys.refresh()
-
-                # Update the tree item data with the updated table
                 if item := self.controller_tree_sessions.find_by_data(name=table.name):
                     self.tree_ctrl_sessions.SetItemData(item, updated_table)
-
-            # CURRENT_TABLE.set_value(updated_table.copy())
 
             wx.CallAfter(self._select_tree_item, **{"name": database.name})
 

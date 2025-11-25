@@ -27,7 +27,7 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
         dc = wx.ClientDC(view)
 
         char_width = 50
-        if self._value is not None :
+        if self._value is not None:
             char_width = dc.GetTextExtent(str(self._value)).GetWidth()
 
         size = wx.Size(char_width, view.CharHeight)
@@ -79,6 +79,15 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
         super().RenderText(str(text), 0, rect, dc, state)
 
         return True
+
+    def StartEditing(self, item, labelRect):
+        print("StartEditing")
+        print(item, labelRect)
+        return super().StartEditing(item, labelRect)
+
+    def Activate(self, cell, model, item, col):
+        print("Activate")
+        return super().Activate(cell, model, item, col)
 
     def update_column_width(self):
         if view := self.GetView():

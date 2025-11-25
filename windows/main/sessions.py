@@ -2,6 +2,7 @@ import wx
 
 from typing import Iterator, Union, List, Callable
 
+from helpers.logger import logger
 from helpers.observables import Loader
 from icons import ImageList, IconList
 
@@ -77,25 +78,30 @@ class TreeSessionsController:
         CURRENT_VIEW.set_value(None)
         CURRENT_TRIGGER.set_value(None)
 
-        if isinstance(data, Session) and (not CURRENT_DATABASE.get_value() or data.id != CURRENT_SESSION.get_value().id):
-            # if CURRENT_SESSION.get_value() and data != CURRENT_SESSION.get_value() :
-            CURRENT_SESSION.set_value(data)
+        if isinstance(data, Session) :
+            if not CURRENT_DATABASE.get_value() or data.id != CURRENT_SESSION.get_value().id:
+                # if CURRENT_SESSION.get_value() and data != CURRENT_SESSION.get_value() :
+                CURRENT_SESSION.set_value(data)
 
-            CURRENT_DATABASE.set_value(None)
+                CURRENT_DATABASE.set_value(None)
 
-        elif isinstance(data, SQLDatabase) and (not CURRENT_DATABASE.get_value() or data.id != CURRENT_DATABASE.get_value().id):
-            session = self.tree_ctrl_sessions.GetItemData(parent)
-            database = data
+        elif isinstance(data, SQLDatabase) :
+            if not CURRENT_DATABASE.get_value() or data.id != CURRENT_DATABASE.get_value().id:
+                session = self.tree_ctrl_sessions.GetItemData(parent)
+                database = data
 
-            if session.id != CURRENT_SESSION.get_value().id:
-                CURRENT_SESSION.set_value(session)
+                if session.id != CURRENT_SESSION.get_value().id:
+                    CURRENT_SESSION.set_value(session)
 
-            CURRENT_DATABASE.set_value(database)
+                CURRENT_DATABASE.set_value(database)
 
-            self.load_child(data.control, childrens=list(database.tables) + list(database.views) + list(database.triggers))
+                self.load_child(data.control, childrens=list(database.tables) + list(database.views) + list(database.triggers))
 
         else:
             session = self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent))
+            if not session :
+                logger.error("problem")
+
             if session.id != CURRENT_SESSION.get_value().id:
                 CURRENT_SESSION.set_value(session)
 

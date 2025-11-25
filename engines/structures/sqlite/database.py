@@ -1,50 +1,15 @@
 import dataclasses
-from typing import Self, List, Optional, Dict, Tuple, Literal
+from typing import Self, List, Optional, Dict, Tuple
 
 from helpers.logger import logger
+
 from engines.structures import merge_original_current
-from engines.structures.context import LOG_QUERY, Transaction, AbstractColumnBuilder
-from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLDatabase, SQLView, SQLTrigger
+from engines.structures.context import LOG_QUERY, AbstractColumnBuilder
+from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
+
+from engines.structures.sqlite.builder import SQLiteColumnBuilder
 
 from engines.structures.sqlite.indextype import SQLiteIndexType
-
-
-class SQLiteColumnBuilder(AbstractColumnBuilder):
-    TEMPLATE = ["%(name)s", "%(datatype)s", "%(primary_key)s", "%(auto_increment)s", "%(nullable)s", "%(unique)s", "%(check)s", "%(default)s", "%(collate)s", "%(generated)s", "%(references)s"]
-
-    def __init__(self, column: 'SQLiteColumn', exclude: Optional[List[str]] = None):
-        super().__init__(column, exclude)
-
-        self.parts.update({
-            'check': self.check,
-            'unique': self.unique,
-            'generated': self.generated,
-            'references': self.references,
-        })
-
-    @property
-    def primary_key(self):
-        return 'PRIMARY KEY' if self.column.is_primary_key or self.column.is_auto_increment else ''
-
-    @property
-    def auto_increment(self):
-        return 'AUTOINCREMENT' if self.column.is_auto_increment else ''
-
-    @property
-    def check(self):
-        return f"CHECK ({self.column.check})" if self.column.check else ''
-
-    @property
-    def unique(self):
-        return 'UNIQUE' if self.column.is_unique_key else ''
-
-    @property
-    def generated(self):
-        return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality is not None else ''
-
-    @property
-    def references(self):
-        return f""
 
 
 @dataclasses.dataclass
@@ -53,6 +18,7 @@ class SQLiteTable(SQLTable):
     def rename(self, table: Self, new_name: str) -> bool:
         sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
         self.database.context.execute(sql)
+
         return True
 
     def truncate(self):
@@ -187,6 +153,10 @@ class SQLiteTable(SQLTable):
 
                     self.rename(self, original_name)
 
+                    self.name = original_name
+
+                    map_indexes = merge_original_current([], current_indexes)
+
                     transaction.execute("PRAGMA foreign_keys = ON")
 
                 else:
@@ -217,9 +187,6 @@ class SQLiteTable(SQLTable):
             LOG_QUERY.append(f"/* alter_table exception: {ex} */")
             logger.error(ex, exc_info=True)
             return False
-
-        else:
-            self.name = original_name
 
         return True
 
@@ -350,7 +317,7 @@ class SQLiteRecord(SQLRecord):
         sql_select = f"SELECT * FROM `{self.table.name}` WHERE {identifier_conditions}"
         self.table.database.context.execute(sql_select)
 
-        if not (existing_record := self.table.context.fetchone()):
+        if not (existing_record := self.table.database.context.fetchone()):
             logger.warning(f"Record not found for update: {identifier_columns}")
             assert False, "Record not found for update with identifier columns"
 

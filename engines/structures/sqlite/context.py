@@ -281,7 +281,7 @@ class SQLiteContext(AbstractContext):
         results = []
         for fk in foreign_keys:
             id = fk['id']
-            name = f"fk_{table.name}_{fk['table']}_{id}"
+            name = f"""fk_{table.name}_{'_'.join(fk['from'].split(","))}-{fk['table']}_{'_'.join(fk['to'].split(","))}_{id}"""
 
             columns = fk['from'].split(",")
             reference_columns = fk['to'].split(",")
@@ -290,6 +290,7 @@ class SQLiteContext(AbstractContext):
                 SQLiteForeignKey(
                     id=int(id),
                     name=name,
+                    table=table,
                     columns=columns,
                     reference_table=fk['table'],
                     reference_columns=reference_columns,
@@ -346,6 +347,17 @@ class SQLiteContext(AbstractContext):
             type=type,
             columns=columns,
             table=table,
+        )
+    def build_empty_foreign_key(self, name: str, table: SQLiteTable, columns: List[str]) -> SQLiteForeignKey:
+        return SQLiteForeignKey(
+            id=SQLiteContext.get_temporary_id(table.foreign_keys),
+            name=name,
+            table=table,
+            columns=columns,
+            reference_table="",
+            reference_columns=[],
+            on_update="",
+            on_delete=""
         )
 
     def build_empty_record(self, table: SQLiteTable, values: Dict[str, Any]) -> SQLiteRecord:
