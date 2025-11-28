@@ -2,13 +2,16 @@ import contextlib
 import re
 import abc
 
-from typing import Dict, Any, Optional, List, Type, Union, TypeAlias
+from typing import Dict, Any, Optional, List, Union, TypeAlias
 
+from icons import BitmapList
 from helpers.logger import logger
 from helpers.observables import ObservableList
 
+from engines.structures.datatype import StandardDataType
 from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
-from engines.structures.indextype import SQLIndexType
+from engines.structures.indextype import SQLIndexType, StandardIndexType
+
 
 LOG_QUERY: ObservableList[str] = ObservableList()
 
@@ -30,14 +33,8 @@ class AbstractColumnBuilder(abc.ABC):
             'primary_key': self.primary_key,
             'auto_increment': self.auto_increment,
             'nullable': self.nullable,
-            # 'unique': self.unique,
-            # 'check': self.check,
             'default': self.default,
-            'collate': self.collate,
-            # 'generated': self.generated,
-            # 'references': self.references,
-            # 'references': self.references,
-            # 'constraint': self.constraint,
+            'collate': self.collate
         }
 
     @property
@@ -110,10 +107,15 @@ class AbstractContext(abc.ABC):
     _connection: Any = None
     _cursor: Any = None
 
+    BITMAP: BitmapList
+
+    ENGINES: List[str]
+    DATATYPE: StandardDataType
+    INDEXTYPE: StandardIndexType
     COLLATIONS: List[str]
 
-    def __init__(self, connection_url):
-        self.connection_url = connection_url
+    def __init__(self, session):
+        self.session = session
 
     @abc.abstractmethod
     def connect(self, **connect_kwargs) -> None:
@@ -140,13 +142,6 @@ class AbstractContext(abc.ABC):
         if self._cursor is None:
             raise RuntimeError("Not connected to the database. Call connect() first.")
         return self._cursor
-
-    # def __enter__(self):
-    #     self.connect()
-    #     return self
-    #
-    # def __exit__(self, exc_type, exc_val, exc_tb):
-    #     self.disconnect()
 
     def _on_connect(self, *args, **kwargs):
         logger.debug("connected")
@@ -223,17 +218,13 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     # EXECUTION
-    def execute(self, query: str, params=None, **kwargs) -> bool:
+    def execute(self, query: str) -> bool:
         query = re.sub(r'\s+', ' ', str(query)).strip()
 
         LOG_QUERY.append(query)
 
         try:
-            if params is not None:
-                self.cursor.execute(query, params)
-            else:
-                self.cursor.execute(query, **kwargs)
-
+            self.cursor.execute(query)
         except Exception as ex:
             logger.error(ex, exc_info=True)
             LOG_QUERY.append(f"/* {str(ex)} */")
@@ -264,24 +255,3 @@ class AbstractContext(abc.ABC):
         except Exception as ex:
             self.execute("ROLLBACK")
             raise
-
-
-class Transaction:
-    def __init__(self, context: AbstractContext):
-        self.context = context
-
-    def __enter__(self):
-        self.context.execute("BEGIN")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            self.context.execute("COMMIT")
-            logger.info("Transaction committed")
-        else:
-            self.context.execute("ROLLBACK")
-            logger.error(f"Transaction failed: {exc_val}")
-            LOG_QUERY.append(f"/* {str(exc_val)} */")
-
-    def execute(self, query: str, params=None, **kwargs) -> bool:
-        return self.context.execute(query, params, **kwargs)

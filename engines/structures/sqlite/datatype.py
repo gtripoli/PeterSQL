@@ -13,10 +13,10 @@ class SQLiteDataType(StandardDataType):
 
     CHARACTER = SQLDataType(name="CHARACTER", category=DataTypeCategory.TEXT, has_length=True, max_size=20)
 
-    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=255, format=DataTypeFormat.TEXT)
-    NCHAR = SQLDataType(name="NCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=55, format=DataTypeFormat.TEXT)
-    NVARCHAR = SQLDataType(name="NVARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=100, format=DataTypeFormat.TEXT)
-    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
+    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=255, format=DataTypeFormat.STRING)
+    NCHAR = SQLDataType(name="NCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=55, format=DataTypeFormat.STRING)
+    NVARCHAR = SQLDataType(name="NVARCHAR", category=DataTypeCategory.TEXT, has_length=True, max_size=100, format=DataTypeFormat.STRING)
+    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
     CLOB = SQLDataType(name="CLOB", category=DataTypeCategory.TEXT)
 
     REAL = SQLDataType(name="REAL", category=DataTypeCategory.REAL)

@@ -22,11 +22,11 @@ class TableForeignKeyModel(BaseDataViewIndexListModel):
         if col == 0:
             return wx.dataview.DataViewIconText(fk.name, BitmapList.KEY_FOREIGN)
         elif col == 1:
-            return ", ".join(fk.columns)
+            return ",".join(fk.columns)
         elif col == 2:
             return fk.reference_table
         elif col == 3:
-            return ", ".join(fk.reference_columns)
+            return ",".join(fk.reference_columns)
         elif col == 4:
             return fk.on_update
         elif col == 5:
@@ -38,27 +38,29 @@ class TableForeignKeyModel(BaseDataViewIndexListModel):
         if row >= len(self.data):
             return False
 
-        fk = self.data[row]
+        new_fk = self.data[row].copy()
 
         if col == 0:
-            fk.name = value.Text
+            new_fk.name = value.Text
         elif col == 1:
-            fk.columns = [c.strip() for c in value.split(", ") if c.strip()]
+            new_fk.columns = [c.strip() for c in value.split(",") if c.strip()]
         elif col == 2:
-            fk.reference_table = value
+            new_fk.reference_table = value
         elif col == 3:
-            fk.reference_columns = [c.strip() for c in value.split(", ") if c.strip()]
+            new_fk.reference_columns = [c.strip() for c in value.split(",") if c.strip()]
         elif col == 4:
-            fk.on_update = value
+            new_fk.on_update = value
         elif col == 5:
-            fk.on_delete = value
+            new_fk.on_delete = value
 
-        if fk.name == "" and len(fk.columns) > 0 and fk.reference_table != "" and len(fk.reference_columns) > 0:
+        if new_fk.name == "" and len(new_fk.columns) > 0 and new_fk.reference_table != "" and len(new_fk.reference_columns) > 0:
             table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
-            fk.name = f"fk_{table.name}_{'_'.join(fk.columns)}-{fk.reference_table}_{'_'.join(fk.reference_columns)}"
+            new_fk.name = f"fk_{table.name}_{'_'.join(new_fk.columns)}-{new_fk.reference_table}_{'_'.join(new_fk.reference_columns)}"
             self.ValueChanged(self.GetItem(row), 0)
 
-        self.ValueChanged(self.GetItem(row), col)
+        if new_fk != self.data[row] :
+            self.data[row] = new_fk
+            self.ValueChanged(self.GetItem(row), col)
 
         return True
 

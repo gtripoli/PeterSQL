@@ -1,74 +1,131 @@
 import wx
+import wx.dataview
 
-from typing import Iterator, Union, List, Callable
+from typing import Callable
 
+from icons import BitmapList
 from helpers.logger import logger
-from helpers.observables import Loader
-from icons import ImageList, IconList
 
-from engines.session import Session, SessionEngine
-from engines.structures.database import SQLDatabase, SQLTable, SQLView, SQLTrigger
+from engines.session import Session
+from engines.structures.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER, BaseDataViewModel, SESSIONS, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
 from windows.main.table import NEW_TABLE
+
+
+class SessionListModel(BaseDataViewModel):
+    def __init__(self):
+        super().__init__(column_count=2)
+
+    def GetColumnType(self, col):
+        mapper = {
+            0: "string",
+            1: "long",
+        }
+        return mapper[col]
+
+    def GetChildren(self, parent, children):
+        if not parent:
+            for session in self.data:
+                children.append(self.ObjectToItem(session))
+
+            return len(self.data)
+
+        node = self.ItemToObject(parent)
+        if isinstance(node, Session):
+            databases = node.context.get_databases()
+            for database in databases:
+                children.append(self.ObjectToItem(database))
+
+            return len(databases)
+
+        if isinstance(node, SQLDatabase):
+            length = sum([len(node.tables), len(node.views), len(node.triggers)])
+
+            for table in list(node.tables):
+                children.append(self.ObjectToItem(table))
+            for view in list(node.views):
+                children.append(self.ObjectToItem(view))
+            for procedure in list(node.procedures):
+                children.append(self.ObjectToItem(procedure))
+            for function in list(node.functions):
+                children.append(self.ObjectToItem(function))
+            for trigger in list(node.triggers):
+                children.append(self.ObjectToItem(trigger))
+            for event in list(node.events):
+                children.append(self.ObjectToItem(event))
+
+            return length
+
+        return 0
+
+    def IsContainer(self, item):
+        if not item:
+            return True
+
+        node = self.ItemToObject(item)
+        if isinstance(node, (Session, SQLDatabase)) :
+            return True
+
+        return False
+
+    def GetParent(self, item):
+        if not item:
+            return wx.dataview.NullDataViewItem
+
+        node = self.ItemToObject(item)
+        if isinstance(node, Session):
+            return wx.dataview.NullDataViewItem
+
+        elif isinstance(node, SQLDatabase):
+            return self.ObjectToItem(node.context.session)
+        else:
+            return self.ObjectToItem(node.database)
+
+    def GetValue(self, item, col):
+        node = self.ItemToObject(item)
+
+        if isinstance(node, Session):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, node.context.BITMAP), 1: "", }
+        elif isinstance(node, SQLDatabase):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_DATABASE), 1: node.size}
+        elif isinstance(node, SQLTable):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_TABLE), 1: int((node.size / node.database.size) * 100)}
+        elif isinstance(node, SQLView):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_VIEW), 1: 0}
+        elif isinstance(node, SQLProcedure):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_PROCEDURE), 1: 0}
+        elif isinstance(node, SQLFunction):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_FUNCTION), 1: 0}
+        elif isinstance(node, SQLTrigger):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_TRIGGER), 1: 0}
+        elif isinstance(node, SQLEvent):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_EVENT), 1: 0}
+
+        return mapper[col]
 
 
 class TreeSessionsController:
     on_cancel_table: Callable
     do_cancel_table: Callable
 
-    def __init__(self, tree_ctrl_sessions: wx.TreeCtrl):
+    def __init__(self, tree_ctrl_sessions: wx.dataview.DataViewCtrl):
         self.app = wx.GetApp()
 
         self.tree_ctrl_sessions = tree_ctrl_sessions
-        self.tree_ctrl_sessions.SetImageList(ImageList)
 
-        self.tree_ctrl_sessions_root = self.tree_ctrl_sessions.AddRoot("sessions")
+        self.model = SessionListModel()
+        self.model.set_observable(SESSIONS)
 
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_select_item)
+        self.tree_ctrl_sessions.AssociateModel(self.model)
 
-    def load_child(self, parent: wx.TreeItemId, childrens: Union[Iterator[SQLDatabase], List[SQLTable]]):
-        with Loader.cursor_wait():
-            self.tree_ctrl_sessions.DeleteChildren(parent)
+        self.tree_ctrl_sessions.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self.on_selection_changed)
 
-            for children in childrens:
-                item = self.tree_ctrl_sessions.AppendItem(parent=parent, text=children.name, data=children)
-                children.control = item
-
-                if type(children) is SQLDatabase:
-                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_DATABASE, wx.TreeItemIcon_Normal)
-                elif type(children) is SQLTable:
-                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TABLE, wx.TreeItemIcon_Normal)
-                elif type(children) is SQLView:
-                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_VIEW, wx.TreeItemIcon_Normal)
-                elif type(children) is SQLTrigger:
-                    self.tree_ctrl_sessions.SetItemImage(item, IconList.SYSTEM_TRIGGER, wx.TreeItemIcon_Normal)
-
-            self.tree_ctrl_sessions.Expand(parent)
-
-    def append_session(self, session: Session):
-        icon = IconList.NOT_FOUND
-        if session.engine == SessionEngine.MYSQL:
-            icon = IconList.ENGINE_MYSQL
-        elif session.engine == SessionEngine.MARIADB:
-            icon = IconList.ENGINE_MARIADB
-        elif session.engine == SessionEngine.SQLITE:
-            icon = IconList.ENGINE_SQLITE
-        elif session.engine == SessionEngine.POSTGRESQL:
-            icon = IconList.ENGINE_POSTGRESQL
-
-        session_tree_item = self.tree_ctrl_sessions.AppendItem(self.tree_ctrl_sessions_root, text=session.name, data=session)
-
-        self.tree_ctrl_sessions.SetItemImage(session_tree_item, icon, wx.TreeItemIcon_Normal)
-
-        self.tree_ctrl_sessions.SelectItem(session_tree_item)
-
-        self.load_child(session_tree_item, session.context.get_databases())
-
-    def on_select_item(self, event: wx.TreeEvent):
+    def on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
-        data = self.tree_ctrl_sessions.GetItemData(item)
-        parent = self.tree_ctrl_sessions.GetItemParent(item)
+        if not item.IsOk():
+            event.Veto()
+            return
 
         if NEW_TABLE.get_value() and not self.on_cancel_table(event):
             event.Veto()
@@ -77,66 +134,55 @@ class TreeSessionsController:
         CURRENT_TABLE.set_value(None)
         CURRENT_VIEW.set_value(None)
         CURRENT_TRIGGER.set_value(None)
+        CURRENT_PROCEDURE.set_value(None)
+        CURRENT_EVENT.set_value(None)
+        CURRENT_FUNCTION.set_value(None)
 
-        if isinstance(data, Session) :
-            if not CURRENT_DATABASE.get_value() or data.id != CURRENT_SESSION.get_value().id:
-                # if CURRENT_SESSION.get_value() and data != CURRENT_SESSION.get_value() :
-                CURRENT_SESSION.set_value(data)
+        object = self.model.ItemToObject(item)
+        self.tree_ctrl_sessions.Expand(item)
 
+        if isinstance(object, Session):
+            if not CURRENT_DATABASE.get_value() or object != CURRENT_SESSION.get_value():
+                CURRENT_SESSION.set_value(object)
                 CURRENT_DATABASE.set_value(None)
 
-        elif isinstance(data, SQLDatabase) :
-            if not CURRENT_DATABASE.get_value() or data.id != CURRENT_DATABASE.get_value().id:
-                session = self.tree_ctrl_sessions.GetItemData(parent)
-                database = data
-
-                if session.id != CURRENT_SESSION.get_value().id:
+        elif isinstance(object, SQLDatabase):
+            if not CURRENT_DATABASE.get_value() or object != CURRENT_DATABASE.get_value():
+                database = object
+                session = database.context.session
+                
+                if session != CURRENT_SESSION.get_value():
                     CURRENT_SESSION.set_value(session)
 
                 CURRENT_DATABASE.set_value(database)
+                #
+                # children = list(database.tables) + list(database.views) + list(database.triggers)
+                # self._append_child_rows(session, item, children)
 
-                self.load_child(data.control, childrens=list(database.tables) + list(database.views) + list(database.triggers))
-
-        else:
-            session = self.tree_ctrl_sessions.GetItemData(self.tree_ctrl_sessions.GetItemParent(parent))
-            if not session :
-                logger.error("problem")
-
-            if session.id != CURRENT_SESSION.get_value().id:
+        elif isinstance(object, (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent)):
+            database = object.database
+            session = database.context.session
+            
+            if session != CURRENT_SESSION.get_value() :
                 CURRENT_SESSION.set_value(session)
-
-            database = self.tree_ctrl_sessions.GetItemData(parent)
-            if database.id != CURRENT_DATABASE.get_value().id:
+            
+            if database != CURRENT_DATABASE.get_value() :
                 CURRENT_DATABASE.set_value(database)
+            
+            if isinstance(object, SQLTable) and (not CURRENT_TABLE.get_value() or object != CURRENT_TABLE.get_value()):
+                CURRENT_TABLE.set_value(object.copy())
 
-            if isinstance(data, SQLTable) and (not CURRENT_TABLE.get_value() or data.id != CURRENT_TABLE.get_value().id):
-                CURRENT_TABLE.set_value(data.copy())
+            elif isinstance(object, SQLView) and (not CURRENT_VIEW.get_value() or object != CURRENT_VIEW.get_value()):
+                CURRENT_VIEW.set_value(object.copy())
 
-            elif isinstance(data, SQLView) and (not CURRENT_VIEW.get_value() or data.id != CURRENT_VIEW.get_value().id):
-                CURRENT_VIEW.set_value(data.copy())
+            elif isinstance(object, SQLTrigger) and (not CURRENT_TRIGGER.get_value() or object != CURRENT_TRIGGER.get_value()):
+                CURRENT_TRIGGER.set_value(object.copy())
 
-            if isinstance(data, SQLTrigger) and not (CURRENT_TRIGGER.get_value() or data.id != CURRENT_TRIGGER.get_value().id):
-                CURRENT_TRIGGER.set_value(data.copy())
+            elif isinstance(object, SQLProcedure) and (not CURRENT_PROCEDURE.get_value() or object != CURRENT_PROCEDURE.get_value()):
+                CURRENT_TRIGGER.set_value(object.copy())
 
-    def find_by_data(self, **filters) -> wx.TreeItemId:
-        def _matches(data):
-            return all(getattr(data, key, None) == value for key, value in filters.items())
+            elif isinstance(object, SQLFunction) and (not CURRENT_FUNCTION.get_value() or object != CURRENT_FUNCTION.get_value()):
+                CURRENT_TRIGGER.set_value(object.copy())
 
-        def _search(item):
-            if not item.IsOk():
-                return None
-
-            data = self.tree_ctrl_sessions.GetItemData(item)
-            if data is not None and _matches(data):
-                return item
-
-            child, cookie = self.tree_ctrl_sessions.GetFirstChild(item)
-            while child.IsOk():
-                found = _search(child)
-                if found:
-                    return found
-                child, cookie = self.tree_ctrl_sessions.GetNextChild(item, cookie)
-
-            return None
-
-        return _search(self.tree_ctrl_sessions_root)
+            elif isinstance(object, SQLEvent) and (not CURRENT_EVENT.get_value() or object != CURRENT_EVENT.get_value()):
+                CURRENT_TRIGGER.set_value(object.copy())

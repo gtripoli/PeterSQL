@@ -19,12 +19,6 @@ class SessionManagerRepository:
         except Exception:
             return []
 
-    # def save_sessions(self, sessions: List[Dict[str, Any]]) -> None:
-    #     """Save sessions to YAML file"""
-    #     data = {"sessions": sessions}
-    #     with open(SESSIONS_CONFIG_FILE, 'w') as f:
-    #         yaml.dump(data, f, sort_keys=False)
-
     def save_session(self, session: Session) -> List[Dict[str, Any]]:
         sessions = self.load_sessions()
         sessions.append(session.to_dict())
@@ -44,8 +38,6 @@ class SessionManagerRepository:
         return sessions
 
     def session_from_dict(self, index: str, data: Dict[str, Any]) -> Session:
-        """Create Session object from dictionary"""
-        # Convert engine string to enum
         engine = SessionEngine(data['engine']) if data.get('engine') else None
 
         # Convert configuration

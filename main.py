@@ -70,13 +70,11 @@ class PeterSQL(wx.App):
 
     def _on_size(self, event):
         size = event.GetSize()
-        logger.debug(f"new size {size}")
         self.settings.set_value("window", "size", value=f"{size.Width},{size.Height}")
         self.main_frame.Layout()
 
     def _on_move(self, event):
         position = event.GetPosition()
-        logger.debug(f"new position {position}")
         self.settings.set_value("window", "position", value=f"{position.x},{position.y}")
         self.main_frame.Layout()
 

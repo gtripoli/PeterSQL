@@ -185,7 +185,7 @@ class TableColumnsController:
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_table_columns.GetColumn(model_column)
-        self.list_ctrl_table_columns.edit_item_smart(item, column)
+        self.list_ctrl_table_columns.edit_item(item, column)
 
     def _update_table_columns(self):
         database: SQLDatabase = CURRENT_DATABASE.get_value()
@@ -224,14 +224,14 @@ class TableColumnsController:
 
     def on_column_insert(self):
         session = CURRENT_SESSION.get_value()
-        table = CURRENT_TABLE.get_value()
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
 
         index = len(table.columns)
         default_values = dict()
 
-        datatype = session.datatype.VARCHAR
+        datatype = session.context.DATATYPE.VARCHAR
 
         if selected:
             current_column: SQLColumn = self.model.get_data_by_item(selected)

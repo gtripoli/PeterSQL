@@ -13,8 +13,9 @@ class BitmapList:
     SYSTEM_DATABASE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "database.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_VIEW = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "view.png"), wx.BITMAP_TYPE_PNG)
     SYSTEM_TRIGGER = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "cog.png"), wx.BITMAP_TYPE_PNG)
-    SYSTEM_CHECKBOX_CHECKED = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_checked.png"), wx.BITMAP_TYPE_PNG)
-    SYSTEM_CHECKBOX_UNCHECKED = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "gridcheckbox_unchecked.png"), wx.BITMAP_TYPE_PNG)
+    SYSTEM_PROCEDURE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "code-folding.png"), wx.BITMAP_TYPE_PNG)
+    SYSTEM_FUNCTION = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "lightning.png"), wx.BITMAP_TYPE_PNG)
+    SYSTEM_EVENT = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "calendar_view_day.png"), wx.BITMAP_TYPE_PNG)
 
     ENGINE_SQLITE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-sqlite.png"), wx.BITMAP_TYPE_PNG)
     ENGINE_MYSQL = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "server-mysql.png"), wx.BITMAP_TYPE_PNG)

@@ -1,16 +1,18 @@
-from engines.structures.context import AbstractColumnBuilder
-from engines.structures.sqlite.database import SQLiteColumn
+from typing import Optional, List
 
+from engines.structures.context import AbstractColumnBuilder
 
 class SQLiteColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(primary_key)s", "%(auto_increment)s", "%(nullable)s", "%(unique)s", "%(check)s", "%(default)s", "%(collate)s", "%(generated)s", "%(references)s"]
 
-    def __init__(self, column: SQLiteColumn):
-        super().__init__(column)
+    def __init__(self, column: 'SQLiteColumn', exclude: Optional[List[str]] = None):
+        super().__init__(column, exclude)
 
         self.parts.update({
             'check': self.check,
+            'unique': self.unique,
             'generated': self.generated,
+            'references': self.references,
         })
 
     @property
@@ -26,6 +28,13 @@ class SQLiteColumnBuilder(AbstractColumnBuilder):
         return f"CHECK ({self.column.check})" if self.column.check else ''
 
     @property
+    def unique(self):
+        return 'UNIQUE' if self.column.is_unique_key else ''
+
+    @property
     def generated(self):
         return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality is not None else ''
 
+    @property
+    def references(self):
+        return f""

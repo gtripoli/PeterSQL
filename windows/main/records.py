@@ -123,11 +123,6 @@ class TableRecordsController:
         if table is not None:
             self.table = table
 
-            logger.debug(f"table {table}")
-            logger.debug(f"table.records {table.records}")
-
-            # records = list(table.get_records_handler(table, 1000, 0))
-            # self.model = RecordsModel(self.session, table, records)
             self.model = RecordsModel(self.table, len(self.table.columns))
             self.model.set_observable(self.table.records)
             self.list_ctrl_records.AssociateModel(self.model)

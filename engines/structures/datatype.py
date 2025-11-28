@@ -23,14 +23,10 @@ class DataTypeCategory(enum.Enum):
 
 
 class DataTypeFormat(enum.Enum):
-    TEXT = lambda value: f"'{value}'"
+    STRING = lambda value: f"'{value}'"
     INTEGER = lambda value: int(value)
     BOOLEAN = lambda value: 1 if bool(value == 1) else 0
     REAL = lambda value: float(value)
-    DATE = lambda value: f"'{value}'"
-    DATETIME = lambda value: f"'{value}'"
-    TIMESTAMP = lambda value: f"'{value}'"
-    TIME = lambda value: f"'{value}'"
     JSON = lambda value: f"'{value}'"
 
 
@@ -92,17 +88,17 @@ class StandardDataType():
     # NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.INTEGER, has_precision=False, has_scale=False, alias=["DECIMAL", "NUM"], format=SQLDataTypeFormat.INTEGER)
     DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_precision=True, has_scale=True, format=DataTypeFormat.REAL)
 
-    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
-    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, format=DataTypeFormat.TEXT)
-    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
-    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=DataTypeFormat.TEXT)
+    TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
+    VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, has_length=True, format=DataTypeFormat.STRING)
+    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
+    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
 
     BLOB = SQLDataType(name="BLOB", category=DataTypeCategory.BINARY)
 
-    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.DATE)
-    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.DATETIME)
-    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.TIME)
-    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.TIMESTAMP)
+    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
 
     @classmethod
     @functools.lru_cache(maxsize=1)

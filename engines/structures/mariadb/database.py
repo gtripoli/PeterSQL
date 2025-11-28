@@ -7,18 +7,17 @@ from engines.structures import merge_original_current
 from engines.structures.context import LOG_QUERY
 from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 
-from engines.structures.sqlite.builder import SQLiteColumnBuilder
-
-from engines.structures.sqlite.indextype import SQLiteIndexType
+from engines.structures.mariadb.indextype import MariaDBIndexType
+from engines.structures.mariadb.builder import MariaDBColumnBuilder
 
 
 @dataclasses.dataclass
-class SQLiteDatabase(SQLDatabase):
-    pass
+class MariaDBDatabase(SQLDatabase):
+    default_collation: str = None
 
 
 @dataclasses.dataclass(eq=False)
-class SQLiteTable(SQLTable):
+class MariaDBTable(SQLTable):
     def rename(self, table: Self, new_name: str) -> bool:
         sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
         self.database.context.execute(sql)
@@ -28,21 +27,17 @@ class SQLiteTable(SQLTable):
     def truncate(self):
         try:
             with self.database.context.transaction() as context:
-                context.execute(f"DELETE FROM `{self.name}`;")
-
-                context.execute(f"DELETE FROM sqlite_sequence WHERE name='{self.name}';")
+                context.execute(f"TRUNCATE TABLE `{self.name}`;")
 
         except Exception as ex:
             logger.error(ex, exc_info=True)
 
         return True
 
-    def create(self, map_columns: List[Tuple[Optional['SQLiteColumn'], Optional['SQLiteColumn']]]) -> bool:
+    def create(self, map_columns: List[Tuple[Optional['MariaDBColumn'], Optional['MariaDBColumn']]]) -> bool:
         constraints = []
         primary_keys = []
         columns_definitions: Dict[str, str] = {}
-
-        unique_indexes_multiple_columns = [index for index in self.indexes if index.type == SQLiteIndexType.UNIQUE and len(index.columns) > 1 and index.name.startswith('sqlite_autoindex_')]
 
         for original, current in map_columns:
             if current:
@@ -54,12 +49,7 @@ class SQLiteTable(SQLTable):
                 if len(primary_keys) > 1:
                     exclude += ['primary_key', 'auto_increment']
 
-                columns_definitions[current.name] = str(SQLiteColumnBuilder(current, exclude=exclude))
-
-        for unique_index_multiple_columns in unique_indexes_multiple_columns:
-            cols = ", ".join([f'`{c}`' for c in unique_index_multiple_columns.columns])
-
-            constraints.append(f"UNIQUE ({cols})")
+                columns_definitions[current.name] = str(MariaDBColumnBuilder(current, exclude=exclude))
 
         # Handle primary keys
         if len(primary_keys) > 1:
@@ -97,12 +87,12 @@ class SQLiteTable(SQLTable):
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
         original_columns = list(original_table.columns)
         original_indexes = list(original_table.indexes)
-        original_primary_keys = next((pk for pk in original_indexes if pk.type == SQLiteIndexType.PRIMARY), None)
+        original_primary_keys = next((pk for pk in original_indexes if pk.type == MariaDBIndexType.PRIMARY), None)
         original_foreign_keys = list(original_table.foreign_keys)
 
         current_columns = list(self.columns)
         current_indexes = list(self.indexes)
-        current_primary_keys = next((pk for pk in current_indexes if pk.type == SQLiteIndexType.PRIMARY), None)
+        current_primary_keys = next((pk for pk in current_indexes if pk.type == MariaDBIndexType.PRIMARY), None)
         current_foreign_keys = list(self.foreign_keys)
 
         map_columns = merge_original_current(original_columns, current_columns)
@@ -128,7 +118,6 @@ class SQLiteTable(SQLTable):
                 # SQLite does not support ALTER COLUMN or ADD CONSTRAINT,
                 # so rename and recreate the table with the new columns and constraints
                 if needs_recreate:
-                    transaction.execute("PRAGMA foreign_keys = OFF")
 
                     temp_name = f"_{original_name}_{self.generate_uuid()}"
 
@@ -160,8 +149,6 @@ class SQLiteTable(SQLTable):
                     self.name = original_name
 
                     map_indexes = merge_original_current([], current_indexes)
-
-                    transaction.execute("PRAGMA foreign_keys = ON")
 
                 else:
                     # Perform supported ALTER operations
@@ -199,11 +186,14 @@ class SQLiteTable(SQLTable):
 
 
 @dataclasses.dataclass(eq=False)
-class SQLiteColumn(SQLColumn):
-    check: Optional[str] = None
+class MariaDBColumn(SQLColumn):
+    set: Optional[List[str]] = None
+    is_unsigned: Optional[bool] = False
+    is_zerofill: Optional[bool] = False
+    comments: Optional[str] = None
 
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {SQLiteColumnBuilder(self)}"
+        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {MariaDBColumnBuilder(self)}"
         if hasattr(self, 'after') and self.after:
             sql += f" AFTER `{self.after}`"
 
@@ -247,38 +237,30 @@ class SQLiteColumn(SQLColumn):
 
         # Recreate non-primary indexes
         for index in self.table.indexes:
-            if index.type != SQLiteIndexType.PRIMARY:
+            if index.type != MariaDBIndexType.PRIMARY:
                 index.create()
 
 
 @dataclasses.dataclass(eq=False)
-class SQLiteIndex(SQLIndex):
+class MariaDBIndex(SQLIndex):
     def create(self) -> bool:
-        if self.type == SQLiteIndexType.PRIMARY:
+        if self.type == MariaDBIndexType.PRIMARY:
             return False  # PRIMARY is handled in table creation
 
-        if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # UNIQUE is handled in table creation
+        unique_index = "UNIQUE INDEX" if self.type == MariaDBIndexType.UNIQUE else "INDEX"
 
-        unique_index = "UNIQUE INDEX" if self.type == SQLiteIndexType.UNIQUE else "INDEX"
-
-        if self.type == SQLiteIndexType.EXPRESSION:
+        if self.type == MariaDBIndexType.EXPRESSION:
             expression = ", ".join(self.expression)
         else:
             expression = ", ".join(self.columns)
 
-        where_str = f"WHERE {self.condition}" if self.condition else ""
-
-        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS {self.name} ON {self.table.name}({expression}) {where_str}")
+        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS {self.name} ON {self.table.name}({expression})")
 
     def drop(self) -> bool:
-        if self.type == SQLiteIndexType.PRIMARY:
+        if self.type == MariaDBIndexType.PRIMARY:
             return False
 
-        if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # sqlite_ UNIQUE is handled in table creation
-
-        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name}")
+        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON {self.table.name}")
 
     def modify(self, new_index: Self):
         self.drop()
@@ -287,11 +269,12 @@ class SQLiteIndex(SQLIndex):
 
 
 @dataclasses.dataclass(eq=False)
-class SQLiteForeignKey(SQLForeignKey):
+class MariaDBForeignKey(SQLForeignKey):
     pass
 
 
-class SQLiteRecord(SQLRecord):
+class MariaDBRecord(SQLRecord):
+
     def raw_insert_record(self) -> str:
         columns_values = {}
 
@@ -342,7 +325,7 @@ class SQLiteRecord(SQLRecord):
 
         set_clause = ", ".join(changed_columns)
 
-        return f"UPDATE `{self.table.database.name}`.`{self.table.name}` SET {set_clause} WHERE {identifier_conditions}"
+        return f"UPDATE `{self.table.name}` SET {set_clause} WHERE {identifier_conditions}"
 
     def raw_delete_record(self) -> str:
         identifier_columns = self._get_identifier_columns()
@@ -351,6 +334,7 @@ class SQLiteRecord(SQLRecord):
 
         return f"DELETE FROM `{self.table.name}` WHERE {identifier_conditions}"
 
+    # RECORDS
     def insert(self) -> bool:
         with self.table.database.context.transaction() as transaction:
             if raw_insert_record := self.raw_insert_record():
@@ -373,7 +357,7 @@ class SQLiteRecord(SQLRecord):
         return False
 
 
-class SQLiteView(SQLView):
+class MariaDBView(SQLView):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.name} AS {self.sql}")
 
@@ -384,7 +368,7 @@ class SQLiteView(SQLView):
         pass
 
 
-class SQLiteTrigger(SQLTrigger):
+class MariaDBTrigger(SQLTrigger):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.name} {self.sql}")
 

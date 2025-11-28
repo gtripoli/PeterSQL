@@ -2,6 +2,7 @@ import re
 import sqlite3
 from typing import Optional, List, Dict, Any
 
+from engines.structures.indextype import SQLIndexType
 from helpers.logger import logger
 
 from engines.structures.context import LOG_QUERY, AbstractContext
@@ -9,31 +10,39 @@ from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from engines.structures.datatype import SQLDataType
 
 from engines.structures.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, ATTRIBUTES_PATTERN
-from engines.structures.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger
+from engines.structures.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
 from engines.structures.sqlite.datatype import SQLiteDataType
 from engines.structures.sqlite.indextype import SQLiteIndexType
+from icons import BitmapList
 
 
 class SQLiteContext(AbstractContext):
+    BITMAP = BitmapList.ENGINE_SQLITE
+
+    ENGINES = ["default"]
     COLLATIONS = COLLATIONS
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
+    DATATYPE = SQLiteDataType()
+    INDEXTYPE = SQLiteIndexType()
+
     def __init__(self, session):
+        super().__init__(session)
+
         self.filename = session.configuration.filename
 
         self.connection_url = f"sqlite:///{self.filename}"
 
-        super().__init__(self.connection_url)
-
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
-        self.execute("PRAGMA foreign_keys = ON")
+        self.execute("PRAGMA database_list;")
+        self.execute("PRAGMA foreign_keys = ON;")
         # self.execute("PRAGMA case_sensitive_like = ON")
         # self.execute("PRAGMA secure_delete = ON")
         # self.execute("PRAGMA auto_vacuum = FULL")
         # self.execute("PRAGMA cache_size = 10000")
         # self.execute("PRAGMA journal_mode = WAL")
-        self.execute("PRAGMA temp_store = MEMORY")
+        self.execute("PRAGMA temp_store = MEMORY;")
         # self.execute("PRAGMA threads = 4")
         # self.execute("PRAGMA page_size = 4096")
 
@@ -57,10 +66,12 @@ class SQLiteContext(AbstractContext):
         return None
 
     def get_databases(self) -> List[SQLDatabase]:
-        return [SQLDatabase(
+        self.execute("SELECT page_count * page_size as file_size_bytes FROM pragma_page_count(), pragma_page_size();")
+        return [SQLiteDatabase(
             id=0,
             name='main',
             context=self,
+            size=self.fetchone()['file_size_bytes'],
             get_tables_handler=self.get_tables,
             get_views_handler=self.get_views,
             get_triggers_handler=self.get_triggers,
@@ -100,12 +111,16 @@ class SQLiteContext(AbstractContext):
 
         results = []
         for i, row in enumerate(self.cursor.fetchall()):
+            self.execute(f"SELECT SUM(pgsize) as total_size_bytes FROM dbstat WHERE name = '{row['name']}' GROUP BY name;""")
+            size = self.fetchone()
+
             results.append(
                 SQLiteTable(
                     id=i,
                     name=row['name'],
                     database=database,
                     engine='sqlite',
+                    size=size['total_size_bytes'],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
@@ -158,7 +173,6 @@ class SQLiteContext(AbstractContext):
             results.append(
                 SQLiteColumn(
                     id=i,
-                    pos=i + 1,
                     name=column_dict["name"],
                     datatype=SQLiteDataType.get_by_name(column_dict['datatype']),
                     is_nullable=column_dict.get('is_nullable', "NULL") == "NULL",
@@ -201,9 +215,8 @@ class SQLiteContext(AbstractContext):
             )
 
         self.execute(f"SELECT * FROM pragma_index_list('{table.name}') WHERE `origin` != 'pk' order by seq desc;")
-        indexes = [dict(row) for row in self.cursor.fetchall()]
 
-        for idx in indexes:
+        for idx in [dict(row) for row in self.cursor.fetchall()]:
             id = int(idx['seq']) + 1
             name = idx['name']
             is_unique = bool(idx.get('unique', False))
@@ -276,17 +289,15 @@ class SQLiteContext(AbstractContext):
         self.execute(f"SELECT"
                      f" `id`, `table`, GROUP_CONCAT(`from`) as `from`, GROUP_CONCAT(`to`) as `to`, `on_update`, `on_delete`"
                      f" FROM pragma_foreign_key_list('{table.name}') GROUP BY id;")
-        foreign_keys = [dict(row) for row in self.cursor.fetchall()]
 
-        results = []
-        for fk in foreign_keys:
+        foreign_keys = []
+        for fk in [dict(row) for row in self.fetchall()]:
             id = fk['id']
-            name = f"""fk_{table.name}_{'_'.join(fk['from'].split(","))}-{fk['table']}_{'_'.join(fk['to'].split(","))}_{id}"""
-
             columns = fk['from'].split(",")
             reference_columns = fk['to'].split(",")
+            name = f"""fk_{table.name}_{'_'.join(columns)}-{fk['table']}_{'_'.join(reference_columns)}_{id}"""
 
-            results.append(
+            foreign_keys.append(
                 SQLiteForeignKey(
                     id=int(id),
                     name=name,
@@ -299,12 +310,12 @@ class SQLiteContext(AbstractContext):
                 )
             )
 
-        return results
+        return foreign_keys
 
     def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLiteRecord]:
         LOG_QUERY.append(f"/* get_records for table={table.name} */")
-        if table is None :
-            print("error")
+        if table is None or table.is_new():
+            return []
 
         query = f"SELECT * FROM `{table.name}` LIMIT {limit} OFFSET {offset}"
         self.execute(query)
@@ -323,23 +334,23 @@ class SQLiteContext(AbstractContext):
             name='',
             database=database,
             engine='sqlite',
+            size=0,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
-        )
+        ).copy()
 
     def build_empty_column(self, name: str, table: SQLTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
         return SQLiteColumn(
             id=SQLiteContext.get_temporary_id(table.columns),
-            pos=-1,
             name="",
             table=table,
             datatype=datatype,
             **default_values
         )
 
-    def build_empty_index(self, name: str, table: SQLiteTable, type: SQLiteIndexType, columns: List[str]) -> SQLiteIndex:
+    def build_empty_index(self, name: str, table: SQLiteTable, type: SQLIndexType, columns: List[str]) -> SQLiteIndex:
         return SQLiteIndex(
             id=SQLiteContext.get_temporary_id(table.indexes),
             pos=-1,
@@ -348,6 +359,7 @@ class SQLiteContext(AbstractContext):
             columns=columns,
             table=table,
         )
+
     def build_empty_foreign_key(self, name: str, table: SQLiteTable, columns: List[str]) -> SQLiteForeignKey:
         return SQLiteForeignKey(
             id=SQLiteContext.get_temporary_id(table.foreign_keys),

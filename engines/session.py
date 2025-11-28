@@ -45,33 +45,23 @@ class Session:
     configuration: Union[CredentialsConfiguration, SourceConfiguration] | None
     comments: Optional[str] = None
 
-
     context: Optional[AbstractContext] = dataclasses.field(init=False)
-    datatype: Optional[StandardDataType] = dataclasses.field(init=False)
-    indextype: Optional[StandardIndexType] = dataclasses.field(init=False)
 
     def __post_init__(self):
         if self.engine == SessionEngine.MYSQL:
-            # self.statement = MySQLStatement(self)
-            # self.datatype = MySQLDataType()
-            # self.indextype = MySQLIndexType()
             pass
         elif self.engine == SessionEngine.MARIADB:
             self.context = MariaDBContext(self)
-            self.datatype = MariaDBDataType()
-            self.indextype = MariaDBIndexType()
         elif self.engine == SessionEngine.POSTGRESQL:
             pass
-        #     self.statement = PostgreSQLStatement(self)
-        #     self.datatype = PostgreSQLDataType()
-            # self.indextype = PostgreSQLIndexType()
         elif self.engine == SessionEngine.SQLITE:
             self.context = SQLiteContext(self)
-            self.datatype = SQLiteDataType()
-            self.indextype = SQLiteIndexType()
 
-        else :
+        else:
             raise ValueError(f"Unsupported engine {self.engine}")
+
+    def copy(self):
+        return dataclasses.replace(self)
 
     def to_dict(self):
         return {

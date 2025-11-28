@@ -5,8 +5,9 @@ import os
 
 from typing import Optional, List, Union
 
+import wx.adv
 import wx.stc
-import wx.html2
+import wx.lib.wordwrap
 
 from gettext import gettext as _
 
@@ -16,7 +17,7 @@ from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeig
 from engines.structures.context import LOG_QUERY
 
 from windows import MainFrameView
-from windows.main import SESSIONS, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
+from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
 from windows.main.sessions import TreeSessionsController
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
@@ -118,7 +119,7 @@ class MainFrameController(MainFrameView):
 
         LOG_QUERY.subscribe(self._write_query_log, ObservableList.CallbackEvent.ON_APPEND)
 
-        SESSIONS.subscribe(self._load_session, ObservableList.CallbackEvent.ON_APPEND)
+        # SESSIONS.subscribe(self._load_session, ObservableList.CallbackEvent.ON_APPEND)
 
         CURRENT_SESSION.subscribe(self._on_current_session)
 
@@ -157,12 +158,6 @@ class MainFrameController(MainFrameView):
         self._toggle_panel(2, visible)
         self._toggle_panel(3, visible)
 
-    # def _refresh_database(self):
-    #     session = CURRENT_SESSION.get_value()
-    #     db = CURRENT_DATABASE.get_value()
-    #     db.tables = session.statement.get_tables(database=db)
-    #     CURRENT_DATABASE.set_value(db)
-
     def _select_tree_item(self, **filters):
         if table_item := self.controller_tree_sessions.find_by_data(**filters):
             print("select", table_item)
@@ -189,8 +184,24 @@ class MainFrameController(MainFrameView):
 
         self.status_bar.SetStatusText(_('Memory used: {used:.2f} ({percentage:.2%})').format(used=used, percentage=percentage), 3)
 
-    def _load_session(self, session: Session):
-        self.controller_tree_sessions.append_session(session)
+    def on_menu_about(self, event):
+        info = wx.adv.AboutDialogInfo()
+        info.SetName("PeterSQL")
+        info.SetVersion(open("VERSION", "r").read().strip())
+        info.SetLicense(wx.lib.wordwrap.wordwrap(open("LICENSE", "r").read().strip(), 500, wx.ClientDC(self)))
+        info.SetCopyright("(c) 2025 Giuseppe Tripoli")
+        info.SetWebSite("https://github.com/gtripoli/petersql", "PeterSQL HomePage")
+        info.SetIcon(wx.Icon("petersql_large.png"))
+        info.SetDevelopers(["Giuseppe Tripoli"])
+        info.SetArtists(["Giuseppe Tripoli"])
+        info.SetDescription(wx.lib.wordwrap.wordwrap("""
+            PeterSQL is a graphical client for database management, inspired by the
+            excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in
+            Python with **wxPython**, and designed to run natively on **All OS**.""",
+                                                     500, wx.ClientDC(self)))
+
+        # Then we call wx.AboutBox giving it that info object
+        wx.adv.AboutBox(info)
 
     def do_close(self, event):
         super().Destroy()
@@ -260,6 +271,8 @@ class MainFrameController(MainFrameView):
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
+        self.table_engine.SetItems(CURRENT_DATABASE.get_value().context.ENGINES)
+        self.table_collation.SetItems(list(CURRENT_DATABASE.get_value().context.COLLATIONS.keys()))
 
     # VIEW
     def _on_current_view(self, current: SQLView):
@@ -322,8 +335,14 @@ class MainFrameController(MainFrameView):
         self.btn_cancel_table.Enable(bool(current is not None))
 
     def on_insert_table(self, event):
-        NEW_TABLE.set_value(None)
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+
         CURRENT_TABLE.set_value(None)
+
+        NEW_TABLE.set_value(
+            session.context.build_empty_table(database)
+        )
 
         self._toggle_panel(2, True)
         self.MainFrameNotebook.SetSelection(2)
@@ -375,7 +394,7 @@ class MainFrameController(MainFrameView):
 
         NEW_TABLE.set_value(None)
 
-        if table := next((t for t in database.tables if t.name == table.name), None):
+        if table := next((t for t in database.tables if t.id == table.id), None):
             CURRENT_TABLE.set_value(None).set_value(table.copy())
 
         return True

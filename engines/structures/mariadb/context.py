@@ -1,0 +1,379 @@
+import re
+import pymysql
+from typing import Optional, List, Dict, Any
+
+from icons import BitmapList
+from helpers.logger import logger
+
+from engines.structures.context import LOG_QUERY, AbstractContext
+from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
+from engines.structures.datatype import SQLDataType
+
+from engines.structures.mariadb import MAP_COLUMN_FIELDS
+from engines.structures.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
+from engines.structures.mariadb.datatype import MariaDBDataType
+from engines.structures.mariadb.indextype import MariaDBIndexType
+
+
+class MariaDBContext(AbstractContext):
+    ENGINES = []
+    COLLATIONS = {}
+
+    MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
+
+    BITMAP = BitmapList.ENGINE_MARIADB
+    DATATYPE = MariaDBDataType
+    INDEXTYPE = MariaDBIndexType
+
+    def __init__(self, session):
+        super().__init__(session)
+
+        self.host = session.configuration.hostname
+        self.user = session.configuration.username
+        self.password = session.configuration.password
+        # self.database = session.configuration.database
+        self.port = getattr(session.configuration, 'port', 3306)
+
+        self.connection_url = f"mariadb://{self.user}:{self.password}@{self.host}:{self.port}"
+
+    def _on_connect(self, *args, **kwargs):
+        super()._on_connect(*args, **kwargs)
+        self.execute("""
+            SELECT COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLLATIONS
+            WHERE CHARACTER_SET_NAME IS NOT NULL
+            ORDER BY CHARACTER_SET_NAME, COLLATION_NAME;
+        """)
+        for row in self.fetchall():
+            self.COLLATIONS[row['COLLATION_NAME']] = row['CHARACTER_SET_NAME']
+
+        self.execute("""SHOW ENGINES;""")
+        self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
+
+    def _parse_type(self, column_type: str):
+        if match := re.search(r'(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?', column_type):
+            print(match.group(1))
+            return dict(
+                name=match.group(1).upper(),
+                precision=int(match.group(2)),
+                scale=int(match.group(3)) if match.group(3) else None,
+                is_unsigned=bool(match.group(4)),
+                is_zerofill=bool(match.group(5))
+            )
+
+        if match := re.search(r'^(enum|set)\((.*)\)$', column_type):
+            return dict(
+                name=match.group(1).upper(),
+                set=[value.strip("'") for value in match.group(2).split(",")]
+            )
+
+        return dict()
+
+    def connect(self, **connect_kwargs) -> None:
+        if self._connection is None:
+            try:
+                self._connection = pymysql.connect(
+                    host=self.host,
+                    user=self.user,
+                    password=self.password,
+                    # database=self.database,
+                    cursorclass=pymysql.cursors.DictCursor,
+                    port=self.port,
+                    **connect_kwargs
+                )
+                self._cursor = self._connection.cursor()
+                self._on_connect()
+            except Exception as e:
+                logger.error(f"Failed to connect to MariaDB: {e}")
+                raise
+
+    def get_server_version(self) -> str:
+        self.execute("SELECT VERSION() as version")
+        version = self.cursor.fetchone()
+        return version[0]
+
+    def get_server_uptime(self) -> Optional[int]:
+        return None
+
+    def get_databases(self) -> List[SQLDatabase]:
+        self.execute("""
+            SELECT TABLE_SCHEMA, ENGINE, TABLE_COLLATION, ROUND(SUM(DATA_LENGTH + INDEX_LENGTH), 2) as size
+            FROM information_schema.TABLES
+            GROUP BY TABLE_SCHEMA
+            ORDER BY TABLE_SCHEMA;
+        """)
+        results = []
+        for i, row in enumerate(self.fetchall()):
+            results.append(MariaDBDatabase(
+                id=i,
+                name=row["TABLE_SCHEMA"],
+                default_collation=row["TABLE_COLLATION"],
+                size=row["size"],
+                context=self,
+                get_tables_handler=self.get_tables,
+                get_views_handler=self.get_views,
+                get_triggers_handler=self.get_triggers,
+            ))
+        return results
+
+    def get_views(self, database: SQLDatabase):
+        results: List[MariaDBView] = []
+        self.execute(f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME")
+        for i, result in enumerate(self.fetchall()):
+            results.append(MariaDBView(
+                id=i,
+                name=result['TABLE_NAME'],
+                database=database,
+                sql=result['VIEW_DEFINITION']
+            ))
+
+        return results
+
+    def get_triggers(self, database: SQLDatabase) -> List[MariaDBTrigger]:
+        results: List[MariaDBTrigger] = []
+        self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
+        for i, result in enumerate(self.fetchall()):
+            results.append(MariaDBTrigger(
+                id=i,
+                name=result['TRIGGER_NAME'],
+                database=database,
+                sql=result['ACTION_STATEMENT']
+            ))
+
+        return results
+
+    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+        LOG_QUERY.append(f"/* get_tables for database={database.name} */")
+
+        self.execute(f"""
+            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, AUTO_INCREMENT, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as size
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = '{database.name}'
+            AND TABLE_TYPE = 'BASE TABLE'
+            ORDER BY TABLE_NAME
+        """)
+
+        results = []
+        for i, row in enumerate(self.cursor.fetchall()):
+            results.append(
+                MariaDBTable(
+                    id=i,
+                    name=row['TABLE_NAME'],
+                    database=database,
+                    engine=row['ENGINE'],
+                    collation_name=row['TABLE_COLLATION'],
+                    auto_increment=row['AUTO_INCREMENT'],
+                    size=row['size'],
+                    get_columns_handler=self.get_columns,
+                    get_indexes_handler=self.get_indexes,
+                    get_foreign_keys_handler=self.get_foreign_keys,
+                    get_records_handler=self.get_records,
+                )
+            )
+
+        return results
+
+    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+        results = []
+        if table.id == -1:
+            return results
+
+        LOG_QUERY.append(f"/* get_columns for table={table.name} */")
+
+        self.execute(f"""
+            SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE,
+                   IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_TYPE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = '{table.database.name}' AND TABLE_NAME = '{table.name}'
+            ORDER BY ORDINAL_POSITION
+        """)
+
+        for i, row in enumerate(self.cursor.fetchall()):
+            is_auto_increment = 'auto_increment' in (row['EXTRA'] or '').lower()
+            is_nullable = row['IS_NULLABLE'] == 'YES'
+            parse_type = self._parse_type(row['COLUMN_TYPE'])
+            datatype = MariaDBDataType.get_by_name(row['DATA_TYPE'])
+
+            print(parse_type)
+
+            results.append(
+                MariaDBColumn(
+                    id=i,
+                    name=row['COLUMN_NAME'],
+                    datatype=datatype,
+                    is_nullable=is_nullable,
+                    table=table,
+                    server_default=row['COLUMN_DEFAULT'],
+                    is_auto_increment=is_auto_increment,
+                    length=parse_type.get('length'),
+                    numeric_precision=parse_type.get('precision'),
+                    numeric_scale=parse_type.get('scale'),
+                    set=parse_type.get('set'),
+                    is_unsigned=parse_type.get('is_unsigned'),
+                    is_zerofill=parse_type.get('is_zerofill'),
+                )
+            )
+
+        return results
+
+    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+        if table is None or table.is_new():
+            return []
+
+        logger.debug(f"get_indexes for table={table.name}")
+
+        LOG_QUERY.append(f"/* get_indexes for table={table.name} */")
+
+        results = []
+
+        # Get primary key
+        self.execute(f"""
+            SELECT COLUMN_NAME
+            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = '{table.database.name}' AND TABLE_NAME = '{table.name}' AND CONSTRAINT_NAME = 'PRIMARY'
+            ORDER BY ORDINAL_POSITION
+        """)
+        pk_columns = [row['COLUMN_NAME'] for row in self.cursor.fetchall()]
+        if pk_columns:
+            results.append(
+                MariaDBIndex(
+                    id=0,
+                    pos=1,
+                    name="PRIMARY KEY",
+                    type=MariaDBIndexType.PRIMARY,
+                    columns=pk_columns,
+                    table=table,
+                )
+            )
+
+        # Get other indexes
+        self.execute(f"""
+            SELECT INDEX_NAME, COLUMN_NAME, SEQ_IN_INDEX, NON_UNIQUE
+            FROM INFORMATION_SCHEMA.STATISTICS
+            WHERE TABLE_SCHEMA = '{table.database.name}' AND TABLE_NAME = '{table.name}' AND INDEX_NAME != 'PRIMARY'
+            ORDER BY INDEX_NAME, SEQ_IN_INDEX
+        """)
+        index_data = {}
+        for row in self.cursor.fetchall():
+            idx_name = row['INDEX_NAME']
+            if idx_name not in index_data:
+                index_data[idx_name] = {'columns': [], 'unique': not row['NON_UNIQUE']}
+            index_data[idx_name]['columns'].append(row['COLUMN_NAME'])
+
+        for i, (idx_name, data) in enumerate(index_data.items(), start=1):
+            idx_type = MariaDBIndexType.UNIQUE if data['unique'] else MariaDBIndexType.NORMAL
+            results.append(
+                MariaDBIndex(
+                    id=i,
+                    pos=i + 1,
+                    name=idx_name,
+                    type=idx_type,
+                    columns=data['columns'],
+                    table=table,
+                )
+            )
+
+        return results
+
+    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+        if table is None or table.is_new():
+            return []
+
+        logger.debug(f"get_foreign_keys for table={table.name}")
+
+        LOG_QUERY.append(f"/* get_foreign_keys for table={table.name} */")
+
+        self.execute(f"""
+            SELECT 
+                kcu.CONSTRAINT_NAME,
+                GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION) as COLUMNS_NAME,
+                kcu.REFERENCED_TABLE_NAME,
+                GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION) as REFERENCED_COLUMNS,
+                UPDATE_RULE,
+                DELETE_RULE
+            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+            JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+            ON kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+            WHERE kcu.TABLE_SCHEMA = '{table.database.name}' AND kcu.TABLE_NAME = '{table.name}'
+            AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+            GROUP BY CONSTRAINT_NAME
+        """)
+        foreign_keys = []
+        for i, row in enumerate(self.cursor.fetchall()):
+            foreign_keys.append(MariaDBForeignKey(
+                id=i,
+                name=row['CONSTRAINT_NAME'],
+                columns=row["COLUMNS_NAME"].split(","),
+                table=table,
+                reference_table=row['REFERENCED_TABLE_NAME'],
+                reference_columns=row["REFERENCED_COLUMNS"].split(","),
+                on_update=row['UPDATE_RULE'],
+                on_delete=row['DELETE_RULE'],
+            ))
+
+        return foreign_keys
+
+    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[MariaDBRecord]:
+        LOG_QUERY.append(f"/* get_records for table={table.name} */")
+        if table is None or table.is_new():
+            return []
+
+        query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
+        self.execute(query)
+
+        results = []
+        for i, record in enumerate(self.cursor.fetchall(), start=offset):
+            results.append(
+                MariaDBRecord(id=i, table=table, values=dict(record))
+            )
+        logger.debug(f"get records for table={table.name} results={results}")
+        return results
+
+    def build_empty_table(self, database: SQLDatabase):
+        return MariaDBTable(
+            id=MariaDBContext.get_temporary_id(database.tables),
+            name='',
+            database=database,
+            engine='mariadb',
+            get_indexes_handler=self.get_indexes,
+            get_columns_handler=self.get_columns,
+            get_foreign_keys_handler=self.get_foreign_keys,
+            get_records_handler=self.get_records,
+        ).copy()
+
+    def build_empty_column(self, name: str, table: SQLTable, datatype: SQLDataType, **default_values) -> MariaDBColumn:
+        return MariaDBColumn(
+            id=MariaDBContext.get_temporary_id(table.columns),
+            name="",
+            table=table,
+            datatype=datatype,
+            **default_values
+        )
+
+    def build_empty_index(self, name: str, table: MariaDBTable, type: MariaDBIndexType, columns: List[str]) -> MariaDBIndex:
+        return MariaDBIndex(
+            id=MariaDBContext.get_temporary_id(table.indexes),
+            pos=-1,
+            name=name,
+            type=type,
+            columns=columns,
+            table=table,
+        )
+
+    def build_empty_foreign_key(self, name: str, table: MariaDBTable, columns: List[str]) -> MariaDBForeignKey:
+        return MariaDBForeignKey(
+            id=MariaDBContext.get_temporary_id(table.foreign_keys),
+            name=name,
+            table=table,
+            columns=columns,
+            reference_table="",
+            reference_columns=[],
+            on_update="",
+            on_delete=""
+        )
+
+    def build_empty_record(self, table: MariaDBTable, values: Dict[str, Any]) -> MariaDBRecord:
+        return MariaDBRecord(
+            id=MariaDBContext.get_temporary_id(table.records),
+            table=table,
+            values=values
+        )

@@ -458,7 +458,10 @@ class MainFrameView ( wx.Frame ):
 		self.m_menubar2.Append( self.m_menu2, _(u"File") )
 
 		self.m_menu4 = wx.Menu()
-		self.m_menubar2.Append( self.m_menu4, _(u"About") )
+		self.m_menuItem15 = wx.MenuItem( self.m_menu4, wx.ID_ANY, _(u"About"), wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu4.Append( self.m_menuItem15 )
+
+		self.m_menubar2.Append( self.m_menu4, _(u"Help") )
 
 		self.SetMenuBar( self.m_menubar2 )
 
@@ -498,10 +501,9 @@ class MainFrameView ( wx.Frame ):
 		self.m_panel14 = wx.Panel( self.m_splitter4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer24 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.tree_ctrl_sessions = wx.TreeCtrl( self.m_panel14, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TR_DEFAULT_STYLE|wx.TR_FULL_ROW_HIGHLIGHT|wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT|wx.TR_TWIST_BUTTONS )
-		self.m_menu12 = wx.Menu()
-		self.tree_ctrl_sessions.Bind( wx.EVT_RIGHT_DOWN, self.tree_ctrl_sessionsOnContextMenu )
-
+		self.tree_ctrl_sessions = wx.dataview.DataViewCtrl( self.m_panel14, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_SINGLE )
+		self.m_dataViewColumn1 = self.tree_ctrl_sessions.AppendIconTextColumn( _(u"Database"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn3 = self.tree_ctrl_sessions.AppendProgressColumn( _(u"Size"), 1, wx.dataview.DATAVIEW_CELL_INERT, 50, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		bSizer24.Add( self.tree_ctrl_sessions, 1, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -529,8 +531,6 @@ class MainFrameView ( wx.Frame ):
 		MainFrameNotebookImages = wx.ImageList( MainFrameNotebookImageSize.GetWidth(), MainFrameNotebookImageSize.GetHeight() )
 		self.MainFrameNotebook.AssignImageList( MainFrameNotebookImages )
 		self.panel_system = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.panel_system.Enable( False )
-
 		bSizer272 = wx.BoxSizer( wx.VERTICAL )
 
 		self.m_staticText291 = wx.StaticText( self.panel_system, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -558,8 +558,6 @@ class MainFrameView ( wx.Frame ):
 			MainFrameNotebookIndex += 1
 
 		self.panel_database = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.panel_database.Enable( False )
-
 		bSizer27 = wx.BoxSizer( wx.VERTICAL )
 
 		self.m_notebook6 = wx.Notebook( self.panel_database, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -729,8 +727,10 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer2721.Add( self.m_staticText821, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.table_collation = wx.TextCtrl( self.PanelTableOptions, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer2721.Add( self.table_collation, 1, wx.ALL|wx.EXPAND, 5 )
+		table_collationChoices = []
+		self.table_collation = wx.Choice( self.PanelTableOptions, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, table_collationChoices, 0 )
+		self.table_collation.SetSelection( 0 )
+		bSizer2721.Add( self.table_collation, 1, wx.ALL, 5 )
 
 
 		gSizer11.Add( bSizer2721, 0, wx.EXPAND, 5 )
@@ -1059,20 +1059,6 @@ class MainFrameView ( wx.Frame ):
 		self.panel_records = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer61 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE )
-		self.m_collapsiblePane1.Collapse( True )
-
-		bSizer831 = wx.BoxSizer( wx.VERTICAL )
-
-		self.m_textCtrl21 = wx.TextCtrl( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
-		bSizer831.Add( self.m_textCtrl21, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-		self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
-		self.m_collapsiblePane1.GetPane().Layout()
-		bSizer831.Fit( self.m_collapsiblePane1.GetPane() )
-		bSizer61.Add( self.m_collapsiblePane1, 0, wx.EXPAND | wx.ALL, 5 )
-
 		bSizer83 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.btn_insert_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Insert record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
@@ -1117,6 +1103,25 @@ class MainFrameView ( wx.Frame ):
 		self.btn_apply_record.Enable( False )
 
 		bSizer83.Add( self.btn_apply_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE )
+		self.m_collapsiblePane1.Collapse( True )
+
+		bSizer831 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_textCtrl21 = wx.TextCtrl( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+		bSizer831.Add( self.m_textCtrl21, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
+		self.m_collapsiblePane1.GetPane().Layout()
+		bSizer831.Fit( self.m_collapsiblePane1.GetPane() )
+		bSizer83.Add( self.m_collapsiblePane1, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_button40 = wx.Button( self.panel_records, wx.ID_ANY, _(u"Next"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.m_button40.SetBitmap( wx.Bitmap( u"icons/16x16/resultset_next.png", wx.BITMAP_TYPE_ANY ) )
+		bSizer83.Add( self.m_button40, 0, wx.ALL, 5 )
 
 
 		bSizer61.Add( bSizer83, 0, wx.EXPAND, 5 )
@@ -1271,9 +1276,9 @@ class MainFrameView ( wx.Frame ):
 
 		# Connect Events
 		self.Bind( wx.EVT_CLOSE, self.do_close )
+		self.Bind( wx.EVT_MENU, self.on_menu_about, id = self.m_menuItem15.GetId() )
 		self.Bind( wx.EVT_TOOL, self.do_open_session_manager, id = self.m_tool5.GetId() )
 		self.Bind( wx.EVT_TOOL, self.do_disconnect, id = self.m_tool4.GetId() )
-		self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 		self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
 		self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
 		self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
@@ -1293,6 +1298,7 @@ class MainFrameView ( wx.Frame ):
 		self.btn_duplicate_record.Bind( wx.EVT_BUTTON, self.on_duplicate_record )
 		self.btn_delete_record.Bind( wx.EVT_BUTTON, self.on_delete_record )
 		self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
+		self.m_button40.Bind( wx.EVT_BUTTON, self.on_next_records )
 
 	def __del__( self ):
 		pass
@@ -1302,13 +1308,13 @@ class MainFrameView ( wx.Frame ):
 	def do_close( self, event ):
 		event.Skip()
 
+	def on_menu_about( self, event ):
+		event.Skip()
+
 	def do_open_session_manager( self, event ):
 		event.Skip()
 
 	def do_disconnect( self, event ):
-		event.Skip()
-
-	def show_tree_ctrl_menu( self, event ):
 		event.Skip()
 
 	def on_page_chaged( self, event ):
@@ -1366,6 +1372,9 @@ class MainFrameView ( wx.Frame ):
 	def on_auto_apply( self, event ):
 		event.Skip()
 
+	def on_next_records( self, event ):
+		event.Skip()
+
 	def m_splitter51OnIdle( self, event ):
 		self.m_splitter51.SetSashPosition( -150 )
 		self.m_splitter51.Unbind( wx.EVT_IDLE )
@@ -1373,9 +1382,6 @@ class MainFrameView ( wx.Frame ):
 	def m_splitter4OnIdle( self, event ):
 		self.m_splitter4.SetSashPosition( 300 )
 		self.m_splitter4.Unbind( wx.EVT_IDLE )
-
-	def tree_ctrl_sessionsOnContextMenu( self, event ):
-		self.tree_ctrl_sessions.PopupMenu( self.m_menu12, event.GetPosition() )
 
 	def m_panel14OnContextMenu( self, event ):
 		self.m_panel14.PopupMenu( self.m_menu5, event.GetPosition() )
@@ -1398,10 +1404,10 @@ class MainFrameView ( wx.Frame ):
 
 
 ###########################################################################
-## Class MyPanel3
+## Class Trash
 ###########################################################################
 
-class MyPanel3 ( wx.Panel ):
+class Trash ( wx.Panel ):
 
 	def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
 		wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
@@ -1411,12 +1417,64 @@ class MyPanel3 ( wx.Panel ):
 		self.m_textCtrl221 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer90.Add( self.m_textCtrl221, 1, wx.ALL|wx.EXPAND, 5 )
 
+		bSizer93 = wx.BoxSizer( wx.VERTICAL )
+
+
+		bSizer90.Add( bSizer93, 1, wx.EXPAND, 5 )
+
+		self.m_collapsiblePane2 = wx.CollapsiblePane( self, wx.ID_ANY, _(u"collapsible"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE )
+		self.m_collapsiblePane2.Collapse( False )
+
+		bSizer92 = wx.BoxSizer( wx.VERTICAL )
+
+
+		self.m_collapsiblePane2.GetPane().SetSizer( bSizer92 )
+		self.m_collapsiblePane2.GetPane().Layout()
+		bSizer92.Fit( self.m_collapsiblePane2.GetPane() )
+		bSizer90.Add( self.m_collapsiblePane2, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.tree_ctrl_sessions = wx.TreeCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TR_DEFAULT_STYLE|wx.TR_FULL_ROW_HIGHLIGHT|wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT|wx.TR_TWIST_BUTTONS )
+		self.m_menu12 = wx.Menu()
+		self.tree_ctrl_sessions.Bind( wx.EVT_RIGHT_DOWN, self.tree_ctrl_sessionsOnContextMenu )
+
+		bSizer90.Add( self.tree_ctrl_sessions, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_treeListCtrl3 = wx.dataview.TreeListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.TL_DEFAULT_STYLE )
+
+		bSizer90.Add( self.m_treeListCtrl3, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.tree_ctrl_sessions1 = wx.dataview.TreeListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.TL_DEFAULT_STYLE )
+		self.tree_ctrl_sessions1.AppendColumn( _(u"Column3"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+		self.tree_ctrl_sessions1.AppendColumn( _(u"Column4"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+
+		bSizer90.Add( self.tree_ctrl_sessions1, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.table_collationdd = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer90.Add( self.table_collationdd, 1, wx.ALL|wx.EXPAND, 5 )
+
 
 		self.SetSizer( bSizer90 )
 		self.Layout()
+		self.m_menu11 = wx.Menu()
+		self.Bind( wx.EVT_RIGHT_DOWN, self.TrashOnContextMenu )
+
+
+		# Connect Events
+		self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 
 	def __del__( self ):
 		pass
+
+
+	# Virtual event handlers, override them in your derived class
+	def show_tree_ctrl_menu( self, event ):
+		event.Skip()
+
+	def tree_ctrl_sessionsOnContextMenu( self, event ):
+		self.tree_ctrl_sessions.PopupMenu( self.m_menu12, event.GetPosition() )
+
+	def TrashOnContextMenu( self, event ):
+		self.PopupMenu( self.m_menu11, event.GetPosition() )
 
 
 ###########################################################################

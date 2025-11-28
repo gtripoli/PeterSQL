@@ -45,6 +45,30 @@ class SQLiteTableColumnsDataViewCtrl:
         # dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
+class MariaDBMySQLTableColumnsDataViewCtrl:
+    def __init__(self, dataview):
+        dataview.AppendToggleColumn(_(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        dataview.AppendToggleColumn(_(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        dataview.AppendToggleColumn(_(u"Zerofill"), 6, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        column_default_renderer = PopupRenderer(PopupColumnDefault)
+        column = wx.dataview.DataViewColumn(_(u"Default"), column_default_renderer, 7, width=200, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "VIRTUAL", "STORED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column = wx.dataview.DataViewColumn(_(u"Virtuality"), choice_virtuality_renderer, 8, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        dataview.AppendTextColumn(_(u"Expression"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        column_collation_renderer = PopupRenderer(PopupChoice)
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION.get_value().context.COLLATIONS])
+        column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 10, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+
 class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -194,12 +218,12 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
     def _load_session(self, session: Session):
-        if session.engine == SessionEngine.SQLITE:
-            if not self._current_dataview or not isinstance(self._current_dataview, SQLiteTableColumnsDataViewCtrl):
+        if not self._current_dataview :
+            if session.engine == SessionEngine.SQLITE:
+                # if not self._current_dataview or not isinstance(self._current_dataview, SQLiteTableColumnsDataViewCtrl):
                 self._current_dataview = SQLiteTableColumnsDataViewCtrl(self)
-        elif session.engine == SessionEngine.MYSQL:
-            # self.DeleteColumn(self.GetColumn(7))
-            pass
+            elif session.engine in [SessionEngine.MYSQL, SessionEngine.MARIADB]:
+                self._current_dataview = MariaDBMySQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
         from icons import BitmapList
@@ -246,7 +270,7 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
 
         create_index_menu = wx.Menu()
 
-        for index_type in session.indextype.get_all():
+        for index_type in session.context.INDEXTYPE.get_all():
             item = wx.MenuItem(create_index_menu, wx.ID_ANY, index_type.name, wx.EmptyString, wx.ITEM_NORMAL)
             item.SetBitmap(index_type.bitmap)
             create_index_menu.Append(item)
@@ -397,7 +421,7 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
                     records = session.context.get_records(reference_table)
 
                 for record in records:
-                    reference = [str(getattr(record, reference_column)) for reference_column in foreign_key.reference_columns]
+                    reference = [str(record.values.get(reference_column)) for reference_column in foreign_key.reference_columns]
 
                     references.append(reference)
 
@@ -408,8 +432,9 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
                 return r
 
         if column.datatype.name == 'ENUM':
-            pass
-        #     return ChoiceRenderer(column.set)
+            popoup_render = PopupRenderer(PopupChoice)
+            popoup_render.on_open = lambda popup: popup.set_choices(column.set)
+            return popoup_render
 
         elif column.datatype.name == 'SET':
             popoup_render = PopupRenderer(PopupCheckList)

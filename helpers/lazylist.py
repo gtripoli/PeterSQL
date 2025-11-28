@@ -1,8 +1,8 @@
 from typing import List, Callable, Iterator, TypeVar, Any, overload, Union, Self
+
 from typing import SupportsIndex
 
 T = TypeVar('T')
-
 
 class LazyList(List[T]):
     def __init__(self, loader: Callable[[], List[T]]) -> None:

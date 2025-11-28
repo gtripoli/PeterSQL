@@ -17,8 +17,8 @@ class Observable(Generic[T]):
         AFTER_CHANGE = "after"
 
     def __init__(self, default: Any = None):
+        self._last = default
         self._value = default
-        self._initial = default
         self._default = default
 
         self._callbacks: Dict[str, List[Callable]] = {
@@ -51,8 +51,8 @@ class Observable(Generic[T]):
         return None
 
     def set_value(self, value: Optional[T], **kwargs) -> Self:
-        if self._initial is None and self._value is None:
-            self._initial = value
+        # if self._last is None and self._value is None:
+        #     self._last = value
 
         resolved_value = (
             value if value is not None else self._default if self._default is not None else None
@@ -75,6 +75,8 @@ class Observable(Generic[T]):
             self._callbacks[callback_event.value].append(ref)
 
             if self.is_dirty or execute_immediately:
+                self._last = self._value
+
                 self.execute_callback(event=callback_event)
 
         return self
@@ -94,11 +96,11 @@ class Observable(Generic[T]):
 
     @property
     def is_pristine(self) -> bool:
-        return self._value == self._initial
+        return self._last == self._value
 
     @property
     def is_dirty(self) -> bool:
-        return self._value != self._initial
+        return self._last != self._value
 
 
 class ObservableList(Observable[List[T]]):
@@ -246,6 +248,41 @@ class ObservableList(Observable[List[T]]):
 
     def clear(self) -> Self:
         self.set_value([])
+        return self
+
+
+class ObservableLazyList(ObservableList[T]):
+    def __init__(self, loader: Callable[[], List[T]]) -> None:
+        super().__init__(default=[])
+        self._loader = loader
+        self._loaded = False
+
+    def _ensure_list(self):
+        self._ensure_loaded()
+        return super()._ensure_list()
+
+    def _ensure_loaded(self, force: bool = False) -> None:
+        if force:
+            self._loaded = False
+
+        if force or not self._loaded:
+            super().set_value(list(self._loader()))
+            self._loaded = True
+
+    def get_value(self) -> List[T]:
+        self._ensure_loaded()
+        return super().get_value()
+
+    def set_value(self, value: Optional[List[T]], **kwargs) -> Self:
+        self._loaded = True
+        return super().set_value(value, **kwargs)
+
+    def clear(self) -> Self:
+        self._loaded = False
+        return super().clear()
+
+    def refresh(self) -> Self:
+        self._ensure_loaded(force=True)
         return self
 
 

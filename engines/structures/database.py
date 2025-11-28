@@ -7,53 +7,62 @@ from typing import Optional, Callable, Literal, List, Any, Self, Dict
 
 import wx
 
-from helpers.lazylist import LazyList
-from helpers.observables import ObservableList
 from icons import BitmapList
+from helpers.observables import ObservableLazyList
 
-from engines.structures.indextype import SQLIndexType
 from engines.structures.datatype import SQLDataType
+from engines.structures.indextype import SQLIndexType
 from engines.structures.sqlite.indextype import SQLiteIndexType
 
 
 @dataclasses.dataclass
-class SQLDatabase:
+class SQLDatabase(abc.ABC):
     id: Optional[int]
     name: str
     context: 'AbstractContext'
+    size: float = 0
 
     get_tables_handler: Callable[[Self], List['SQLTable']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
     get_views_handler: Callable[[Self], List['SQLView']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
+    get_procedures_handler: Callable[[Self], List['SQLProcedure']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
+    get_functions_handler: Callable[[Self], List['SQLFunction']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
     get_triggers_handler: Callable[[Self], List['SQLTrigger']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-
-    control: Optional[wx.Control] = None
+    get_events_handler: Callable[[Self], List['SQLEvent']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
 
     def __post_init__(self):
-        self.tables = LazyList(lambda: self.get_tables_handler(self))
-        self.views = LazyList(lambda: self.get_views_handler(self))
-        self.triggers = LazyList(lambda: self.get_triggers_handler(self))
+        self.tables = ObservableLazyList(lambda: self.get_tables_handler(self))
+        self.views = ObservableLazyList(lambda: self.get_views_handler(self))
+        self.procedures = ObservableLazyList(lambda: self.get_procedures_handler(self))
+        self.functions = ObservableLazyList(lambda: self.get_functions_handler(self))
+        self.triggers = ObservableLazyList(lambda: self.get_triggers_handler(self))
+        self.events = ObservableLazyList(lambda: self.get_events_handler(self))
 
-    def __ne__(self, other: Any) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLDatabase):
-            return True
+            return False
 
-        if any([
+        if not all([
             getattr(self, field.name) != getattr(other, field.name)
             for field in dataclasses.fields(self)
-            if field.compare
+            if field.compare and not isinstance(field, ObservableLazyList)
         ]):
-            return True
+            return False
 
-        return any([t1 != t2 for t1, t2 in zip(self.tables, other.tables)])
+        for observable_lazy_list in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+            if not all([oll1 != oll2 for oll1, oll2 in zip(getattr(self, observable_lazy_list), getattr(other, observable_lazy_list))]):
+                return False
+
+        return True
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLTable(abc.ABC):
     id: int
     name: str
 
     database: SQLDatabase = dataclasses.field(compare=False)
-    engine: Optional[str]
+    engine: Optional[str] = None
+    size: float = 0
 
     get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
     get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
@@ -84,81 +93,78 @@ class SQLTable(abc.ABC):
     temporary: bool = False
 
     def __post_init__(self):
-        self.indexes = LazyList(lambda: self.get_indexes_handler(self))
-        self.columns = LazyList(lambda: self.get_columns_handler(self))
-        self.foreign_keys = LazyList(lambda: self.get_foreign_keys_handler(self))
-        self.records = LazyList(lambda: self.get_records_handler(self))
+        self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
+        self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
+        self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
+        self.records = ObservableLazyList(lambda: self.get_records_handler(self))
 
-    def __ne__(self, other: Any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, SQLTable):
-            return True
+            return False
 
-        if any([
-            getattr(self, field.name) != getattr(other, field.name)
+        print("== SQLTable", {
+            field.name: (getattr(self, field.name), getattr(other, field.name))
             for field in dataclasses.fields(self)
-            if field.compare
+            if field.compare and not isinstance(field, ObservableLazyList)
+        })
+
+        if not all([
+            getattr(self, field.name) == getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.compare and not isinstance(field, ObservableLazyList)
         ]):
-            return True
+            return False
 
-        if any([c1 != c2 for c1, c2 in zip(self.columns, other.columns)]):
-            return True
+        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
+            l1 = getattr(self, observable_lazy_list)
+            l2 = getattr(other, observable_lazy_list)
 
-        if any([i1 != i2 for i1, i2 in zip(self.indexes, other.indexes)]):
-            return True
+            if len(l1) != len(l2):
+                return False
 
-        if any([f1 != f2 for f1, f2 in zip(self.foreign_keys, other.foreign_keys)]):
-            return True
+            for o1, o2 in zip(l1, l2):
+                if o1 != o2: return False
 
-        return False
+        return True
+
 
     def copy(self):
-        # # Invalidate caches to ensure fresh data from DB
-        # self.columns.clear()
-        # self.indexes.clear()
-        # self.foreign_keys.clear()
 
-        current_columns = list(self.columns)
-        current_indexes = list(self.indexes)
-        current_foreign_keys = list(self.foreign_keys)
-        current_records = list(self.records)
-
-        field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
-        new_table = self.__class__(**field_values)
-
-        new_table.columns = ObservableList([dataclasses.replace(col, table=new_table) for col in current_columns])
-        new_table.indexes = ObservableList([dataclasses.replace(idx, table=new_table) for idx in current_indexes])
-        new_table.foreign_keys = ObservableList([dataclasses.replace(fk) for fk in current_foreign_keys])
-        new_table.records = ObservableList([dataclasses.replace(rec, table=new_table) for rec in current_records])
-
-        return new_table
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        return cls(**field_values)
 
     def is_valid(self) -> bool:
-        # print("table is valid:", f"name: {self.name != ''}",
-        #       "columns:", {c.name: c.is_valid for c in self.columns},
-        #       "indexes:", {i.name: i.is_valid for i in self.indexes},
-        #       "foreign_keys:", {fk.name: fk.is_valid for fk in self.foreign_keys},
-        #       )
-        return all([
-            self.name.strip() != "",
-            not " " in self.name.strip(),
-            len(self.columns) > 0,
-            len(set([c.name for c in self.columns])) == len(self.columns),
-            all([c.is_valid for c in self.columns]),
-            all([ix.is_valid for ix in self.indexes]),
-            all([fk.is_valid for fk in self.foreign_keys]),
-        ])
+
+        if not self.name.strip():
+            return False
+
+        if " " in self.name.strip():
+            return False
+
+        if not self.columns:
+            return False
+
+        if len(self.columns) != len(set([c.name for c in self.columns])):
+            return False
+
+        for c in self.columns:
+            if not c.is_valid:
+                return False
+
+        for ix in self.indexes:
+            if not ix.is_valid:
+                return False
+
+        for fk in self.foreign_keys:
+            if not fk.is_valid:
+                return False
+
+        return True
 
     @staticmethod
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
-
-    def get_identifier_indexes(self) -> List['SQLIndex']:
-        identifier_indexes = []
-        for index in list(self.indexes):
-            if index.type.is_primary or index.type.is_unique:
-                identifier_indexes.append(index)
-
-        return identifier_indexes
 
     @abc.abstractmethod
     def rename(self, table: 'SQLTable', new_name: str):
@@ -176,9 +182,19 @@ class SQLTable(abc.ABC):
     def drop(self):
         raise NotImplementedError
 
-    def save(self) -> Optional[bool]:
+    def get_identifier_indexes(self) -> List['SQLIndex']:
+        identifier_indexes = []
+        for index in list(self.indexes):
+            if index.type.is_primary or index.type.is_unique:
+                identifier_indexes.append(index)
 
-        if self.id <= -1:
+        return identifier_indexes
+
+    def is_new(self):
+        return self.id <= -1
+
+    def save(self) -> Optional[bool]:
+        if self.is_new():
             method = self.create
         else:
             method = self.alter
@@ -191,23 +207,17 @@ class SQLTable(abc.ABC):
         return result
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLColumn(abc.ABC):
     id: int
-    pos: int
     name: str
-    table: SQLTable
+    table: SQLTable = dataclasses.field(compare=False)
     datatype: SQLDataType
     is_nullable: bool = False
     extra: Optional[str] = None
 
     server_default: Optional[str] = None
-
-    # is_unsigned: bool = False
-    # is_zerofill: bool = False
     is_auto_increment: bool = False
-
-    # set: Optional[List[str]] = None
     length: Optional[int] = None
 
     collation_name: Optional[str] = None
@@ -221,11 +231,14 @@ class SQLColumn(abc.ABC):
         if not isinstance(other, SQLColumn):
             return False
 
-        return all([
-            getattr(self, field.name) == getattr(other, field.name)
-            for field in dataclasses.fields(self)
-            if field.default_factory is dataclasses.MISSING and field.type != SQLTable
-        ])
+        for field in dataclasses.fields(self):
+            if not field.compare:
+                continue
+
+            if getattr(self, field.name) != getattr(other, field.name):
+                return False
+
+        return True
 
     @property
     def is_primary_key(self):
@@ -243,11 +256,8 @@ class SQLColumn(abc.ABC):
         if not self.name.strip() or " " in self.name.strip():
             return False
 
-        # try:
         if self.datatype.has_length and not self.length_scale_set:
             return False
-        # except Exception as ex:
-        #     print("errore", ex)
 
         if self.datatype.has_precision and not self.numeric_precision:
             return False
@@ -330,7 +340,7 @@ class SQLColumn(abc.ABC):
         return str(uuid.uuid4())[::-1][:length]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLIndex(abc.ABC):
     id: int
     pos: int
@@ -341,22 +351,25 @@ class SQLIndex(abc.ABC):
     condition: str = dataclasses.field(default_factory=str)
     expression: List[str] = dataclasses.field(default_factory=list)
 
-    def __ne__(self, other):
+    def __eq__(self, other):
         if not isinstance(other, SQLIndex):
-            return True
+            return False
 
-        return any([
-            getattr(self, field.name) != getattr(other, field.name)
-            for field in dataclasses.fields(self)
-            if field.compare
-        ])
+        for field in dataclasses.fields(self):
+            if not field.compare:
+                continue
+
+            if getattr(self, field.name) != getattr(other, field.name) :
+                return False
+
+        return True
 
     @property
     def is_valid(self):
         return all([self.name, self.type, len(self.columns)])
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLForeignKey(abc.ABC):
     id: int
     name: str
@@ -374,20 +387,22 @@ class SQLForeignKey(abc.ABC):
         if not isinstance(other, SQLForeignKey):
             return False
 
-        # print([{field.name: [getattr(self, field.name), getattr(other, field.name)]} for field in dataclasses.fields(self)])
+        for field in dataclasses.fields(self):
+            if not field.compare:
+                continue
 
-        return all([
-            getattr(self, field.name) == getattr(other, field.name)
-            for field in dataclasses.fields(self)
-            if field.compare
-        ])
+            if getattr(self, field.name) != getattr(other, field.name):
+                return False
+
+        return True
+
 
     @property
     def is_valid(self):
         return all([self.name, len(self.columns), self.reference_table, len(self.reference_columns)])
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLRecord(abc.ABC):
     id: int
     table: 'SQLTable'
@@ -520,6 +535,45 @@ class SQLTrigger(abc.ABC):
     sql: str
     timing: Literal['BEFORE', 'AFTER'] = 'BEFORE'
     event: Literal['INSERT', 'UPDATE', 'DELETE'] = 'INSERT'
+
+    def copy(self):
+        field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
+        new_view = self.__class__(**field_values)
+
+        return new_view
+
+
+@dataclasses.dataclass
+class SQLProcedure(abc.ABC):
+    id: int
+    name: str
+    database: SQLDatabase = dataclasses.field(compare=False)
+
+    def copy(self):
+        field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
+        new_view = self.__class__(**field_values)
+
+        return new_view
+
+
+@dataclasses.dataclass
+class SQLFunction(abc.ABC):
+    id: int
+    name: str
+    database: SQLDatabase = dataclasses.field(compare=False)
+
+    def copy(self):
+        field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
+        new_view = self.__class__(**field_values)
+
+        return new_view
+
+
+@dataclasses.dataclass
+class SQLEvent(abc.ABC):
+    id: int
+    name: str
+    database: SQLDatabase = dataclasses.field(compare=False)
 
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}

@@ -83,6 +83,7 @@ class SessionManagerModel(AbstractModel):
                 self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
             ]):
                 new_session = Session(
+                    id=-1,
                     name=self.name.get_value(),
                     engine=session_engine,
                     comments=self.comments.get_value(),
@@ -95,6 +96,7 @@ class SessionManagerModel(AbstractModel):
                 )
             elif self.engine.get_value() == SessionEngine.SQLITE.value and not self.filename.is_empty:
                 new_session = Session(
+                    id=-1,
                     name=self.name.get_value(),
                     engine=session_engine,
                     comments=self.comments.get_value(),
@@ -103,7 +105,7 @@ class SessionManagerModel(AbstractModel):
                     )
                 )
         else:
-            modified = copy.copy(current_session)
+            modified = current_session.copy()
             modified.name = self.name.get_value()
             modified.engine = session_engine
             modified.comments = self.comments.get_value()
@@ -193,9 +195,6 @@ class SessionTreeController():
             self.session_tree_ctrl.UnselectAll()
             return
 
-        # item = self.find_by_data(name=session.name)
-        # self.session_tree_ctrl.Select(item)
-
     def find_by_data(self, **filters) -> wx.TreeItemId:
         def _matches(data):
             return all(getattr(data, key, None) == value for key, value in filters.items())
@@ -255,7 +254,6 @@ class SessionManagerController(SessionManagerView):
 
     @property
     def _sessions(self):
-        """Load sessions from repository"""
         raw_sessions = self._repository.load_sessions()
         return self._build_session_tree(raw_sessions)
 
@@ -293,14 +291,6 @@ class SessionManagerController(SessionManagerView):
         self.btn_save.Enable(bool(session and session.is_valid()))
         self.btn_open.Enable(bool(session and session.is_valid()))
 
-    def _on_edit_session(self, event):
-        """Handle session editing"""
-        session = self.session_tree_ctrl.get_selected_session()
-        if session:
-            # TODO: Open session edit dialog
-            wx.MessageBox(f"Edit session: {session.name}", "Info", wx.OK | wx.ICON_INFORMATION)
-        else:
-            wx.MessageBox("Please select a session to edit", "Warning", wx.OK | wx.ICON_WARNING)
 
     def _on_delete_session(self, event):
         """Handle session deletion"""
@@ -349,13 +339,14 @@ class SessionManagerController(SessionManagerView):
 
         dialog = wx.MessageDialog(None,
                                   message=_(f'Do you want save the session {session.name}?'),
+                                  caption=_("Confirm save"),
                                   style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
                                   )
 
         if dialog.ShowModal() != wx.ID_YES:
             return False
 
-        if session._id is None:
+        if session.id <= -1:
             self._repository.save_session(session)
         # else:
         #     index = self.session_tree_controller.sessions.find(lambda s: isinstance(s, Session) and s._id == session.id)
@@ -389,6 +380,7 @@ class SessionManagerController(SessionManagerView):
     def on_open(self, event):
         if NEW_SESSION.get_value() and not self.on_save(event):
             return
+
         session = CURRENT_SESSION.get_value()
         if session:
             try:
@@ -404,6 +396,7 @@ class SessionManagerController(SessionManagerView):
             return
         dialog = wx.MessageDialog(None,
                                   message=_(f'Do you want delete the session {session.name}?'),
+                                  caption=_(f"Confirm delete"),
                                   style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
                                   )
         if dialog.ShowModal() == wx.ID_YES:
@@ -418,7 +411,10 @@ class SessionManagerController(SessionManagerView):
                 session.context.connect(connect_timeout=5)
             except Exception as ex:
                 logger.warning(ex)
-                wx.MessageDialog(None, message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))), style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
+                wx.MessageDialog(None,
+                                 message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))),
+                                 caption=_("Connection error"),
+                                 style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
                 raise
 
     def on_exit(self, event):
