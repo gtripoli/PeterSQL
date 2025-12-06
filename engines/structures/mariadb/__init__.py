@@ -20,5 +20,5 @@ MAP_COLUMN_FIELDS = {
     8: ColumnField("virtuality", str),
     9: ColumnField("expression", str),
     10: ColumnField("collation_name", str),
-    11: ColumnField("comments", str),
+    11: ColumnField("comment", str),
 }

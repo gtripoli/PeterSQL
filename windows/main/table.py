@@ -48,7 +48,7 @@ class EditTableModel(AbstractModel):
 
         table.name = self.name.get_value()
         table.comment = self.comment.get_value()
-        table.auto_increment = self.auto_increment.get_value()
+        table.auto_increment = int(self.auto_increment.get_value() or 0)
         table.collation = self.collation.get_value()
         table.engine = self.engine.get_value()
 

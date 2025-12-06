@@ -63,11 +63,17 @@ class ColumnModel(BaseDataViewIndexListModel):
         column_field = self.MAP_COLUMN_FIELDS[col]
         column_field_attr = getattr(column_field, "attr")
 
-        setattr(self.data[row], column_field_attr, value)
+        org_col = self.get_data_by_row(row)
+        new_col = org_col.copy()
 
-        self.ValueChanged(item, col)
+        setattr(new_col, column_field_attr, value)
 
-        self.update_columns(col, row)
+        if new_col != org_col:
+            self.set_data_by_row(row, new_col)
+
+            self.update_columns(col, row)
+
+            self.ValueChanged(item, col)
 
         return True
 
@@ -104,6 +110,7 @@ class ColumnModel(BaseDataViewIndexListModel):
         item = self.GetItem(row)
 
         column: SQLColumn = self.get_data_by_row(row)
+
         column_field = self.MAP_COLUMN_FIELDS[col]
         column_field_attr = getattr(column_field, "attr")
 
@@ -155,6 +162,11 @@ class TableColumnsController:
 
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
         CURRENT_TABLE.subscribe(self._load_table)
+        NEW_TABLE.subscribe(self._load_table)
+
+    def _do_edit(self, item, model_column: int = 1):
+        column = self.list_ctrl_table_columns.GetColumn(model_column)
+        self.list_ctrl_table_columns.edit_item(item, column)
 
     def _load_session(self, session):
         with Loader.cursor_wait():
@@ -164,37 +176,37 @@ class TableColumnsController:
     def _load_table(self, table: SQLTable):
         with Loader.cursor_wait():
             self.model.clear()
-            if table is not None:
+            if table := NEW_TABLE.get_value() or CURRENT_TABLE.get_value():
                 self.model.set_observable(table.columns)
 
-    def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
-        self._update_table_columns()
-
-        event.Skip()
-
     def _on_selection_change(self, event):
+        item = event.GetItem()
+
         CURRENT_COLUMN.set_value(None)
-        selected = self.list_ctrl_table_columns.GetSelection()
 
-        if selected.IsOk():
-            column: SQLColumn = self.model.get_data_by_item(selected)
-
+        if item.IsOk():
+            column: SQLColumn = self.model.get_data_by_item(item)
             CURRENT_COLUMN.set_value(column)
 
         event.Skip()
 
-    def _do_edit(self, item, model_column: int = 1):
-        column = self.list_ctrl_table_columns.GetColumn(model_column)
-        self.list_ctrl_table_columns.edit_item(item, column)
+    def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
+        print("#" * 10, "ON COLUMN EDITING DONE", "#" * 10)
 
-    def _update_table_columns(self):
-        database: SQLDatabase = CURRENT_DATABASE.get_value()
-        table: SQLTable = CURRENT_TABLE.get_value()
+        item = event.GetItem()
+
+        if not item.IsOk():
+            event.Skip()
+            return
 
         current_columns: List[SQLColumn] = self.model.data
 
+        table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value()).copy()
+
+        database: SQLDatabase = CURRENT_DATABASE.get_value()
         original_table = next((t for t in list(database.tables) if t.id == table.id), None)
         original_columns = list(original_table.columns)
+        # original_columns = list(table.columns)
 
         map_columns = merge_original_current(original_columns, current_columns)
 
@@ -219,8 +231,8 @@ class TableColumnsController:
             table.columns.set_value(current_columns)
 
             NEW_TABLE.set_value(table)
-        else:
-            NEW_TABLE.set_value(None)
+
+        event.Skip()
 
     def on_column_insert(self):
         session = CURRENT_SESSION.get_value()
@@ -274,14 +286,11 @@ class TableColumnsController:
         column: SQLColumn = self.model.get_data_by_row(row)
 
         table.columns.remove(column)
-        # del self.model.data[row]
-        # self.model.RowDeleted(row)
-        #
-        # self._update_table_columns()
+
         NEW_TABLE.set_value(table)
 
     def on_column_move_up(self):
-        table = CURRENT_TABLE.get_value()
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
         if not selected.IsOk():
@@ -294,8 +303,6 @@ class TableColumnsController:
 
         table.columns.move_up(selected_column)
 
-        self.model.RowChanged(selected_row)
-        self.model.RowChanged(previous_row)
 
         self.list_ctrl_table_columns.Select(self.model.GetItem(previous_row))
 

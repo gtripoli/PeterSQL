@@ -2,51 +2,62 @@ import copy
 import enum
 import inspect
 import weakref
-from typing import List, Callable, TypeVar, Generic, Any, overload, Union, Tuple, Optional, Dict, cast, Self
+from sys import exc_info
+from typing import List, Callable, TypeVar, Generic, Any, overload, Union, Tuple, Optional, Dict, cast, Self, NewType
 from typing import SupportsIndex
 from contextlib import contextmanager
 
 import wx
 
+from helpers.logger import logger
+
 T = TypeVar("T")
 
 
+class CallbackEvent(enum.Enum):
+    BEFORE_CHANGE = "before"
+    AFTER_CHANGE = "after"
+    ON_APPEND = "append"
+    ON_INSERT = "insert"
+    ON_POP = "pop"
+    ON_EXTEND = "extend"
+    ON_REMOVE = "remove"
+    ON_REVERSE = "reverse"
+    ON_MOVE = "on_move"
+
+
 class Observable(Generic[T]):
-    class CallbackEvent(enum.Enum):
-        BEFORE_CHANGE = "before"
-        AFTER_CHANGE = "after"
 
     def __init__(self, default: Any = None):
-        self._last = default
-        self._value = default
         self._default = default
+        if default is not None:
+            self._value = default
 
-        self._callbacks: Dict[str, List[Callable]] = {
-            "before": [],
-            "after": [],
-        }
+        self._callbacks: Dict[CallbackEvent, List[Callable]] = {event: [] for event in CallbackEvent}
 
-    def execute_callback(self, event: CallbackEvent, **kwargs) -> None:
+    def execute_callback(self, event: CallbackEvent) -> None:
         dead = []
-        value = kwargs.pop("value", self._value)
-        for callback in self._callbacks[event.value]:
+        for callback in self._callbacks[event]:
             ref = callback()
             if ref is None:
                 dead.append(callback)
                 continue
 
-            ref(value, **kwargs)
+            try:
+                ref(self.get_value())
+            except Exception as ex:
+                logger.error(ex, exc_info=True)
 
         for callback in dead:
-            self._callbacks[event.value].remove(callback)
+            self._callbacks[event].remove(callback)
 
         return None
 
     def _set_value(self, value: Any, **kwargs) -> None:
-        if self._value != value:
-            self.execute_callback(Observable.CallbackEvent.BEFORE_CHANGE, **kwargs)
+        if getattr(self, "_value", None) != value:
+            self.execute_callback(CallbackEvent.BEFORE_CHANGE, **kwargs)
             self._value = value
-            self.execute_callback(Observable.CallbackEvent.AFTER_CHANGE, **kwargs)
+            self.execute_callback(CallbackEvent.AFTER_CHANGE, **kwargs)
 
         return None
 
@@ -63,67 +74,51 @@ class Observable(Generic[T]):
         return self
 
     def get_value(self) -> Optional[T]:
-        return self._value
+        return getattr(self, "_value", None)
 
     def subscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE, execute_immediately: bool = False) -> Self:
         if callable(callback):
             if inspect.ismethod(callback):
                 ref = weakref.WeakMethod(callback)
             else:
-                ref = weakref.ref(callback)  # type: ignore[assignment]
+                ref = weakref.ref(callback)
 
-            self._callbacks[callback_event.value].append(ref)
+            self._callbacks[callback_event].append(ref)
 
-            if self.is_dirty or execute_immediately:
-                self._last = self._value
-
+            if callback_event in [CallbackEvent.BEFORE_CHANGE, CallbackEvent.AFTER_CHANGE] and (self.is_dirty or execute_immediately):
                 self.execute_callback(event=callback_event)
 
         return self
 
     def unsubscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE):
         to_remove = []
-        for ref in self._callbacks[callback_event.value]:
+        for ref in self._callbacks[callback_event]:
             if ref() is callback:
                 to_remove.append(ref)
 
         for r in to_remove:
-            self._callbacks[callback_event.value].remove(r)
+            self._callbacks[callback_event].remove(r)
+
+    @property
+    def callbacks(self) -> Dict[CallbackEvent, List[Callable]]:
+        return self._callbacks
 
     @property
     def is_empty(self) -> bool:
-        return self._value in (None, "")
+        return getattr(self, "_value", None) in (None, "", [])
 
     @property
     def is_pristine(self) -> bool:
-        return self._last == self._value
+        return not hasattr(self, "_value")
 
     @property
     def is_dirty(self) -> bool:
-        return self._last != self._value
+        return hasattr(self, "_value")
 
 
 class ObservableList(Observable[List[T]]):
-    class CallbackEvent(enum.Enum):
-        BEFORE_CHANGE = "before"
-        AFTER_CHANGE = "after"
-
-        ON_APPEND = "append"
-        ON_INSERT = "insert"
-        ON_POP = "pop"
-        ON_EXTEND = "extend"
-        ON_REMOVE = "remove"
-        ON_REVERSE = "reverse"
-
     def __init__(self, default: Any = None):
         super().__init__(default)
-
-        self._callbacks[ObservableList.CallbackEvent.ON_APPEND.value] = []
-        self._callbacks[ObservableList.CallbackEvent.ON_INSERT.value] = []
-        self._callbacks[ObservableList.CallbackEvent.ON_REMOVE.value] = []
-        self._callbacks[ObservableList.CallbackEvent.ON_POP.value] = []
-        self._callbacks[ObservableList.CallbackEvent.ON_EXTEND.value] = []
-        self._callbacks[ObservableList.CallbackEvent.ON_REVERSE.value] = []
 
     def _ensure_list(self) -> List:
         value = super().get_value() or []
@@ -161,35 +156,37 @@ class ObservableList(Observable[List[T]]):
         else:
             values.append(value)
 
-        self._value = values
-        self.execute_callback(ObservableList.CallbackEvent.ON_APPEND, value=value)
+        # self._value = values
+        self.execute_callback_on_value(CallbackEvent.ON_APPEND, value=value)
 
-        return values
+        return self.set_value(values)
 
     def insert(self, index: int, value: Any) -> Self:
         values = self.get_value()
         values.insert(index, value)
 
-        self._value = values
-        self.execute_callback(ObservableList.CallbackEvent.ON_INSERT, value=value, index=index)
-        return values
+        # self._value = values
+        self.execute_callback_on_value(CallbackEvent.ON_INSERT, value=value, index=index)
+
+        return self.set_value(values)
 
     def extend(self, other: List[Any]) -> Self:
         values = self.get_value()
         values.extend(other)
 
-        self._value = values
-        self.execute_callback(ObservableList.CallbackEvent.ON_EXTEND, value=other)
-        return values
+        # self._value = values
+        # self.set_value(values)
+        self.execute_callback_on_value(CallbackEvent.ON_EXTEND, value=other)
+        return self.set_value(values)
 
     def pop(self, index: int = -1) -> Any:
         values = self.get_value()
         value = values.pop(index)
 
-        self._value = values
-        self.execute_callback(ObservableList.CallbackEvent.ON_POP, value=value)
+        # self._value = values
+        self.execute_callback_on_value(CallbackEvent.ON_POP, value=value)
 
-        return value
+        return self.set_value(values)
 
     def reverse(self) -> Self:
         values = self.get_value()
@@ -201,10 +198,11 @@ class ObservableList(Observable[List[T]]):
         values = self.get_value()
         values.remove(value)
 
-        self._value = values
-        self.execute_callback(ObservableList.CallbackEvent.ON_REMOVE, value=value)
+        # self._value = values
+        self.set_value(values)
+        self.execute_callback_on_value(CallbackEvent.ON_REMOVE, value=value)
 
-        return values
+        return self
 
     def sort(self, key: Optional[Callable] = None, reverse: bool = False) -> Self:
         values = self.get_value()
@@ -236,6 +234,8 @@ class ObservableList(Observable[List[T]]):
         if idx > 0:
             values[idx], values[idx - 1] = values[idx - 1], values[idx]
 
+        self.execute_callback_on_value(CallbackEvent.ON_MOVE, value=value, current=idx, future=idx - 1)
+
         return self.set_value(values)
 
     def move_down(self, value):
@@ -244,11 +244,26 @@ class ObservableList(Observable[List[T]]):
         if idx < len(values) - 1:
             values[idx], values[idx + 1] = values[idx + 1], values[idx]
 
+        self.execute_callback_on_value(CallbackEvent.ON_MOVE, value=value, current=idx, future=idx + 1)
+
         return self.set_value(values)
 
     def clear(self) -> Self:
         self.set_value([])
         return self
+
+    def execute_callback_on_value(self, event: CallbackEvent, value: Any, **kwargs) -> None:
+        dead = []
+        for callback in self._callbacks[event]:
+            ref = callback()
+            if ref is None:
+                dead.append(callback)
+                continue
+
+            try:
+                ref(value, **kwargs)
+            except Exception as ex:
+                logger.error(ex, exc_info=True)
 
 
 class ObservableLazyList(ObservableList[T]):
@@ -265,7 +280,7 @@ class ObservableLazyList(ObservableList[T]):
         if force:
             self._loaded = False
 
-        if force or not self._loaded:
+        if not self._loaded :
             super().set_value(list(self._loader()))
             self._loaded = True
 
@@ -278,7 +293,7 @@ class ObservableLazyList(ObservableList[T]):
         return super().set_value(value, **kwargs)
 
     def clear(self) -> Self:
-        self._loaded = False
+        # self._loaded = False
         return super().clear()
 
     def refresh(self) -> Self:

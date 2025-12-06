@@ -8,8 +8,9 @@ from typing import Optional, List, Dict, Any, Callable, Union
 from gettext import gettext as _
 
 from helpers.bindings import AbstractModel
+from helpers.exceptions import ConnectionException
 from helpers.logger import logger
-from helpers.observables import Observable, debounce, Loader
+from helpers.observables import Observable, debounce, Loader, CallbackEvent
 from icons import IconList, ImageList
 from engines.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
 from windows import SessionManagerView
@@ -37,7 +38,7 @@ class SessionManagerModel(AbstractModel):
             callback=self.build_session
         )
 
-        CURRENT_SESSION.subscribe(self.clear, Observable.CallbackEvent.BEFORE_CHANGE)
+        CURRENT_SESSION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
         CURRENT_SESSION.subscribe(self.populate)
 
     def _set_default_port(self, engine_value):
@@ -71,7 +72,7 @@ class SessionManagerModel(AbstractModel):
             self.filename.set_value(session.configuration.filename)
 
     def build_session(self, *args):
-        if self.engine.is_empty:
+        if any([self.name.is_empty, self.engine.is_empty]):
             return
 
         new_session = None
@@ -144,7 +145,7 @@ class SessionTreeController():
         self.session_tree_ctrl.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self._on_select_session)
         self.session_tree_ctrl.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self._on_active_session)
 
-        CURRENT_SESSION.subscribe(self._on_current_session_changed, Observable.CallbackEvent.AFTER_CHANGE)
+        CURRENT_SESSION.subscribe(self._on_current_session_changed, CallbackEvent.AFTER_CHANGE)
 
     def _create_session_folder(self, name: str, sessions: List[Session], parent=None):
         if parent is None:
@@ -385,6 +386,8 @@ class SessionManagerController(SessionManagerView):
         if session:
             try:
                 self.verify_connection(session)
+            except ConnectionException as ex:
+                logger.info(ex)
             except Exception as ex:
                 logger.error(ex, exc_info=True)
             else:
@@ -410,12 +413,12 @@ class SessionManagerController(SessionManagerView):
             try:
                 session.context.connect(connect_timeout=5)
             except Exception as ex:
-                logger.warning(ex)
                 wx.MessageDialog(None,
                                  message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))),
                                  caption=_("Connection error"),
                                  style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
-                raise
+                raise ConnectionException
+
 
     def on_exit(self, event):
         if not self._app.main_frame:

@@ -1,6 +1,7 @@
 import contextlib
 import re
 import abc
+from sys import exc_info
 
 from typing import Dict, Any, Optional, List, Union, TypeAlias
 
@@ -11,7 +12,6 @@ from helpers.observables import ObservableList
 from engines.structures.datatype import StandardDataType
 from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from engines.structures.indextype import SQLIndexType, StandardIndexType
-
 
 LOG_QUERY: ObservableList[str] = ObservableList()
 
@@ -31,6 +31,7 @@ class AbstractColumnBuilder(abc.ABC):
             'name': self.name,
             'datatype': self.datatype,
             'primary_key': self.primary_key,
+            'unique': self.unique,
             'auto_increment': self.auto_increment,
             'nullable': self.nullable,
             'default': self.default,
@@ -54,6 +55,9 @@ class AbstractColumnBuilder(abc.ABC):
             else:
                 datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision})"
 
+        if self.column.datatype.has_set:
+            datatype_str += f"({self.column.set or self.column.datatype.default_set})"
+
         return datatype_str
 
     @property
@@ -62,7 +66,7 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def auto_increment(self):
-        return 'AUTO_INCREMENT' if self.column.is_auto_increment else ''
+        raise Exception("the auto increment should be defined in the engine column's table builder")
 
     @property
     def nullable(self):
@@ -74,14 +78,15 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def collate(self):
-        return f"COLLATE {self.column.collation_name}" if self.column.collation_name else ''
+        return f"CHARSET SET {self.column.table.database.context.COLLATION[self.column.collation_name]} COLLATE {self.column.collation_name}" if self.column.collation_name else ''
 
     @property
     def virtual(self):
         return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality and self.column.expression else ''
 
-    # def unique(self):
-    #     return 'UNIQUE' if self.column.is_unique else ''
+    @property
+    def unique(self):
+        return 'UNIQUE' if self.column.is_unique_key else ''
 
     # @property
     # def references(self):
@@ -96,7 +101,11 @@ class AbstractColumnBuilder(abc.ABC):
         for template_part in self.TEMPLATE:
             if self.exclude and any(part in template_part for part in self.exclude):
                 continue
-            formatted = template_part % self.parts
+            try:
+                formatted = template_part % self.parts
+            except Exception as ex:
+                logger.Error(ex, exc_info=True)
+
             if formatted_strip := formatted.strip():  # Only include non-empty parts
                 formatted_parts.append(formatted_strip)
 

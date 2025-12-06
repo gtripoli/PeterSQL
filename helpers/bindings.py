@@ -5,7 +5,7 @@ from typing import Optional, Union, Any, List, TypeAlias, Dict, Tuple, Callable
 
 import wx
 
-from helpers.observables import Observable
+from helpers.observables import Observable, CallbackEvent
 
 CONTROL_BIND_LABEL: TypeAlias = wx.StaticText
 CONTROL_BIND_VALUE: TypeAlias = Union[wx.TextCtrl, wx.SpinCtrl, wx.CheckBox]
@@ -24,7 +24,7 @@ class AbstractBindControl(abc.ABC):
         self.initial = self.get()
         self.observable = observable
 
-        self.observable.subscribe(self._set_value, Observable.CallbackEvent.AFTER_CHANGE)
+        self.observable.subscribe(self._set_value, CallbackEvent.AFTER_CHANGE)
 
         if event is not None:
             self.control.Bind(event, self.handle_control_event)

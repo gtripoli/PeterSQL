@@ -1,6 +1,6 @@
 import enum
 import dataclasses
-from typing import NamedTuple, Union, Optional
+from typing import NamedTuple, Union, Optional, Any
 
 from engines.structures.context import AbstractContext
 from engines.structures.indextype import StandardIndexType
@@ -37,7 +37,7 @@ class SourceConfiguration(NamedTuple):
     filename: str
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class Session:
     id: Union[int, str]
     name: str
@@ -45,7 +45,7 @@ class Session:
     configuration: Union[CredentialsConfiguration, SourceConfiguration] | None
     comments: Optional[str] = None
 
-    context: Optional[AbstractContext] = dataclasses.field(init=False)
+    context: Optional[AbstractContext] = dataclasses.field(compare=False, init=False)
 
     def __post_init__(self):
         if self.engine == SessionEngine.MYSQL:
@@ -59,6 +59,18 @@ class Session:
 
         else:
             raise ValueError(f"Unsupported engine {self.engine}")
+
+    def __eq__(self, other: Any):
+        if not isinstance(other, Session):
+            return False
+
+        for field in dataclasses.fields(self):
+            if not field.compare:
+                continue
+            if getattr(self, field.name) != getattr(other, field.name):
+                return False
+
+        return True
 
     def copy(self):
         return dataclasses.replace(self)

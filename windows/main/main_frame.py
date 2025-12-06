@@ -1,3 +1,5 @@
+import time
+
 import math
 import datetime
 import psutil
@@ -10,9 +12,9 @@ import wx.stc
 import wx.lib.wordwrap
 
 from gettext import gettext as _
+from helpers.observables import CallbackEvent
 
-from helpers.observables import ObservableList
-from engines.session import Session
+from engines.session import Session, SessionEngine
 from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 from engines.structures.context import LOG_QUERY
 
@@ -117,9 +119,9 @@ class MainFrameController(MainFrameView):
     def _setup_subscribers(self):
         self.toggle_panel()
 
-        LOG_QUERY.subscribe(self._write_query_log, ObservableList.CallbackEvent.ON_APPEND)
+        LOG_QUERY.subscribe(self._write_query_log, CallbackEvent.ON_APPEND)
 
-        # SESSIONS.subscribe(self._load_session, ObservableList.CallbackEvent.ON_APPEND)
+        # SESSIONS.subscribe(self._load_session, CallbackEvent.ON_APPEND)
 
         CURRENT_SESSION.subscribe(self._on_current_session)
 
@@ -169,7 +171,7 @@ class MainFrameController(MainFrameView):
 
     def _format_server_uptime(self, uptime: Optional[float] = None) -> str:
         if not uptime:
-            uptime = (datetime.datetime.now()).timestamp()
+            uptime = time.time() - psutil.boot_time()
 
         return (f"{math.floor(uptime / 86400)} {_('days')}, "
                 f"{math.floor((uptime % 86400) / 3600)} {_('hours')}, "
@@ -263,16 +265,26 @@ class MainFrameController(MainFrameView):
     def _on_current_session(self, session: Session):
         self.toggle_panel(session)
 
-        self.status_bar.SetStatusText(f"{_('Session')}: {session.name}", 0)
+        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
+        # self.status_bar.SetStatusText(f"{_('Session')}: {session.name}", 0)
 
-        self.status_bar.SetStatusText(f"{_('Version')}: {session.context.get_server_version()}", 1)
+        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
+        # self.status_bar.SetStatusText(f"{_('Version')}: {session.context.get_server_version()}", 1)
 
-        self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+        # self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
+
+        self.table_engine.Enable(len(CURRENT_DATABASE.get_value().context.ENGINES) > 1)
         self.table_engine.SetItems(CURRENT_DATABASE.get_value().context.ENGINES)
+
+        self.table_collation.Enable(len(CURRENT_DATABASE.get_value().context.COLLATIONS.keys()) > 1)
         self.table_collation.SetItems(list(CURRENT_DATABASE.get_value().context.COLLATIONS.keys()))
+
+        if CURRENT_SESSION.get_value().engine in [SessionEngine.SQLITE]:
+            self.table_collation.Enable(False)
 
     # VIEW
     def _on_current_view(self, current: SQLView):
@@ -330,9 +342,9 @@ class MainFrameController(MainFrameView):
 
         self.btn_delete_table.Enable(current is not None)
 
-    def _on_new_table(self, current: SQLTable):
-        self.btn_apply_table.Enable(bool(current is not None and current.is_valid()))
-        self.btn_cancel_table.Enable(bool(current is not None))
+    def _on_new_table(self, table: SQLTable):
+        self.btn_apply_table.Enable(bool(table is not None and table.is_valid()))
+        self.btn_cancel_table.Enable(bool(table is not None))
 
     def on_insert_table(self, event):
         session = CURRENT_SESSION.get_value()
@@ -371,12 +383,9 @@ class MainFrameController(MainFrameView):
             NEW_TABLE.set_value(None)
 
             if updated_table := next((t for t in list(database.tables) if t.id == table.id), None):
-                if item := self.controller_tree_sessions.find_by_data(name=table.name):
-                    self.tree_ctrl_sessions.SetItemData(item, updated_table)
+                item = self.controller_tree_sessions.model.ObjectToItem(updated_table)
 
-            wx.CallAfter(self._select_tree_item, **{"name": database.name})
-
-            wx.CallAfter(self._select_tree_item, **{"name": table.name})
+                self.list_ctrl_table_columns.Select(item)
 
     def on_cancel_table(self, event: wx.Event):
         if new_table := NEW_TABLE.get_value():

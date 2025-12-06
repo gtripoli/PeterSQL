@@ -32,9 +32,9 @@ class MariaDBDataType(StandardDataType):
 
     # Date and time
     DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL)
-    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, has_precision=True)
-    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, has_precision=True)
-    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, has_precision=True)
+    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL)
+    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL)
+    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL)
     YEAR = SQLDataType(name="YEAR", category=DataTypeCategory.TEMPORAL)
 
     ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.TEXT, has_set=True)

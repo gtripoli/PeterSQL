@@ -183,7 +183,7 @@ class PopupColumnDatatype(BasePopup):
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
 
         self.session = CURRENT_SESSION.get_value()
-        self.set_choices(self.session.datatype.get_all())
+        self.set_choices(self.session.context.DATATYPE.get_all())
 
         # CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
@@ -216,7 +216,7 @@ class PopupColumnDatatype(BasePopup):
         return self
 
     def get_value(self):
-        return self.session.datatype.get_by_name(self._value)
+        return self.session.context.DATATYPE.get_by_name(self._value)
 
     def open(self, value: Any, position: wx.Point) -> Self:
 

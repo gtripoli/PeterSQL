@@ -50,8 +50,22 @@ class MariaDBContext(AbstractContext):
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
     def _parse_type(self, column_type: str):
-        if match := re.search(r'(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?', column_type):
-            print(match.group(1))
+        types = MariaDBDataType.get_all()
+        type_set = [x.lower() for type in types if type.has_set for x in ([type.name] + type.alias)]
+        type_length = [x.lower() for type in types if type.has_length for x in ([type.name] + type.alias)]
+
+        if match := re.search(fr"^({'|'.join(type_set)})\((.*)\)$", column_type):
+            return dict(
+                name=match.group(1).upper(),
+                set=[value.strip("'") for value in match.group(2).split(",")]
+            )
+        elif match := re.search(fr"^({'|'.join(type_length)})\((.*)\)$", column_type):
+            return dict(
+                name=match.group(1).upper(),
+                length=int(match.group(2))
+            )
+
+        elif match := re.search(r'(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?', column_type):
             return dict(
                 name=match.group(1).upper(),
                 precision=int(match.group(2)),
@@ -60,11 +74,6 @@ class MariaDBContext(AbstractContext):
                 is_zerofill=bool(match.group(5))
             )
 
-        if match := re.search(r'^(enum|set)\((.*)\)$', column_type):
-            return dict(
-                name=match.group(1).upper(),
-                set=[value.strip("'") for value in match.group(2).split(",")]
-            )
 
         return dict()
 
@@ -89,10 +98,12 @@ class MariaDBContext(AbstractContext):
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")
         version = self.cursor.fetchone()
-        return version[0]
+        return version["version"]
 
     def get_server_uptime(self) -> Optional[int]:
-        return None
+        self.execute("SHOW STATUS LIKE 'Uptime'")
+        result = self.fetchone()
+        return int(result['Value']) if result else None
 
     def get_databases(self) -> List[SQLDatabase]:
         self.execute("""
@@ -145,7 +156,7 @@ class MariaDBContext(AbstractContext):
         LOG_QUERY.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
-            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, AUTO_INCREMENT, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as size
+            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = '{database.name}'
             AND TABLE_TYPE = 'BASE TABLE'
@@ -161,8 +172,9 @@ class MariaDBContext(AbstractContext):
                     database=database,
                     engine=row['ENGINE'],
                     collation_name=row['TABLE_COLLATION'],
-                    auto_increment=row['AUTO_INCREMENT'],
-                    size=row['size'],
+                    auto_increment=int(row['AUTO_INCREMENT'] or 0),
+                    total_bytes=row['total_bytes'],
+                    total_rows=row["TABLE_ROWS"],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
@@ -193,7 +205,7 @@ class MariaDBContext(AbstractContext):
             parse_type = self._parse_type(row['COLUMN_TYPE'])
             datatype = MariaDBDataType.get_by_name(row['DATA_TYPE'])
 
-            print(parse_type)
+            print("parse_type", parse_type)
 
             results.append(
                 MariaDBColumn(
@@ -208,8 +220,8 @@ class MariaDBContext(AbstractContext):
                     numeric_precision=parse_type.get('precision'),
                     numeric_scale=parse_type.get('scale'),
                     set=parse_type.get('set'),
-                    is_unsigned=parse_type.get('is_unsigned'),
-                    is_zerofill=parse_type.get('is_zerofill'),
+                    is_unsigned=parse_type.get('is_unsigned', False),
+                    is_zerofill=parse_type.get('is_zerofill', False),
                 )
             )
 
@@ -260,7 +272,7 @@ class MariaDBContext(AbstractContext):
             index_data[idx_name]['columns'].append(row['COLUMN_NAME'])
 
         for i, (idx_name, data) in enumerate(index_data.items(), start=1):
-            idx_type = MariaDBIndexType.UNIQUE if data['unique'] else MariaDBIndexType.NORMAL
+            idx_type = MariaDBIndexType.UNIQUE if data['unique'] else MariaDBIndexType.INDEX
             results.append(
                 MariaDBIndex(
                     id=i,

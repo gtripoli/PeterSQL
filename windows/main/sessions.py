@@ -90,7 +90,7 @@ class SessionListModel(BaseDataViewModel):
         elif isinstance(node, SQLDatabase):
             mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_DATABASE), 1: node.size}
         elif isinstance(node, SQLTable):
-            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_TABLE), 1: int((node.size / node.database.size) * 100)}
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_TABLE), 1: int((node.total_bytes / node.database.size) * 100)}
         elif isinstance(node, SQLView):
             mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_VIEW), 1: 0}
         elif isinstance(node, SQLProcedure):
@@ -155,9 +155,6 @@ class TreeSessionsController:
                     CURRENT_SESSION.set_value(session)
 
                 CURRENT_DATABASE.set_value(database)
-                #
-                # children = list(database.tables) + list(database.views) + list(database.triggers)
-                # self._append_child_rows(session, item, children)
 
         elif isinstance(object, (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent)):
             database = object.database

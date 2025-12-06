@@ -19,6 +19,12 @@ class SQLiteDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteTable(SQLTable):
+    def set_auto_increment(self, auto_increment):
+        sql = f"UPDATE sqlite_sequence SET seq = {auto_increment} WHERE name = '{self.name}';"
+        self.database.context.execute(sql)
+
+        return True
+
     def rename(self, table: Self, new_name: str) -> bool:
         sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
         self.database.context.execute(sql)
@@ -121,9 +127,11 @@ class SQLiteTable(SQLTable):
 
         try:
             with self.database.context.transaction() as transaction:
-                if current_table := next((t for t in self.database.tables if t.id == self.id), None):
-                    if self.name != current_table.name:
-                        self.rename(current_table, self.name)
+                if original_table:
+                    if self.name != original_table.name:
+                        self.rename(original_table, self.name)
+                    if self.auto_increment != original_table.auto_increment:
+                        self.set_auto_increment(self.auto_increment)
 
                 # SQLite does not support ALTER COLUMN or ADD CONSTRAINT,
                 # so rename and recreate the table with the new columns and constraints
@@ -200,8 +208,6 @@ class SQLiteTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteColumn(SQLColumn):
-    check: Optional[str] = None
-
     def add(self) -> bool:
         sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {SQLiteColumnBuilder(self)}"
         if hasattr(self, 'after') and self.after:

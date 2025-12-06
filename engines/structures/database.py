@@ -8,6 +8,7 @@ from typing import Optional, Callable, Literal, List, Any, Self, Dict
 import wx
 
 from icons import BitmapList
+from helpers.logger import logger
 from helpers.observables import ObservableLazyList
 
 from engines.structures.datatype import SQLDataType
@@ -62,35 +63,18 @@ class SQLTable(abc.ABC):
 
     database: SQLDatabase = dataclasses.field(compare=False)
     engine: Optional[str] = None
-    size: float = 0
+
+    total_bytes: float = 0
+    total_rows: Optional[int] = None
+    auto_increment: Optional[int] = 0
+
+    comment: Optional[str] = None
+    collation_name: Optional[str] = None
 
     get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
     get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
     get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
     get_records_handler: Callable[[Self, int, int], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, limit=1000, offset=0: list([]))
-
-    comment: Optional[str] = None
-    count_rows: Optional[int] = None
-
-    auto_increment: Optional[int] = None
-    create_time: Optional[datetime] = None
-    update_time: Optional[datetime] = None
-    control: Optional[wx.Control] = None
-    collation_name: Optional[str] = None
-
-    row_format: Optional[str] = None
-    table_rows: Optional[int] = None
-    avg_row_length: Optional[int] = None
-    data_length: Optional[int] = None
-    max_data_length: Optional[int] = None
-    index_length: Optional[int] = None
-    data_free: Optional[int] = None
-    check_time: Optional[datetime] = None
-    table_collation: Optional[str] = None
-    checksum: Optional[int] = None
-    create_options: Optional[str] = None
-    max_index_length: Optional[int] = None
-    temporary: bool = False
 
     def __post_init__(self):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
@@ -127,15 +111,21 @@ class SQLTable(abc.ABC):
 
         return True
 
-
     def copy(self):
-
         cls = self.__class__
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
-        return cls(**field_values)
+        new_cls = cls(**field_values)
+
+        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
+            o1: ObservableLazyList = getattr(self, observable_lazy_list)
+            o2: ObservableLazyList = getattr(new_cls, observable_lazy_list)
+            if getattr(o1, '_loaded', False):
+                o2.set_value(o1.get_value())
+                o2._callbacks = o1._callbacks
+
+        return new_cls
 
     def is_valid(self) -> bool:
-
         if not self.name.strip():
             return False
 
@@ -199,9 +189,7 @@ class SQLTable(abc.ABC):
         else:
             method = self.alter
 
-        result = method()
-
-        if method:
+        if result := method():
             self.database.tables.refresh()
 
         return result
@@ -220,6 +208,7 @@ class SQLColumn(abc.ABC):
     is_auto_increment: bool = False
     length: Optional[int] = None
 
+    check: Optional[str] = None
     collation_name: Optional[str] = None
     numeric_precision: Optional[int] = None
     numeric_scale: Optional[int] = None
@@ -235,6 +224,7 @@ class SQLColumn(abc.ABC):
             if not field.compare:
                 continue
 
+            logger.debug(f"{field.name}: {getattr(self, field.name)} - {getattr(other, field.name)}: {getattr(self, field.name) != getattr(other, field.name)}")
             if getattr(self, field.name) != getattr(other, field.name):
                 return False
 
@@ -339,6 +329,11 @@ class SQLColumn(abc.ABC):
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
 
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        return cls(**field_values)
+
 
 @dataclasses.dataclass(eq=False)
 class SQLIndex(abc.ABC):
@@ -359,7 +354,7 @@ class SQLIndex(abc.ABC):
             if not field.compare:
                 continue
 
-            if getattr(self, field.name) != getattr(other, field.name) :
+            if getattr(self, field.name) != getattr(other, field.name):
                 return False
 
         return True
@@ -367,6 +362,11 @@ class SQLIndex(abc.ABC):
     @property
     def is_valid(self):
         return all([self.name, self.type, len(self.columns)])
+
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        return cls(**field_values)
 
 
 @dataclasses.dataclass(eq=False)
@@ -387,19 +387,23 @@ class SQLForeignKey(abc.ABC):
         if not isinstance(other, SQLForeignKey):
             return False
 
-        for field in dataclasses.fields(self):
-            if not field.compare:
-                continue
-
-            if getattr(self, field.name) != getattr(other, field.name):
-                return False
+        if not all([
+            getattr(self, field.name) != getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.compare
+        ]):
+            return False
 
         return True
-
 
     @property
     def is_valid(self):
         return all([self.name, len(self.columns), self.reference_table, len(self.reference_columns)])
+
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        return cls(**field_values)
 
 
 @dataclasses.dataclass(eq=False)

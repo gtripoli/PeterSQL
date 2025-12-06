@@ -18,8 +18,26 @@ class MariaDBDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBTable(SQLTable):
+    def alter_auto_increment(self, auto_increment: int):
+        sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
+        self.database.context.execute(sql)
+
+        return True
+
+    def alter_collation(self, convert: bool = True):
+        charset = ""
+        if convert:
+            charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[self.collation_name]}"
+        return self.database.context.execute(f"""ALTER TABLE `{self.database.name}`.`{self.name}` {charset} COLLATE {self.collation_name};""")
+
+    def alter_engine(self, engine: str):
+        sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` ENGINE {engine};"
+        self.database.context.execute(sql)
+
+        return True
+
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
+        sql = f"ALTER TABLE `{self.database.name}`.`{table.name}` RENAME TO `{new_name}`;"
         self.database.context.execute(sql)
 
         return True
@@ -27,7 +45,7 @@ class MariaDBTable(SQLTable):
     def truncate(self):
         try:
             with self.database.context.transaction() as context:
-                context.execute(f"TRUNCATE TABLE `{self.name}`;")
+                context.execute(f"TRUNCATE TABLE `{self.database.name}`.`{self.name}`;")
 
         except Exception as ex:
             logger.error(ex, exc_info=True)
@@ -97,75 +115,29 @@ class MariaDBTable(SQLTable):
 
         map_columns = merge_original_current(original_columns, current_columns)
         map_indexes = merge_original_current(original_indexes, current_indexes)
-
-        original_name = self.name
-        needs_recreate = False
-
-        # Check for columns changes
-        if any([
-            original_columns != current_columns,
-            original_primary_keys != current_primary_keys,
-            original_foreign_keys != current_foreign_keys
-        ]):
-            needs_recreate = True
+        map_foreign_keys = merge_original_current(original_foreign_keys, current_foreign_keys)
 
         try:
             with self.database.context.transaction() as transaction:
-                if current_table := next((t for t in self.database.tables if t.id == self.id), None):
-                    if self.name != current_table.name:
-                        self.rename(current_table, self.name)
+                if self.name != original_table.name:
+                    self.rename(original_table, self.name)
+                if self.auto_increment != original_table.auto_increment:
+                    original_table.alter_auto_increment(self.auto_increment)
+                if self.collation_name != original_table.collation_name:
+                    original_table.alter_collation(self.collation_name)
+                if self.engine != original_table.engine:
+                    original_table.alter_engine(self.engine)
 
-                # SQLite does not support ALTER COLUMN or ADD CONSTRAINT,
-                # so rename and recreate the table with the new columns and constraints
-                if needs_recreate:
+                for original, current in map_columns:
+                    if original is None:
+                        current.add()
+                    elif current is None:
+                        original.drop()
+                    elif current.name != original.name:
+                        original.rename(current.name)
+                    elif current != original:
+                        original.modify(current)
 
-                    temp_name = f"_{original_name}_{self.generate_uuid()}"
-
-                    self.name = temp_name
-
-                    self.create(map_columns)
-
-                    columns = []
-
-                    for original, current in map_columns:
-                        if current and current.virtuality is None:
-                            if original is None:
-                                if current.server_default is None:
-                                    columns.append(f"""{None if current.is_nullable else "''"} as `{current.name}`""")
-                                else:
-                                    columns.append(f"""{current.server_default} as `{current.name}`""")
-                            else:
-                                if current.name == original.name:
-                                    columns.append(f"{current.name}")
-                                else:
-                                    columns.append(f"{original.name} as `{current.name}`")
-
-                    transaction.execute(f"INSERT INTO `{self.name}` SELECT {', '.join(columns)} FROM `{original_name}`;")
-
-                    transaction.execute(f"DROP TABLE `{original_name}`;")
-
-                    self.rename(self, original_name)
-
-                    self.name = original_name
-
-                    map_indexes = merge_original_current([], current_indexes)
-
-                else:
-                    # Perform supported ALTER operations
-                    for original, current in map_columns:
-                        if original is None:
-                            current.add()
-
-                        elif current is None:
-                            original.drop()
-
-                        elif current.name != original.name:
-                            original.rename(current.name)
-
-                        elif current != original:
-                            original.modify(current)
-
-                # INDEX
                 for original_index, current_index in map_indexes:
                     if current_index is None:
                         original_index.drop()
@@ -174,15 +146,23 @@ class MariaDBTable(SQLTable):
                     elif original_index != current_index:
                         original_index.modify(current_index)
 
+                for original_foreign_key, current_foreign_key in map_foreign_keys:
+                    if current_foreign_key is None:
+                        original_foreign_key.drop()
+                    elif original_foreign_key is None:
+                        current_foreign_key.create()
+                    elif original_foreign_key != current_foreign_key:
+                        original_foreign_key.modify(current_foreign_key)
+
         except Exception as ex:
             LOG_QUERY.append(f"/* alter_table exception: {ex} */")
-            logger.error(ex, exc_info=True)
-            return False
+            logger.error(ex)
+            raise
 
         return True
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TABLE `{self.name}`")
+        return self.database.context.execute(f"DROP TABLE `{self.database.name}`.`{self.name}`")
 
 
 @dataclasses.dataclass(eq=False)
@@ -190,87 +170,67 @@ class MariaDBColumn(SQLColumn):
     set: Optional[List[str]] = None
     is_unsigned: Optional[bool] = False
     is_zerofill: Optional[bool] = False
-    comments: Optional[str] = None
+    comment: Optional[str] = None
 
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {MariaDBColumnBuilder(self)}"
+        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MariaDBColumnBuilder(self)}"
         if hasattr(self, 'after') and self.after:
             sql += f" AFTER `{self.after}`"
 
         return self.table.database.context.execute(sql)
 
-    def modify(self):
-        new_name = f"_{self.table.name}_{self.generate_uuid()}"
-
-        for i, c in enumerate(self.table.columns):
-            if c.name == self.name:
-                self.table.columns[i] = self
-                break
-
-        with self.table.database.context.transaction() as transaction:
-            self.table.rename(self.table, new_name)
-
-            self.table.create()
-
-            transaction.execute(f"INSERT INTO `{self.table.name}` SELECT * FROM {new_name};")
-
-            transaction.execute(f"DROP TABLE {new_name};")
+    def modify(self, current: Self):
+        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MariaDBColumnBuilder(current)}"
+        self.table.database.context.execute(sql)
 
     def rename(self, new_name: str) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE `{self.table.name}` RENAME COLUMN `{self.name}` TO `{new_name}`")
+        return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` RENAME COLUMN `{self.name}` TO `{new_name}`")
 
-    def drop(self, table: SQLTable, column: SQLColumn) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE `{table.name}` DROP COLUMN `{self.name}`")
-
-    def recreate_table_for_foreign_keys(self):
-        new_name = f"_{self.table.name}_{self.generate_uuid()}"
-
-        self.table.rename(new_name)
-
-        self.table.create()
-
-        cols = ", ".join([f"`{c.name}`" for c in self.table.columns])
-        self.database.context.execute(f"INSERT INTO `{self.table.name}` ({cols}) SELECT {cols} FROM {new_name};")
-
-        # Drop old table
-        self.database.context.execute(f"DROP TABLE {new_name};")
-
-        # Recreate non-primary indexes
-        for index in self.table.indexes:
-            if index.type != MariaDBIndexType.PRIMARY:
-                index.create()
+    def drop(self) -> bool:
+        return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` DROP COLUMN `{self.name}`")
 
 
 @dataclasses.dataclass(eq=False)
 class MariaDBIndex(SQLIndex):
     def create(self) -> bool:
         if self.type == MariaDBIndexType.PRIMARY:
-            return False  # PRIMARY is handled in table creation
+            return self.table.database.context.execute(f"""ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD PRIMARY KEY ({", ".join(self.columns)})""")
 
-        unique_index = "UNIQUE INDEX" if self.type == MariaDBIndexType.UNIQUE else "INDEX"
-
-        if self.type == MariaDBIndexType.EXPRESSION:
-            expression = ", ".join(self.expression)
-        else:
-            expression = ", ".join(self.columns)
-
-        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS {self.name} ON {self.table.name}({expression})")
+        return self.table.database.context.execute(f"""ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD {self.type.name} `{self.name}` ({", ".join(self.columns)})""")
 
     def drop(self) -> bool:
         if self.type == MariaDBIndexType.PRIMARY:
-            return False
+            return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` DROP PRIMARY KEY")
 
-        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON {self.table.name}")
+        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON `{self.table.database.name}`.`{self.table.name}`")
 
-    def modify(self, new_index: Self):
+    def modify(self, new: Self):
         self.drop()
 
-        new_index.create()
+        new.create()
 
 
 @dataclasses.dataclass(eq=False)
 class MariaDBForeignKey(SQLForeignKey):
-    pass
+    def create(self) -> bool:
+        return self.table.database.context.execute(f"""
+            ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD CONSTRAINT `{self.name}`
+            FOREIGN KEY ({", ".join(self.columns)})
+            REFERENCES `{self.reference_table}` ({", ".join(self.reference_columns)})
+            ON DELETE {self.on_delete}
+            ON UPDATE {self.on_update}
+        """)
+
+    def drop(self) -> bool:
+        return self.table.database.context.execute(f"""
+            ALTER TABLE `{self.table.database.name}`.`{self.table.name}`
+            DROP FOREIGN KEY `{self.name}`
+        """)
+
+    def modify(self, new: Self):
+        self.drop()
+
+        new.create()
 
 
 class MariaDBRecord(SQLRecord):
@@ -293,14 +253,14 @@ class MariaDBRecord(SQLRecord):
         if not columns_values:
             assert False, "No columns values"
 
-        return f"""INSERT INTO `{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
+        return f"""INSERT INTO `{self.table.database.name}`.`{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
     def raw_update_record(self) -> Optional[str]:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        sql_select = f"SELECT * FROM `{self.table.name}` WHERE {identifier_conditions}"
+        sql_select = f"SELECT * FROM `{self.table.database.name}`.`{self.table.name}` WHERE {identifier_conditions}"
         self.table.database.context.execute(sql_select)
 
         if not (existing_record := self.table.database.context.fetchone()):
@@ -325,14 +285,14 @@ class MariaDBRecord(SQLRecord):
 
         set_clause = ", ".join(changed_columns)
 
-        return f"UPDATE `{self.table.name}` SET {set_clause} WHERE {identifier_conditions}"
+        return f"UPDATE `{self.table.database.name}`.`{self.table.name}` SET {set_clause} WHERE {identifier_conditions}"
 
     def raw_delete_record(self) -> str:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        return f"DELETE FROM `{self.table.name}` WHERE {identifier_conditions}"
+        return f"DELETE FROM `{self.table.database.name}`.`{self.table.name}` WHERE {identifier_conditions}"
 
     # RECORDS
     def insert(self) -> bool:
@@ -359,10 +319,10 @@ class MariaDBRecord(SQLRecord):
 
 class MariaDBView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.name} AS {self.sql}")
+        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS `{self.name}` AS {self.sql}")
 
     def drop(self):
-        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
 
     def alter(self):
         pass
@@ -370,10 +330,10 @@ class MariaDBView(SQLView):
 
 class MariaDBTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.name} {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS `{self.name}` {self.sql}")
 
     def drop(self):
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
 
     def alter(self):
         pass

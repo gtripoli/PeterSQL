@@ -1,7 +1,11 @@
 import re
 from typing import NamedTuple
 
-COLLATIONS = ["BINARY", "BINARY NOCASE", "NOCASE", "RTRIM"]
+COLLATIONS = {
+    "BINARY": "utf8",
+    "NOCASE": "utf8",
+    "RTRIM": "utf8"
+}
 
 
 class ColumnField(NamedTuple):
@@ -51,10 +55,6 @@ ATTRIBUTES_PATTERN = [
     re.compile(r"""(?P<is_nullable>NOT\s+NULL|NULL)(?:\s+ON\s+CONFLICT\s+(?P<nullability_conflict>ROLLBACK|ABORT|FAIL|IGNORE|REPLACE))?"""),
     re.compile(r"""(?P<is_unique>UNIQUE)(?:\s+ON\s+CONFLICT\s+(?P<conflict>ROLLBACK|ABORT|FAIL|IGNORE|REPLACE))?"""),
     re.compile(r"""CHECK\s*\((?P<check>[^)].*)\)"""),
-    # re.compile(r"""(?:\s+DEFAULT\s+(?P<default>NULL|CURRENT_TIMESTAMP|'.*?'|".*?"|[^\s,]+))?"""),
-    # re.compile(r"""(?:\s+DEFAULT\s+(?P<default>(?:NULL|CURRENT_TIMESTAMP|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()]|(?R))*\)|[^\s,]+)))?"""),
-    # re.compile(r"""DEFAULT\s+\((?P<default>.*)\)"""),
-    # re.compile(r"""DEFAULT\s+(?P<default>-?\d+(\.\d+)?|\w+|'.*?'|\".*?\")?"""),
     re.compile(r"""DEFAULT\s+(?P<default>\(.*?\))(?=\s|$)"""),
     re.compile(r"""DEFAULT\s+(?P<default>-?\d+(\.\d+)?)"""),
     re.compile(r"""DEFAULT\s+(?P<default>\w?(\'.*\'|\".*\"))"""),

@@ -104,23 +104,30 @@ class SQLiteContext(AbstractContext):
         return results
 
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
-        # self.execute("SELECT * FROM sqlite_master WHERE type IN('table', 'view', 'trigger') AND name NOT LIKE 'sqlite_%' ORDER BY name")
         LOG_QUERY.append(f"/* get_tables for database={database.name} */")
 
-        self.execute("SELECT * FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        self.execute("""
+            SELECT *, SUM(pgsize) as total_bytes, SUM(ncell) as total_rows
+            FROM sqlite_master
+            JOIN dbstat ON dbstat.name = sqlite_master.name
+            LEFT JOIN sqlite_sequence ON sqlite_sequence.name = sqlite_master.name
+            WHERE sqlite_master.type = 'table' AND sqlite_master.name NOT LIKE 'sqlite_%'
+            GROUP BY sqlite_master.name
+            ORDER BY sqlite_master.name;
+        """)
 
         results = []
         for i, row in enumerate(self.cursor.fetchall()):
-            self.execute(f"SELECT SUM(pgsize) as total_size_bytes FROM dbstat WHERE name = '{row['name']}' GROUP BY name;""")
-            size = self.fetchone()
-
             results.append(
                 SQLiteTable(
                     id=i,
                     name=row['name'],
                     database=database,
-                    engine='sqlite',
-                    size=size['total_size_bytes'],
+                    engine='default',
+                    auto_increment=int(row["seq"] or 0),
+                    total_bytes=row['total_bytes'],
+                    total_rows=row["total_rows"],
+                    collation_name="BINARY",
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
@@ -252,7 +259,7 @@ class SQLiteContext(AbstractContext):
                     condition = groups.get('condition', None)
 
             # Determine index type
-            index_type = SQLiteIndexType.NORMAL
+            index_type = SQLiteIndexType.INDEX
 
             if is_unique:
                 index_type = SQLiteIndexType.UNIQUE
@@ -334,12 +341,11 @@ class SQLiteContext(AbstractContext):
             name='',
             database=database,
             engine='sqlite',
-            size=0,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
-        ).copy()
+        )
 
     def build_empty_column(self, name: str, table: SQLTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
         return SQLiteColumn(
