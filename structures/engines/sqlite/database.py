@@ -3,13 +3,13 @@ from typing import Self, List, Optional, Dict, Tuple
 
 from helpers.logger import logger
 
-from engines.structures import merge_original_current
-from engines.structures.context import LOG_QUERY
-from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines import merge_original_current
+from structures.engines.context import LOG_QUERY
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 
-from engines.structures.sqlite.builder import SQLiteColumnBuilder
+from structures.engines.sqlite.builder import SQLiteColumnBuilder
 
-from engines.structures.sqlite.indextype import SQLiteIndexType
+from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
 @dataclasses.dataclass

@@ -9,9 +9,9 @@ from icons import BitmapList
 from helpers.logger import logger
 from helpers.observables import ObservableList
 
-from engines.structures.datatype import StandardDataType
-from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
-from engines.structures.indextype import SQLIndexType, StandardIndexType
+from structures.engines.datatype import StandardDataType
+from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
+from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 LOG_QUERY: ObservableList[str] = ObservableList()
 

@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from engines.structures.context import AbstractColumnBuilder
+from structures.engines.context import AbstractColumnBuilder
 
 class SQLiteColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(primary_key)s", "%(auto_increment)s", "%(nullable)s", "%(unique)s", "%(check)s", "%(default)s", "%(collate)s", "%(generated)s", "%(references)s"]

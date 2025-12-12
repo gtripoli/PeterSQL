@@ -1,16 +1,18 @@
-from typing import List
+from typing import List, Optional
 
 import wx
 import wx.dataview
 
-from engines.structures import merge_original_current
+from structures.engines import merge_original_current
+from helpers.logger import logger
 from helpers.observables import Loader
 from icons import BitmapList
+from windows import TableForeignKeysDataViewCtrl
 
 from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, BaseDataViewIndexListModel, CURRENT_SESSION
 from windows.main.table import NEW_TABLE
 
-from engines.structures.database import SQLForeignKey, SQLTable
+from structures.engines.database import SQLForeignKey, SQLTable
 
 
 class TableForeignKeyModel(BaseDataViewIndexListModel):
@@ -24,7 +26,10 @@ class TableForeignKeyModel(BaseDataViewIndexListModel):
         if col == 0:
             return wx.dataview.DataViewIconText(fk.name, BitmapList.KEY_FOREIGN)
         elif col == 1:
-            return ",".join(fk.columns)
+            try :
+                return ",".join(fk.columns)
+            except Exception as  ex:
+                print(ex)
         elif col == 2:
             return fk.reference_table
         elif col == 3:
@@ -59,17 +64,16 @@ class TableForeignKeyModel(BaseDataViewIndexListModel):
         if new_fk.name == "" and len(new_fk.columns) > 0 and new_fk.reference_table != "" and len(new_fk.reference_columns) > 0:
             table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
             new_fk.name = f"fk_{table.name}_{'_'.join(new_fk.columns)}-{new_fk.reference_table}_{'_'.join(new_fk.reference_columns)}"
-            # self.ValueChanged(self.GetItem(row), 0)
 
         if new_fk != org_fk:
             self.set_data_by_row(row, new_fk)
-            self.ValueChanged(self.GetItem(row), col)
+            self.ItemChanged(self.GetItem(row))
 
         return True
 
 
 class TableForeignKeyController:
-    def __init__(self, list_ctrl_foreign_key: wx.dataview.DataViewCtrl):
+    def __init__(self, list_ctrl_foreign_key: TableForeignKeysDataViewCtrl):
         self.list_ctrl_foreign_key = list_ctrl_foreign_key
 
         self.model = TableForeignKeyModel(6)
@@ -84,15 +88,15 @@ class TableForeignKeyController:
         CURRENT_TABLE.subscribe(self._load_table)
         NEW_TABLE.subscribe(self._load_table)
 
-    def _do_edit(self, item, column_index: int = 1):
-        column = self.list_ctrl_foreign_key.GetColumn(column_index)
-        self.list_ctrl_foreign_key.edit_item(item, column)
-
     def _load_table(self, table: SQLTable):
         with Loader.cursor_wait():
             self.model.clear()
             if table := NEW_TABLE.get_value() or CURRENT_TABLE.get_value():
                 self.model.set_observable(table.foreign_keys)
+
+    def _do_edit(self, item, column_index: int = 1):
+        column = self.list_ctrl_foreign_key.GetColumn(column_index)
+        self.list_ctrl_foreign_key.edit_item(item, column)
 
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
@@ -106,7 +110,7 @@ class TableForeignKeyController:
         event.Skip()
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
-        print("#" * 10, "ON FOREIGN KEY EDITING DONE", "#" * 10)
+        logger.debug(f"{'#' * 10} ON FOREIGN KEY EDITING DONE {'#' * 10}")
 
         item = event.GetItem()
 
@@ -128,7 +132,7 @@ class TableForeignKeyController:
 
         event.Skip()
 
-    def on_foreign_key_insert(self):
+    def on_foreign_key_insert(self, event : wx.Event):
         session = CURRENT_SESSION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
@@ -148,7 +152,7 @@ class TableForeignKeyController:
 
         self._do_edit(new_empty_item, 1)
 
-    def on_foreign_key_delete(self):
+    def on_foreign_key_delete(self, event : wx.Event):
         selected = self.list_ctrl_foreign_key.GetSelection()
         if not selected.IsOk():
             return
@@ -162,7 +166,7 @@ class TableForeignKeyController:
 
             NEW_TABLE.set_value(table)
 
-    def on_foreign_key_clear(self):
+    def on_foreign_key_clear(self, event : wx.Event):
         table = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
         self.model.clear()

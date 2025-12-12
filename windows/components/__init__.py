@@ -1,6 +1,9 @@
+from typing import Any, Callable, List, Optional, Self
+
 import wx
 import wx.dataview
-from typing import Any, Self, Callable, List, Optional
+
+from helpers.logger import logger
 
 
 class Validator:
@@ -81,12 +84,11 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
         return True
 
     def StartEditing(self, item, labelRect):
-        print("StartEditing")
-        print(item, labelRect)
+        logger.debug("StartEditing")
         return super().StartEditing(item, labelRect)
 
     def Activate(self, cell, model, item, col):
-        print("Activate")
+        logger.debug("Activate")
         return super().Activate(cell, model, item, col)
 
     def update_column_width(self):
@@ -126,3 +128,142 @@ class BaseTextRenderer(BaseDataViewCustomRenderer):
                 return
 
         event.Skip()
+
+
+class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def finish_editing(self, current_column):
+        if current_column := self.CurrentColumn:
+            current_column.GetRenderer().FinishEditing()
+
+    def _on_char_hook(self, event: wx.KeyEvent):
+        key_code = event.GetKeyCode()
+
+        item = self.GetSelection()
+
+        if not item.IsOk():
+            event.Skip()
+            return
+
+        logger.debug(f"BaseDataViewCtrl._on_char_hook key_code={key_code}")
+        if key_code not in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_TAB, wx.WXK_ESCAPE):
+            event.Skip()
+            return
+
+        current_column = self.CurrentColumn
+
+        current_column_render = current_column.GetRenderer()
+        current_column_mode = current_column_render.GetMode()
+        current_model_column = current_column.GetModelColumn()
+
+        self.finish_editing(current_column)
+
+        navigable_columns = [
+            c.ModelColumn
+            for c in self.GetColumns()
+            if c.HasFlag(wx.dataview.DATAVIEW_CELL_EDITABLE | wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
+        ]
+
+        if key_code == wx.WXK_TAB:
+            shift_down = event.ShiftDown()
+
+            next_column_model = current_model_column + (-1 if shift_down else 1)
+
+            next_column = self.GetColumn(next_column_model)
+
+            if min(navigable_columns) < next_column_model > max(navigable_columns):
+                wx.Bell()
+            else:
+                self._current_column = next_column_model
+
+                self.edit_item(item, next_column)
+
+        event.Skip()
+
+    def edit_item(self, item, column):
+        """Smart edit/activate method that handles both editable and activatable cells."""
+        renderer = column.GetRenderer()
+        mode = renderer.GetMode()
+
+        if mode == wx.dataview.DATAVIEW_CELL_ACTIVATABLE:
+            # For activatable cells, activate programmatically
+            rect = self.GetItemRect(item, column)
+            rect.y -= int(self.CharHeight + (self.CharHeight / 3))
+            try:
+                renderer.StartEditing(item, rect)
+                renderer.ActivateCell(rect, self.GetModel(), item, column.GetModelColumn(), None)
+            except Exception as ex:
+                logger.error(f"Error activating cell: {ex}", exc_info=True)
+        else:
+            # For editable cells, use EditItem
+            wx.CallAfter(self.EditItem, item, column)
+
+    def calculate_column_width(self, text, col=None):
+        w = 0
+        cw = 0
+
+        if view := self.GetParent():
+            dc = wx.ClientDC(view)
+            w, h = dc.GetTextExtent(str(text))
+            if col:
+                cw = self.GetCurrentColumn().GetWidth()
+
+        return max(cw, w + 20)
+
+
+class BasePopup(wx.PopupTransientWindow):
+    popup_size: wx.Size
+    column_width: int = 100
+    default_value: Optional[str] = None
+
+    # on_open: Callable[..., bool] = None
+    on_dismiss: Callable[..., bool]
+
+    def __init__(self, parent):
+        super().__init__(parent, flags=wx.BORDER_NONE)
+        self._value = None
+        self._initial = None
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetSizer(self.sizer)
+
+        # self.Bind(wx.EVT_CLOSE, self.close)
+
+    def get_value(self):
+        return self._value
+
+    def set_value(self, value):
+        self._value = value
+
+        return self
+
+    def get_initial(self):
+        return self._initial
+
+    def open(self, value: Any, position: wx.Point) -> Self:
+        self._value = value
+        self._initial = value
+
+        self.SetPosition(position)
+        self.SetMinSize(self.popup_size)
+        self.SetMaxSize(self.popup_size)
+
+        self.Layout()
+        self.sizer.Fit(self)
+        self.Fit()
+
+        wx.CallAfter(self.Popup)
+
+        return self
+
+    def Dismiss(self):
+        if hasattr(self, 'on_dismiss') and self.on_dismiss:
+            self.on_dismiss()
+
+        super().Dismiss()

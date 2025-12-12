@@ -24,5 +24,3 @@ square.paste(img, offset)
 # Salva in più risoluzioni per compatibilità Windows / wxWidgets
 sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 square.save(out_path, format="ICO", sizes=sizes)
-
-print(f"✅ Icona salvata in: {out_path}")

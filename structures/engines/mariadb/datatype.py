@@ -1,4 +1,4 @@
-from engines.structures.datatype import SQLDataType, StandardDataType, DataTypeCategory, DataTypeFormat
+from structures.engines.datatype import SQLDataType, StandardDataType, DataTypeCategory, DataTypeFormat
 
 
 class MariaDBDataType(StandardDataType):

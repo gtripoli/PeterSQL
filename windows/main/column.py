@@ -3,19 +3,21 @@ from typing import List, Optional, Dict, Any
 import wx
 import wx.dataview
 
+from helpers.logger import logger
 from icons import combine_bitmaps
 
 from helpers.observables import Loader
 
-from engines.session import Session
-from engines.structures.sqlite import ColumnField
+from structures.session import Session
+from structures.engines.sqlite import ColumnField
+from windows import TableColumnsDataViewCtrl
 
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, BaseDataViewIndexListModel, CURRENT_COLUMN
 from windows.main.table import NEW_TABLE
 
-from engines.structures import merge_original_current
-from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
-from engines.structures.indextype import SQLIndexType
+from structures.engines import merge_original_current
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
+from structures.engines.indextype import SQLIndexType
 
 
 class ColumnModel(BaseDataViewIndexListModel):
@@ -73,7 +75,7 @@ class ColumnModel(BaseDataViewIndexListModel):
 
             self.update_columns(col, row)
 
-            self.ValueChanged(item, col)
+            self.ItemChanged(item)
 
         return True
 
@@ -88,7 +90,7 @@ class ColumnModel(BaseDataViewIndexListModel):
             attr.SetBold(True)
 
         if column_field_attr == "#":
-            attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+            attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
 
         if column_field_attr == "name" and not getattr(column, column_field_attr, "").strip():
             attr.SetColour(wx.Colour(255, 0, 0))
@@ -102,13 +104,11 @@ class ColumnModel(BaseDataViewIndexListModel):
         if column_field_attr == "length_scale_set":
             datatype = column.datatype
             if not any([datatype.has_length, datatype.has_precision, datatype.has_scale, datatype.has_set]):
-                attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+                attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
 
         return True
 
     def update_columns(self, col, row):
-        item = self.GetItem(row)
-
         column: SQLColumn = self.get_data_by_row(row)
 
         column_field = self.MAP_COLUMN_FIELDS[col]
@@ -137,13 +137,10 @@ class ColumnModel(BaseDataViewIndexListModel):
         if column_field_attr == "default" and column.default == "NULL" and not column.is_nullable:
             column.is_nullable = True
 
-        self.ItemChanged(item)
-
-
 class TableColumnsController:
     app = wx.GetApp()
 
-    def __init__(self, list_ctrl_table_columns: wx.dataview.DataViewCtrl):
+    def __init__(self, list_ctrl_table_columns: TableColumnsDataViewCtrl):
         self.list_ctrl_table_columns = list_ctrl_table_columns
 
         self.list_ctrl_table_columns.insert_column_index = self.insert_column_index
@@ -191,7 +188,7 @@ class TableColumnsController:
         event.Skip()
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
-        print("#" * 10, "ON COLUMN EDITING DONE", "#" * 10)
+        logger.debug(f"{'#' * 10} ON COLUMN EDITING DONE {'#' * 10}")
 
         item = event.GetItem()
 
@@ -201,7 +198,7 @@ class TableColumnsController:
 
         current_columns: List[SQLColumn] = self.model.data
 
-        table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value()).copy()
+        table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
         database: SQLDatabase = CURRENT_DATABASE.get_value()
         original_table = next((t for t in list(database.tables) if t.id == table.id), None)
@@ -234,7 +231,7 @@ class TableColumnsController:
 
         event.Skip()
 
-    def on_column_insert(self):
+    def on_column_insert(self, event: wx.Event):
         session = CURRENT_SESSION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
@@ -249,6 +246,7 @@ class TableColumnsController:
             current_column: SQLColumn = self.model.get_data_by_item(selected)
             datatype = current_column.datatype
             index = table.columns.index(current_column) + 1
+            default_values["after"] = current_column.name
 
         if datatype.has_length:
             default_values['length'] = datatype.default_length
@@ -274,22 +272,20 @@ class TableColumnsController:
 
         self._do_edit(new_empty_item, 1)
 
-    def on_column_delete(self):
-        table = CURRENT_TABLE.get_value()
+    def on_column_delete(self, event: wx.Event):
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
         if not selected.IsOk():
             return
 
-        row = self.model.GetRow(selected)
-
-        column: SQLColumn = self.model.get_data_by_row(row)
+        column: SQLColumn = self.model.get_data_by_item(selected)
 
         table.columns.remove(column)
 
         NEW_TABLE.set_value(table)
 
-    def on_column_move_up(self):
+    def on_column_move_up(self, event: wx.Event):
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
@@ -303,12 +299,11 @@ class TableColumnsController:
 
         table.columns.move_up(selected_column)
 
-
         self.list_ctrl_table_columns.Select(self.model.GetItem(previous_row))
 
         CURRENT_COLUMN.set_value(None).set_value(selected_column)
 
-    def on_column_move_down(self):
+    def on_column_move_down(self, event: wx.Event):
         table = CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
@@ -322,9 +317,6 @@ class TableColumnsController:
 
         table.columns.move_down(selected_column)
 
-        self.model.RowChanged(selected_row)
-        self.model.RowChanged(forward_row)
-
         self.list_ctrl_table_columns.Select(self.model.GetItem(forward_row))
 
         CURRENT_COLUMN.set_value(None).set_value(selected_column)
@@ -336,7 +328,7 @@ class TableColumnsController:
 
         session: Session = CURRENT_SESSION.get_value()
 
-        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+        table = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
         row = self.model.GetRow(selected)
         col = self.model.data[row]
@@ -359,7 +351,7 @@ class TableColumnsController:
         if not selected.IsOk():
             return
 
-        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+        table = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
         row = self.model.GetRow(selected)
         col = self.model.data[row]

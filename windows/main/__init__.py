@@ -7,8 +7,8 @@ import wx.dataview
 
 from helpers.logger import logger
 from helpers.observables import Observable, ObservableList, ObservableLazyList, CallbackEvent
-from engines.session import Session
-from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLForeignKey, SQLIndex, SQLRecord, SQLTrigger, SQLView
+from structures.session import Session
+from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLForeignKey, SQLIndex, SQLRecord, SQLTrigger, SQLView
 
 SESSIONS: ObservableList[Session] = ObservableList()
 
@@ -147,8 +147,6 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         return item
 
     def _remove(self, data: Any) -> wx.dataview.DataViewItem:
-        logger.debug(f"{self.__class__.__name__}._remove: {data}")
-
         AbstractBaseDataModel.remove(self, data)
 
         item = self.ObjectToItem(data)
@@ -214,9 +212,7 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
         return True
 
     def _move(self, data: Any, current : int, future : int) -> bool:
-        index = AbstractBaseDataModel.move(self, data)
-
-        self.RowChanged(index)
+        AbstractBaseDataModel.move(self, data, current, future)
 
         self.RowChanged(current)
         self.RowChanged(future)

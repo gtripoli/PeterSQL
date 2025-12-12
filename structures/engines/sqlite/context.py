@@ -2,17 +2,17 @@ import re
 import sqlite3
 from typing import Optional, List, Dict, Any
 
-from engines.structures.indextype import SQLIndexType
+from structures.engines.indextype import SQLIndexType
 from helpers.logger import logger
 
-from engines.structures.context import LOG_QUERY, AbstractContext
-from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
-from engines.structures.datatype import SQLDataType
+from structures.engines.context import LOG_QUERY, AbstractContext
+from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
+from structures.engines.datatype import SQLDataType
 
-from engines.structures.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, ATTRIBUTES_PATTERN
-from engines.structures.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
-from engines.structures.sqlite.datatype import SQLiteDataType
-from engines.structures.sqlite.indextype import SQLiteIndexType
+from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, ATTRIBUTES_PATTERN
+from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
+from structures.engines.sqlite.datatype import SQLiteDataType
+from structures.engines.sqlite.indextype import SQLiteIndexType
 from icons import BitmapList
 
 
@@ -213,7 +213,6 @@ class SQLiteContext(AbstractContext):
             results.append(
                 SQLiteIndex(
                     id=0,
-                    pos=0 + 1,
                     name="PRIMARY KEY",
                     type=SQLiteIndexType.PRIMARY,
                     columns=[col['name'] for col in pk_index],
@@ -271,7 +270,6 @@ class SQLiteContext(AbstractContext):
             results.append(
                 SQLiteIndex(
                     id=id,
-                    pos=id + 1,
                     name=name,
                     type=index_type,
                     columns=columns,
@@ -321,7 +319,7 @@ class SQLiteContext(AbstractContext):
 
     def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLiteRecord]:
         LOG_QUERY.append(f"/* get_records for table={table.name} */")
-        if table is None or table.is_new():
+        if table is None or table.is_new:
             return []
 
         query = f"SELECT * FROM `{table.name}` LIMIT {limit} OFFSET {offset}"
@@ -332,7 +330,7 @@ class SQLiteContext(AbstractContext):
             results.append(
                 SQLiteRecord(id=i, table=table, values=dict(record))
             )
-        logger.debug(f"get records for table={table.name} results={results}")
+        logger.debug(f"get records for table={table.name}")
         return results
 
     def build_empty_table(self, database: SQLDatabase):
@@ -359,7 +357,6 @@ class SQLiteContext(AbstractContext):
     def build_empty_index(self, name: str, table: SQLiteTable, type: SQLIndexType, columns: List[str]) -> SQLiteIndex:
         return SQLiteIndex(
             id=SQLiteContext.get_temporary_id(table.indexes),
-            pos=-1,
             name=name,
             type=type,
             columns=columns,

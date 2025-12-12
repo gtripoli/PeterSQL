@@ -1,19 +1,20 @@
 import abc
+import copy
 import dataclasses
 import uuid
-from datetime import datetime
 
 from typing import Optional, Callable, Literal, List, Any, Self, Dict
 
 import wx
 
 from icons import BitmapList
-from helpers.logger import logger
 from helpers.observables import ObservableLazyList
 
-from engines.structures.datatype import SQLDataType
-from engines.structures.indextype import SQLIndexType
-from engines.structures.sqlite.indextype import SQLiteIndexType
+from structures.engines.datatype import SQLDataType
+from structures.engines.indextype import SQLIndexType
+from structures.engines.sqlite.indextype import SQLiteIndexType
+
+
 
 
 @dataclasses.dataclass
@@ -82,49 +83,67 @@ class SQLTable(abc.ABC):
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
         self.records = ObservableLazyList(lambda: self.get_records_handler(self))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLTable):
             return False
 
-        print("== SQLTable", {
-            field.name: (getattr(self, field.name), getattr(other, field.name))
-            for field in dataclasses.fields(self)
-            if field.compare and not isinstance(field, ObservableLazyList)
-        })
+        # print("== SQLTable", {
+        #     field.name: (getattr(self, field.name), getattr(other, field.name))
+        #     for field in dataclasses.fields(self)
+        #     if field.compare and not isinstance(field, ObservableLazyList)
+        # })
 
-        if not all([
-            getattr(self, field.name) == getattr(other, field.name)
-            for field in dataclasses.fields(self)
-            if field.compare and not isinstance(field, ObservableLazyList)
-        ]):
+        if not self.compare_fields(other):
             return False
 
         for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
-            l1 = getattr(self, observable_lazy_list)
-            l2 = getattr(other, observable_lazy_list)
-
-            if len(l1) != len(l2):
+            if not self._compare_observable_lazy_list(other, observable_lazy_list):
                 return False
-
-            for o1, o2 in zip(l1, l2):
-                if o1 != o2: return False
 
         return True
 
-    def copy(self):
-        cls = self.__class__
-        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
-        new_cls = cls(**field_values)
+    def _compare_observable_lazy_list(self, other: Self, name_observable_lazy_list: str):
+        l1 = getattr(self, name_observable_lazy_list)
+        l2 = getattr(other, name_observable_lazy_list)
 
-        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
-            o1: ObservableLazyList = getattr(self, observable_lazy_list)
-            o2: ObservableLazyList = getattr(new_cls, observable_lazy_list)
-            if getattr(o1, '_loaded', False):
-                o2.set_value(o1.get_value())
-                o2._callbacks = o1._callbacks
+        if len(l1) != len(l2):
+            return False
 
-        return new_cls
+        return not all([o1 != o2 for o1, o2 in zip(l1, l2)])
 
+    def compare_fields(self, other: Self):
+        return all([
+            getattr(self, field.name) == getattr(other, field.name)
+            for field in dataclasses.fields(self)
+            if field.compare and not isinstance(field, ObservableLazyList)
+        ])
+
+    def compare_columns(self, other: Self):
+        return self._compare_observable_lazy_list(other, "columns")
+
+    def compare_indexes(self, other: Self):
+        return self._compare_observable_lazy_list(other, "indexes")
+
+    def compare_foreign_keys(self, other: Self):
+        return self._compare_observable_lazy_list(other, "foreign_keys")
+
+    @abc.abstractmethod
+    def rename(self, table: 'SQLTable', new_name: str):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def create(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self):
+        raise NotImplementedError
+
+    @property
     def is_valid(self) -> bool:
         if not self.name.strip():
             return False
@@ -152,25 +171,13 @@ class SQLTable(abc.ABC):
 
         return True
 
+    @property
+    def is_new(self):
+        return self.id <= -1
+
     @staticmethod
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
-
-    @abc.abstractmethod
-    def rename(self, table: 'SQLTable', new_name: str):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def create(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def alter(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def drop(self):
-        raise NotImplementedError
 
     def get_identifier_indexes(self) -> List['SQLIndex']:
         identifier_indexes = []
@@ -180,17 +187,39 @@ class SQLTable(abc.ABC):
 
         return identifier_indexes
 
-    def is_new(self):
-        return self.id <= -1
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        new_cls = cls(**field_values)
+
+        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
+            o1: ObservableLazyList = getattr(self, observable_lazy_list)
+            o2: ObservableLazyList = getattr(new_cls, observable_lazy_list)
+
+            if not o1.is_loaded:
+                o1.refresh()
+
+            o2._value = copy.copy(o1._value)
+            o2._loaded = True
+            o2._callbacks = o1._callbacks
+
+        return new_cls
+
+    def refresh(self):
+        original_table = next((t for t in self.database.tables if t.id == self.id), None)
+
+        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
+            if not self._compare_observable_lazy_list(original_table, observable_lazy_list):
+                getattr(original_table, observable_lazy_list).refresh()
 
     def save(self) -> Optional[bool]:
-        if self.is_new():
+        if is_new := self.is_new:
             method = self.create
         else:
             method = self.alter
 
         if result := method():
-            self.database.tables.refresh()
+            self.refresh()
 
         return result
 
@@ -224,11 +253,13 @@ class SQLColumn(abc.ABC):
             if not field.compare:
                 continue
 
-            logger.debug(f"{field.name}: {getattr(self, field.name)} - {getattr(other, field.name)}: {getattr(self, field.name) != getattr(other, field.name)}")
             if getattr(self, field.name) != getattr(other, field.name):
                 return False
 
         return True
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(id={self.id}, name={self.name}, datatype={self.datatype}, is_nullable={self.is_nullable})"
 
     @property
     def is_primary_key(self):
@@ -338,7 +369,6 @@ class SQLColumn(abc.ABC):
 @dataclasses.dataclass(eq=False)
 class SQLIndex(abc.ABC):
     id: int
-    pos: int
     name: str
     type: SQLIndexType
     columns: List[str]
@@ -358,6 +388,9 @@ class SQLIndex(abc.ABC):
                 return False
 
         return True
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(id={self.id}, name={self.name}, type={self.type}, columns={self.columns})"
 
     @property
     def is_valid(self):
@@ -396,6 +429,9 @@ class SQLForeignKey(abc.ABC):
 
         return True
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(id={self.id}, name={self.name}, columns={self.columns}, reference_table={self.reference_table}, reference_columns={self.reference_columns})"
+
     @property
     def is_valid(self):
         return all([self.name, len(self.columns), self.reference_table, len(self.reference_columns)])
@@ -411,6 +447,15 @@ class SQLRecord(abc.ABC):
     id: int
     table: 'SQLTable'
     values: Dict[str, str] = dataclasses.field(default_factory=dict)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SQLRecord):
+            return False
+
+        return self.values == other.values
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(id={self.id}, table={self.table.name}, values={self.values})"
 
     def is_new(self) -> bool:
         return self.id <= -1
@@ -436,12 +481,6 @@ class SQLRecord(abc.ABC):
                 return False
 
         return True
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SQLRecord):
-            return False
-
-        return self.values == other.values
 
     def _get_identifier_columns(self) -> Dict[str, str]:
         identifier_indexes = self.table.get_identifier_indexes()

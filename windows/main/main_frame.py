@@ -14,9 +14,9 @@ import wx.lib.wordwrap
 from gettext import gettext as _
 from helpers.observables import CallbackEvent
 
-from engines.session import Session, SessionEngine
-from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
-from engines.structures.context import LOG_QUERY
+from structures.session import Session, SessionEngine
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines.context import LOG_QUERY
 
 from windows import MainFrameView
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
@@ -62,7 +62,7 @@ class MainFrameController(MainFrameView):
         self.memory_timer.Start(5000)  # Update every 5 seconds
 
     def _setup_query_logs(self):
-        for name_styled_text_ctrl in ["sql_logs_query", "sql_view"]:
+        for name_styled_text_ctrl in ["sql_query_logs", "sql_view", "sql_query_filters"]:
             styled_text_ctrl = getattr(self, name_styled_text_ctrl)
 
             font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
@@ -148,8 +148,8 @@ class MainFrameController(MainFrameView):
         # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
-        self.sql_logs_query.AppendText(f"{text}\n")
-        self.sql_logs_query.GotoLine(self.sql_logs_query.GetLineCount() - 1)
+        self.sql_query_logs.AppendText(f"{text}\n")
+        self.sql_query_logs.GotoLine(self.sql_query_logs.GetLineCount() - 1)
 
     def _toggle_panel(self, index: int, visible: bool):
         panel = self.MainFrameNotebook.GetPage(index)
@@ -162,7 +162,6 @@ class MainFrameController(MainFrameView):
 
     def _select_tree_item(self, **filters):
         if table_item := self.controller_tree_sessions.find_by_data(**filters):
-            print("select", table_item)
             tree = self.controller_tree_sessions.tree_ctrl_sessions
             tree.UnselectAll()
 
@@ -216,7 +215,6 @@ class MainFrameController(MainFrameView):
         sm.Show()
 
     def toggle_panel(self, current: Optional[Union[Session, SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
-
         current_session = CURRENT_SESSION.get_value()
         current_database = CURRENT_DATABASE.get_value()
         current_table = CURRENT_TABLE.get_value()
@@ -343,7 +341,7 @@ class MainFrameController(MainFrameView):
         self.btn_delete_table.Enable(current is not None)
 
     def _on_new_table(self, table: SQLTable):
-        self.btn_apply_table.Enable(bool(table is not None and table.is_valid()))
+        self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
         self.btn_cancel_table.Enable(bool(table is not None))
 
     def on_insert_table(self, event):
@@ -370,7 +368,7 @@ class MainFrameController(MainFrameView):
         if session is None or database is None or table is None:
             return
 
-        if not table.is_valid():
+        if not table.is_valid:
             return
 
         try:
@@ -382,10 +380,16 @@ class MainFrameController(MainFrameView):
         else:
             NEW_TABLE.set_value(None)
 
-            if updated_table := next((t for t in list(database.tables) if t.id == table.id), None):
-                item = self.controller_tree_sessions.model.ObjectToItem(updated_table)
+            database.tables.refresh()
 
-                self.list_ctrl_table_columns.Select(item)
+            if table := next((t for t in database.tables if t.id == table.id), None):
+                CURRENT_TABLE.set_value(None).set_value(table.copy())
+                # item = self.controller_tree_sessions.model.ObjectToItem(updated_table)
+                #
+                # self.tree_ctrl_sessions.UnselectAll()
+                # self.tree_ctrl_sessions.Select(item)
+
+                # self.list_ctrl_table_columns.Select(item)
 
     def on_cancel_table(self, event: wx.Event):
         if new_table := NEW_TABLE.get_value():
@@ -423,7 +427,7 @@ class MainFrameController(MainFrameView):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = CURRENT_TABLE.get_value()
-        if session.context.drop_table(database, table):
+        if table.drop():
             CURRENT_TABLE.set_value(None)
             # self._refresh_database()
 
@@ -441,23 +445,21 @@ class MainFrameController(MainFrameView):
         row = self.controller_list_table_columns.model.GetRow(selected)
         total_rows = len(self.controller_list_table_columns.model.data) - 1
 
-        print("row, total_rows", row, total_rows)
-
         self.btn_delete_column.Enable(column is not None)
         self.btn_move_up_column.Enable(column is not None and row > 0)
         self.btn_move_down_column.Enable(column is not None and row < total_rows)
 
-    def on_insert_column(self, event):
-        self.controller_list_table_columns.on_column_insert()
+    def on_insert_column(self, event: wx.Event):
+        self.controller_list_table_columns.on_column_insert(event)
 
-    def on_delete_column(self, event):
-        self.controller_list_table_columns.on_column_delete()
+    def on_delete_column(self, event: wx.Event):
+        self.controller_list_table_columns.on_column_delete(event)
 
-    def on_move_up_column(self, event):
-        self.controller_list_table_columns.on_column_move_up()
+    def on_move_up_column(self, event: wx.Event):
+        self.controller_list_table_columns.on_column_move_up(event)
 
-    def on_move_down_column(self, event):
-        self.controller_list_table_columns.on_column_move_down()
+    def on_move_down_column(self, event: wx.Event):
+        self.controller_list_table_columns.on_column_move_down(event)
 
     # INDEXES
     def _on_current_index(self, index: SQLIndex):
@@ -473,14 +475,14 @@ class MainFrameController(MainFrameView):
     def _on_current_foreign_key(self, foreign_key: SQLForeignKey):
         self.btn_delete_foreign_key.Enable(foreign_key is not None)
 
-    def on_insert_foreign_key(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_insert()
+    def on_insert_foreign_key(self, event: wx.Event):
+        self.controller_list_table_foreign_key.on_foreign_key_insert(event)
 
-    def on_delete_foreign_key(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_delete()
+    def on_delete_foreign_key(self, event: wx.Event):
+        self.controller_list_table_foreign_key.on_foreign_key_delete(event)
 
-    def on_clear_foreign_key(self, event):
-        self.controller_list_table_foreign_key.on_foreign_key_clear()
+    def on_clear_foreign_key(self, event: wx.Event):
+        self.controller_list_table_foreign_key.on_foreign_key_clear(event)
 
     # RECORDS
     def _on_auto_apply(self, value: bool):
@@ -490,8 +492,11 @@ class MainFrameController(MainFrameView):
     def on_auto_apply(self, event):
         AUTO_APPLY.set_value(self.chb_auto_apply.GetValue())
 
+    def on_collapsible_pane_changed(self, event):
+        self.panel_records.Layout()
+        event.Skip()
+
     def _on_current_records(self, records: List[SQLRecord]):
-        print("_on_current_records", records)
         self.btn_duplicate_record.Enable(len(records) == 1)
         self.btn_delete_record.Enable(len(records) > 0)
 

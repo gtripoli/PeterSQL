@@ -1,69 +1,18 @@
 import datetime
-from typing import List, Self, Any, Dict, Optional, Callable
+from typing import List, Self, Any, Dict
 
 import wx
 import wx.adv
 
 from gettext import gettext as _
 
+from helpers.logger import logger
+
 from windows.main import CURRENT_SESSION
+from windows.components import BasePopup
 
-from engines.session import Session
-from engines.structures.datatype import SQLDataType, DataTypeCategory, StandardDataType
-
-
-class BasePopup(wx.PopupTransientWindow):
-    popup_size: wx.Size
-    column_width: int = 100
-    default_value: Optional[str] = None
-
-    # on_open: Callable[..., bool] = None
-    on_dismiss: Callable[..., bool]
-
-    def __init__(self, parent):
-        super().__init__(parent, flags=wx.BORDER_NONE)
-        self._value = None
-        self._initial = None
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-
-        self.SetWindowStyle(wx.TRANSPARENT_WINDOW)
-        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
-        self.SetSizer(self.sizer)
-
-        # self.Bind(wx.EVT_CLOSE, self.close)
-
-    def get_value(self):
-        return self._value
-
-    def set_value(self, value):
-        self._value = value
-
-        return self
-
-    def get_initial(self):
-        return self._initial
-
-    def open(self, value: Any, position: wx.Point) -> Self:
-        self._value = value
-        self._initial = value
-
-        self.SetPosition(position)
-        self.SetMinSize(self.popup_size)
-        self.SetMaxSize(self.popup_size)
-
-        self.Layout()
-        self.sizer.Fit(self)
-        self.Fit()
-
-        wx.CallAfter(self.Popup)
-
-        return self
-
-    def Dismiss(self):
-        if hasattr(self, 'on_dismiss') and self.on_dismiss:
-            self.on_dismiss()
-
-        super().Dismiss()
+from structures.session import Session
+from structures.engines.datatype import SQLDataType, DataTypeCategory, StandardDataType
 
 
 class PopupColumnDefault(BasePopup):
@@ -120,7 +69,6 @@ class PopupColumnDefault(BasePopup):
         elif self.rb_null.HasFocus():
             self.rb_auto_increment.SetFocus()
 
-        print(self.rb_no_default.HasFocus(), self.rb_expression.HasFocus(), self.rb_null.HasFocus(), self.rb_auto_increment.HasFocus())
         # elif self.rb_auto_increment.HasFocus() :
         #     self.rb_no_default.SetFocus()
 
@@ -263,15 +211,15 @@ class PopupCheckList(BasePopup):
 
         return self
 
-    def _on_char_hook(self, event : wx.KeyEvent = None):
+    def _on_char_hook(self, event: wx.KeyEvent = None):
         key_code = event.GetKeyCode()
-        print(key_code)
+
         if key_code == wx.WXK_ESCAPE:
             self._on_select(event)
             self.Dismiss()
 
         if key_code == wx.WXK_RETURN:
-            print("PopupCheckList._on_char_hook", key_code)
+            logger.debug("PopupCheckList._on_char_hook", key_code)
 
             self._on_select(event)
             self.Dismiss()
@@ -311,7 +259,6 @@ class PopupCheckList(BasePopup):
 
         if self.check_list_box.GetCount() > 0:
             self.check_list_box.SetSelection(0)
-
 
         self.check_list_box.SetFocus()
 

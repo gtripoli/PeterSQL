@@ -1,18 +1,18 @@
-import copy
-
 import wx
 import wx.dataview
 
 from typing import Optional, List, Dict, Any, Callable, Union
-
 from gettext import gettext as _
 
+from icons import IconList, ImageList
+
+from helpers.logger import logger
 from helpers.bindings import AbstractModel
 from helpers.exceptions import ConnectionException
-from helpers.logger import logger
 from helpers.observables import Observable, debounce, Loader, CallbackEvent
-from icons import IconList, ImageList
-from engines.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+
+from structures.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+
 from windows import SessionManagerView
 from windows.main import CURRENT_SESSION, SESSIONS
 from windows.sessions.repository import SessionManagerRepository
@@ -23,18 +23,29 @@ NEW_SESSION: Observable[Session] = Observable()
 class SessionManagerModel(AbstractModel):
     def __init__(self):
         self.name = Observable()
-        self.engine = Observable(default=SessionEngine.MYSQL.value)
+        self.engine = Observable(initial=SessionEngine.MYSQL.value)
         self.hostname = Observable()
         self.username = Observable()
         self.password = Observable()
-        self.port = Observable(default=3306)
+        self.port = Observable(initial=3306)
         self.filename = Observable()
         self.comments = Observable()
+
+        self.ssh_tunnel_use = Observable(initial=False)
+        self.ssh_tunnel_executable = Observable(initial="ssh")
+        self.ssh_tunnel_hostname = Observable()
+        self.ssh_tunnel_port = Observable(initial=22)
+        self.ssh_tunnel_username = Observable()
+        self.ssh_tunnel_password = Observable()
+        self.ssh_tunnel_local_port = Observable(initial=3307)
 
         self.engine.subscribe(self._set_default_port)
 
         debounce(
-            self.name, self.engine, self.hostname, self.username, self.password, self.port, self.filename, self.comments,
+            self.name, self.engine, self.hostname, self.username, self.password, self.port,
+            self.filename, self.comments,
+            self.ssh_tunnel_use, self.ssh_tunnel_executable, self.ssh_tunnel_hostname,
+            self.ssh_tunnel_port, self.ssh_tunnel_username, self.ssh_tunnel_password, self.ssh_tunnel_local_port,
             callback=self.build_session
         )
 
@@ -50,16 +61,29 @@ class SessionManagerModel(AbstractModel):
                 self.port.set_value(3306)
 
     def clear(self, *args):
-        for field in [self.name, self.engine, self.hostname, self.username, self.password, self.port, self.filename, self.comments]:
-            field.set_value(None)
+        defaults = {
+            self.name: None,
+            self.engine: SessionEngine.MYSQL.value,
+            self.hostname: None, self.username: None, self.password: None, self.port: 3306,
+            self.filename: None,
+            self.comments: None,
+            self.ssh_tunnel_use: False, self.ssh_tunnel_executable: "ssh", self.ssh_tunnel_hostname: None,
+            self.ssh_tunnel_port: 22, self.ssh_tunnel_username: None, self.ssh_tunnel_password: None,
+            self.ssh_tunnel_local_port: 3307,
+        }
+
+        for observable, value in defaults.items():
+            observable.set_value(value)
 
     def populate(self, session: Session):
         if not session:
             return
 
         self.name.set_value(session.name)
+
         if session.engine is not None:
             self.engine.set_value(session.engine.value)
+
         self.comments.set_value(session.comments)
 
         if isinstance(session.configuration, CredentialsConfiguration):
@@ -71,12 +95,24 @@ class SessionManagerModel(AbstractModel):
         elif isinstance(session.configuration, SourceConfiguration):
             self.filename.set_value(session.configuration.filename)
 
+        if tunnel := session.ssh_tunnel:
+            self.ssh_tunnel_use.set_value(tunnel.enabled)
+            self.ssh_tunnel_executable.set_value(tunnel.executable)
+            self.ssh_tunnel_hostname.set_value(tunnel.hostname)
+            self.ssh_tunnel_port.set_value(tunnel.port)
+            self.ssh_tunnel_username.set_value(tunnel.username)
+            self.ssh_tunnel_password.set_value(tunnel.password)
+            self.ssh_tunnel_local_port.set_value(tunnel.local_port)
+        else:
+            self.ssh_tunnel_use.set_value(False)
+
     def build_session(self, *args):
         if any([self.name.is_empty, self.engine.is_empty]):
             return
 
         new_session = None
         session_engine = SessionEngine(self.engine.get_value())
+        ssh_tunnel = self._build_ssh_configuration()
 
         if (current_session := CURRENT_SESSION.get_value()) is None:
 
@@ -93,7 +129,8 @@ class SessionManagerModel(AbstractModel):
                         username=self.username.get_value(),
                         password=self.password.get_value(),
                         port=self.port.get_value()
-                    )
+                    ),
+                    ssh_tunnel=ssh_tunnel,
                 )
             elif self.engine.get_value() == SessionEngine.SQLITE.value and not self.filename.is_empty:
                 new_session = Session(
@@ -103,7 +140,8 @@ class SessionManagerModel(AbstractModel):
                     comments=self.comments.get_value(),
                     configuration=SourceConfiguration(
                         filename=self.filename.get_value()
-                    )
+                    ),
+                    ssh_tunnel=None,
                 )
         else:
             modified = current_session.copy()
@@ -122,6 +160,8 @@ class SessionManagerModel(AbstractModel):
                 modified.configuration = SourceConfiguration(
                     filename=self.filename.get_value()
                 )
+
+            modified.ssh_tunnel = ssh_tunnel
 
             if modified.is_valid() and modified == current_session:
                 return
@@ -246,8 +286,19 @@ class SessionManagerController(SessionManagerView):
         self.session_manager_model.bind_controls(
             name=self.name,
             engine=(self.engine, dict(initial=[engine.value for engine in SessionEngine])),
-            hostname=self.hostname, port=self.port, username=self.username, password=self.password,
-            filename=self.filename, comments=self.comments,
+            hostname=self.hostname,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            filename=self.filename,
+            comments=self.comments,
+            ssh_tunnel_use=self.ssh_tunnel_use,
+            ssh_tunnel_executable=self.ssh_tunnel_executable,
+            ssh_tunnel_hostname=self.ssh_tunnel_hostname,
+            ssh_tunnel_port=self.ssh_tunnel_port,
+            ssh_tunnel_username=self.ssh_tunnel_username,
+            ssh_tunnel_password=self.ssh_tunnel_password,
+            ssh_tunnel_local_port=self.ssh_tunnel_local_port,
         )
         self.session_manager_model.engine.subscribe(self._on_change_engine)
 
@@ -292,12 +343,11 @@ class SessionManagerController(SessionManagerView):
         self.btn_save.Enable(bool(session and session.is_valid()))
         self.btn_open.Enable(bool(session and session.is_valid()))
 
-
     def _on_delete_session(self, event):
         """Handle session deletion"""
         session = self.session_tree_ctrl.get_selected_session()
         if session:
-            if wx.MessageBox(f"Are you sure you want to delete session '{session.name}'?",
+            if wx.MessageBox(_(f"Are you sure you want to delete session '{session.name}'?"),
                              "Confirm Delete", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION) == wx.YES:
                 self.session_manager.remove_session(session)
                 self.session_tree_ctrl.remove_session(session)
@@ -411,6 +461,8 @@ class SessionManagerController(SessionManagerView):
     def verify_connection(self, session: Session):
         with Loader.cursor_wait():
             try:
+                if session.has_enabled_tunnel():
+                    SSHTunnelRunner(session).ensure()
                 session.context.connect(connect_timeout=5)
             except Exception as ex:
                 wx.MessageDialog(None,
@@ -418,7 +470,6 @@ class SessionManagerController(SessionManagerView):
                                  caption=_("Connection error"),
                                  style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
                 raise ConnectionException
-
 
     def on_exit(self, event):
         if not self._app.main_frame:

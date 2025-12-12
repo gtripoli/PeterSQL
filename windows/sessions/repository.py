@@ -2,7 +2,7 @@ import os
 import yaml
 from typing import List, Dict, Any, Optional, Union
 
-from engines.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+from structures.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
 
 WORKDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

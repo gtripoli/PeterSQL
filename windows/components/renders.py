@@ -2,14 +2,10 @@ import wx
 import wx.adv
 import wx.dataview
 
-from typing import Type, Optional, Callable, List
+from typing import Type, Optional, Callable
 
-from wx.dataview import DATAVIEW_CELL_EDITABLE, DVR_DEFAULT_ALIGNMENT
-
-from engines.structures.database import SQLForeignKey
 from windows.components import BaseDataViewCustomRenderer, BaseTextRenderer, Validator
 from windows.components.popup import BasePopup
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE
 
 
 class PopupRenderer(BaseDataViewCustomRenderer):
@@ -49,7 +45,6 @@ class PopupRenderer(BaseDataViewCustomRenderer):
             self._popup.popup_size = wx.Size(view.GetColumn(col).GetWidth(), -1)
 
         def _on_dismiss():
-            print("_on_dismiss")
             if self._popup is not None:
                 if str((new_value := self._popup.get_value())) != self._value:
                     self._value = new_value
@@ -68,7 +63,6 @@ class PopupRenderer(BaseDataViewCustomRenderer):
         return True
 
     def CancelEditing(self):
-        print("CancelEditing")
         if self._popup is not None:
             self._popup.Dismiss()
             self._popup = None
@@ -76,7 +70,6 @@ class PopupRenderer(BaseDataViewCustomRenderer):
         return True
 
     def FinishEditing(self):
-        print("FinishEditing")
         if self._popup is not None:
             self._popup.Dismiss()
             self._popup.Close()
@@ -94,7 +87,6 @@ class TextRenderer(BaseTextRenderer):
 
 
 class IntegerRenderer(BaseTextRenderer):
-
     def __init__(self, varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT):
         validators = [
             Validator(self.validate)
@@ -133,8 +125,6 @@ class FloatRenderer(TextRenderer):
 
 
 class DateTimeRenderer(BaseDataViewCustomRenderer):
-    """Renderer for datetime columns"""
-
     def __init__(self):
         super().__init__(varianttype="datetime", mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
 
@@ -171,8 +161,6 @@ class DateTimeRenderer(BaseDataViewCustomRenderer):
 
 
 class TimeRenderer(BaseDataViewCustomRenderer):
-    """Renderer for time columns"""
-
     def __init__(self):
         super().__init__(varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
 

@@ -3,12 +3,12 @@ from typing import Self, List, Optional, Dict, Tuple
 
 from helpers.logger import logger
 
-from engines.structures import merge_original_current
-from engines.structures.context import LOG_QUERY
-from engines.structures.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines import merge_original_current
+from structures.engines.context import LOG_QUERY
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 
-from engines.structures.mariadb.indextype import MariaDBIndexType
-from engines.structures.mariadb.builder import MariaDBColumnBuilder
+from structures.engines.mariadb.indextype import MariaDBIndexType
+from structures.engines.mariadb.builder import MariaDBColumnBuilder
 
 
 @dataclasses.dataclass
@@ -159,6 +159,7 @@ class MariaDBTable(SQLTable):
             logger.error(ex)
             raise
 
+
         return True
 
     def drop(self) -> bool:
@@ -171,6 +172,7 @@ class MariaDBColumn(SQLColumn):
     is_unsigned: Optional[bool] = False
     is_zerofill: Optional[bool] = False
     comment: Optional[str] = None
+    after: Optional[str] = None
 
     def add(self) -> bool:
         sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MariaDBColumnBuilder(self)}"

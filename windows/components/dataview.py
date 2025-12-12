@@ -5,21 +5,21 @@ import wx.dataview
 
 from gettext import gettext as _
 
-from helpers.logger import logger
-from engines.session import Session, SessionEngine
+from structures.session import Session, SessionEngine
 
-from engines.structures.database import SQLColumn, SQLTable, SQLIndex, SQLDatabase
-from engines.structures.datatype import DataTypeCategory
-from engines.structures.indextype import SQLIndexType, StandardIndexType
+from structures.engines.database import SQLColumn, SQLTable, SQLIndex
+from structures.engines.datatype import DataTypeCategory
+from structures.engines.indextype import SQLIndexType, StandardIndexType
 
-from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupTime, PopupCalendar, PopupCalendarTime
-from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, DateTimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer
+from windows.components import BaseDataViewCtrl
+from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
+from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_COLUMN
+from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
 from windows.main.table import NEW_TABLE
 
 
-class SQLiteTableColumnsDataViewCtrl:
+class _SQLiteTableColumnsDataViewCtrl:
     def __init__(self, dataview):
         dataview.AppendToggleColumn(_(u"Allow NULL"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
@@ -45,7 +45,7 @@ class SQLiteTableColumnsDataViewCtrl:
         # dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
-class MariaDBMySQLTableColumnsDataViewCtrl:
+class _MariaDBMySQLTableColumnsDataViewCtrl:
     def __init__(self, dataview):
         dataview.AppendToggleColumn(_(u"Unsigned"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
         dataview.AppendToggleColumn(_(u"Allow NULL"), 5, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
@@ -69,123 +69,11 @@ class MariaDBMySQLTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
-class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
-        # self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_EDITING_STARTED, self._on_edit_start)
-        # self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_START_EDITING, self._on_start_editing)
-        # self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_active)
-        # self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_active)
-
-    # def _on_item_active(self, event):
-    #     self._current_column = event.GetColumn()
-    #     print("_on_item_active", self._current_column)
-    #     event.Skip()
-    #
-    # def _on_edit_start(self, event):
-    #     item = event.GetItem()
-    #     column = event.GetColumn()
-    #     # row = self.GetModel().GetRow(item)
-    #     self._current_column = column
-    #     print("on_edit_start", self._current_column)
-    #     event.Skip()
-    #
-    # def _on_start_editing(self, event):
-    #     item = event.GetItem()
-    #     column = event.GetColumn()
-    #     # row = self.GetModel().GetRow(item)
-    #     print("_on_start_editing", column)
-    #     event.Skip()
-
-    def finish_editing(self, current_column):
-        if current_column := self.CurrentColumn:
-            current_column.GetRenderer().FinishEditing()
-
-        # if self.on_finish_editing:
-        #     self.on_finish_editing(self.GetSelection())
-
-    def _on_char_hook(self, event: wx.KeyEvent):
-        key_code = event.GetKeyCode()
-
-        item = self.GetSelection()
-
-        if not item.IsOk():
-            event.Skip()
-            return
-
-        print("BaseDataViewCtrl._on_char_hook", key_code)
-        if key_code not in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_TAB, wx.WXK_ESCAPE):
-            event.Skip()
-            return
-
-        current_column = self.CurrentColumn
-
-        current_column_render = current_column.GetRenderer()
-        current_column_mode = current_column_render.GetMode()
-        current_model_column = current_column.GetModelColumn()
-
-        self.finish_editing(current_column)
-
-        navigable_columns = [
-            c.ModelColumn
-            for c in self.GetColumns()
-            if c.HasFlag(wx.dataview.DATAVIEW_CELL_EDITABLE | wx.dataview.DATAVIEW_CELL_ACTIVATABLE)
-        ]
-
-        if key_code == wx.WXK_TAB:
-            shift_down = event.ShiftDown()
-
-            next_column_model = current_model_column + (-1 if shift_down else 1)
-
-            next_column = self.GetColumn(next_column_model)
-
-            if min(navigable_columns) < next_column_model > max(navigable_columns):
-                wx.Bell()
-            else:
-                self._current_column = next_column_model
-
-                self.edit_item(item, next_column)
-
-        event.Skip()
-
-    def edit_item(self, item, column):
-        """Smart edit/activate method that handles both editable and activatable cells."""
-        renderer = column.GetRenderer()
-        mode = renderer.GetMode()
-
-        if mode == wx.dataview.DATAVIEW_CELL_ACTIVATABLE:
-            # For activatable cells, activate programmatically
-            rect = self.GetItemRect(item, column)
-            rect.y -= int(self.CharHeight + (self.CharHeight / 3))
-            try:
-                renderer.StartEditing(item, rect)
-                renderer.ActivateCell(rect, self.GetModel(), item, column.GetModelColumn(), None)
-            except Exception as ex:
-                logger.error(f"Error activating cell: {ex}", exc_info=True)
-        else:
-            # For editable cells, use EditItem
-            wx.CallAfter(self.EditItem, item, column)
-
-    def calculate_column_width(self, text, col=None):
-        w = 0
-        cw = 0
-
-        if view := self.GetParent():
-            dc = wx.ClientDC(view)
-            w, h = dc.GetTextExtent(str(text))
-            if col:
-                cw = self.GetCurrentColumn().GetWidth()
-
-        return max(cw, w + 20)
-
-
 class TableColumnsDataViewCtrl(BaseDataViewCtrl):
-    on_column_insert: Callable[[...], Optional[bool]]
-    on_column_delete: Callable[[...], Optional[bool]]
-    on_column_move_up: Callable[[...], Optional[bool]]
-    on_column_move_down: Callable[[...], Optional[bool]]
+    on_column_insert: Callable[[wx.Event], None]
+    on_column_delete: Callable[[wx.Event], None]
+    on_column_move_up: Callable[[wx.Event], None]
+    on_column_move_down: Callable[[wx.Event], None]
 
     insert_column_index: Callable[[wx.Event, SQLIndexType], Optional[bool]]
     append_column_index: Callable[[wx.Event, SQLIndex], Optional[bool]]
@@ -195,20 +83,20 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        column = wx.dataview.DataViewColumn(_(u"#"), wx.dataview.DataViewIconTextRenderer(align=wx.ALIGN_LEFT), 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
+        column0 = wx.dataview.DataViewColumn(_(u"#"), wx.dataview.DataViewIconTextRenderer(align=wx.ALIGN_LEFT), 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column0)
 
-        column_name_render = TextRenderer()
-        column = wx.dataview.DataViewColumn(_(u"Name"), column_name_render, 1, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
+        column1_render = TextRenderer()
+        column1 = wx.dataview.DataViewColumn(_(u"Name"), column1_render, 1, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column1)
 
-        column_datatype_renderer = PopupRenderer(PopupColumnDatatype)
-        column = wx.dataview.DataViewColumn(_(u"Data type"), column_datatype_renderer, 2, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
+        column2_renderer = PopupRenderer(PopupColumnDatatype)
+        column2 = wx.dataview.DataViewColumn(_(u"Data type"), column2_renderer, 2, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column2)
 
-        column_lengthset_renderer = LengthSetRender()
-        column = wx.dataview.DataViewColumn(_(u"Length/Set"), column_lengthset_renderer, 3, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
-        self.AppendColumn(column)
+        column3_renderer = LengthSetRender()
+        column3 = wx.dataview.DataViewColumn(_(u"Length/Set"), column3_renderer, 3, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column3)
 
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
 
@@ -218,12 +106,11 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
 
     def _load_session(self, session: Session):
-        if not self._current_dataview :
+        if not self._current_dataview:
             if session.engine == SessionEngine.SQLITE:
-                # if not self._current_dataview or not isinstance(self._current_dataview, SQLiteTableColumnsDataViewCtrl):
-                self._current_dataview = SQLiteTableColumnsDataViewCtrl(self)
+                self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
             elif session.engine in [SessionEngine.MYSQL, SessionEngine.MARIADB]:
-                self._current_dataview = MariaDBMySQLTableColumnsDataViewCtrl(self)
+                self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
         from icons import BitmapList
@@ -233,8 +120,8 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
 
         selected = self.GetSelection()
         model = self.GetModel()
-        row = model.GetRow(selected)
-        column = model.data[row]
+        # row = model.GetRow(selected)
+        column = model.get_data_by_item(selected)
 
         menu = wx.Menu()
 
@@ -316,9 +203,9 @@ class TableIndexesDataViewCtrl(BaseDataViewCtrl):
 
 
 class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
-    on_foreign_key_insert: Callable[[...], Optional[bool]]
-    on_foreign_key_delete: Callable[[...], Optional[bool]]
-    on_foreign_key_update: Callable[[...], Optional[bool]]
+    on_foreign_key_insert: Callable[[wx.Event], None]
+    on_foreign_key_delete: Callable[[wx.Event], None]
+    on_foreign_key_update: Callable[[wx.Event], None]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

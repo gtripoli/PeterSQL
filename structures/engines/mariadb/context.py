@@ -5,14 +5,14 @@ from typing import Optional, List, Dict, Any
 from icons import BitmapList
 from helpers.logger import logger
 
-from engines.structures.context import LOG_QUERY, AbstractContext
-from engines.structures.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
-from engines.structures.datatype import SQLDataType
+from structures.engines.context import LOG_QUERY, AbstractContext
+from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
+from structures.engines.datatype import SQLDataType
 
-from engines.structures.mariadb import MAP_COLUMN_FIELDS
-from engines.structures.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
-from engines.structures.mariadb.datatype import MariaDBDataType
-from engines.structures.mariadb.indextype import MariaDBIndexType
+from structures.engines.mariadb import MAP_COLUMN_FIELDS
+from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
+from structures.engines.mariadb.datatype import MariaDBDataType
+from structures.engines.mariadb.indextype import MariaDBIndexType
 
 
 class MariaDBContext(AbstractContext):
@@ -205,8 +205,6 @@ class MariaDBContext(AbstractContext):
             parse_type = self._parse_type(row['COLUMN_TYPE'])
             datatype = MariaDBDataType.get_by_name(row['DATA_TYPE'])
 
-            print("parse_type", parse_type)
-
             results.append(
                 MariaDBColumn(
                     id=i,
@@ -228,7 +226,7 @@ class MariaDBContext(AbstractContext):
         return results
 
     def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
-        if table is None or table.is_new():
+        if table is None or table.is_new:
             return []
 
         logger.debug(f"get_indexes for table={table.name}")
@@ -249,7 +247,6 @@ class MariaDBContext(AbstractContext):
             results.append(
                 MariaDBIndex(
                     id=0,
-                    pos=1,
                     name="PRIMARY KEY",
                     type=MariaDBIndexType.PRIMARY,
                     columns=pk_columns,
@@ -276,7 +273,6 @@ class MariaDBContext(AbstractContext):
             results.append(
                 MariaDBIndex(
                     id=i,
-                    pos=i + 1,
                     name=idx_name,
                     type=idx_type,
                     columns=data['columns'],
@@ -287,7 +283,7 @@ class MariaDBContext(AbstractContext):
         return results
 
     def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
-        if table is None or table.is_new():
+        if table is None or table.is_new:
             return []
 
         logger.debug(f"get_foreign_keys for table={table.name}")
@@ -326,7 +322,7 @@ class MariaDBContext(AbstractContext):
 
     def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[MariaDBRecord]:
         LOG_QUERY.append(f"/* get_records for table={table.name} */")
-        if table is None or table.is_new():
+        if table is None or table.is_new:
             return []
 
         query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
@@ -337,7 +333,7 @@ class MariaDBContext(AbstractContext):
             results.append(
                 MariaDBRecord(id=i, table=table, values=dict(record))
             )
-        logger.debug(f"get records for table={table.name} results={results}")
+        logger.debug(f"get records for table={table.name}")
         return results
 
     def build_empty_table(self, database: SQLDatabase):
@@ -364,7 +360,6 @@ class MariaDBContext(AbstractContext):
     def build_empty_index(self, name: str, table: MariaDBTable, type: MariaDBIndexType, columns: List[str]) -> MariaDBIndex:
         return MariaDBIndex(
             id=MariaDBContext.get_temporary_id(table.indexes),
-            pos=-1,
             name=name,
             type=type,
             columns=columns,

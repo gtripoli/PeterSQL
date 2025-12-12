@@ -1,5 +1,5 @@
 from icons import BitmapList
-from engines.structures.indextype import SQLIndexType, StandardIndexType
+from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 
 class MariaDBIndexType(StandardIndexType):

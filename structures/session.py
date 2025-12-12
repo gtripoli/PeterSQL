@@ -1,40 +1,13 @@
-import enum
+import contextlib
 import dataclasses
-from typing import NamedTuple, Union, Optional, Any
 
-from engines.structures.context import AbstractContext
-from engines.structures.indextype import StandardIndexType
-from engines.structures.datatype import StandardDataType
+from typing import Union, Optional, Any
 
-from engines.structures.mariadb.context import MariaDBContext
-from engines.structures.mariadb.datatype import MariaDBDataType
-from engines.structures.mariadb.indextype import MariaDBIndexType
-#
-# from engines.structures.mysql.statement import MySQLStatement
-# from engines.structures.mysql.datatype import MySQLDataType
-# from engines.structures.mysql.indextype import MySQLIndexType
+from structures.engines.context import AbstractContext
 
-from engines.structures.sqlite.context import SQLiteContext
-from engines.structures.sqlite.datatype import SQLiteDataType
-from engines.structures.sqlite.indextype import SQLiteIndexType
-
-
-class SessionEngine(enum.Enum):
-    MYSQL = "MySQL"
-    MARIADB = "MariaDB"
-    POSTGRESQL = "PostgreSQL"
-    SQLITE = "SQLite"
-
-
-class CredentialsConfiguration(NamedTuple):
-    hostname: str
-    username: str
-    password: str
-    port: int
-
-
-class SourceConfiguration(NamedTuple):
-    filename: str
+from structures.engines.sqlite.context import SQLiteContext
+from structures.engines.mariadb.context import MariaDBContext
+from structures.configurations import SessionEngine, CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
 
 
 @dataclasses.dataclass(eq=False)
@@ -44,18 +17,23 @@ class Session:
     engine: SessionEngine | None
     configuration: Union[CredentialsConfiguration, SourceConfiguration] | None
     comments: Optional[str] = None
+    ssh_tunnel: Optional[SSHTunnelConfiguration] = None
 
     context: Optional[AbstractContext] = dataclasses.field(compare=False, init=False)
+    _ssh_tunnel_process: Any = dataclasses.field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self):
-        if self.engine == SessionEngine.MYSQL:
-            pass
+        if self.engine == SessionEngine.SQLITE:
+            self.context = SQLiteContext(self)
+
         elif self.engine == SessionEngine.MARIADB:
             self.context = MariaDBContext(self)
+
+        elif self.engine == SessionEngine.MYSQL:
+            pass
+
         elif self.engine == SessionEngine.POSTGRESQL:
             pass
-        elif self.engine == SessionEngine.SQLITE:
-            self.context = SQLiteContext(self)
 
         else:
             raise ValueError(f"Unsupported engine {self.engine}")
@@ -67,6 +45,7 @@ class Session:
         for field in dataclasses.fields(self):
             if not field.compare:
                 continue
+
             if getattr(self, field.name) != getattr(other, field.name):
                 return False
 
@@ -80,8 +59,26 @@ class Session:
             'name': self.name,
             'engine': self.engine.value if self.engine else None,
             'configuration': self.configuration._asdict() if self.configuration else None,
-            'comments': self.comments
+            'comments': self.comments,
+            'ssh_tunnel': self.ssh_tunnel._asdict() if self.ssh_tunnel else None
         }
 
     def is_valid(self):
         return all([self.name, self.engine]) and all(self.configuration._asdict().values())
+
+    def has_enabled_tunnel(self) -> bool:
+        return bool(self.ssh_tunnel and self.ssh_tunnel.is_enabled)
+
+    @property
+    def tunnel_process(self):
+        return getattr(self, "_ssh_tunnel_process", None)
+
+    def set_tunnel_process(self, process: Any):
+        self._ssh_tunnel_process = process
+
+    def stop_tunnel(self):
+        if process := getattr(self, "_ssh_tunnel_process", None):
+            with contextlib.suppress(Exception):
+                process.terminate()
+                process.wait(timeout=1)
+            self._ssh_tunnel_process = None

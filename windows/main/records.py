@@ -5,9 +5,9 @@ import wx.dataview
 
 from helpers.logger import logger
 
-from engines.session import Session
-from engines.structures.database import SQLTable, SQLDatabase, SQLColumn, SQLRecord
-from engines.structures.datatype import DataTypeCategory
+from structures.session import Session
+from structures.engines.database import SQLTable, SQLDatabase, SQLColumn, SQLRecord
+from structures.engines.datatype import DataTypeCategory
 from helpers.observables import ObservableList
 from windows import TableRecordsDataViewCtrl
 
@@ -132,7 +132,7 @@ class TableRecordsController:
         self.list_ctrl_records.edit_item(item, column)
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
-        print("#" * 10, "ON RECORD EDITING DONE", "#" * 10)
+        logger.debug(f"{'#' * 10} ON RECORD EDITING DONE {'#' * 10}")
         table: SQLTable = CURRENT_TABLE.get_value()
 
         item = event.GetItem()
@@ -161,9 +161,7 @@ class TableRecordsController:
         event.Skip()
 
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
-        print("#" * 10, "ON SELECTION CHANGED", "#" * 10)
-        records = self.get_selected_records()
-        print("records", records)
+        logger.debug(f"{'#' * 10} ON SELECTION CHANGED {'#' * 10}")
         CURRENT_RECORDS.set_value(self.get_selected_records())
         event.Skip()
 

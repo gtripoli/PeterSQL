@@ -3,11 +3,11 @@ from typing import List
 import wx
 import wx.dataview
 
-from engines.structures import merge_original_current
+from structures.engines import merge_original_current
 from windows.main import CURRENT_TABLE, CURRENT_INDEX, BaseDataViewIndexListModel
 from windows.main.column import NEW_TABLE
 
-from engines.structures.database import SQLTable, SQLIndex
+from structures.engines.database import SQLTable, SQLIndex
 
 
 class TableIndexModel(BaseDataViewIndexListModel):
@@ -65,7 +65,7 @@ class TableIndexController:
         CURRENT_TABLE.subscribe(self._load_table)
         NEW_TABLE.subscribe(self._load_table)
 
-    def _load_table(self, table):
+    def _load_table(self, table : SQLTable):
         self.model.clear()
         if table := NEW_TABLE.get_value() or CURRENT_TABLE.get_value():
             self.model.set_observable(table.indexes)
@@ -120,7 +120,7 @@ class TableIndexController:
         NEW_TABLE.set_value(table)
 
     def on_index_clear(self):
-        table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value()).copy()
+        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         self.model.clear()
 

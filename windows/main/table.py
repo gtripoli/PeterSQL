@@ -1,13 +1,9 @@
-import copy
-
-from engines.structures.mariadb.database import MariaDBTable
 from helpers.bindings import AbstractModel
-from helpers.logger import logger
-from helpers.observables import Observable, debounce, ObservableList, Loader
+from helpers.observables import Observable, debounce, ObservableList
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE, CURRENT_COLUMN
+from windows.main import CURRENT_TABLE, CURRENT_DATABASE
 
-from engines.structures.database import SQLTable
+from structures.engines.database import SQLTable
 
 NEW_TABLE: Observable[SQLTable] = Observable()
 
@@ -30,21 +26,20 @@ class EditTableModel(AbstractModel):
         CURRENT_TABLE.subscribe(self._load_table)
 
     def _load_table(self, table: SQLTable):
-        self.name.set_value(table.name if table is not None else "")
-        self.comment.set_value(table.comment if table is not None else "")
-        self.auto_increment.set_value(table.auto_increment if table is not None else 0)
-        self.collation.set_value(table.collation_name if table is not None else "")
-        self.engine.set_value(table.engine if table is not None else "")
+        if table is None:
+            return
+
+        self.name.set_initial(table.name)
+        self.comment.set_initial(table.comment)
+        self.auto_increment.set_initial(table.auto_increment)
+        self.collation.set_initial(table.collation_name)
+        self.engine.set_initial(table.engine)
 
     def update_table(self, *args):
         if not any(args):
             return
 
-        if (current_table := CURRENT_TABLE.get_value()) is None :
-            table = NEW_TABLE.get_value()
-        else :
-            table = CURRENT_TABLE.get_value().copy()
-
+        table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         table.name = self.name.get_value()
         table.comment = self.comment.get_value()
@@ -52,13 +47,10 @@ class EditTableModel(AbstractModel):
         table.collation = self.collation.get_value()
         table.engine = self.engine.get_value()
 
-
-        if not table.is_new() :
+        if not table.is_new:
             original_table = next((t for t in CURRENT_DATABASE.get_value().tables if t.id == table.id), None)
 
-            if original_table is not None and original_table != table :
-                # CURRENT_TABLE.set_value(None)
+            if not original_table.compare_fields(table):
                 NEW_TABLE.set_value(table)
-        else :
+        else:
             NEW_TABLE.set_value(table)
-

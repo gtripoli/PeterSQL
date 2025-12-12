@@ -39,9 +39,15 @@ class SessionManagerView ( wx.Dialog ):
 		self.m_panel16 = wx.Panel( self.m_splitter3, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
 		bSizer35 = wx.BoxSizer( wx.VERTICAL )
 
-		self.session_tree_ctrl = wx.dataview.TreeListCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.TL_DEFAULT_STYLE )
-		self.session_tree_ctrl.AppendColumn( _(u"Name"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
-		self.session_tree_ctrl.AppendColumn( _(u"Last connection"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+		self.m_dataViewCtrl7 = wx.dataview.DataViewCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
+		self.m_dataViewColumn3 = self.m_dataViewCtrl7.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn4 = self.m_dataViewCtrl7.AppendTextColumn( _(u"Last connection"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		bSizer35.Add( self.m_dataViewCtrl7, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.m_panel16.SetSizer( bSizer35 )
+		self.m_panel16.Layout()
+		bSizer35.Fit( self.m_panel16 )
 		self.m_menu5 = wx.Menu()
 		self.m_menuItem4 = wx.MenuItem( self.m_menu5, wx.ID_ANY, _(u"New directory"), wx.EmptyString, wx.ITEM_NORMAL )
 		self.m_menu5.Append( self.m_menuItem4 )
@@ -54,15 +60,8 @@ class SessionManagerView ( wx.Dialog ):
 		self.m_menuItem10 = wx.MenuItem( self.m_menu5, wx.ID_ANY, _(u"Import"), wx.EmptyString, wx.ITEM_NORMAL )
 		self.m_menu5.Append( self.m_menuItem10 )
 
-		self.session_tree_ctrl.Bind( wx.EVT_RIGHT_DOWN, self.session_tree_ctrlOnContextMenu )
+		self.m_panel16.Bind( wx.EVT_RIGHT_DOWN, self.m_panel16OnContextMenu )
 
-
-		bSizer35.Add( self.session_tree_ctrl, 1, wx.EXPAND | wx.ALL, 5 )
-
-
-		self.m_panel16.SetSizer( bSizer35 )
-		self.m_panel16.Layout()
-		bSizer35.Fit( self.m_panel16 )
 		self.m_panel17 = wx.Panel( self.m_splitter3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer36 = wx.BoxSizer( wx.VERTICAL )
 
@@ -101,10 +100,8 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer12.Add( bSizer13, 0, wx.EXPAND, 5 )
 
-		bSizer51 = wx.BoxSizer( wx.VERTICAL )
-
 		self.panel_credentials = wx.Panel( self.panel_session, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		bSizer48 = wx.BoxSizer( wx.VERTICAL )
+		bSizer103 = wx.BoxSizer( wx.VERTICAL )
 
 		bSizer121 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -117,7 +114,7 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer121.Add( self.hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-		bSizer48.Add( bSizer121, 0, wx.EXPAND, 5 )
+		bSizer103.Add( bSizer121, 0, wx.EXPAND, 5 )
 
 		bSizer122 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -130,7 +127,7 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer122.Add( self.username, 1, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
 
 
-		bSizer48.Add( bSizer122, 0, wx.EXPAND, 5 )
+		bSizer103.Add( bSizer122, 0, wx.EXPAND, 5 )
 
 		bSizer1221 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -143,7 +140,7 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer1221.Add( self.password, 1, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
 
 
-		bSizer48.Add( bSizer1221, 0, wx.EXPAND, 5 )
+		bSizer103.Add( bSizer1221, 0, wx.EXPAND, 5 )
 
 		bSizer12211 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -156,40 +153,37 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer12211.Add( self.port, 0, wx.ALL, 5 )
 
 
-		bSizer48.Add( bSizer12211, 0, wx.EXPAND, 5 )
+		bSizer103.Add( bSizer12211, 0, wx.EXPAND, 5 )
 
 
-		self.panel_credentials.SetSizer( bSizer48 )
+		self.panel_credentials.SetSizer( bSizer103 )
 		self.panel_credentials.Layout()
-		bSizer48.Fit( self.panel_credentials )
-		bSizer51.Add( self.panel_credentials, 0, wx.EXPAND | wx.ALL, 0 )
+		bSizer103.Fit( self.panel_credentials )
+		bSizer12.Add( self.panel_credentials, 0, wx.EXPAND | wx.ALL, 0 )
 
 		self.panel_source = wx.Panel( self.panel_session, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		self.panel_source.Hide()
 
-		bSizer52 = wx.BoxSizer( wx.VERTICAL )
+		bSizer105 = wx.BoxSizer( wx.VERTICAL )
 
-		bSizer1212 = wx.BoxSizer( wx.HORIZONTAL )
+		bSizer106 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText212 = wx.StaticText( self.panel_source, wx.ID_ANY, _(u"Filename"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-		self.m_staticText212.Wrap( -1 )
+		self.m_staticText50 = wx.StaticText( self.panel_source, wx.ID_ANY, _(u"Filename"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText50.Wrap( -1 )
 
-		bSizer1212.Add( self.m_staticText212, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+		bSizer106.Add( self.m_staticText50, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.filename = wx.FilePickerCtrl( self.panel_source, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"Database (*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_USE_TEXTCTRL )
-		bSizer1212.Add( self.filename, 1, wx.ALL, 5 )
-
-
-		bSizer52.Add( bSizer1212, 0, wx.EXPAND, 0 )
+		self.filename = wx.FilePickerCtrl( self.panel_source, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.*"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_FILE_MUST_EXIST )
+		bSizer106.Add( self.filename, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-		self.panel_source.SetSizer( bSizer52 )
+		bSizer105.Add( bSizer106, 1, wx.EXPAND, 5 )
+
+
+		self.panel_source.SetSizer( bSizer105 )
 		self.panel_source.Layout()
-		bSizer52.Fit( self.panel_source )
-		bSizer51.Add( self.panel_source, 0, wx.EXPAND | wx.ALL, 0 )
-
-
-		bSizer12.Add( bSizer51, 0, wx.EXPAND, 0 )
+		bSizer105.Fit( self.panel_source )
+		bSizer12.Add( self.panel_source, 0, wx.EXPAND | wx.ALL, 0 )
 
 		bSizer122111 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -208,6 +202,93 @@ class SessionManagerView ( wx.Dialog ):
 		self.panel_session.SetSizer( bSizer12 )
 		self.panel_session.Layout()
 		self.m_notebook4.AddPage( self.panel_session, _(u"Settings"), False )
+		self.m_panel36 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer102 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer116 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+		bSizer116.Add( ( 160, 0), 0, wx.EXPAND, 5 )
+
+		self.ssh_tunnel_use = wx.CheckBox( self.m_panel36, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer116.Add( self.ssh_tunnel_use, 0, wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer116, 0, wx.EXPAND, 5 )
+
+		bSizer1213 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText213 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH executable:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText213.Wrap( -1 )
+
+		bSizer1213.Add( self.m_staticText213, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_executable = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer1213.Add( self.ssh_tunnel_executable, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer1213, 0, wx.EXPAND, 5 )
+
+		bSizer12131 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText2131 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH host + port:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2131.Wrap( -1 )
+
+		bSizer12131.Add( self.m_staticText2131, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_hostname = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12131.Add( self.ssh_tunnel_hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_port = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12131.Add( self.ssh_tunnel_port, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer12131, 0, wx.EXPAND, 5 )
+
+		bSizer12132 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText2132 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH username:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2132.Wrap( -1 )
+
+		bSizer12132.Add( self.m_staticText2132, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_username = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12132.Add( self.ssh_tunnel_username, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer12132, 0, wx.EXPAND, 5 )
+
+		bSizer121321 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText21321 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH password:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText21321.Wrap( -1 )
+
+		bSizer121321.Add( self.m_staticText21321, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_password = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer121321.Add( self.ssh_tunnel_password, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer121321, 0, wx.EXPAND, 5 )
+
+		bSizer1213211 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText213211 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"Local port:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText213211.Wrap( -1 )
+
+		bSizer1213211.Add( self.m_staticText213211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_local_port = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer1213211.Add( self.ssh_tunnel_local_port, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer102.Add( bSizer1213211, 0, wx.EXPAND, 5 )
+
+
+		self.m_panel36.SetSizer( bSizer102 )
+		self.m_panel36.Layout()
+		bSizer102.Fit( self.m_panel36 )
+		self.m_notebook4.AddPage( self.m_panel36, _(u"SSH Tunnel"), True )
 		self.m_panel18 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer361 = wx.BoxSizer( wx.VERTICAL )
 
@@ -388,8 +469,8 @@ class SessionManagerView ( wx.Dialog ):
 		self.m_splitter3.SetSashPosition( 250 )
 		self.m_splitter3.Unbind( wx.EVT_IDLE )
 
-	def session_tree_ctrlOnContextMenu( self, event ):
-		self.session_tree_ctrl.PopupMenu( self.m_menu5, event.GetPosition() )
+	def m_panel16OnContextMenu( self, event ):
+		self.m_panel16.PopupMenu( self.m_menu5, event.GetPosition() )
 
 
 ###########################################################################
@@ -1059,6 +1140,26 @@ class MainFrameView ( wx.Frame ):
 		self.panel_records = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer61 = wx.BoxSizer( wx.VERTICAL )
 
+		bSizer94 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.name_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"database.table:"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.name_database_table.Wrap( -1 )
+
+		bSizer94.Add( self.name_database_table, 0, wx.ALL, 5 )
+
+		self.rows_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"total_rows"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rows_database_table.Wrap( -1 )
+
+		bSizer94.Add( self.rows_database_table, 0, wx.ALL, 5 )
+
+		self.m_staticText44 = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"rows total"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText44.Wrap( -1 )
+
+		bSizer94.Add( self.m_staticText44, 0, wx.ALL, 5 )
+
+
+		bSizer61.Add( bSizer94, 0, wx.EXPAND, 5 )
+
 		bSizer83 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.btn_insert_record = wx.Button( self.panel_records, wx.ID_ANY, _(u"Insert record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
@@ -1104,19 +1205,8 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer83.Add( self.btn_apply_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE )
-		self.m_collapsiblePane1.Collapse( True )
 
-		bSizer831 = wx.BoxSizer( wx.VERTICAL )
-
-		self.m_textCtrl21 = wx.TextCtrl( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
-		bSizer831.Add( self.m_textCtrl21, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-		self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
-		self.m_collapsiblePane1.GetPane().Layout()
-		bSizer831.Fit( self.m_collapsiblePane1.GetPane() )
-		bSizer83.Add( self.m_collapsiblePane1, 1, wx.ALL|wx.EXPAND, 5 )
+		bSizer83.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
 		self.m_button40 = wx.Button( self.panel_records, wx.ID_ANY, _(u"Next"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
@@ -1125,6 +1215,57 @@ class MainFrameView ( wx.Frame ):
 
 
 		bSizer61.Add( bSizer83, 0, wx.EXPAND, 5 )
+
+		self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE|wx.FULL_REPAINT_ON_RESIZE )
+		self.m_collapsiblePane1.Collapse( False )
+
+		bSizer831 = wx.BoxSizer( wx.VERTICAL )
+
+		self.sql_query_filters = wx.stc.StyledTextCtrl( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,100 ), 0)
+		self.sql_query_filters.SetUseTabs ( True )
+		self.sql_query_filters.SetTabWidth ( 4 )
+		self.sql_query_filters.SetIndent ( 4 )
+		self.sql_query_filters.SetTabIndents( True )
+		self.sql_query_filters.SetBackSpaceUnIndents( True )
+		self.sql_query_filters.SetViewEOL( False )
+		self.sql_query_filters.SetViewWhiteSpace( False )
+		self.sql_query_filters.SetMarginWidth( 2, 0 )
+		self.sql_query_filters.SetIndentationGuides( True )
+		self.sql_query_filters.SetReadOnly( False )
+		self.sql_query_filters.SetMarginWidth( 1, 0 )
+		self.sql_query_filters.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+		self.sql_query_filters.SetMarginWidth( 0, self.sql_query_filters.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_query_filters.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+		self.sql_query_filters.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_query_filters.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+		self.sql_query_filters.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_query_filters.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+		self.sql_query_filters.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_query_filters.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+		self.sql_query_filters.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_filters.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+		self.sql_query_filters.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+		bSizer831.Add( self.sql_query_filters, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.m_button41 = wx.Button( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.m_button41.SetBitmap( wx.Bitmap( u"icons/16x16/tick.png", wx.BITMAP_TYPE_ANY ) )
+		self.m_button41.SetHelpText( _(u"CTRL+ENTER") )
+
+		bSizer831.Add( self.m_button41, 0, wx.ALL, 5 )
+
+
+		self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
+		self.m_collapsiblePane1.GetPane().Layout()
+		bSizer831.Fit( self.m_collapsiblePane1.GetPane() )
+		bSizer61.Add( self.m_collapsiblePane1, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.list_ctrl_table_records = TableRecordsDataViewCtrl( self.panel_records, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_MULTIPLE )
 		bSizer61.Add( self.list_ctrl_table_records, 1, wx.ALL|wx.EXPAND, 5 )
@@ -1221,38 +1362,38 @@ class MainFrameView ( wx.Frame ):
 		self.LogSQLPanel = wx.Panel( self.m_splitter51, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
 		sizer_log_sql = wx.BoxSizer( wx.VERTICAL )
 
-		self.sql_logs_query = wx.stc.StyledTextCtrl( self.LogSQLPanel, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
-		self.sql_logs_query.SetUseTabs ( True )
-		self.sql_logs_query.SetTabWidth ( 4 )
-		self.sql_logs_query.SetIndent ( 4 )
-		self.sql_logs_query.SetTabIndents( True )
-		self.sql_logs_query.SetBackSpaceUnIndents( True )
-		self.sql_logs_query.SetViewEOL( False )
-		self.sql_logs_query.SetViewWhiteSpace( False )
-		self.sql_logs_query.SetMarginWidth( 2, 0 )
-		self.sql_logs_query.SetIndentationGuides( True )
-		self.sql_logs_query.SetReadOnly( False )
-		self.sql_logs_query.SetMarginWidth( 1, 0 )
-		self.sql_logs_query.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-		self.sql_logs_query.SetMarginWidth( 0, self.sql_logs_query.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
-		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
-		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
-		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
-		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
-		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
-		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
-		self.sql_logs_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
-		self.sql_logs_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
-		self.sql_logs_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
-		self.sql_logs_query.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
-		self.sql_logs_query.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-		sizer_log_sql.Add( self.sql_logs_query, 1, wx.EXPAND | wx.ALL, 5 )
+		self.sql_query_logs = wx.stc.StyledTextCtrl( self.LogSQLPanel, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+		self.sql_query_logs.SetUseTabs ( True )
+		self.sql_query_logs.SetTabWidth ( 4 )
+		self.sql_query_logs.SetIndent ( 4 )
+		self.sql_query_logs.SetTabIndents( True )
+		self.sql_query_logs.SetBackSpaceUnIndents( True )
+		self.sql_query_logs.SetViewEOL( False )
+		self.sql_query_logs.SetViewWhiteSpace( False )
+		self.sql_query_logs.SetMarginWidth( 2, 0 )
+		self.sql_query_logs.SetIndentationGuides( True )
+		self.sql_query_logs.SetReadOnly( False )
+		self.sql_query_logs.SetMarginWidth( 1, 0 )
+		self.sql_query_logs.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+		self.sql_query_logs.SetMarginWidth( 0, self.sql_query_logs.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+		self.sql_query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+		self.sql_query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+		self.sql_query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+		self.sql_query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+		self.sql_query_logs.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+		self.sql_query_logs.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_logs.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+		self.sql_query_logs.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+		self.sql_query_logs.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+		sizer_log_sql.Add( self.sql_query_logs, 1, wx.EXPAND | wx.ALL, 5 )
 
 
 		self.LogSQLPanel.SetSizer( sizer_log_sql )
@@ -1299,6 +1440,8 @@ class MainFrameView ( wx.Frame ):
 		self.btn_delete_record.Bind( wx.EVT_BUTTON, self.on_delete_record )
 		self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
 		self.m_button40.Bind( wx.EVT_BUTTON, self.on_next_records )
+		self.m_collapsiblePane1.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_collapsible_pane_changed )
+		self.m_button41.Bind( wx.EVT_BUTTON, self.on_apply_filters )
 
 	def __del__( self ):
 		pass
@@ -1373,6 +1516,12 @@ class MainFrameView ( wx.Frame ):
 		event.Skip()
 
 	def on_next_records( self, event ):
+		event.Skip()
+
+	def on_collapsible_pane_changed( self, event ):
+		event.Skip()
+
+	def on_apply_filters( self, event ):
 		event.Skip()
 
 	def m_splitter51OnIdle( self, event ):
@@ -1451,6 +1600,60 @@ class Trash ( wx.Panel ):
 
 		self.table_collationdd = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer90.Add( self.table_collationdd, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_textCtrl21 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+		bSizer90.Add( self.m_textCtrl21, 1, wx.ALL|wx.EXPAND, 5 )
+
+		bSizer51 = wx.BoxSizer( wx.VERTICAL )
+
+		self.panel_credentials = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer48 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_notebook8 = wx.Notebook( self.panel_credentials, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+
+		bSizer48.Add( self.m_notebook8, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+		self.panel_credentials.SetSizer( bSizer48 )
+		self.panel_credentials.Layout()
+		bSizer48.Fit( self.panel_credentials )
+		bSizer51.Add( self.panel_credentials, 0, wx.EXPAND | wx.ALL, 0 )
+
+		self.panel_source = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		self.panel_source.Hide()
+
+		bSizer52 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer1212 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText212 = wx.StaticText( self.panel_source, wx.ID_ANY, _(u"Filename"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText212.Wrap( -1 )
+
+		bSizer1212.Add( self.m_staticText212, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.filename = wx.FilePickerCtrl( self.panel_source, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"Database (*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_USE_TEXTCTRL )
+		bSizer1212.Add( self.filename, 1, wx.ALL, 5 )
+
+
+		bSizer52.Add( bSizer1212, 0, wx.EXPAND, 0 )
+
+
+		self.panel_source.SetSizer( bSizer52 )
+		self.panel_source.Layout()
+		bSizer52.Fit( self.panel_source )
+		bSizer51.Add( self.panel_source, 0, wx.EXPAND | wx.ALL, 0 )
+
+
+		bSizer90.Add( bSizer51, 0, wx.EXPAND, 0 )
+
+		self.m_panel35 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizer96 = wx.BoxSizer( wx.VERTICAL )
+
+
+		self.m_panel35.SetSizer( bSizer96 )
+		self.m_panel35.Layout()
+		bSizer96.Fit( self.m_panel35 )
+		bSizer90.Add( self.m_panel35, 1, wx.EXPAND | wx.ALL, 5 )
 
 
 		self.SetSizer( bSizer90 )

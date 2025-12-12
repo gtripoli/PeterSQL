@@ -6,8 +6,8 @@ from typing import Callable
 from icons import BitmapList
 from helpers.logger import logger
 
-from engines.session import Session
-from engines.structures.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
+from structures.session import Session
+from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
 
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER, BaseDataViewModel, SESSIONS, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
 from windows.main.table import NEW_TABLE
