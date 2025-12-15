@@ -1,10 +1,8 @@
 import wx
 import wx.dataview
 
-from typing import Optional, List, Dict, Any, Callable, Union
+from typing import Optional
 from gettext import gettext as _
-
-from icons import IconList, ImageList
 
 from helpers.logger import logger
 from helpers.bindings import AbstractModel
@@ -12,10 +10,12 @@ from helpers.exceptions import ConnectionException
 from helpers.observables import Observable, debounce, Loader, CallbackEvent
 
 from structures.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
+from structures.configurations import SSHTunnelConfiguration
 
 from windows import SessionManagerView
-from windows.main import CURRENT_SESSION, SESSIONS
+from windows.main import CURRENT_SESSION, SESSIONS, BaseDataViewModel
 from windows.sessions.repository import SessionManagerRepository
+from windows.sessions.ssh_tunnel import SSHTunnelRunner
 
 NEW_SESSION: Observable[Session] = Observable()
 
@@ -31,7 +31,7 @@ class SessionManagerModel(AbstractModel):
         self.filename = Observable()
         self.comments = Observable()
 
-        self.ssh_tunnel_use = Observable(initial=False)
+        self.ssh_tunnel_enabled = Observable(initial=False)
         self.ssh_tunnel_executable = Observable(initial="ssh")
         self.ssh_tunnel_hostname = Observable()
         self.ssh_tunnel_port = Observable(initial=22)
@@ -44,9 +44,9 @@ class SessionManagerModel(AbstractModel):
         debounce(
             self.name, self.engine, self.hostname, self.username, self.password, self.port,
             self.filename, self.comments,
-            self.ssh_tunnel_use, self.ssh_tunnel_executable, self.ssh_tunnel_hostname,
+            self.ssh_tunnel_enabled, self.ssh_tunnel_executable, self.ssh_tunnel_hostname,
             self.ssh_tunnel_port, self.ssh_tunnel_username, self.ssh_tunnel_password, self.ssh_tunnel_local_port,
-            callback=self.build_session
+            callback=self._build_session
         )
 
         CURRENT_SESSION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
@@ -67,7 +67,7 @@ class SessionManagerModel(AbstractModel):
             self.hostname: None, self.username: None, self.password: None, self.port: 3306,
             self.filename: None,
             self.comments: None,
-            self.ssh_tunnel_use: False, self.ssh_tunnel_executable: "ssh", self.ssh_tunnel_hostname: None,
+            self.ssh_tunnel_enabled: False, self.ssh_tunnel_executable: "ssh", self.ssh_tunnel_hostname: None,
             self.ssh_tunnel_port: 22, self.ssh_tunnel_username: None, self.ssh_tunnel_password: None,
             self.ssh_tunnel_local_port: 3307,
         }
@@ -96,7 +96,7 @@ class SessionManagerModel(AbstractModel):
             self.filename.set_value(session.configuration.filename)
 
         if tunnel := session.ssh_tunnel:
-            self.ssh_tunnel_use.set_value(tunnel.enabled)
+            self.ssh_tunnel_enabled.set_value(tunnel.enabled)
             self.ssh_tunnel_executable.set_value(tunnel.executable)
             self.ssh_tunnel_hostname.set_value(tunnel.hostname)
             self.ssh_tunnel_port.set_value(tunnel.port)
@@ -104,172 +104,195 @@ class SessionManagerModel(AbstractModel):
             self.ssh_tunnel_password.set_value(tunnel.password)
             self.ssh_tunnel_local_port.set_value(tunnel.local_port)
         else:
-            self.ssh_tunnel_use.set_value(False)
+            self.ssh_tunnel_enabled.set_value(False)
 
-    def build_session(self, *args):
+    def do_create_session(self):
+        CURRENT_SESSION.set_value(None)
+        NEW_SESSION.set_value(None)
+
+        session = Session(
+            id=-1,
+            name=_("New Session"),
+            engine=SessionEngine.MYSQL,
+            configuration=CredentialsConfiguration(
+                hostname="localhost",
+                username="root",
+                password="",
+                port=3306
+            )
+        )
+
+        CURRENT_SESSION.set_value(session)
+
+    def _build_session(self, *args):
         if any([self.name.is_empty, self.engine.is_empty]):
             return
 
-        new_session = None
         session_engine = SessionEngine(self.engine.get_value())
-        ssh_tunnel = self._build_ssh_configuration()
 
-        if (current_session := CURRENT_SESSION.get_value()) is None:
+        if (NEW_SESSION.get_value() or CURRENT_SESSION.get_value()) is None:
+            self.do_create_session()
 
-            if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL] and not any([
-                self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
-            ]):
-                new_session = Session(
-                    id=-1,
-                    name=self.name.get_value(),
-                    engine=session_engine,
-                    comments=self.comments.get_value(),
-                    configuration=CredentialsConfiguration(
-                        hostname=self.hostname.get_value(),
-                        username=self.username.get_value(),
-                        password=self.password.get_value(),
-                        port=self.port.get_value()
-                    ),
-                    ssh_tunnel=ssh_tunnel,
+        current_session = (NEW_SESSION.get_value() or CURRENT_SESSION.get_value()).copy()
+
+        new_session = NEW_SESSION.get_value() or CURRENT_SESSION.get_value()
+        new_session.name = self.name.get_value()
+        new_session.engine = session_engine
+        new_session.comments = self.comments.get_value()
+
+        if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL] and not any([
+            self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
+        ]):
+            new_session.configuration = CredentialsConfiguration(
+                hostname=self.hostname.get_value(),
+                username=self.username.get_value(),
+                password=self.password.get_value(),
+                port=self.port.get_value()
+            )
+
+            if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled.get_value()):
+                new_session.ssh_tunnel = SSHTunnelConfiguration(
+                    enabled=ssh_tunnel_enabled,
+                    executable=self.ssh_tunnel_executable.get_value(),
+                    hostname=self.ssh_tunnel_hostname.get_value(),
+                    port=self.ssh_tunnel_port.get_value(),
+                    username=self.ssh_tunnel_username.get_value(),
+                    password=self.ssh_tunnel_password.get_value(),
+                    local_port=self.ssh_tunnel_local_port.get_value(),
                 )
+
             elif self.engine.get_value() == SessionEngine.SQLITE.value and not self.filename.is_empty:
-                new_session = Session(
-                    id=-1,
-                    name=self.name.get_value(),
-                    engine=session_engine,
-                    comments=self.comments.get_value(),
-                    configuration=SourceConfiguration(
-                        filename=self.filename.get_value()
-                    ),
-                    ssh_tunnel=None,
-                )
-        else:
-            modified = current_session.copy()
-            modified.name = self.name.get_value()
-            modified.engine = session_engine
-            modified.comments = self.comments.get_value()
-
-            if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL]:
-                modified.configuration = CredentialsConfiguration(
-                    hostname=self.hostname.get_value(),
-                    username=self.username.get_value(),
-                    password=self.password.get_value(),
-                    port=self.port.get_value()
-                )
-            elif modified.engine == SessionEngine.SQLITE:
-                modified.configuration = SourceConfiguration(
+                new_session.configuration = SourceConfiguration(
                     filename=self.filename.get_value()
                 )
+                new_session.ssh_tunnel = None
 
-            modified.ssh_tunnel = ssh_tunnel
+        if not new_session.is_valid:
+            return
 
-            if modified.is_valid() and modified == current_session:
-                return
-
-            if modified.is_valid() and modified != current_session:
-                new_session = modified
+        elif new_session == current_session:
+            return
 
         NEW_SESSION.set_value(new_session)
 
 
+class SessionListModel(BaseDataViewModel):
+    def __init__(self):
+        super().__init__(column_count=2)
+
+    def GetColumnType(self, col):
+        if col == 0:
+            return wx.dataview.DataViewIconText
+
+        return "string"
+
+    def GetChildren(self, parent, children):
+        if not parent:
+            for session in self.data:
+                children.append(self.ObjectToItem(session))
+
+            return len(self.data)
+
+        # node = self.ItemToObject(parent)
+        # if isinstance(node, Session):
+        #     databases = node.context.get_databases()
+        #     for database in databases:
+        #         children.append(self.ObjectToItem(database))
+        #
+        #     return len(databases)
+        #
+        # if isinstance(node, SQLDatabase):
+        #     length = sum([len(node.tables), len(node.views), len(node.triggers)])
+        #
+        #     for table in list(node.tables):
+        #         children.append(self.ObjectToItem(table))
+        #     for view in list(node.views):
+        #         children.append(self.ObjectToItem(view))
+        #     for procedure in list(node.procedures):
+        #         children.append(self.ObjectToItem(procedure))
+        #     for function in list(node.functions):
+        #         children.append(self.ObjectToItem(function))
+        #     for trigger in list(node.triggers):
+        #         children.append(self.ObjectToItem(trigger))
+        #     for event in list(node.events):
+        #         children.append(self.ObjectToItem(event))
+        #
+        #     return length
+        return 0
+
+    def IsContainer(self, item):
+        if not item:
+            return True
+
+        # node = self.ItemToObject(item)
+        # if isinstance(node, (Session, SQLDatabase)) :
+        #     return True
+
+        return False
+
+    def GetParent(self, item):
+        # if not item:
+        return wx.dataview.NullDataViewItem
+
+        # node = self.ItemToObject(item)
+        # if isinstance(node, Session):
+        #     return wx.dataview.NullDataViewItem
+        #
+        # elif isinstance(node, SQLDatabase):
+        #     return self.ObjectToItem(node.context.session)
+        # else:
+        #     return self.ObjectToItem(node.database)
+
+    def GetValue(self, item, col):
+        node = self.ItemToObject(item)
+
+        mapper = {}
+        if isinstance(node, Session):
+            bitmap = node.engine.BITMAP
+            # else:
+            #     bitmap = wx.NullBitmap
+
+            mapper = {0: wx.dataview.DataViewIconText(node.name, bitmap), 1: ""}
+        else:
+            print(node)
+
+        return mapper[col]
+
+
 class SessionTreeController():
-    on_select: Optional[Callable[[Session], None]] = None
-    on_active: Optional[Callable[[Session], None]] = None
 
-    def __init__(self, session_tree_ctrl: wx.dataview.TreeListCtrl):
+    def __init__(self, session_tree_ctrl: wx.dataview.DataViewCtrl, repository: SessionManagerRepository):
         self.session_tree_ctrl = session_tree_ctrl
-        self.session_tree_ctrl.SetImageList(ImageList)
+        self.repository = repository
 
-        self.session_tree_root = self.session_tree_ctrl.GetRootItem()
+        self.model = SessionListModel()
+        self.model.set_observable(self.repository.sessions)
+        self.session_tree_ctrl.AssociateModel(self.model)
 
-        self.session_tree_ctrl.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self._on_select_session)
-        self.session_tree_ctrl.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self._on_active_session)
+        self.session_tree_ctrl.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
+        self.session_tree_ctrl.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
 
-        CURRENT_SESSION.subscribe(self._on_current_session_changed, CallbackEvent.AFTER_CHANGE)
+        # CURRENT_SESSION.subscribe(self._on_current_session_changed, CallbackEvent.AFTER_CHANGE)
+        # NEW_SESSION.subscribe(self._on_new_session)
 
-    def _create_session_folder(self, name: str, sessions: List[Session], parent=None):
-        if parent is None:
-            parent = self.session_tree_root
-
-        item = self.session_tree_ctrl.AppendItem(parent, icon=wx.dataview.DataViewIconText(name))
-        for session in sessions:
-            self._create_session_item(session, parent=item)
-
-    def _create_session_item(self, session: Session, parent=None):
-        parent = parent or self.session_tree_root
-
-        icon_index = None
-        if session.engine == SessionEngine.MYSQL:
-            icon_index = IconList.ENGINE_MYSQL
-        elif session.engine == SessionEngine.MARIADB:
-            icon_index = IconList.ENGINE_MARIADB
-        elif session.engine == SessionEngine.SQLITE:
-            icon_index = IconList.ENGINE_SQLITE
-        elif session.engine == SessionEngine.POSTGRESQL:
-            icon_index = IconList.ENGINE_POSTGRESQL
-
-        item = self.session_tree_ctrl.AppendItem(parent, session.name, icon_index)
-        self.session_tree_ctrl.SetItemData(item, session)
-
-    def _create_new_session(self, label: str, parent=None):
-        parent = parent or self.session_tree_root
-
-        item = self.session_tree_ctrl.AppendItem(parent, label)
-        self.session_tree_ctrl.UnselectAll()
-        self.session_tree_ctrl.Select(item)
-        return item
-
-    def _on_select_session(self, event):
+    def _on_selection_changed(self, event):
         item = event.GetItem()
-        session = self.session_tree_ctrl.GetItemData(item)
-        if self.on_select is not None:
-            self.on_select(session)
+        CURRENT_SESSION.set_value(None)
 
-    def _on_active_session(self, event):
-        item = event.GetItem()
-        session = self.session_tree_ctrl.GetItemData(item)
-        if self.on_active is not None:
-            self.on_active(session)
-
-    def _on_current_session_changed(self, session: Session):
-        if session is None:
-            self.session_tree_ctrl.UnselectAll()
+        if not item.IsOk():
             return
 
-    def find_by_data(self, **filters) -> wx.TreeItemId:
-        def _matches(data):
-            return all(getattr(data, key, None) == value for key, value in filters.items())
+        session = self.model.ItemToObject(item)
 
-        def _search(item):
-            if not item.IsOk():
-                return None
+        CURRENT_SESSION.set_value(session)
 
-            data = self.session_tree_ctrl.GetItemData(item)
-            if data is not None and _matches(data):
-                return item
+    def _on_item_activated(self, event):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+        session = self.model.ItemToObject(item)
 
-            child = self.session_tree_ctrl.GetFirstChild(item)
-            while child.IsOk():
-                found = _search(child)
-                if found:
-                    return found
-                child = self.session_tree_ctrl.GetNextItem(item)
-
-            return None
-
-        return _search(self.session_tree_root)
-
-    def load_sessions(self, sessions: List[Union[Dict[str, List[Session]], Session, str]]):
-        self.session_tree_ctrl.DeleteAllItems()
-
-        for session in sessions:
-            if isinstance(session, dict):
-                if name := str(session.get("name")):
-                    self._create_session_folder(name, session.get("sessions", []))
-            elif isinstance(session, Session):
-                self._create_session_item(session)
-            elif isinstance(session, str):
-                self._create_new_session(session)
+        CURRENT_SESSION.set_value(session)
 
 
 class SessionManagerController(SessionManagerView):
@@ -278,70 +301,38 @@ class SessionManagerController(SessionManagerView):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.engine.SetItems([engine.value for engine in SessionEngine])
 
-        self.session_tree_controller = SessionTreeController(self.session_tree_ctrl)
-        self.session_tree_controller.load_sessions(self._sessions)
+        self.session_tree_controller = SessionTreeController(self.session_tree_ctrl, self._repository)
 
         self.session_manager_model = SessionManagerModel()
         self.session_manager_model.bind_controls(
             name=self.name,
-            engine=(self.engine, dict(initial=[engine.value for engine in SessionEngine])),
-            hostname=self.hostname,
-            port=self.port,
-            username=self.username,
-            password=self.password,
+            engine=self.engine,
+            hostname=self.hostname, port=self.port,
+            username=self.username, password=self.password,
             filename=self.filename,
             comments=self.comments,
-            ssh_tunnel_use=self.ssh_tunnel_use,
-            ssh_tunnel_executable=self.ssh_tunnel_executable,
-            ssh_tunnel_hostname=self.ssh_tunnel_hostname,
-            ssh_tunnel_port=self.ssh_tunnel_port,
-            ssh_tunnel_username=self.ssh_tunnel_username,
-            ssh_tunnel_password=self.ssh_tunnel_password,
+            ssh_tunnel_enabled=self.ssh_tunnel_enabled, ssh_tunnel_executable=self.ssh_tunnel_executable,
+            ssh_tunnel_hostname=self.ssh_tunnel_hostname, ssh_tunnel_port=self.ssh_tunnel_port,
+            ssh_tunnel_username=self.ssh_tunnel_username, ssh_tunnel_password=self.ssh_tunnel_password,
             ssh_tunnel_local_port=self.ssh_tunnel_local_port,
         )
-        self.session_manager_model.engine.subscribe(self._on_change_engine)
 
         self._setup_event_handlers()
-
-    @property
-    def _sessions(self):
-        raw_sessions = self._repository.load_sessions()
-        return self._build_session_tree(raw_sessions)
-
-    def _build_session_tree(self, sessions_data: List[Dict[str, Any]], prefix: Optional[int] = None) -> List[Union[str, Dict[str, Any], Session]]:
-        """Build hierarchical session tree from flat data"""
-        result: List[Union[str, Dict[str, Any], Session]] = []
-        for index, item in enumerate(sessions_data):
-            if isinstance(item, str):
-                # It's a group name
-                result.append(item)
-            elif isinstance(item, dict):
-                if 'sessions' in item:
-                    # It's a group with sessions
-                    group = {
-                        'name': item['name'],
-                        'sessions': self._build_session_tree(item['sessions'], prefix=index)
-                    }
-                    result.append(group)
-                else:
-                    # It's a session
-                    index_str = f"{prefix}_{index}" if prefix is not None else str(index)
-                    session = self._repository.session_from_dict(index_str, item)
-                    result.append(session)
-        return result
 
     def _setup_event_handlers(self):
         self.Bind(wx.EVT_CLOSE, self.on_exit)
 
-        self.session_tree_controller.on_select = self._on_session_selected
-        self.session_tree_controller.on_active = self._on_session_activated
+        self.session_manager_model.engine.subscribe(self._on_change_engine)
+
+        CURRENT_SESSION.subscribe(self._on_current_session)
 
         NEW_SESSION.subscribe(self._on_new_session)
 
     def _on_new_session(self, session: Session):
-        self.btn_save.Enable(bool(session and session.is_valid()))
-        self.btn_open.Enable(bool(session and session.is_valid()))
+        self.btn_save.Enable(bool(session and session.is_valid))
+        self.btn_open.Enable(bool(session and session.is_valid))
 
     def _on_delete_session(self, event):
         """Handle session deletion"""
@@ -367,10 +358,8 @@ class SessionManagerController(SessionManagerView):
 
         self.Hide()
 
-    def _on_session_selected(self, session: Optional[Session]):
-        CURRENT_SESSION.set_value(session)
-
-        self.btn_open.Enable(bool(session and session.is_valid()))
+    def _on_current_session(self, session: Optional[Session]):
+        self.btn_open.Enable(bool(session and session.is_valid))
         self.btn_delete.Enable(bool(session))
 
     def _on_session_activated(self, session: Session):
@@ -397,36 +386,21 @@ class SessionManagerController(SessionManagerView):
         if dialog.ShowModal() != wx.ID_YES:
             return False
 
-        if session.id <= -1:
+        if session.is_new:
             self._repository.save_session(session)
         # else:
         #     index = self.session_tree_controller.sessions.find(lambda s: isinstance(s, Session) and s._id == session.id)
         #     self.session_tree_controller.sessions.replace(index, session)
 
-        self.session_tree_controller.load_sessions(self._sessions)
+        # self.session_tree_controller.load_sessions(self._sessions)
 
         NEW_SESSION.set_value(None)
         CURRENT_SESSION.set_value(session)
 
         return True
 
-    def on_create(self, event):
-        self.session_manager_model.clear()
-
-        CURRENT_SESSION.set_value(None)
-
-        session = Session(
-            id=-1,
-            name="New Session",
-            engine=SessionEngine.MYSQL,
-            configuration=CredentialsConfiguration(
-                hostname="localhost",
-                username="root",
-                password="",
-                port=3306
-            )
-        )
-        NEW_SESSION.set_value(session)
+    def on_create_session(self, event):
+        self.session_manager_model.do_create_session()
 
     def on_open(self, event):
         if NEW_SESSION.get_value() and not self.on_save(event):
@@ -456,7 +430,6 @@ class SessionManagerController(SessionManagerView):
             NEW_SESSION.set_value(None)
             CURRENT_SESSION.set_value(None)
             self._repository.delete_session(session)
-            self.session_tree_controller.load_sessions(self._sessions)
 
     def verify_connection(self, session: Session):
         with Loader.cursor_wait():

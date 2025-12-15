@@ -29,8 +29,8 @@ class AbstractBindControl(abc.ABC):
         if event is not None:
             self.control.Bind(event, self.handle_control_event)
 
-        if self.observable.get_value() is not None:
-            self.set(self.observable.get_value())
+        if (value := self.observable.get_value()) is not None:
+            self.set(value)
 
     def handle_control_event(self, event: Union[wx.Event, wx.CommandEvent]):
         value = self.get()
@@ -118,8 +118,7 @@ class BindSelectionControl(AbstractBindControl):
             value = value.name
 
         if isinstance(value, str):
-            index = self.control.FindString(value)
-            if index != wx.NOT_FOUND:
+            if (index := self.control.FindString(value)) != wx.NOT_FOUND:
                 self.control.SetSelection(index)
             else:
                 self.control.SetSelection(wx.NOT_FOUND)

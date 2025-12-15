@@ -1,11 +1,11 @@
 import contextlib
 import re
 import abc
-from sys import exc_info
 
 from typing import Dict, Any, Optional, List, Union, TypeAlias
 
-from icons import BitmapList
+import wx
+
 from helpers.logger import logger
 from helpers.observables import ObservableList
 
@@ -115,8 +115,6 @@ class AbstractColumnBuilder(abc.ABC):
 class AbstractContext(abc.ABC):
     _connection: Any = None
     _cursor: Any = None
-
-    BITMAP: BitmapList
 
     ENGINES: List[str]
     DATATYPE: StandardDataType

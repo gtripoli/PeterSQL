@@ -39,10 +39,10 @@ class SessionManagerView ( wx.Dialog ):
 		self.m_panel16 = wx.Panel( self.m_splitter3, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
 		bSizer35 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_dataViewCtrl7 = wx.dataview.DataViewCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
-		self.m_dataViewColumn3 = self.m_dataViewCtrl7.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn4 = self.m_dataViewCtrl7.AppendTextColumn( _(u"Last connection"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		bSizer35.Add( self.m_dataViewCtrl7, 1, wx.ALL|wx.EXPAND, 5 )
+		self.session_tree_ctrl = wx.dataview.DataViewCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
+		self.m_dataViewColumn3 = self.session_tree_ctrl.AppendIconTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn4 = self.session_tree_ctrl.AppendTextColumn( _(u"Last connection"), 1, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		bSizer35.Add( self.session_tree_ctrl, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.m_panel16.SetSizer( bSizer35 )
@@ -201,7 +201,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		self.panel_session.SetSizer( bSizer12 )
 		self.panel_session.Layout()
-		self.m_notebook4.AddPage( self.panel_session, _(u"Settings"), False )
+		self.m_notebook4.AddPage( self.panel_session, _(u"Settings"), True )
 		self.m_panel36 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer102 = wx.BoxSizer( wx.VERTICAL )
 
@@ -210,8 +210,8 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer116.Add( ( 160, 0), 0, wx.EXPAND, 5 )
 
-		self.ssh_tunnel_use = wx.CheckBox( self.m_panel36, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer116.Add( self.ssh_tunnel_use, 0, wx.ALL, 5 )
+		self.ssh_tunnel_enabled = wx.CheckBox( self.m_panel36, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
 
 
 		bSizer102.Add( bSizer116, 0, wx.EXPAND, 5 )
@@ -288,7 +288,7 @@ class SessionManagerView ( wx.Dialog ):
 		self.m_panel36.SetSizer( bSizer102 )
 		self.m_panel36.Layout()
 		bSizer102.Fit( self.m_panel36 )
-		self.m_notebook4.AddPage( self.m_panel36, _(u"SSH Tunnel"), True )
+		self.m_notebook4.AddPage( self.m_panel36, _(u"SSH Tunnel"), False )
 		self.m_panel18 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer361 = wx.BoxSizer( wx.VERTICAL )
 
@@ -428,7 +428,7 @@ class SessionManagerView ( wx.Dialog ):
 		self.Bind( wx.EVT_MENU, self.on_new_session, id = self.m_menuItem5.GetId() )
 		self.Bind( wx.EVT_MENU, self.on_import, id = self.m_menuItem10.GetId() )
 		self.engine.Bind( wx.EVT_CHOICE, self.on_choice_engine )
-		self.btn_create.Bind( wx.EVT_BUTTON, self.on_create )
+		self.btn_create.Bind( wx.EVT_BUTTON, self.on_create_session )
 		self.btn_save.Bind( wx.EVT_BUTTON, self.on_save )
 		self.btn_delete.Bind( wx.EVT_BUTTON, self.on_delete )
 		self.btn_open.Bind( wx.EVT_BUTTON, self.on_open )
@@ -453,7 +453,7 @@ class SessionManagerView ( wx.Dialog ):
 	def on_choice_engine( self, event ):
 		event.Skip()
 
-	def on_create( self, event ):
+	def on_create_session( self, event ):
 		event.Skip()
 
 	def on_save( self, event ):
@@ -1009,7 +1009,7 @@ class MainFrameView ( wx.Frame ):
 		self.panel_table.SetSizer( bSizer251 )
 		self.panel_table.Layout()
 		bSizer251.Fit( self.panel_table )
-		self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), True )
+		self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), False )
 		MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
 		if ( MainFrameNotebookBitmap.IsOk() ):
 			MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1233,8 +1233,7 @@ class MainFrameView ( wx.Frame ):
 		self.sql_query_filters.SetIndentationGuides( True )
 		self.sql_query_filters.SetReadOnly( False )
 		self.sql_query_filters.SetMarginWidth( 1, 0 )
-		self.sql_query_filters.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-		self.sql_query_filters.SetMarginWidth( 0, self.sql_query_filters.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+		self.sql_query_filters.SetMarginWidth ( 0, 0 )
 		self.sql_query_filters.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
 		self.sql_query_filters.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
 		self.sql_query_filters.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
@@ -1268,6 +1267,8 @@ class MainFrameView ( wx.Frame ):
 		bSizer61.Add( self.m_collapsiblePane1, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.list_ctrl_table_records = TableRecordsDataViewCtrl( self.panel_records, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_MULTIPLE )
+		self.list_ctrl_table_records.SetFont( wx.Font( 10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
+
 		bSizer61.Add( self.list_ctrl_table_records, 1, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -1283,7 +1284,7 @@ class MainFrameView ( wx.Frame ):
 
 		self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-		self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
+		self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
 		MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
 		if ( MainFrameNotebookBitmap.IsOk() ):
 			MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1372,7 +1373,7 @@ class MainFrameView ( wx.Frame ):
 		self.sql_query_logs.SetViewWhiteSpace( False )
 		self.sql_query_logs.SetMarginWidth( 2, 0 )
 		self.sql_query_logs.SetIndentationGuides( True )
-		self.sql_query_logs.SetReadOnly( False )
+		self.sql_query_logs.SetReadOnly( True )
 		self.sql_query_logs.SetMarginWidth( 1, 0 )
 		self.sql_query_logs.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
 		self.sql_query_logs.SetMarginWidth( 0, self.sql_query_logs.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )

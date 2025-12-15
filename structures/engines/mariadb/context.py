@@ -21,7 +21,6 @@ class MariaDBContext(AbstractContext):
 
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
-    BITMAP = BitmapList.ENGINE_MARIADB
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 

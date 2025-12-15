@@ -86,7 +86,7 @@ class SessionListModel(BaseDataViewModel):
         node = self.ItemToObject(item)
 
         if isinstance(node, Session):
-            mapper = {0: wx.dataview.DataViewIconText(node.name, node.context.BITMAP), 1: "", }
+            mapper = {0: wx.dataview.DataViewIconText(node.name, node.engine.BITMAP), 1: "", }
         elif isinstance(node, SQLDatabase):
             mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_DATABASE), 1: node.size}
         elif isinstance(node, SQLTable):

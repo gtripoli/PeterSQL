@@ -17,8 +17,6 @@ from icons import BitmapList
 
 
 class SQLiteContext(AbstractContext):
-    BITMAP = BitmapList.ENGINE_SQLITE
-
     ENGINES = ["default"]
     COLLATIONS = COLLATIONS
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS

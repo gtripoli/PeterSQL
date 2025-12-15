@@ -1,12 +1,4 @@
-import enum
 from typing import NamedTuple
-
-
-class SessionEngine(enum.Enum):
-    MYSQL = "MySQL"
-    MARIADB = "MariaDB"
-    POSTGRESQL = "PostgreSQL"
-    SQLITE = "SQLite"
 
 
 class CredentialsConfiguration(NamedTuple):
@@ -31,10 +23,11 @@ class SSHTunnelConfiguration(NamedTuple):
 
     @property
     def is_enabled(self) -> bool:
-        return bool(
-            self.enabled
-            and self.executable
-            and self.hostname
-            and self.username
-            and self.local_port
-        )
+        return all([
+            self.enabled,
+            self.executable,
+            self.hostname,
+            self.username,
+            self.password,
+            self.local_port
+        ])
