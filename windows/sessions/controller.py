@@ -1,8 +1,9 @@
+
+from typing import Optional, Any, Callable
+from gettext import gettext as _
+
 import wx
 import wx.dataview
-
-from typing import Optional
-from gettext import gettext as _
 
 from helpers.logger import logger
 from helpers.bindings import AbstractModel
@@ -15,7 +16,6 @@ from structures.configurations import SSHTunnelConfiguration
 from windows import SessionManagerView
 from windows.main import CURRENT_SESSION, SESSIONS, BaseDataViewModel
 from windows.sessions.repository import SessionManagerRepository
-from windows.sessions.ssh_tunnel import SSHTunnelRunner
 
 NEW_SESSION: Observable[Session] = Observable()
 
@@ -23,7 +23,7 @@ NEW_SESSION: Observable[Session] = Observable()
 class SessionManagerModel(AbstractModel):
     def __init__(self):
         self.name = Observable()
-        self.engine = Observable(initial=SessionEngine.MYSQL.value)
+        self.engine = Observable(initial=SessionEngine.MYSQL.value.name)
         self.hostname = Observable()
         self.username = Observable()
         self.password = Observable()
@@ -52,18 +52,19 @@ class SessionManagerModel(AbstractModel):
         CURRENT_SESSION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
         CURRENT_SESSION.subscribe(self.populate)
 
-    def _set_default_port(self, engine_value):
-        if engine_value == SessionEngine.POSTGRESQL.value:
+    def _set_default_port(self, session_engine_name: str):
+        session_engine = SessionEngine.from_name(session_engine_name)
+        if session_engine == SessionEngine.POSTGRESQL:
             if self.port.get_value() != 5432:
                 self.port.set_value(5432)
-        elif engine_value in [SessionEngine.MYSQL.value, SessionEngine.MARIADB.value]:
+        elif session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB]:
             if self.port.get_value() != 3306:
                 self.port.set_value(3306)
 
     def clear(self, *args):
         defaults = {
             self.name: None,
-            self.engine: SessionEngine.MYSQL.value,
+            self.engine: SessionEngine.MYSQL.value.name,
             self.hostname: None, self.username: None, self.password: None, self.port: 3306,
             self.filename: None,
             self.comments: None,
@@ -82,7 +83,7 @@ class SessionManagerModel(AbstractModel):
         self.name.set_value(session.name)
 
         if session.engine is not None:
-            self.engine.set_value(session.engine.value)
+            self.engine.set_value(session.engine.value.name)
 
         self.comments.set_value(session.comments)
 
@@ -112,7 +113,7 @@ class SessionManagerModel(AbstractModel):
 
         session = Session(
             id=-1,
-            name=_("New Session"),
+            name=self.name.get_value() or _("New Session"),
             engine=SessionEngine.MYSQL,
             configuration=CredentialsConfiguration(
                 hostname="localhost",
@@ -128,7 +129,7 @@ class SessionManagerModel(AbstractModel):
         if any([self.name.is_empty, self.engine.is_empty]):
             return
 
-        session_engine = SessionEngine(self.engine.get_value())
+        session_engine = SessionEngine.from_name(self.engine.get_value())
 
         if (NEW_SESSION.get_value() or CURRENT_SESSION.get_value()) is None:
             self.do_create_session()
@@ -140,9 +141,7 @@ class SessionManagerModel(AbstractModel):
         new_session.engine = session_engine
         new_session.comments = self.comments.get_value()
 
-        if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL] and not any([
-            self.name.is_empty, self.hostname.is_empty, self.username.is_empty, self.password.is_empty
-        ]):
+        if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL]:
             new_session.configuration = CredentialsConfiguration(
                 hostname=self.hostname.get_value(),
                 username=self.username.get_value(),
@@ -161,11 +160,11 @@ class SessionManagerModel(AbstractModel):
                     local_port=self.ssh_tunnel_local_port.get_value(),
                 )
 
-            elif self.engine.get_value() == SessionEngine.SQLITE.value and not self.filename.is_empty:
-                new_session.configuration = SourceConfiguration(
-                    filename=self.filename.get_value()
-                )
-                new_session.ssh_tunnel = None
+        elif session_engine == SessionEngine.SQLITE:
+            new_session.configuration = SourceConfiguration(
+                filename=self.filename.get_value()
+            )
+            new_session.ssh_tunnel = None
 
         if not new_session.is_valid:
             return
@@ -193,40 +192,11 @@ class SessionListModel(BaseDataViewModel):
 
             return len(self.data)
 
-        # node = self.ItemToObject(parent)
-        # if isinstance(node, Session):
-        #     databases = node.context.get_databases()
-        #     for database in databases:
-        #         children.append(self.ObjectToItem(database))
-        #
-        #     return len(databases)
-        #
-        # if isinstance(node, SQLDatabase):
-        #     length = sum([len(node.tables), len(node.views), len(node.triggers)])
-        #
-        #     for table in list(node.tables):
-        #         children.append(self.ObjectToItem(table))
-        #     for view in list(node.views):
-        #         children.append(self.ObjectToItem(view))
-        #     for procedure in list(node.procedures):
-        #         children.append(self.ObjectToItem(procedure))
-        #     for function in list(node.functions):
-        #         children.append(self.ObjectToItem(function))
-        #     for trigger in list(node.triggers):
-        #         children.append(self.ObjectToItem(trigger))
-        #     for event in list(node.events):
-        #         children.append(self.ObjectToItem(event))
-        #
-        #     return length
         return 0
 
     def IsContainer(self, item):
         if not item:
             return True
-
-        # node = self.ItemToObject(item)
-        # if isinstance(node, (Session, SQLDatabase)) :
-        #     return True
 
         return False
 
@@ -234,23 +204,14 @@ class SessionListModel(BaseDataViewModel):
         # if not item:
         return wx.dataview.NullDataViewItem
 
-        # node = self.ItemToObject(item)
-        # if isinstance(node, Session):
-        #     return wx.dataview.NullDataViewItem
-        #
-        # elif isinstance(node, SQLDatabase):
-        #     return self.ObjectToItem(node.context.session)
-        # else:
-        #     return self.ObjectToItem(node.database)
 
     def GetValue(self, item, col):
         node = self.ItemToObject(item)
 
         mapper = {}
         if isinstance(node, Session):
-            bitmap = node.engine.BITMAP
-            # else:
-            #     bitmap = wx.NullBitmap
+            bitmap = node.engine.value.bitmap
+            
 
             mapper = {0: wx.dataview.DataViewIconText(node.name, bitmap), 1: ""}
         else:
@@ -260,6 +221,8 @@ class SessionListModel(BaseDataViewModel):
 
 
 class SessionTreeController():
+    on_selection_chance: Callable[[Optional[Any]], Optional[Any]] = None
+    on_item_activated: Callable[[Optional[Any]], Optional[Any]] = None
 
     def __init__(self, session_tree_ctrl: wx.dataview.DataViewCtrl, repository: SessionManagerRepository):
         self.session_tree_ctrl = session_tree_ctrl
@@ -294,6 +257,9 @@ class SessionTreeController():
 
         CURRENT_SESSION.set_value(session)
 
+        if self.on_item_activated:
+            self.on_item_activated(session)
+
 
 class SessionManagerController(SessionManagerView):
     _app = wx.GetApp()
@@ -301,9 +267,10 @@ class SessionManagerController(SessionManagerView):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.engine.SetItems([engine.value for engine in SessionEngine])
+        self.engine.SetItems([e.name for e in SessionEngine.get_all()])
 
         self.session_tree_controller = SessionTreeController(self.session_tree_ctrl, self._repository)
+        self.session_tree_controller.on_item_activated = lambda session: self.on_open(None)
 
         self.session_manager_model = SessionManagerModel()
         self.session_manager_model.bind_controls(
@@ -331,6 +298,10 @@ class SessionManagerController(SessionManagerView):
         NEW_SESSION.subscribe(self._on_new_session)
 
     def _on_new_session(self, session: Session):
+        item = self.session_tree_controller.model.ObjectToItem(session)
+        if item.IsOk():
+            self.session_tree_controller.model.ItemChanged(item)
+
         self.btn_save.Enable(bool(session and session.is_valid))
         self.btn_open.Enable(bool(session and session.is_valid))
 
@@ -367,9 +338,10 @@ class SessionManagerController(SessionManagerView):
         # self._app.main_frame.show()
         self.on_open(None)
 
-    def _on_change_engine(self, value):
-        self.panel_credentials.Show(value in [SessionEngine.MYSQL.value, SessionEngine.MARIADB.value, SessionEngine.POSTGRESQL.value])
-        self.panel_source.Show(value == SessionEngine.SQLITE.value)
+    def _on_change_engine(self, value: str):
+        session_engine = SessionEngine.from_name(value)
+        self.panel_credentials.Show(session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL])
+        self.panel_source.Show(session_engine == SessionEngine.SQLITE)
         self.panel_source.GetParent().Layout()
 
     def on_save(self, *args):
@@ -386,16 +358,14 @@ class SessionManagerController(SessionManagerView):
         if dialog.ShowModal() != wx.ID_YES:
             return False
 
-        if session.is_new:
-            self._repository.save_session(session)
-        # else:
-        #     index = self.session_tree_controller.sessions.find(lambda s: isinstance(s, Session) and s._id == session.id)
-        #     self.session_tree_controller.sessions.replace(index, session)
-
-        # self.session_tree_controller.load_sessions(self._sessions)
+        self._repository.save_session(session)
 
         NEW_SESSION.set_value(None)
-        CURRENT_SESSION.set_value(session)
+        if session.is_new:
+            session = self.session_tree_controller.model.data[-1]
+
+        CURRENT_SESSION.set_value(None).set_value(session)
+        self.session_tree_ctrl.Select(self.session_tree_controller.model.ObjectToItem(session))
 
         return True
 
@@ -434,12 +404,10 @@ class SessionManagerController(SessionManagerView):
     def verify_connection(self, session: Session):
         with Loader.cursor_wait():
             try:
-                if session.has_enabled_tunnel():
-                    SSHTunnelRunner(session).ensure()
-                session.context.connect(connect_timeout=5)
+                session.context.connect(connect_timeout=10)
             except Exception as ex:
                 wx.MessageDialog(None,
-                                 message=_(u'Connection error:\n{connection_error}?'.format(connection_error=str(ex))),
+                                 message=_(f'Connection error:\n{str(ex)}'),
                                  caption=_("Connection error"),
                                  style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
                 raise ConnectionException

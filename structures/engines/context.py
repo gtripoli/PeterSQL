@@ -4,14 +4,15 @@ import abc
 
 from typing import Dict, Any, Optional, List, Union, TypeAlias
 
-import wx
-
 from helpers.logger import logger
 from helpers.observables import ObservableList
+
+from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.datatype import StandardDataType
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from structures.engines.indextype import SQLIndexType, StandardIndexType
+
 
 LOG_QUERY: ObservableList[str] = ObservableList()
 
@@ -115,6 +116,7 @@ class AbstractColumnBuilder(abc.ABC):
 class AbstractContext(abc.ABC):
     _connection: Any = None
     _cursor: Any = None
+    _ssh_tunnel: Optional[SSHTunnel] = None
 
     ENGINES: List[str]
     DATATYPE: StandardDataType
@@ -138,6 +140,10 @@ class AbstractContext(abc.ABC):
             self._connection.close()
             self._connection = None
 
+        if self._ssh_tunnel is not None:
+            self._ssh_tunnel.stop()
+            self._ssh_tunnel = None
+
     @property
     def connection(self) -> Any:
         if self._connection is None:
@@ -155,6 +161,9 @@ class AbstractContext(abc.ABC):
 
     def _on_disconnect(self, *args, **kwargs):
         logger.debug("disconnected")
+
+    def __del__(self):
+        self.disconnect()
 
     @staticmethod
     def get_temporary_id(container: Union[List[SQLTypeAlias]]):

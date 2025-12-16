@@ -4,7 +4,6 @@ import wx.dataview
 from typing import Callable
 
 from icons import BitmapList
-from helpers.logger import logger
 
 from structures.session import Session
 from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
@@ -86,7 +85,7 @@ class SessionListModel(BaseDataViewModel):
         node = self.ItemToObject(item)
 
         if isinstance(node, Session):
-            mapper = {0: wx.dataview.DataViewIconText(node.name, node.engine.BITMAP), 1: "", }
+            mapper = {0: wx.dataview.DataViewIconText(node.name, node.engine.value.bitmap), 1: "", }
         elif isinstance(node, SQLDatabase):
             mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_DATABASE), 1: node.size}
         elif isinstance(node, SQLTable):

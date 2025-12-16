@@ -29,8 +29,6 @@ class SQLiteContext(AbstractContext):
 
         self.filename = session.configuration.filename
 
-        self.connection_url = f"sqlite:///{self.filename}"
-
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
         self.execute("PRAGMA database_list;")

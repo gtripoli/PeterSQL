@@ -36,17 +36,18 @@ class AbstractBaseDataModel():
         self.column_count = column_count
 
     def load(self, data: List[Any]):
-        logger.debug(f"{self.__class__.__name__}._load: {data[:50]}")
+        logger.debug(f"{self.__class__.__name__}.load: {data[:50]}")
 
         if data:
             self._data = data.copy()
         
     def append(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}._append: {data}")
+        logger.debug(f"{self.__class__.__name__}.append: {data}")
 
         self._data.append(data)
 
         return len(self._data) - 1
+
 
     def insert(self, data: Any, index: int) -> int:
         logger.debug(f"{self.__class__.__name__}._insert: {index} {data} ")
@@ -55,8 +56,8 @@ class AbstractBaseDataModel():
 
         return index
 
-    def replace(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}.replace: {data}")
+    def replace(self, data: Any, index : int) -> int:
+        logger.debug(f"{self.__class__.__name__}.replace: index={index} {data}")
 
         index = self._data.index(data)
 
@@ -130,9 +131,22 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         if item.IsOk():
             self.ItemAdded(wx.dataview.NullDataViewItem, item)
 
+        # self.Cleared()
+
+        return item
+
+    def _replace(self, data: Any, index : int) -> wx.dataview.DataViewItem:
+        AbstractBaseDataModel.replace(self, data, index)
+
+        item = self.ObjectToItem(data)
+
+        if item.IsOk():
+            self.ItemAdded(wx.dataview.NullDataViewItem, item)
+
         self.Cleared()
 
         return item
+
 
     def _insert(self, data: Any, index: int) -> wx.dataview.DataViewItem:
         AbstractBaseDataModel.insert(self, data, index)
@@ -162,6 +176,7 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         self._observable = observable
         self._observable.subscribe(self._load, execute_immediately=True)
         self._observable.subscribe(self._append, callback_event=CallbackEvent.ON_APPEND)
+        self._observable.subscribe(self._replace, callback_event=CallbackEvent.ON_REPLACE)
         self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
         self._observable.subscribe(self._remove, callback_event=CallbackEvent.ON_REMOVE)
 
@@ -204,8 +219,8 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
 
         return True
 
-    def _replace(self, row: int, data: Any) -> bool:
-        index = AbstractBaseDataModel.replace(self, data)
+    def _replace(self, data: Any, index : int) -> bool:
+        index = AbstractBaseDataModel.replace(self, data, index)
 
         self.RowChanged(index)
 

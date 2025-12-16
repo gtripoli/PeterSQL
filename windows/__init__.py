@@ -105,13 +105,16 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer121 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText21 = wx.StaticText( self.panel_credentials, wx.ID_ANY, _(u"Host Name / IP"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText21 = wx.StaticText( self.panel_credentials, wx.ID_ANY, _(u"Host + port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText21.Wrap( -1 )
 
 		bSizer121.Add( self.m_staticText21, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 		self.hostname = wx.TextCtrl( self.panel_credentials, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer121.Add( self.hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.port = wx.SpinCtrl( self.panel_credentials, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 3306 )
+		bSizer121.Add( self.port, 0, wx.ALL, 5 )
 
 
 		bSizer103.Add( bSizer121, 0, wx.EXPAND, 5 )
@@ -142,19 +145,6 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer103.Add( bSizer1221, 0, wx.EXPAND, 5 )
 
-		bSizer12211 = wx.BoxSizer( wx.HORIZONTAL )
-
-		self.m_staticText2211 = wx.StaticText( self.panel_credentials, wx.ID_ANY, _(u"Port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-		self.m_staticText2211.Wrap( -1 )
-
-		bSizer12211.Add( self.m_staticText2211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-		self.port = wx.SpinCtrl( self.panel_credentials, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 3306 )
-		bSizer12211.Add( self.port, 0, wx.ALL, 5 )
-
-
-		bSizer103.Add( bSizer12211, 0, wx.EXPAND, 5 )
-
 
 		self.panel_credentials.SetSizer( bSizer103 )
 		self.panel_credentials.Layout()
@@ -173,7 +163,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer106.Add( self.m_staticText50, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.filename = wx.FilePickerCtrl( self.panel_source, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.*"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_FILE_MUST_EXIST )
+		self.filename = wx.FilePickerCtrl( self.panel_source, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.*"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_DEFAULT_STYLE|wx.FLP_FILE_MUST_EXIST )
 		bSizer106.Add( self.filename, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -223,7 +213,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer1213.Add( self.m_staticText213, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.ssh_tunnel_executable = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.ssh_tunnel_executable = wx.TextCtrl( self.m_panel36, wx.ID_ANY, _(u"ssh"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer1213.Add( self.ssh_tunnel_executable, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -239,8 +229,8 @@ class SessionManagerView ( wx.Dialog ):
 		self.ssh_tunnel_hostname = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer12131.Add( self.ssh_tunnel_hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.ssh_tunnel_port = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer12131.Add( self.ssh_tunnel_port, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+		self.ssh_tunnel_port = wx.SpinCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 22 )
+		bSizer12131.Add( self.ssh_tunnel_port, 0, wx.ALL, 5 )
 
 
 		bSizer102.Add( bSizer12131, 0, wx.EXPAND, 5 )
@@ -265,7 +255,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer121321.Add( self.m_staticText21321, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.ssh_tunnel_password = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.ssh_tunnel_password = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
 		bSizer121321.Add( self.ssh_tunnel_password, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -278,8 +268,10 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer1213211.Add( self.m_staticText213211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.ssh_tunnel_local_port = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer1213211.Add( self.ssh_tunnel_local_port, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+		self.ssh_tunnel_local_port = wx.SpinCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 0 )
+		self.ssh_tunnel_local_port.SetToolTip( _(u"if the value is set to 0, the first available port will be used") )
+
+		bSizer1213211.Add( self.ssh_tunnel_local_port, 1, wx.ALL, 5 )
 
 
 		bSizer102.Add( bSizer1213211, 0, wx.EXPAND, 5 )
@@ -1655,6 +1647,22 @@ class Trash ( wx.Panel ):
 		self.m_panel35.Layout()
 		bSizer96.Fit( self.m_panel35 )
 		bSizer90.Add( self.m_panel35, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.ssh_tunnel_port = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer90.Add( self.ssh_tunnel_port, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.ssh_tunnel_local_port = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer90.Add( self.ssh_tunnel_local_port, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		bSizer12211 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText2211 = wx.StaticText( self, wx.ID_ANY, _(u"Port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2211.Wrap( -1 )
+
+		bSizer12211.Add( self.m_staticText2211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+		bSizer90.Add( bSizer12211, 0, wx.EXPAND, 5 )
 
 
 		self.SetSizer( bSizer90 )

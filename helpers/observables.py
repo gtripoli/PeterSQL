@@ -18,6 +18,7 @@ class CallbackEvent(enum.Enum):
     BEFORE_CHANGE = "before"
     AFTER_CHANGE = "after"
     ON_APPEND = "append"
+    ON_REPLACE = "replace"
     ON_INSERT = "insert"
     ON_POP = "pop"
     ON_EXTEND = "extend"
@@ -160,11 +161,14 @@ class ObservableList(Observable[List[T]]):
         if replace_existing and value in values:
             idx = self.index(value)
             values[idx] = value
+
+            callback = dict(event=CallbackEvent.ON_REPLACE, value=value, index=idx)
         else:
             values.append(value)
+            callback = dict(event=CallbackEvent.ON_APPEND, value=value)
 
         self._value = values
-        self.execute_callback_on_value(CallbackEvent.ON_APPEND, value=value)
+        self.execute_callback_on_value(**callback)
 
         return self
 

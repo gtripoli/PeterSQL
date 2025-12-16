@@ -97,7 +97,10 @@ class BindValueControl(AbstractBindControl):
 
     def get(self) -> Any:
         if isinstance(self.control, wx.CheckBox):
-            return self.control.GetValue()
+            return bool(self.control.GetValue())
+        elif isinstance(self.control, wx.SpinCtrl):
+            return int(self.control.GetValue())
+
         return self.control.GetValue()
 
 

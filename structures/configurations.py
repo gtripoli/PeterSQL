@@ -1,10 +1,10 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 
 class CredentialsConfiguration(NamedTuple):
     hostname: str
     username: str
-    password: str
+    password: Optional[str]
     port: int
 
 
@@ -17,8 +17,8 @@ class SSHTunnelConfiguration(NamedTuple):
     executable: str
     hostname: str
     port: int
-    username: str
-    password: str
+    username: Optional[str]
+    password: Optional[str]
     local_port: int
 
     @property
@@ -27,7 +27,5 @@ class SSHTunnelConfiguration(NamedTuple):
             self.enabled,
             self.executable,
             self.hostname,
-            self.username,
-            self.password,
             self.local_port
         ])

@@ -45,11 +45,11 @@ class SessionManagerRepository:
         return self.refresh()
 
     def save_session(self, session: Session) -> List[Session]:
-        sessions = list(self.sessions.get_value())
-        sessions.append(session.copy())
-        self._write_sessions_file(sessions)
-        self.sessions.set_value(sessions)
-        return sessions
+        self.sessions.append(session, replace_existing=True)
+
+        self._write_sessions_file(list(self.sessions.get_value()))
+
+        return self.load_sessions()
 
     def delete_session(self, session: Session) -> List[Session]:
         sessions = list(self.sessions.get_value())
@@ -62,7 +62,7 @@ class SessionManagerRepository:
         return sessions
 
     def session_from_dict(self, index: int, data: Dict[str, Any]) -> Session:
-        engine = SessionEngine(data['engine']) if data.get('engine') else None
+        engine = SessionEngine.from_name(data['engine']) if data.get('engine') else None
 
         # Convert configuration
         configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]] = None
