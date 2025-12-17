@@ -40,8 +40,6 @@ class Session:
         else:
             raise ValueError(f"Unsupported engine {self.engine}")
 
-
-
     def __eq__(self, other: Any):
         if not isinstance(other, Session):
             return False

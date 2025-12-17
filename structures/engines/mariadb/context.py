@@ -2,10 +2,9 @@ import re
 import pymysql
 from typing import Optional, List, Dict, Any
 
-from icons import BitmapList
 from helpers.logger import logger
 
-from structures.engines.context import LOG_QUERY, AbstractContext
+from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
 
@@ -152,7 +151,7 @@ class MariaDBContext(AbstractContext):
         return results
 
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
-        LOG_QUERY.append(f"/* get_tables for database={database.name} */")
+        QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
             SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
@@ -188,7 +187,7 @@ class MariaDBContext(AbstractContext):
         if table.id == -1:
             return results
 
-        LOG_QUERY.append(f"/* get_columns for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_columns for table={table.name} */")
 
         self.execute(f"""
             SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE,
@@ -230,7 +229,7 @@ class MariaDBContext(AbstractContext):
 
         logger.debug(f"get_indexes for table={table.name}")
 
-        LOG_QUERY.append(f"/* get_indexes for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_indexes for table={table.name} */")
 
         results = []
 
@@ -287,7 +286,7 @@ class MariaDBContext(AbstractContext):
 
         logger.debug(f"get_foreign_keys for table={table.name}")
 
-        LOG_QUERY.append(f"/* get_foreign_keys for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_foreign_keys for table={table.name} */")
 
         self.execute(f"""
             SELECT 
@@ -320,7 +319,7 @@ class MariaDBContext(AbstractContext):
         return foreign_keys
 
     def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[MariaDBRecord]:
-        LOG_QUERY.append(f"/* get_records for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
 

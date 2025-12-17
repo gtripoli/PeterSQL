@@ -1,17 +1,18 @@
-import datetime
-from typing import Optional, List, Union
+from typing import Optional
 
 import wx.dataview
 
 from helpers.logger import logger
 
+from helpers.dataview import BaseDataViewIndexListModel
+from helpers.observables import ObservableList
+
 from structures.session import Session
 from structures.engines.database import SQLTable, SQLDatabase, SQLColumn, SQLRecord
 from structures.engines.datatype import DataTypeCategory
-from helpers.observables import ObservableList
-from windows import TableRecordsDataViewCtrl
 
-from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS, BaseDataViewIndexListModel
+from windows import TableRecordsDataViewCtrl
+from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
@@ -103,8 +104,6 @@ class TableRecordsController:
 
     def __init__(self, list_ctrl_records: TableRecordsDataViewCtrl):
         self.list_ctrl_records = list_ctrl_records
-        # self.list_ctrl_records.on_record_insert = self.on_insert_record
-        # self.list_ctrl_records.on_record_delete = self.on_delete_record
 
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)

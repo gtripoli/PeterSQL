@@ -16,7 +16,7 @@ from helpers.observables import CallbackEvent
 
 from structures.session import Session, SessionEngine
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
-from structures.engines.context import LOG_QUERY
+from structures.engines.context import QUERY_LOGS
 
 from windows import MainFrameView
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
@@ -26,6 +26,7 @@ from windows.main.index import TableIndexController
 from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
 from windows.main.foreign_key import TableForeignKeyController
+from windows.sessions import wx_colour_to_hex
 
 
 class MainFrameController(MainFrameView):
@@ -52,7 +53,7 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_index = TableIndexController(self.dv_table_indexes)
         self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
-        self._setup_query_logs()
+        self._setup_query_editors()
 
         self._setup_subscribers()
 
@@ -61,7 +62,33 @@ class MainFrameController(MainFrameView):
         self.Bind(wx.EVT_TIMER, self._update_memory, self.memory_timer)
         self.memory_timer.Start(5000)  # Update every 5 seconds
 
-    def _setup_query_logs(self):
+        self.Bind(wx.EVT_SYS_COLOUR_CHANGED, self.on_sys_colour_changed)
+
+    def on_sys_colour_changed(self, event):
+        self._setup_query_editors()
+
+    def _setup_query_editors(self):
+        bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
+        fg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT)
+
+        ln_bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
+        ln_fg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+
+        is_dark = wx.SystemSettings.GetAppearance().IsDark()
+
+        if is_dark:
+            keyword = "#569cd6"
+            string = "#ce9178"
+            comment = "#6a9955"
+            number = "#b5cea8"
+            operator = wx_colour_to_hex(fg)
+        else:
+            keyword = "#0000ff"
+            string = "#990099"
+            comment = "#007f00"
+            number = "#ff6600"
+            operator = "#000000"
+
         for name_styled_text_ctrl in ["sql_query_logs", "sql_view", "sql_query_filters"]:
             styled_text_ctrl = getattr(self, name_styled_text_ctrl)
 
@@ -79,28 +106,28 @@ class MainFrameController(MainFrameView):
 
             styled_text_ctrl.StyleClearAll()
             styled_text_ctrl.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
-            styled_text_ctrl.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#000000"))
-            styled_text_ctrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, wx.Colour("#ffffff"))
-            # styled_text_ctrl.StyleClearAll()
+
+            styled_text_ctrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, bg)
+            # styled_text_ctrl.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, fg)
 
             # Numbers
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_NUMBER, "fore:#ff6600")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_NUMBER, f"fore:{number}")
 
             # Comments
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENT, "fore:#007f00,italic")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTLINE, "fore:#007f00,italic")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTDOC, "fore:#007f00,italic")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENT, f"fore:{comment},italic")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTLINE, f"fore:{comment},italic")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTDOC, f"fore:{comment},italic")
 
             # Keys
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD, "fore:#0000ff,bold")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, "fore:#0000ff,bold")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD, f"fore:{keyword},bold")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, f"fore:{keyword},bold")
 
             # String
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, "fore:#990099")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_STRING, "fore:#990099")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, f"fore:{string}")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_STRING, f"fore:{string}")
 
             # Operator
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_OPERATOR, "fore:#000000,bold")
+            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_OPERATOR, f"fore:{operator},bold")
 
             # Table name, Columns, etc.
             styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_IDENTIFIER, "fore:#333333")
@@ -109,17 +136,27 @@ class MainFrameController(MainFrameView):
             # Line numbers
             styled_text_ctrl.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
             styled_text_ctrl.SetMarginWidth(0, 40)
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_STYLE_LINENUMBER, "back:#e0e0e0,fore:#555555")
+            # print(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
+            styled_text_ctrl.StyleSetSpec(
+                wx.stc.STC_STYLE_LINENUMBER,
+                f"back:{wx_colour_to_hex(ln_bg)},"
+                f"fore:{wx_colour_to_hex(ln_fg)}"
+            )
+            styled_text_ctrl.SetMarginBackground(0, ln_bg)
 
             # Caret e selection
-            styled_text_ctrl.SetCaretForeground(wx.Colour("#000000"))
-            styled_text_ctrl.SetSelBackground(True, wx.Colour("#cce8ff"))
-            styled_text_ctrl.SetSelForeground(True, wx.Colour("#000000"))
+            styled_text_ctrl.SetCaretForeground(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
+            styled_text_ctrl.SetSelBackground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT))
+            styled_text_ctrl.SetSelForeground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+
+            # styled_text_ctrl.SetCaretForeground(wx.Colour("#000000"))
+            # styled_text_ctrl.SetSelBackground(True, wx.Colour("#cce8ff"))
+            # styled_text_ctrl.SetSelForeground(True, wx.Colour("#ff0000P"))
 
     def _setup_subscribers(self):
         self.toggle_panel()
 
-        LOG_QUERY.subscribe(self._write_query_log, CallbackEvent.ON_APPEND)
+        QUERY_LOGS.subscribe(self._write_query_log, CallbackEvent.ON_APPEND)
 
         # SESSIONS.subscribe(self._load_session, CallbackEvent.ON_APPEND)
 
@@ -148,6 +185,7 @@ class MainFrameController(MainFrameView):
         # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
+        print(text)
         self.sql_query_logs.AppendText(f"{text}\n")
         self.sql_query_logs.GotoLine(self.sql_query_logs.GetLineCount() - 1)
 
@@ -264,13 +302,10 @@ class MainFrameController(MainFrameView):
         self.toggle_panel(session)
 
         wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
-        # self.status_bar.SetStatusText(f"{_('Session')}: {session.name}", 0)
 
         wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
-        # self.status_bar.SetStatusText(f"{_('Version')}: {session.context.get_server_version()}", 1)
 
         wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
-        # self.status_bar.SetStatusText(f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
@@ -286,39 +321,13 @@ class MainFrameController(MainFrameView):
 
     # VIEW
     def _on_current_view(self, current: SQLView):
-        # if NEW_TABLE.get_value() and not self.on_cancel_table(None):
-        #     return
-
         self.toggle_panel(current)
-
-        # if self.MainFrameNotebook.GetSelection() < 2:
-        #     self.MainFrameNotebook.SetSelection(2)
-        #     self.table_name.SetFocus()
-
-        # CURRENT_COLUMN.set_value(None)
-        # CURRENT_RECORDS.set_value([])
-        # CURRENT_INDEX.set_value(None)
-        # CURRENT_FOREIGN_KEY.set_value(None)
 
         self.btn_delete_view.Enable(current is not None)
 
     # TRIGGER
     def _on_current_trigger(self, current: SQLTrigger):
-        # if NEW_TABLE.get_value() and not self.on_cancel_table(None):
-        #     return
-
         self.toggle_panel(current)
-
-        # if self.MainFrameNotebook.GetSelection() < 2:
-        #     self.MainFrameNotebook.SetSelection(2)
-        #     self.table_name.SetFocus()
-
-        # CURRENT_COLUMN.set_value(None)
-        # CURRENT_RECORDS.set_value([])
-        # CURRENT_INDEX.set_value(None)
-        # CURRENT_FOREIGN_KEY.set_value(None)
-
-        # self.btn_delete_view.Enable(view is not None)
 
     # TABLE
     def _on_current_table(self, current: SQLTable):
@@ -326,12 +335,6 @@ class MainFrameController(MainFrameView):
             return
 
         self.toggle_panel(current)
-
-        # print("MainFrameNotebook", self.MainFrameNotebook.GetSelection())
-        # self._toggle_edit_table(True)
-        # if self.MainFrameNotebook.GetSelection() < 2:
-        #     self.MainFrameNotebook.SetSelection(2)
-        #     self.table_name.SetFocus()
 
         CURRENT_COLUMN.set_value(None)
         CURRENT_RECORDS.set_value([])

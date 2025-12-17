@@ -3,8 +3,11 @@ from typing import List
 import wx
 import wx.dataview
 
+from helpers.dataview import BaseDataViewIndexListModel
+
 from structures.engines import merge_original_current
-from windows.main import CURRENT_TABLE, CURRENT_INDEX, BaseDataViewIndexListModel
+
+from windows.main import CURRENT_TABLE, CURRENT_INDEX
 from windows.main.column import NEW_TABLE
 
 from structures.engines.database import SQLTable, SQLIndex

@@ -6,15 +6,16 @@ import wx
 import wx.dataview
 
 from helpers.logger import logger
+from helpers.dataview import BaseDataViewModel
 from helpers.bindings import AbstractModel
-from helpers.exceptions import ConnectionException
+from helpers.exceptions import ConnectionError
 from helpers.observables import Observable, debounce, Loader, CallbackEvent
 
 from structures.session import Session, SessionEngine, CredentialsConfiguration, SourceConfiguration
 from structures.configurations import SSHTunnelConfiguration
 
 from windows import SessionManagerView
-from windows.main import CURRENT_SESSION, SESSIONS, BaseDataViewModel
+from windows.main import CURRENT_SESSION, SESSIONS
 from windows.sessions.repository import SessionManagerRepository
 
 NEW_SESSION: Observable[Session] = Observable()
@@ -410,7 +411,7 @@ class SessionManagerController(SessionManagerView):
                                  message=_(f'Connection error:\n{str(ex)}'),
                                  caption=_("Connection error"),
                                  style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
-                raise ConnectionException
+                raise ConnectionError(ex)
 
     def on_exit(self, event):
         if not self._app.main_frame:

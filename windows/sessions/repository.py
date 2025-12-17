@@ -100,7 +100,7 @@ class SessionManagerRepository:
                 port=int(data.get('port', 22)),
                 username=data.get('username', ''),
                 password=data.get('password', ''),
-                local_port=int(data.get('local_port', 3307)),
+                local_port=int(data.get('local_port', 0)),
             )
         except (TypeError, ValueError):
             return None

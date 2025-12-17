@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 from structures.engines.indextype import SQLIndexType
 from helpers.logger import logger
 
-from structures.engines.context import LOG_QUERY, AbstractContext
+from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
 
@@ -100,7 +100,7 @@ class SQLiteContext(AbstractContext):
         return results
 
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
-        LOG_QUERY.append(f"/* get_tables for database={database.name} */")
+        QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute("""
             SELECT *, SUM(pgsize) as total_bytes, SUM(ncell) as total_rows
@@ -138,7 +138,7 @@ class SQLiteContext(AbstractContext):
         if table.id == -1:
             return results
 
-        LOG_QUERY.append(f"/* get_columns for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_columns for table={table.name} */")
 
         self.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table.name}'")
         if not (sql_table_result := self.cursor.fetchone()):
@@ -199,7 +199,7 @@ class SQLiteContext(AbstractContext):
             return []
         logger.debug(f"get_indexes for table={table.name}")
 
-        LOG_QUERY.append(f"/* get_indexes for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_indexes for table={table.name} */")
 
         results = []
 
@@ -285,7 +285,7 @@ class SQLiteContext(AbstractContext):
             return []
         logger.debug(f"get_foreign_keys for table={table.name}")
 
-        LOG_QUERY.append(f"/* get_foreign_keys for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_foreign_keys for table={table.name} */")
 
         self.execute(f"SELECT"
                      f" `id`, `table`, GROUP_CONCAT(`from`) as `from`, GROUP_CONCAT(`to`) as `to`, `on_update`, `on_delete`"
@@ -314,7 +314,7 @@ class SQLiteContext(AbstractContext):
         return foreign_keys
 
     def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLiteRecord]:
-        LOG_QUERY.append(f"/* get_records for table={table.name} */")
+        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
 

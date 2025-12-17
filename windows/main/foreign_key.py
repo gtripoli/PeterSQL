@@ -1,15 +1,18 @@
-from typing import List, Optional
+from typing import List
 
 import wx
 import wx.dataview
 
-from structures.engines import merge_original_current
-from helpers.logger import logger
-from helpers.observables import Loader
 from icons import BitmapList
-from windows import TableForeignKeysDataViewCtrl
 
-from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, BaseDataViewIndexListModel, CURRENT_SESSION
+from helpers.logger import logger
+from helpers.dataview import BaseDataViewIndexListModel
+from helpers.observables import Loader
+
+from structures.engines import merge_original_current
+
+from windows import TableForeignKeysDataViewCtrl
+from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_SESSION
 from windows.main.table import NEW_TABLE
 
 from structures.engines.database import SQLForeignKey, SQLTable

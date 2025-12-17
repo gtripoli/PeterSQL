@@ -3,19 +3,19 @@ from typing import List, Optional, Dict, Any
 import wx
 import wx.dataview
 
-from helpers.logger import logger
 from icons import combine_bitmaps
 
+from helpers.logger import logger
 from helpers.observables import Loader
+from helpers.dataview import BaseDataViewIndexListModel
 
-from structures.session import Session
-from structures.engines.sqlite import ColumnField
 from windows import TableColumnsDataViewCtrl
-
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, BaseDataViewIndexListModel, CURRENT_COLUMN
+from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
 from windows.main.table import NEW_TABLE
 
+from structures.session import Session
 from structures.engines import merge_original_current
+from structures.engines.sqlite import ColumnField
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
 from structures.engines.indextype import SQLIndexType
 
@@ -90,7 +90,7 @@ class ColumnModel(BaseDataViewIndexListModel):
             attr.SetBold(True)
 
         if column_field_attr == "#":
-            attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
+            attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
 
         if column_field_attr == "name" and not getattr(column, column_field_attr, "").strip():
             attr.SetColour(wx.Colour(255, 0, 0))
@@ -104,7 +104,7 @@ class ColumnModel(BaseDataViewIndexListModel):
         if column_field_attr == "length_scale_set":
             datatype = column.datatype
             if not any([datatype.has_length, datatype.has_precision, datatype.has_scale, datatype.has_set]):
-                attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
+                attr.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
 
         return True
 

@@ -1365,7 +1365,7 @@ class MainFrameView ( wx.Frame ):
 		self.sql_query_logs.SetViewWhiteSpace( False )
 		self.sql_query_logs.SetMarginWidth( 2, 0 )
 		self.sql_query_logs.SetIndentationGuides( True )
-		self.sql_query_logs.SetReadOnly( True )
+		self.sql_query_logs.SetReadOnly( False )
 		self.sql_query_logs.SetMarginWidth( 1, 0 )
 		self.sql_query_logs.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
 		self.sql_query_logs.SetMarginWidth( 0, self.sql_query_logs.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )

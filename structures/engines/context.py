@@ -14,7 +14,7 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 
-LOG_QUERY: ObservableList[str] = ObservableList()
+QUERY_LOGS: ObservableList[str] = ObservableList()
 
 SQLTypeAlias: TypeAlias = Union['SQLView', 'SQLTrigger', 'SQLTable', 'SQLColumn', 'SQLIndex', 'SQLForeignKey', 'SQLRecord']
 
@@ -237,13 +237,13 @@ class AbstractContext(abc.ABC):
     def execute(self, query: str) -> bool:
         query = re.sub(r'\s+', ' ', str(query)).strip()
 
-        LOG_QUERY.append(query)
+        QUERY_LOGS.append(query)
 
         try:
             self.cursor.execute(query)
         except Exception as ex:
             logger.error(ex, exc_info=True)
-            LOG_QUERY.append(f"/* {str(ex)} */")
+            QUERY_LOGS.append(f"/* {str(ex)} */")
             raise
 
         return True
