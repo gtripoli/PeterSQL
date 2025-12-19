@@ -1,4 +1,3 @@
-
 from typing import Optional, Any, Callable
 from gettext import gettext as _
 
@@ -18,7 +17,8 @@ from windows import SessionManagerView
 from windows.main import CURRENT_SESSION, SESSIONS
 from windows.sessions.repository import SessionManagerRepository
 
-NEW_SESSION: Observable[Session] = Observable()
+NEW_CONFIG: Observable[Session] = Observable()
+CURRENT_CONFIG: Observable[Session] = Observable()
 
 
 class SessionManagerModel(AbstractModel):
@@ -50,8 +50,8 @@ class SessionManagerModel(AbstractModel):
             callback=self._build_session
         )
 
-        CURRENT_SESSION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
-        CURRENT_SESSION.subscribe(self.populate)
+        CURRENT_CONFIG.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
+        CURRENT_CONFIG.subscribe(self.populate)
 
     def _set_default_port(self, session_engine_name: str):
         session_engine = SessionEngine.from_name(session_engine_name)
@@ -109,8 +109,8 @@ class SessionManagerModel(AbstractModel):
             self.ssh_tunnel_enabled.set_value(False)
 
     def do_create_session(self):
-        CURRENT_SESSION.set_value(None)
-        NEW_SESSION.set_value(None)
+        CURRENT_CONFIG.set_value(None)
+        NEW_CONFIG.set_value(None)
 
         session = Session(
             id=-1,
@@ -124,7 +124,7 @@ class SessionManagerModel(AbstractModel):
             )
         )
 
-        CURRENT_SESSION.set_value(session)
+        CURRENT_CONFIG.set_value(session)
 
     def _build_session(self, *args):
         if any([self.name.is_empty, self.engine.is_empty]):
@@ -132,18 +132,18 @@ class SessionManagerModel(AbstractModel):
 
         session_engine = SessionEngine.from_name(self.engine.get_value())
 
-        if (NEW_SESSION.get_value() or CURRENT_SESSION.get_value()) is None:
+        if (NEW_CONFIG.get_value() or CURRENT_CONFIG.get_value()) is None:
             self.do_create_session()
 
-        current_session = (NEW_SESSION.get_value() or CURRENT_SESSION.get_value()).copy()
+        current_config = (NEW_CONFIG.get_value() or CURRENT_CONFIG.get_value()).copy()
 
-        new_session = NEW_SESSION.get_value() or CURRENT_SESSION.get_value()
-        new_session.name = self.name.get_value()
-        new_session.engine = session_engine
-        new_session.comments = self.comments.get_value()
+        new_config = NEW_CONFIG.get_value() or CURRENT_CONFIG.get_value()
+        new_config.name = self.name.get_value()
+        new_config.engine = session_engine
+        new_config.comments = self.comments.get_value()
 
         if session_engine in [SessionEngine.MYSQL, SessionEngine.MARIADB, SessionEngine.POSTGRESQL]:
-            new_session.configuration = CredentialsConfiguration(
+            new_config.configuration = CredentialsConfiguration(
                 hostname=self.hostname.get_value(),
                 username=self.username.get_value(),
                 password=self.password.get_value(),
@@ -151,7 +151,7 @@ class SessionManagerModel(AbstractModel):
             )
 
             if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled.get_value()):
-                new_session.ssh_tunnel = SSHTunnelConfiguration(
+                new_config.ssh_tunnel = SSHTunnelConfiguration(
                     enabled=ssh_tunnel_enabled,
                     executable=self.ssh_tunnel_executable.get_value(),
                     hostname=self.ssh_tunnel_hostname.get_value(),
@@ -162,18 +162,18 @@ class SessionManagerModel(AbstractModel):
                 )
 
         elif session_engine == SessionEngine.SQLITE:
-            new_session.configuration = SourceConfiguration(
+            new_config.configuration = SourceConfiguration(
                 filename=self.filename.get_value()
             )
-            new_session.ssh_tunnel = None
+            new_config.ssh_tunnel = None
 
-        if not new_session.is_valid:
+        if not new_config.is_valid:
             return
 
-        elif new_session == current_session:
+        elif new_config == current_config:
             return
 
-        NEW_SESSION.set_value(new_session)
+        NEW_CONFIG.set_value(new_config)
 
 
 class SessionListModel(BaseDataViewModel):
@@ -205,14 +205,12 @@ class SessionListModel(BaseDataViewModel):
         # if not item:
         return wx.dataview.NullDataViewItem
 
-
     def GetValue(self, item, col):
         node = self.ItemToObject(item)
 
         mapper = {}
         if isinstance(node, Session):
             bitmap = node.engine.value.bitmap
-            
 
             mapper = {0: wx.dataview.DataViewIconText(node.name, bitmap), 1: ""}
         else:
@@ -236,19 +234,16 @@ class SessionTreeController():
         self.session_tree_ctrl.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.session_tree_ctrl.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
 
-        # CURRENT_SESSION.subscribe(self._on_current_session_changed, CallbackEvent.AFTER_CHANGE)
-        # NEW_SESSION.subscribe(self._on_new_session)
-
     def _on_selection_changed(self, event):
         item = event.GetItem()
-        CURRENT_SESSION.set_value(None)
+        CURRENT_CONFIG.set_value(None)
 
         if not item.IsOk():
             return
 
         session = self.model.ItemToObject(item)
 
-        CURRENT_SESSION.set_value(session)
+        CURRENT_CONFIG.set_value(session)
 
     def _on_item_activated(self, event):
         item = event.GetItem()
@@ -256,7 +251,7 @@ class SessionTreeController():
             return
         session = self.model.ItemToObject(item)
 
-        CURRENT_SESSION.set_value(session)
+        CURRENT_CONFIG.set_value(session)
 
         if self.on_item_activated:
             self.on_item_activated(session)
@@ -294,11 +289,11 @@ class SessionManagerController(SessionManagerView):
 
         self.session_manager_model.engine.subscribe(self._on_change_engine)
 
-        CURRENT_SESSION.subscribe(self._on_current_session)
+        CURRENT_CONFIG.subscribe(self._on_current_config)
 
-        NEW_SESSION.subscribe(self._on_new_session)
+        NEW_CONFIG.subscribe(self._on_new_config)
 
-    def _on_new_session(self, session: Session):
+    def _on_new_config(self, session: Session):
         item = self.session_tree_controller.model.ObjectToItem(session)
         if item.IsOk():
             self.session_tree_controller.model.ItemChanged(item)
@@ -318,24 +313,22 @@ class SessionManagerController(SessionManagerView):
             wx.MessageBox("Please select a session to delete", "Warning", wx.OK | wx.ICON_WARNING)
 
     def do_open_session(self, event):
-        session = CURRENT_SESSION.get_value()
-        if not session:
-            wx.MessageBox("Please select a session to open", "Warning", wx.OK | wx.ICON_WARNING)
-            return
-
-        if not self.GetParent():
-            self._app.open_main_frame()
+        session = CURRENT_CONFIG.get_value()
 
         SESSIONS.append(session)
 
+        if not self.GetParent():
+            CURRENT_SESSION.set_value(session)
+            self._app.open_main_frame()
+
         self.Hide()
 
-    def _on_current_session(self, session: Optional[Session]):
+    def _on_current_config(self, session: Optional[Session]):
         self.btn_open.Enable(bool(session and session.is_valid))
         self.btn_delete.Enable(bool(session))
 
     def _on_session_activated(self, session: Session):
-        CURRENT_SESSION.set_value(session)
+        CURRENT_CONFIG.set_value(session)
         # self._app.main_frame.show()
         self.on_open(None)
 
@@ -346,7 +339,7 @@ class SessionManagerController(SessionManagerView):
         self.panel_source.GetParent().Layout()
 
     def on_save(self, *args):
-        session = NEW_SESSION.get_value()
+        session = NEW_CONFIG.get_value()
         if not session:
             return False
 
@@ -361,11 +354,11 @@ class SessionManagerController(SessionManagerView):
 
         self._repository.save_session(session)
 
-        NEW_SESSION.set_value(None)
+        NEW_CONFIG.set_value(None)
         if session.is_new:
             session = self.session_tree_controller.model.data[-1]
 
-        CURRENT_SESSION.set_value(None).set_value(session)
+        CURRENT_CONFIG.set_value(None).set_value(session)
         self.session_tree_ctrl.Select(self.session_tree_controller.model.ObjectToItem(session))
 
         return True
@@ -374,14 +367,14 @@ class SessionManagerController(SessionManagerView):
         self.session_manager_model.do_create_session()
 
     def on_open(self, event):
-        if NEW_SESSION.get_value() and not self.on_save(event):
+        if NEW_CONFIG.get_value() and not self.on_save(event):
             return
 
-        session = CURRENT_SESSION.get_value()
+        session = CURRENT_CONFIG.get_value()
         if session:
             try:
                 self.verify_connection(session)
-            except ConnectionException as ex:
+            except ConnectionError as ex:
                 logger.info(ex)
             except Exception as ex:
                 logger.error(ex, exc_info=True)
@@ -389,7 +382,7 @@ class SessionManagerController(SessionManagerView):
                 self.do_open_session(session)
 
     def on_delete(self, *args):
-        session = CURRENT_SESSION.get_value()
+        session = CURRENT_CONFIG.get_value()
         if not session:
             return
         dialog = wx.MessageDialog(None,
@@ -398,8 +391,8 @@ class SessionManagerController(SessionManagerView):
                                   style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
                                   )
         if dialog.ShowModal() == wx.ID_YES:
-            NEW_SESSION.set_value(None)
-            CURRENT_SESSION.set_value(None)
+            NEW_CONFIG.set_value(None)
+            CURRENT_CONFIG.set_value(None)
             self._repository.delete_session(session)
 
     def verify_connection(self, session: Session):

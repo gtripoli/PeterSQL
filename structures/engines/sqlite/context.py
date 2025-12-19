@@ -13,7 +13,6 @@ from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PAT
 from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
-from icons import BitmapList
 
 
 class SQLiteContext(AbstractContext):
@@ -62,12 +61,12 @@ class SQLiteContext(AbstractContext):
         return None
 
     def get_databases(self) -> List[SQLDatabase]:
-        self.execute("SELECT page_count * page_size as file_size_bytes FROM pragma_page_count(), pragma_page_size();")
+        self.execute("SELECT page_count * page_size as total_bytes FROM pragma_page_count(), pragma_page_size();")
         return [SQLiteDatabase(
             id=0,
             name='main',
             context=self,
-            size=self.fetchone()['file_size_bytes'],
+            total_bytes=float(self.fetchone()['total_bytes']),
             get_tables_handler=self.get_tables,
             get_views_handler=self.get_views,
             get_triggers_handler=self.get_triggers,

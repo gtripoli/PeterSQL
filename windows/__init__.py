@@ -14,6 +14,7 @@ from .components.dataview import TableRecordsDataViewCtrl
 import wx
 import wx.xrc
 import wx.dataview
+import wx.lib.agw.hypertreelist
 import wx.stc
 
 import gettext
@@ -73,7 +74,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer1211 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText211 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Session Name"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText211 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Session name"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText211.Wrap( -1 )
 
 		bSizer1211.Add( self.m_staticText211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -87,7 +88,7 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer13 = wx.BoxSizer( wx.HORIZONTAL )
 
 		bSizer13.SetMinSize( wx.Size( -1,0 ) )
-		self.m_staticText2 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Connection Type"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Connection type"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText2.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText2, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -198,7 +199,7 @@ class SessionManagerView ( wx.Dialog ):
 		bSizer116 = wx.BoxSizer( wx.HORIZONTAL )
 
 
-		bSizer116.Add( ( 160, 0), 0, wx.EXPAND, 5 )
+		bSizer116.Add( ( 150, 0), 0, wx.EXPAND, 5 )
 
 		self.ssh_tunnel_enabled = wx.CheckBox( self.m_panel36, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
@@ -208,7 +209,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer1213 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText213 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH executable:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText213 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH executable"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText213.Wrap( -1 )
 
 		bSizer1213.Add( self.m_staticText213, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -221,7 +222,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer12131 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText2131 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH host + port:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2131 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH host + port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText2131.Wrap( -1 )
 
 		bSizer12131.Add( self.m_staticText2131, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -237,7 +238,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer12132 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText2132 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH username:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText2132 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH username"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText2132.Wrap( -1 )
 
 		bSizer12132.Add( self.m_staticText2132, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -250,7 +251,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer121321 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText21321 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH password:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText21321 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH password"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText21321.Wrap( -1 )
 
 		bSizer121321.Add( self.m_staticText21321, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -263,7 +264,7 @@ class SessionManagerView ( wx.Dialog ):
 
 		bSizer1213211 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText213211 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"Local port:"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+		self.m_staticText213211 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"Local port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
 		self.m_staticText213211.Wrap( -1 )
 
 		bSizer1213211.Add( self.m_staticText213211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -574,9 +575,10 @@ class MainFrameView ( wx.Frame ):
 		self.m_panel14 = wx.Panel( self.m_splitter4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer24 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.tree_ctrl_sessions = wx.dataview.DataViewCtrl( self.m_panel14, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_SINGLE )
-		self.m_dataViewColumn1 = self.tree_ctrl_sessions.AppendIconTextColumn( _(u"Database"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewColumn3 = self.tree_ctrl_sessions.AppendProgressColumn( _(u"Size"), 1, wx.dataview.DATAVIEW_CELL_INERT, 50, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.tree_ctrl_sessions = wx.lib.agw.hypertreelist.HyperTreeList(
+		self.m_panel14, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+		agwStyle=wx.TR_DEFAULT_STYLE|wx.TR_SINGLE|wx.TR_FULL_ROW_HIGHLIGHT|wx.TR_HIDE_ROOT|wx.TR_LINES_AT_ROOT
+		)
 		bSizer24.Add( self.tree_ctrl_sessions, 1, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -1345,7 +1347,7 @@ class MainFrameView ( wx.Frame ):
 
 		self.m_panel15.Bind( wx.EVT_RIGHT_DOWN, self.m_panel15OnContextMenu )
 
-		self.m_splitter4.SplitVertically( self.m_panel14, self.m_panel15, 300 )
+		self.m_splitter4.SplitVertically( self.m_panel14, self.m_panel15, 320 )
 		bSizer72.Add( self.m_splitter4, 1, wx.EXPAND, 5 )
 
 
@@ -1522,7 +1524,7 @@ class MainFrameView ( wx.Frame ):
 		self.m_splitter51.Unbind( wx.EVT_IDLE )
 
 	def m_splitter4OnIdle( self, event ):
-		self.m_splitter4.SetSashPosition( 300 )
+		self.m_splitter4.SetSashPosition( 320 )
 		self.m_splitter4.Unbind( wx.EVT_IDLE )
 
 	def m_panel14OnContextMenu( self, event ):
@@ -1663,6 +1665,26 @@ class Trash ( wx.Panel ):
 
 
 		bSizer90.Add( bSizer12211, 0, wx.EXPAND, 5 )
+
+		self.tree_ctrl_sessions2 = wx.TreeCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TR_DEFAULT_STYLE )
+		self.tree_ctrl_sessions2.Hide()
+
+		bSizer90.Add( self.tree_ctrl_sessions2, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.tree_ctrl_sessions_bkp3 = wx.dataview.TreeListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.TL_DEFAULT_STYLE|wx.dataview.TL_SINGLE )
+		self.tree_ctrl_sessions_bkp3.Hide()
+
+		self.tree_ctrl_sessions_bkp3.AppendColumn( _(u"Name"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+		self.tree_ctrl_sessions_bkp3.AppendColumn( _(u"Usage"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+
+		bSizer90.Add( self.tree_ctrl_sessions_bkp3, 1, wx.EXPAND | wx.ALL, 5 )
+
+		self.tree_ctrl_sessions_bkp = wx.dataview.DataViewCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_SINGLE )
+		self.tree_ctrl_sessions_bkp.Hide()
+
+		self.m_dataViewColumn1 = self.tree_ctrl_sessions_bkp.AppendIconTextColumn( _(u"Database"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn3 = self.tree_ctrl_sessions_bkp.AppendProgressColumn( _(u"Size"), 1, wx.dataview.DATAVIEW_CELL_INERT, 50, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		bSizer90.Add( self.tree_ctrl_sessions_bkp, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.SetSizer( bSizer90 )

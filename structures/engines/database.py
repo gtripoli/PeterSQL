@@ -15,29 +15,36 @@ from structures.engines.indextype import SQLIndexType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
-
-
 @dataclasses.dataclass
 class SQLDatabase(abc.ABC):
     id: Optional[int]
     name: str
     context: 'AbstractContext'
-    size: float = 0
+    total_bytes: float = 0
 
     get_tables_handler: Callable[[Self], List['SQLTable']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_views_handler: Callable[[Self], List['SQLView']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_procedures_handler: Callable[[Self], List['SQLProcedure']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_functions_handler: Callable[[Self], List['SQLFunction']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_triggers_handler: Callable[[Self], List['SQLTrigger']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_events_handler: Callable[[Self], List['SQLEvent']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
+    get_views_handler: Optional[Callable[[Self], List['SQLView']]] = dataclasses.field(compare=False, default=None)
+    get_procedures_handler: Optional[Callable[[Self], List['SQLProcedure']]] = dataclasses.field(compare=False, default=None)
+    get_functions_handler: Optional[Callable[[Self], List['SQLFunction']]] = dataclasses.field(compare=False, default=None)
+    get_triggers_handler: Optional[Callable[[Self], List['SQLTrigger']]] = dataclasses.field(compare=False, default=None)
+    get_events_handler: Optional[Callable[[Self], List['SQLEvent']]] = dataclasses.field(compare=False, default=None)
 
     def __post_init__(self):
         self.tables = ObservableLazyList(lambda: self.get_tables_handler(self))
-        self.views = ObservableLazyList(lambda: self.get_views_handler(self))
-        self.procedures = ObservableLazyList(lambda: self.get_procedures_handler(self))
-        self.functions = ObservableLazyList(lambda: self.get_functions_handler(self))
-        self.triggers = ObservableLazyList(lambda: self.get_triggers_handler(self))
-        self.events = ObservableLazyList(lambda: self.get_events_handler(self))
+        if self.get_views_handler:
+            self.views = ObservableLazyList(lambda: self.get_views_handler(self))
+
+        if self.get_procedures_handler:
+            self.procedures = ObservableLazyList(lambda: self.get_procedures_handler(self))
+
+        if self.get_functions_handler:
+            self.functions = ObservableLazyList(lambda: self.get_functions_handler(self))
+
+        if self.get_triggers_handler:
+            self.triggers = ObservableLazyList(lambda: self.get_triggers_handler(self))
+
+        if self.get_events_handler:
+            self.events = ObservableLazyList(lambda: self.get_events_handler(self))
 
     def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLDatabase):
@@ -51,7 +58,7 @@ class SQLDatabase(abc.ABC):
             return False
 
         for observable_lazy_list in ["tables", "views", "procedures", "functions", "triggers", "events"]:
-            if not all([oll1 != oll2 for oll1, oll2 in zip(getattr(self, observable_lazy_list), getattr(other, observable_lazy_list))]):
+            if not all([oll1 != oll2 for oll1, oll2 in zip(getattr(self, observable_lazy_list, None), getattr(other, observable_lazy_list, None))]):
                 return False
 
         return True

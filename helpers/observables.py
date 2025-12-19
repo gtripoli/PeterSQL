@@ -28,11 +28,13 @@ class CallbackEvent(enum.Enum):
 
 
 class Observable(Generic[T]):
-
+    
     def __init__(self, initial: Any = None):
         self._initial = initial
+        
         if initial is not None:
             self._value = initial
+            self._last_value= initial
 
         self._callbacks: Dict[CallbackEvent, Dict[Any, Callable]] = {event: {} for event in CallbackEvent}
 
@@ -50,13 +52,14 @@ class Observable(Generic[T]):
 
     @property
     def is_dirty(self) -> bool:
-        return hasattr(self, "_value") and self._value != self._initial
+        return hasattr(self, "_value") and self._value != getattr(self, '_last_value', None)
 
     def _set_value(self, value: Any, **kwargs) -> None:
         if getattr(self, "_value", None) != value:
             self.execute_callback(CallbackEvent.BEFORE_CHANGE, **kwargs)
             self._value = value
             self.execute_callback(CallbackEvent.AFTER_CHANGE, **kwargs)
+            self._last_value = value
 
         return None
 
@@ -285,8 +288,8 @@ class ObservableList(Observable[List[T]]):
 class ObservableLazyList(ObservableList[T]):
     def __init__(self, loader: Callable[[], List[T]]) -> None:
         super().__init__(default=[])
-        self._loader = loader
         self._loaded = False
+        self._loader = loader
 
     @property
     def is_loaded(self) -> bool:

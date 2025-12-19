@@ -185,7 +185,6 @@ class MainFrameController(MainFrameView):
         # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
-        print(text)
         self.sql_query_logs.AppendText(f"{text}\n")
         self.sql_query_logs.GotoLine(self.sql_query_logs.GetLineCount() - 1)
 
@@ -301,20 +300,22 @@ class MainFrameController(MainFrameView):
     def _on_current_session(self, session: Session):
         self.toggle_panel(session)
 
-        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
+        if session :
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
 
-        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
 
-        wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
 
-        self.table_engine.Enable(len(CURRENT_DATABASE.get_value().context.ENGINES) > 1)
-        self.table_engine.SetItems(CURRENT_DATABASE.get_value().context.ENGINES)
+        if database :
+            self.table_engine.Enable(len(database.context.ENGINES) > 1)
+            self.table_engine.SetItems(database.context.ENGINES)
 
-        self.table_collation.Enable(len(CURRENT_DATABASE.get_value().context.COLLATIONS.keys()) > 1)
-        self.table_collation.SetItems(list(CURRENT_DATABASE.get_value().context.COLLATIONS.keys()))
+            self.table_collation.Enable(len(database.context.COLLATIONS.keys()) > 1)
+            self.table_collation.SetItems(list(database.context.COLLATIONS.keys()))
 
         if CURRENT_SESSION.get_value().engine in [SessionEngine.SQLITE]:
             self.table_collation.Enable(False)

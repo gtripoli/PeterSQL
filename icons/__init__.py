@@ -33,6 +33,7 @@ class BitmapList:
     ADD = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "add.png"), wx.BITMAP_TYPE_PNG)
     DELETE = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "delete.png"), wx.BITMAP_TYPE_PNG)
     LIGHTNING = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "lightning.png"), wx.BITMAP_TYPE_PNG)
+    CLOCK = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "time.png"), wx.BITMAP_TYPE_PNG)
     ARROW_UP = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "arrow_up.png"), wx.BITMAP_TYPE_PNG)
     ARROW_DOWN = wx.Bitmap(os.path.join(os.getcwd(), "icons", "16x16", "arrow_down.png"), wx.BITMAP_TYPE_PNG)
 
@@ -60,6 +61,7 @@ class IconList(object):
     ADD = ImageList.Add(BitmapList.ADD)
     DELETE = ImageList.Add(BitmapList.DELETE)
     LIGHTNING = ImageList.Add(BitmapList.LIGHTNING)
+    CLOCK = ImageList.Add(BitmapList.CLOCK)
 
 
 def combine_bitmaps(*bitmaps: wx.Bitmap) -> wx.Bitmap:

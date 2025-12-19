@@ -42,7 +42,7 @@ So, as a personal challenge, I decided to port it to Python.
 ## 🔧 Technologies used
 
 - [Python 3.11+](https://www.python.org/)
-- [wxPython 4.2.3](https://wxpython.org/) - native cross-platform interface
+- [wxPython 4.2.4](https://wxpython.org/) - native cross-platform interface
 - [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
 ---
 

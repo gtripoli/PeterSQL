@@ -16,7 +16,7 @@ dependencies = [
     "pymysql>=1.1.2",
     "pyyaml>=6.0.2",
     "requests>=2.32.5",
-    "wxpython==4.2.3",
+    "wxpython==4.2.4",
 ]
 
 [dependency-groups]
