@@ -1,23 +1,30 @@
 import dataclasses
-from typing import Self, List, Optional, Dict, Tuple
+from typing import Self, Optional, Tuple, List
 
 from helpers.logger import logger
-
 from structures.engines import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
-
-from structures.engines.mariadb.indextype import MariaDBIndexType
-from structures.engines.mariadb.builder import MariaDBColumnBuilder
+from structures.engines.database import (
+    SQLColumn,
+    SQLDatabase,
+    SQLForeignKey,
+    SQLIndex,
+    SQLRecord,
+    SQLTable,
+    SQLTrigger,
+    SQLView,
+)
+from structures.engines.mysql.builder import MySQLColumnBuilder
+from structures.engines.mysql.indextype import MySQLIndexType
 
 
 @dataclasses.dataclass
-class MariaDBDatabase(SQLDatabase):
+class MySQLDatabase(SQLDatabase):
     default_collation: str = None
 
 
 @dataclasses.dataclass(eq=False)
-class MariaDBTable(SQLTable):
+class MySQLTable(SQLTable):
     def alter_auto_increment(self, auto_increment: int):
         sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
         self.database.context.execute(sql)
@@ -52,22 +59,22 @@ class MariaDBTable(SQLTable):
 
         return True
 
-    def create(self, map_columns: List[Tuple[Optional['MariaDBColumn'], Optional['MariaDBColumn']]]) -> bool:
+    def create(self, map_columns: List[Tuple[Optional["MySQLColumn"], Optional["MySQLColumn"]]]) -> bool:
         constraints = []
         primary_keys = []
-        columns_definitions: Dict[str, str] = {}
+        columns_definitions: dict[str, str] = {}
 
         for original, current in map_columns:
             if current:
                 if current.is_primary_key or current.is_auto_increment:
                     primary_keys.append(current)
 
-                exclude = ['unique']
+                exclude = ["unique"]
 
                 if len(primary_keys) > 1:
-                    exclude += ['primary_key', 'auto_increment']
+                    exclude += ["primary_key", "auto_increment"]
 
-                columns_definitions[current.name] = str(MariaDBColumnBuilder(current, exclude=exclude))
+                columns_definitions[current.name] = str(MySQLColumnBuilder(current, exclude=exclude))
 
         # Handle primary keys
         if len(primary_keys) > 1:
@@ -75,16 +82,16 @@ class MariaDBTable(SQLTable):
             auto_increment = next((pk for pk in primary_keys if pk.is_auto_increment), None)
             if auto_increment:
                 # If autoincrement and multiple primary keys, use UNIQUE
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
+                cols = ", ".join([f"`{pk.name}`" for pk in primary_keys])
                 constraints.append(f"UNIQUE ({cols})")
             else:
-                columns_definitions = {col_name: col_def.replace(' PRIMARY KEY', '') for col_name, col_def in columns_definitions.items()}
+                columns_definitions = {col_name: col_def.replace(" PRIMARY KEY", "") for col_name, col_def in columns_definitions.items()}
                 # Use PRIMARY KEY table constraint
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
+                cols = ", ".join([f"`{pk.name}`" for pk in primary_keys])
                 constraints.append(f"PRIMARY KEY ({cols})")
 
         # Handle foreign keys
-        foreign_key_is_already_present = any(['FOREIGN KEY' in column_definition for column_definition in columns_definitions])
+        foreign_key_is_already_present = any("FOREIGN KEY" in column_definition for column_definition in columns_definitions)
 
         if not foreign_key_is_already_present:
             for fk in self.foreign_keys:
@@ -105,12 +112,12 @@ class MariaDBTable(SQLTable):
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
         original_columns = list(original_table.columns)
         original_indexes = list(original_table.indexes)
-        original_primary_keys = next((pk for pk in original_indexes if pk.type == MariaDBIndexType.PRIMARY), None)
+        next((pk for pk in original_indexes if pk.type == MySQLIndexType.PRIMARY), None)
         original_foreign_keys = list(original_table.foreign_keys)
 
         current_columns = list(self.columns)
         current_indexes = list(self.indexes)
-        current_primary_keys = next((pk for pk in current_indexes if pk.type == MariaDBIndexType.PRIMARY), None)
+        next((pk for pk in current_indexes if pk.type == MySQLIndexType.PRIMARY), None)
         current_foreign_keys = list(self.foreign_keys)
 
         map_columns = merge_original_current(original_columns, current_columns)
@@ -118,7 +125,7 @@ class MariaDBTable(SQLTable):
         map_foreign_keys = merge_original_current(original_foreign_keys, current_foreign_keys)
 
         try:
-            with self.database.context.transaction() as transaction:
+            with self.database.context.transaction():
                 if self.name != original_table.name:
                     self.rename(original_table, self.name)
                 if self.auto_increment != original_table.auto_increment:
@@ -166,22 +173,22 @@ class MariaDBTable(SQLTable):
 
 
 @dataclasses.dataclass(eq=False)
-class MariaDBColumn(SQLColumn):
-    set: Optional[List[str]] = None
-    is_unsigned: Optional[bool] = False
-    is_zerofill: Optional[bool] = False
+class MySQLColumn(SQLColumn):
+    set: List[str] | None = None
+    is_unsigned: bool | None = False
+    is_zerofill: bool | None = False
     comment: Optional[str] = None
     after: Optional[str] = None
 
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MariaDBColumnBuilder(self)}"
-        if hasattr(self, 'after') and self.after:
+        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MySQLColumnBuilder(self)}"
+        if hasattr(self, "after") and self.after:
             sql += f" AFTER `{self.after}`"
 
         return self.table.database.context.execute(sql)
 
     def modify(self, current: Self):
-        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MariaDBColumnBuilder(current)}"
+        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MySQLColumnBuilder(current)}"
         self.table.database.context.execute(sql)
 
     def rename(self, new_name: str) -> bool:
@@ -192,15 +199,15 @@ class MariaDBColumn(SQLColumn):
 
 
 @dataclasses.dataclass(eq=False)
-class MariaDBIndex(SQLIndex):
+class MySQLIndex(SQLIndex):
     def create(self) -> bool:
-        if self.type == MariaDBIndexType.PRIMARY:
+        if self.type == MySQLIndexType.PRIMARY:
             return self.table.database.context.execute(f"""ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD PRIMARY KEY ({", ".join(self.columns)})""")
 
         return self.table.database.context.execute(f"""ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD {self.type.name} `{self.name}` ({", ".join(self.columns)})""")
 
     def drop(self) -> bool:
-        if self.type == MariaDBIndexType.PRIMARY:
+        if self.type == MySQLIndexType.PRIMARY:
             return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` DROP PRIMARY KEY")
 
         return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON `{self.table.database.name}`.`{self.table.name}`")
@@ -212,7 +219,7 @@ class MariaDBIndex(SQLIndex):
 
 
 @dataclasses.dataclass(eq=False)
-class MariaDBForeignKey(SQLForeignKey):
+class MySQLForeignKey(SQLForeignKey):
     def create(self) -> bool:
         query = [
             f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD CONSTRAINT `{self.name}`",
@@ -240,7 +247,7 @@ class MariaDBForeignKey(SQLForeignKey):
         new.create()
 
 
-class MariaDBRecord(SQLRecord):
+class MySQLRecord(SQLRecord):
 
     def raw_insert_record(self) -> str:
         columns_values = {}
@@ -258,7 +265,7 @@ class MariaDBRecord(SQLRecord):
             # elif column. :
 
         if not columns_values:
-            assert False, "No columns values"
+            raise AssertionError("No columns values")
 
         return f"""INSERT INTO `{self.table.database.name}`.`{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
@@ -272,7 +279,7 @@ class MariaDBRecord(SQLRecord):
 
         if not (existing_record := self.table.database.context.fetchone()):
             logger.warning(f"Record not found for update: {identifier_columns}")
-            assert False, "Record not found for update with identifier columns"
+            raise AssertionError("Record not found for update with identifier columns")
 
         changed_columns = []
 
@@ -324,7 +331,7 @@ class MariaDBRecord(SQLRecord):
         return False
 
 
-class MariaDBView(SQLView):
+class MySQLView(SQLView):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS `{self.name}` AS {self.sql}")
 
@@ -335,7 +342,7 @@ class MariaDBView(SQLView):
         pass
 
 
-class MariaDBTrigger(SQLTrigger):
+class MySQLTrigger(SQLTrigger):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS `{self.name}` {self.sql}")
 

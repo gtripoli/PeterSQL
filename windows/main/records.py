@@ -121,10 +121,10 @@ class TableRecordsController:
     def _load_table(self, table: SQLTable):
         if table is not None:
             self.table = table
-
-            self.model = RecordsModel(self.table, len(self.table.columns))
-            self.model.set_observable(self.table.records)
-            self.list_ctrl_records.AssociateModel(self.model)
+            if getattr(self.table, "records", None) :
+                self.model = RecordsModel(self.table, len(self.table.columns))
+                self.model.set_observable(self.table.records)
+                self.list_ctrl_records.AssociateModel(self.model)
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_records.GetColumn(model_column)

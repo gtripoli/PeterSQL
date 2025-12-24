@@ -297,10 +297,17 @@ class MainFrameController(MainFrameView):
             self.MainFrameNotebook.GetPage(4).Show()
             self.MainFrameNotebook.SetSelection(3)
 
+    def on_page_chaged(self, event):
+
+        if int(event.Selection) == 5:
+            if table := CURRENT_TABLE.get_value():
+                table._load_records()
+
+
     def _on_current_session(self, session: Session):
         self.toggle_panel(session)
 
-        if session :
+        if session:
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
 
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
@@ -310,7 +317,7 @@ class MainFrameController(MainFrameView):
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
 
-        if database :
+        if database:
             self.table_engine.Enable(len(database.context.ENGINES) > 1)
             self.table_engine.SetItems(database.context.ENGINES)
 
@@ -331,18 +338,28 @@ class MainFrameController(MainFrameView):
         self.toggle_panel(current)
 
     # TABLE
-    def _on_current_table(self, current: SQLTable):
+    def _on_current_table(self, table: SQLTable):
         if NEW_TABLE.get_value() and not self.on_cancel_table(None):
             return
 
-        self.toggle_panel(current)
+        if table :
+            # `%(database_name)s`.`%(table_name)s`
+            self.name_database_table.SetLabel(
+                self.name_database_table.GetLabel() % {
+                    "database_name": table.database.name,
+                    "table_name": table.name,
+                    "total_rows" : table.total_rows
+                }
+            )
 
-        CURRENT_COLUMN.set_value(None)
-        CURRENT_RECORDS.set_value([])
-        CURRENT_INDEX.set_value(None)
-        CURRENT_FOREIGN_KEY.set_value(None)
+            self.toggle_panel(table)
 
-        self.btn_delete_table.Enable(current is not None)
+            CURRENT_COLUMN.set_value(None)
+            CURRENT_RECORDS.set_value([])
+            CURRENT_INDEX.set_value(None)
+            CURRENT_FOREIGN_KEY.set_value(None)
+
+        self.btn_delete_table.Enable(table is not None)
 
     def _on_new_table(self, table: SQLTable):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
@@ -410,8 +427,9 @@ class MainFrameController(MainFrameView):
         table = CURRENT_TABLE.get_value()
 
         NEW_TABLE.set_value(None)
+        CURRENT_TABLE.set_value(None)
 
-        if table := next((t for t in database.tables if t.id == table.id), None):
+        if table and (table := next((t for t in database.tables if t.id == table.id), None)):
             CURRENT_TABLE.set_value(None).set_value(table.copy())
 
         return True

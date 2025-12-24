@@ -1136,20 +1136,10 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer94 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.name_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"database.table:"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.name_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"Table `%(database_name)s`.`%(table_name)s`: %(total_rows) rows total"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.name_database_table.Wrap( -1 )
 
 		bSizer94.Add( self.name_database_table, 0, wx.ALL, 5 )
-
-		self.rows_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"total_rows"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.rows_database_table.Wrap( -1 )
-
-		bSizer94.Add( self.rows_database_table, 0, wx.ALL, 5 )
-
-		self.m_staticText44 = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"rows total"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText44.Wrap( -1 )
-
-		bSizer94.Add( self.m_staticText44, 0, wx.ALL, 5 )
 
 
 		bSizer61.Add( bSizer94, 0, wx.EXPAND, 5 )
@@ -1685,6 +1675,16 @@ class Trash ( wx.Panel ):
 		self.m_dataViewColumn1 = self.tree_ctrl_sessions_bkp.AppendIconTextColumn( _(u"Database"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewColumn3 = self.tree_ctrl_sessions_bkp.AppendProgressColumn( _(u"Size"), 1, wx.dataview.DATAVIEW_CELL_INERT, 50, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		bSizer90.Add( self.tree_ctrl_sessions_bkp, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.rows_database_table = wx.StaticText( self, wx.ID_ANY, _(u"%(total_rows)s"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rows_database_table.Wrap( -1 )
+
+		bSizer90.Add( self.rows_database_table, 0, wx.ALL, 5 )
+
+		self.m_staticText44 = wx.StaticText( self, wx.ID_ANY, _(u"rows total"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText44.Wrap( -1 )
+
+		bSizer90.Add( self.m_staticText44, 0, wx.ALL, 5 )
 
 
 		self.SetSizer( bSizer90 )

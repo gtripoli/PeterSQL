@@ -17,11 +17,11 @@ from windows.main.table import NEW_TABLE
 
 
 class GaugeWithLabel(wx.Panel):
-    def __init__(self, parent, range=100, size=(100, 20)):
+    def __init__(self, parent, max_range=100, size=(100, 20)):
         super().__init__(parent, size=size)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
-        self.gauge = wx.Gauge(self, range=range, size=size)
+        self.gauge = wx.Gauge(self, range=max_range, size=size)
         self.label = wx.StaticText(self, label="0%", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -55,61 +55,19 @@ class TreeSessionsController:
 
         self.tree_ctrl_sessions.SetMainColumn(0)
         self.tree_ctrl_sessions.AssignImageList(ImageList)
+        self.tree_ctrl_sessions._main_win.Bind(
+            wx.EVT_MOUSE_EVENTS, lambda e: None if e.LeftDown() else e.Skip()
+        )
 
         self.populate_tree()
 
         SESSIONS.subscribe(self.append_session, CallbackEvent.ON_APPEND)
 
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_exapand_item)
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_EXPANDING, self.on_exapand_item)
+        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
+        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
+        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
 
-    def populate_tree(self):
-        self.tree_ctrl_sessions.DeleteAllItems()
-        self.root_item = self.tree_ctrl_sessions.AddRoot("")
-
-        for session in SESSIONS.get_value():
-            self.append_session(session)
-
-    def append_session(self, session: Session):
-        self.root_item = self.tree_ctrl_sessions.GetRootItem()
-
-        session_item = self.tree_ctrl_sessions.AppendItem(self.root_item, session.name, image=getattr(IconList, f"ENGINE_{session.engine.name}"), data=session)
-        for database in session.context.get_databases():
-            db_item = self.tree_ctrl_sessions.AppendItem(session_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
-            self.tree_ctrl_sessions.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
-            self.tree_ctrl_sessions.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
-
-        self.tree_ctrl_sessions.Expand(session_item)
-
-    def load_observables(self, db_item, database: SQLDatabase):
-        for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
-            observable = getattr(database, observable_name, None)
-            if observable is None:
-                continue
-            if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
-                continue
-
-            for obj in observable.get_value():
-                obj_item = self.tree_ctrl_sessions.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
-
-                if isinstance(obj, SQLTable):
-                    percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
-                    # gauge = wx.Gauge(self.tree_ctrl_sessions, range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1), self.tree_ctrl_sessions.CharHeight))
-                    # gauge.SetValue(percentage)
-                    # self.tree_ctrl_sessions.SetItemWindow(obj_item, gauge, column=1)
-
-                    gauge_panel = GaugeWithLabel(self.tree_ctrl_sessions, range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1) - 15, self.tree_ctrl_sessions.CharHeight))
-                    gauge_panel.SetValue(percentage)
-                    self.tree_ctrl_sessions.SetItemWindow(obj_item, gauge_panel, column=1)
-                else:
-                    self.tree_ctrl_sessions.SetItemText(obj_item, "", column=1)
-
-        loading_item, index_item = self.tree_ctrl_sessions.GetFirstChild(db_item)
-        if loading_item and loading_item.GetData() is None:
-            self.tree_ctrl_sessions.Delete(loading_item)
-
-
-    def on_exapand_item(self, event: wx.lib.agw.hypertreelist.TreeEvent):
+    def _load_items(self, event: wx.lib.agw.hypertreelist.TreeEvent):
         with Loader.cursor_wait():
             item = event.GetItem()
             if not item.IsOk():
@@ -131,10 +89,58 @@ class TreeSessionsController:
                 self.select_session(obj, event)
             elif isinstance(obj, SQLDatabase):
                 self.select_database(obj, item, event)
-            elif isinstance(obj, (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent)):
+            elif isinstance(
+                obj,
+                (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent),
+            ):
                 self.select_sql_object(obj)
 
             event.Skip()
+
+    def populate_tree(self):
+        self.tree_ctrl_sessions.DeleteAllItems()
+        self.root_item = self.tree_ctrl_sessions.AddRoot("")
+
+        for session in SESSIONS.get_value():
+            self.append_session(session)
+
+    def append_session(self, session: Session):
+        self.root_item = self.tree_ctrl_sessions.GetRootItem()
+
+        session_item = self.tree_ctrl_sessions.AppendItem(self.root_item, session.name, image=getattr(IconList, f"ENGINE_{session.engine.name}"), data=session)
+        for database in session.context.get_databases():
+            db_item = self.tree_ctrl_sessions.AppendItem(session_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
+            self.tree_ctrl_sessions.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
+            self.tree_ctrl_sessions.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
+
+        self.tree_ctrl_sessions.Expand(session_item)
+        self.tree_ctrl_sessions.EnsureVisible(session_item)
+
+        self.tree_ctrl_sessions.Layout()
+
+    def load_observables(self, db_item, database: SQLDatabase):
+        for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+            observable = getattr(database, observable_name, None)
+            if observable is None:
+                continue
+            if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
+                continue
+
+            for obj in observable.get_value():
+                obj_item = self.tree_ctrl_sessions.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
+
+                if isinstance(obj, SQLTable):
+                    percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
+
+                    gauge_panel = GaugeWithLabel(self.tree_ctrl_sessions, max_range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1) - 15, self.tree_ctrl_sessions.CharHeight))
+                    gauge_panel.SetValue(percentage)
+                    self.tree_ctrl_sessions.SetItemWindow(obj_item, gauge_panel, column=1)
+                else:
+                    self.tree_ctrl_sessions.SetItemText(obj_item, "", column=1)
+
+        loading_item, index_item = self.tree_ctrl_sessions.GetFirstChild(db_item)
+        if loading_item and loading_item.GetData() is None:
+            self.tree_ctrl_sessions.Delete(loading_item)
 
     def reset_current_objects(self):
         CURRENT_TABLE.set_value(None)
@@ -145,7 +151,6 @@ class TreeSessionsController:
         CURRENT_FUNCTION.set_value(None)
 
     def select_session(self, session: Session, event):
-        # Seleziona sessione solo se diversa da quella corrente o se CURRENT_DATABASE è None
         if session == CURRENT_SESSION.get_value() and CURRENT_DATABASE.get_value():
             event.Skip()
             return
@@ -173,7 +178,6 @@ class TreeSessionsController:
         if database != CURRENT_DATABASE.get_value():
             CURRENT_DATABASE.set_value(database)
 
-        # Copia e setta l'oggetto corrente in base al tipo
         if isinstance(sql_obj, SQLTable):
             if not CURRENT_TABLE.get_value() or sql_obj != CURRENT_TABLE.get_value():
                 CURRENT_TABLE.set_value(sql_obj.copy())

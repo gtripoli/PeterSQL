@@ -137,6 +137,7 @@ class ColumnModel(BaseDataViewIndexListModel):
         if column_field_attr == "default" and column.default == "NULL" and not column.is_nullable:
             column.is_nullable = True
 
+
 class TableColumnsController:
     app = wx.GetApp()
 
@@ -207,7 +208,7 @@ class TableColumnsController:
 
         map_columns = merge_original_current(original_columns, current_columns)
 
-        if not all([o == c for o, c in map_columns]):
+        if not all(o == c for o, c in map_columns):
 
             for original_column, current_column in map_columns:
                 if original_column is None:
@@ -258,7 +259,6 @@ class TableColumnsController:
             default_values['set'] = datatype.default_set
 
         new_empty_column = session.context.build_empty_column(
-            name="",
             table=table,
             datatype=datatype,
             **default_values
@@ -280,6 +280,12 @@ class TableColumnsController:
             return
 
         column: SQLColumn = self.model.get_data_by_item(selected)
+
+        indexes = [i for i in table.indexes if column.name in i.columns]
+        for index in indexes:
+            index.columns.remove(column.name)
+            if not len(index.columns):
+                table.indexes.remove(index)
 
         table.columns.remove(column)
 

@@ -88,6 +88,8 @@ class SQLTable(abc.ABC):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
+
+    def _load_records(self):
         self.records = ObservableLazyList(lambda: self.get_records_handler(self))
 
     def __eq__(self, other: Self) -> bool:

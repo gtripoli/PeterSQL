@@ -2,14 +2,13 @@ import re
 from typing import NamedTuple
 
 
-
 class ColumnField(NamedTuple):
     attr: str
     transform: callable
 
 
 MAP_COLUMN_FIELDS = {
-    0: ColumnField("#", lambda v: str(v + 1) if v >= 0 else ''),
+    0: ColumnField("#", lambda v: str(v + 1) if v >= 0 else ""),
     1: ColumnField("name", lambda v: str(v)),
     2: ColumnField("datatype", str),
     3: ColumnField("length_scale_set", str),

@@ -166,12 +166,8 @@ class AbstractContext(abc.ABC):
         self.disconnect()
 
     @staticmethod
-    def get_temporary_id(container: Union[List[SQLTypeAlias]]):
-        id = min([0] + [t.id for t in container]) - 1
-        # if len(container):
-        #     id = min([id] + [t.id for t in container]) - 1
-
-        return id
+    def get_temporary_id(container: Union[List[SQLTypeAlias]]) -> int:
+        return min([0] + [t.id for t in container]) - 1
 
     @abc.abstractmethod
     def get_server_version(self) -> str:
@@ -218,7 +214,7 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_column(self, id: int, name: str, table: SQLTable, datatype, **default_values) -> SQLColumn:
+    def build_empty_column(self, table: SQLTable, datatype, **default_values) -> SQLColumn:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -242,6 +238,7 @@ class AbstractContext(abc.ABC):
         try:
             self.cursor.execute(query)
         except Exception as ex:
+            logger.error(query)
             logger.error(ex, exc_info=True)
             QUERY_LOGS.append(f"/* {str(ex)} */")
             raise

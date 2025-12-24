@@ -2,12 +2,14 @@ import re
 import sqlite3
 from typing import Optional, List, Dict, Any
 
-from structures.engines.indextype import SQLIndexType
+from gettext import gettext as _
+
 from helpers.logger import logger
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
+from structures.engines.indextype import SQLIndexType
 
 from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, ATTRIBUTES_PATTERN
 from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
@@ -101,14 +103,31 @@ class SQLiteContext(AbstractContext):
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
-        self.execute("""
-            SELECT *, SUM(pgsize) as total_bytes, SUM(ncell) as total_rows
-            FROM sqlite_master
-            JOIN dbstat ON dbstat.name = sqlite_master.name
-            LEFT JOIN sqlite_sequence ON sqlite_sequence.name = sqlite_master.name
-            WHERE sqlite_master.type = 'table' AND sqlite_master.name NOT LIKE 'sqlite_%'
-            GROUP BY sqlite_master.name
-            ORDER BY sqlite_master.name;
+        has_sqlite_sequence = False
+
+        self.execute(""" SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'; """)
+        if self.fetchone():
+            has_sqlite_sequence = True
+
+        selects = [
+            "sM.name",
+            "SUM(dbS.pgsize) AS total_bytes",
+            "SUM(dbS.ncell) AS total_rows",
+        ]
+        if has_sqlite_sequence:
+            selects.append("IFNULL(sS.seq, 0) AS autoincrement_value")
+        else :
+            selects.append("0 AS autoincrement_value")
+
+
+        self.execute(f"""
+            SELECT {', '.join(selects)}
+            FROM sqlite_master as sM
+            JOIN dbstat As dbS ON dbS.name = sM.name
+            {f"JOIN sqlite_sequence as sS ON sS.name = sM.name" if has_sqlite_sequence else ""}
+            WHERE sM.type = 'table' AND sM.name NOT LIKE 'sqlite_%'
+            GROUP BY sM.name
+            ORDER BY sM.name;
         """)
 
         results = []
@@ -119,7 +138,7 @@ class SQLiteContext(AbstractContext):
                     name=row['name'],
                     database=database,
                     engine='default',
-                    auto_increment=int(row["seq"] or 0),
+                    auto_increment=int(row["autoincrement_value"]),
                     total_bytes=row['total_bytes'],
                     total_rows=row["total_rows"],
                     collation_name="BINARY",
@@ -340,10 +359,12 @@ class SQLiteContext(AbstractContext):
             get_records_handler=self.get_records,
         )
 
-    def build_empty_column(self, name: str, table: SQLTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
+    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
+        id = SQLiteContext.get_temporary_id(table.columns),
+
         return SQLiteColumn(
-            id=SQLiteContext.get_temporary_id(table.columns),
-            name="",
+            id=id,
+            name=_(f"Column{str(id * -1):03}"),
             table=table,
             datatype=datatype,
             **default_values
