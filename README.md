@@ -2,40 +2,48 @@
 ![Coverage](https://img.shields.io/badge/coverage-44%25-brightgreen)
 
 # PeterSQL
+
 <p align="center">
   <img src="petersql_large.png" alt="PeterSQL"/>
 </p>
 
-> Heidi's (silly?) friend - a wxPython porting of HeidiSQL
-
-
+> Heidi's (silly?) friend — a wxPython-based reinterpretation of HeidiSQL
 
 **PeterSQL** is a graphical client for database management, inspired by the
-excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python** with **wxPython**, and designed to
-run natively on **All OS**.
+excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python**
+using **wxPython**, with a focus on portability and native look & feel.
 
 ---
 
 ## ⚠️ Project Status
 
-PeterSQL is currently under active development.  
-The project is **not finished** and should be considered **unstable**.
+The project is in **active development** and currently unstable.
+Features may be incomplete or change without notice.
 
-Features may be incomplete, change without notice, or break between versions.  
 Use at your own risk and **do not rely on this project in production environments** yet.
 
 ---
 
 ## 🧭 Why PeterSQL?
 
-Over the years, I have used **HeidiSQL** as my primary tool for working with MySQL, MariaDB, SQLite, and other
-databases. It is a tool that I greatly appreciate: **streamlined**, **intuitive**, **powerful**.
+Over the years, I have used **HeidiSQL** as my primary tool for working with
+MySQL, MariaDB, SQLite, and other databases.
+It is a tool I deeply appreciate: **streamlined**, **intuitive**, and
+**powerful**.
 
-So, as a personal challenge, I decided to port it to Python.
+Rather than trying to compete with HeidiSQL, PeterSQL started as a personal
+challenge: to recreate the same *spirit* in a **pure Python** application.
 
-- ✅ An interface similar to HeidiSQL
-- ✅ A *simple* and *clean* DB client like HeidiSQL
-- ✅ A free and open source project, extensible in Python
+PeterSQL is not a 1:1 port.
+It is a Python-first reinterpretation, built with different goals in mind.
+
+- 🐍 **Written entirely in Python**
+- 🧩 **Built entirely in Python to enable easy modification and extension**
+- 🎯 **Focused on simplicity and clarity**, inspired by HeidiSQL
+- 🆓 **Free and open source**
+
+PeterSQL exists for developers who love HeidiSQL’s approach, but want a tool
+that feels native to the Python ecosystem.
 
 ---
 
@@ -44,6 +52,7 @@ So, as a personal challenge, I decided to port it to Python.
 - [Python 3.11+](https://www.python.org/)
 - [wxPython 4.2.4](https://wxpython.org/) - native cross-platform interface
 - [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
+
 ---
 
 ## 🚀 Installation
@@ -76,21 +85,25 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
 ### Development
 
 For production deployments, install only functional dependencies:
+
 ```bash
 uv sync
 ```
 
 To run tests:
+
 ```bash
 uv run --group dev pytest
 ```
 
 To run mypy:
+
 ```bash
 uv run --group dev mypy
 ```
 
 ## 📸 Screenshot
+
 <p align="center">
   <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
   <img src="screenshot/main_frame_columns.png" alt="Main Frame - Columns" height="200"/>

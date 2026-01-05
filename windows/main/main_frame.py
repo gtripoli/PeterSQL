@@ -13,6 +13,8 @@ import wx.stc
 import wx.lib.wordwrap
 
 from gettext import gettext as _
+
+from helpers import bytes_to_human
 from helpers.observables import CallbackEvent
 
 from structures.session import Session, SessionEngine
@@ -221,11 +223,11 @@ class MainFrameController(MainFrameView):
 
     def _update_memory(self, event):
         memory_info = psutil.Process(os.getpid()).memory_info()
-        used = memory_info.rss / 1024 / 1024  # MB
-        total = psutil.virtual_memory().total / 1024 / 1024  # MB
+        used = memory_info.rss # B
+        total = psutil.virtual_memory().total  # MB
         percentage = used / total
 
-        self.status_bar.SetStatusText(_('Memory used: {used:.2f} ({percentage:.2%})').format(used=used, percentage=percentage), 3)
+        self.status_bar.SetStatusText(_('Memory used: {used} ({percentage:.2%})').format(used=bytes_to_human(used), percentage=percentage), 3)
 
     def on_menu_about(self, event):
         info = wx.adv.AboutDialogInfo()

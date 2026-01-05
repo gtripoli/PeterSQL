@@ -31,20 +31,9 @@ class ColumnModel(BaseDataViewIndexListModel):
 
         column: SQLColumn = self.get_data_by_row(row)
         column_field = self.MAP_COLUMN_FIELDS[col]
-        column_field_attr = getattr(column_field, "attr")
+        column_field_value = column_field.get_value(column)
 
-        if column_field_attr == "#":
-            value = row if column.id >= 0 else -1
-        else:
-            value = getattr(column, column_field_attr)
-
-            if value is None:
-                return ""
-
-        if transform := getattr(column_field, 'transform'):
-            value = transform(value)
-
-        if column_field_attr == "#":
+        if getattr(column_field, "attr") == "#":
             bitmaps = wx.NullBitmap
             if column.table:
                 indexes = [i.type for i in column.table.indexes if column.name in i.columns + i.expression]
@@ -54,9 +43,9 @@ class ColumnModel(BaseDataViewIndexListModel):
                 if len(indexes):
                     bitmaps = combine_bitmaps(*set([i.bitmap for i in indexes]))
 
-            return wx.dataview.DataViewIconText(value, bitmaps)
+            return wx.dataview.DataViewIconText(column_field_value, bitmaps)
 
-        return value
+        return column_field_value
 
     def SetValueByRow(self, value, row, col):
         item = self.GetItem(row)

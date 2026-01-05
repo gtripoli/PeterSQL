@@ -30,7 +30,7 @@ class ModelDatabaseTable(BaseDataViewIndexListModel):
 
         table: SQLTable = self.get_data_by_row(row)
 
-        return self.MAP_COLUMN_FIELDS[col](table)
+        return self.MAP_COLUMN_FIELDS[col].get_value(table)
 
 
 class ListDatabaseTable:

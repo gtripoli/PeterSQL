@@ -25,7 +25,7 @@ class GaugeWithLabel(wx.Panel):
         self.label = wx.StaticText(self, label="0%", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.gauge, 1, wx.EXPAND)
+        self.sizer.Add(self.gauge, 1, wx.EXPAND, 5)
         self.sizer.Add(self.label, 0, wx.ALIGN_CENTER | wx.TOP, -size[1])
 
         self.SetSizer(self.sizer)

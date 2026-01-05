@@ -12,13 +12,19 @@ class ColumnField(NamedTuple):
     attr: str
     transform: Optional[Callable] = None
 
-    def __call__(self, *args, **kwargs):
-        if not self.transform:
-            return getattr(args[0], self.attr)
-        return self.transform(getattr(args[0], self.attr))
+    def get_value(self, *args):
+        value = getattr(args[0], self.attr, None)
+        if callable(self.transform):
+            if self.transform.__name__ == "<lambda>":
+                return self.transform(args[0], value)
+
+            return self.transform(value)
+
+        return value
 
     def has_value(self, *args):
-        return getattr(args[0], self.attr, None) != None
+        return self.get_value(args[0]) is not None
+        
 
 
 class AbstractBaseDataModel():
@@ -241,9 +247,10 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
     def HasValue(self, item, col):
         if not self.data:
             return False
+
         if not hasattr(self, "MAP_COLUMN_FIELDS"):
             return True
-        
+
         return self.MAP_COLUMN_FIELDS[col].has_value(self.get_data_by_item(item))
 
     def clear(self):
