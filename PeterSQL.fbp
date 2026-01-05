@@ -4849,11 +4849,11 @@
                                           </object>
                                         </object>
                                       </object>
-                                      <object class="notebookpage" expanded="false">
+                                      <object class="notebookpage" expanded="true">
                                         <property name="bitmap">Load From File; icons/16x16/database.png</property>
                                         <property name="label">Database</property>
                                         <property name="select">0</property>
-                                        <object class="wxPanel" expanded="false">
+                                        <object class="wxPanel" expanded="true">
                                           <property name="BottomDockable">1</property>
                                           <property name="LeftDockable">1</property>
                                           <property name="RightDockable">1</property>
@@ -4905,16 +4905,16 @@
                                           <property name="window_extra_style"></property>
                                           <property name="window_name"></property>
                                           <property name="window_style">wxTAB_TRAVERSAL</property>
-                                          <object class="wxBoxSizer" expanded="false">
+                                          <object class="wxBoxSizer" expanded="true">
                                             <property name="minimum_size"></property>
                                             <property name="name">bSizer27</property>
                                             <property name="orient">wxVERTICAL</property>
                                             <property name="permission">none</property>
-                                            <object class="sizeritem" expanded="false">
+                                            <object class="sizeritem" expanded="true">
                                               <property name="border">5</property>
                                               <property name="flag">wxEXPAND | wxALL</property>
                                               <property name="proportion">1</property>
-                                              <object class="wxNotebook" expanded="false">
+                                              <object class="wxNotebook" expanded="true">
                                                 <property name="BottomDockable">1</property>
                                                 <property name="LeftDockable">1</property>
                                                 <property name="RightDockable">1</property>
@@ -4968,11 +4968,11 @@
                                                 <property name="window_extra_style"></property>
                                                 <property name="window_name"></property>
                                                 <property name="window_style"></property>
-                                                <object class="notebookpage" expanded="false">
+                                                <object class="notebookpage" expanded="true">
                                                   <property name="bitmap"></property>
                                                   <property name="label">Tables</property>
                                                   <property name="select">0</property>
-                                                  <object class="wxPanel" expanded="false">
+                                                  <object class="wxPanel" expanded="true">
                                                     <property name="BottomDockable">1</property>
                                                     <property name="LeftDockable">1</property>
                                                     <property name="RightDockable">1</property>
@@ -5024,12 +5024,12 @@
                                                     <property name="window_extra_style"></property>
                                                     <property name="window_name"></property>
                                                     <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                    <object class="wxBoxSizer" expanded="false">
+                                                    <object class="wxBoxSizer" expanded="true">
                                                       <property name="minimum_size"></property>
                                                       <property name="name">bSizer80</property>
                                                       <property name="orient">wxVERTICAL</property>
                                                       <property name="permission">none</property>
-                                                      <object class="sizeritem" expanded="false">
+                                                      <object class="sizeritem" expanded="true">
                                                         <property name="border">5</property>
                                                         <property name="flag">wxEXPAND</property>
                                                         <property name="proportion">0</property>
@@ -5272,11 +5272,11 @@
                                                           </object>
                                                         </object>
                                                       </object>
-                                                      <object class="sizeritem" expanded="false">
+                                                      <object class="sizeritem" expanded="true">
                                                         <property name="border">5</property>
                                                         <property name="flag">wxALL|wxEXPAND</property>
                                                         <property name="proportion">1</property>
-                                                        <object class="wxDataViewListCtrl" expanded="false">
+                                                        <object class="wxDataViewCtrl" expanded="true">
                                                           <property name="bg"></property>
                                                           <property name="context_help"></property>
                                                           <property name="context_menu">1</property>
@@ -5288,7 +5288,7 @@
                                                           <property name="id">wxID_ANY</property>
                                                           <property name="maximum_size"></property>
                                                           <property name="minimum_size"></property>
-                                                          <property name="name">m_dataViewListCtrl2</property>
+                                                          <property name="name">list_ctrl_database_tables</property>
                                                           <property name="permission">protected</property>
                                                           <property name="pos"></property>
                                                           <property name="size"></property>
@@ -5298,79 +5298,98 @@
                                                           <property name="window_extra_style"></property>
                                                           <property name="window_name"></property>
                                                           <property name="window_style"></property>
-                                                          <object class="dataViewListColumn" expanded="false">
+                                                          <object class="dataViewColumn" expanded="true">
                                                             <property name="align">wxALIGN_LEFT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Name</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn6</property>
+                                                            <property name="model_column">0</property>
+                                                            <property name="name">m_dataViewColumn12</property>
                                                             <property name="permission">protected</property>
                                                             <property name="type">Text</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
-                                                            <property name="align">wxALIGN_LEFT</property>
+                                                          <object class="dataViewColumn" expanded="true">
+                                                            <property name="align">wxALIGN_RIGHT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
-                                                            <property name="label">Lines</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
+                                                            <property name="label">Rows</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn7</property>
+                                                            <property name="model_column">1</property>
+                                                            <property name="name">m_dataViewColumn13</property>
                                                             <property name="permission">protected</property>
                                                             <property name="type">Text</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
-                                                            <property name="align">wxALIGN_LEFT</property>
+                                                          <object class="dataViewColumn" expanded="true">
+                                                            <property name="align">wxALIGN_RIGHT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Size</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn8</property>
+                                                            <property name="model_column">2</property>
+                                                            <property name="name">m_dataViewColumn14</property>
                                                             <property name="permission">protected</property>
                                                             <property name="type">Text</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
+                                                          <object class="dataViewColumn" expanded="true">
                                                             <property name="align">wxALIGN_LEFT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Created at</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn9</property>
+                                                            <property name="model_column">3</property>
+                                                            <property name="name">m_dataViewColumn15</property>
                                                             <property name="permission">protected</property>
-                                                            <property name="type">Text</property>
+                                                            <property name="type">Date</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
+                                                          <object class="dataViewColumn" expanded="true">
                                                             <property name="align">wxALIGN_LEFT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Updated at</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn10</property>
+                                                            <property name="model_column">4</property>
+                                                            <property name="name">m_dataViewColumn16</property>
                                                             <property name="permission">protected</property>
-                                                            <property name="type">Text</property>
+                                                            <property name="type">Date</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
+                                                          <object class="dataViewColumn" expanded="true">
                                                             <property name="align">wxALIGN_LEFT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Engine</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn11</property>
+                                                            <property name="model_column">5</property>
+                                                            <property name="name">m_dataViewColumn17</property>
                                                             <property name="permission">protected</property>
                                                             <property name="type">Text</property>
                                                             <property name="width">-1</property>
                                                           </object>
-                                                          <object class="dataViewListColumn" expanded="false">
+                                                          <object class="dataViewColumn" expanded="true">
                                                             <property name="align">wxALIGN_LEFT</property>
                                                             <property name="ellipsize"></property>
-                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
+                                                            <property name="label">Collation</property>
+                                                            <property name="mode">wxDATAVIEW_CELL_INERT</property>
+                                                            <property name="model_column">6</property>
+                                                            <property name="name">m_dataViewColumn19</property>
+                                                            <property name="permission">protected</property>
+                                                            <property name="type">Text</property>
+                                                            <property name="width">-1</property>
+                                                          </object>
+                                                          <object class="dataViewColumn" expanded="true">
+                                                            <property name="align">wxALIGN_LEFT</property>
+                                                            <property name="ellipsize"></property>
+                                                            <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
                                                             <property name="label">Comments</property>
                                                             <property name="mode">wxDATAVIEW_CELL_INERT</property>
-                                                            <property name="name">m_dataViewListColumn12</property>
+                                                            <property name="model_column">7</property>
+                                                            <property name="name">m_dataViewColumn18</property>
                                                             <property name="permission">protected</property>
                                                             <property name="type">Text</property>
                                                             <property name="width">-1</property>
@@ -5454,7 +5473,7 @@
                                           </object>
                                         </object>
                                       </object>
-                                      <object class="notebookpage" expanded="false">
+                                      <object class="notebookpage" expanded="true">
                                         <property name="bitmap">Load From File; icons/16x16/table.png</property>
                                         <property name="label">Table</property>
                                         <property name="select">0</property>
@@ -11844,6 +11863,223 @@
             <property name="window_name"></property>
             <property name="window_style"></property>
             <property name="wrap">-1</property>
+          </object>
+        </object>
+        <object class="sizeritem" expanded="true">
+          <property name="border">5</property>
+          <property name="flag">wxALL</property>
+          <property name="proportion">0</property>
+          <object class="wxDataViewCtrl" expanded="true">
+            <property name="bg"></property>
+            <property name="context_help"></property>
+            <property name="context_menu">1</property>
+            <property name="drag_accept_files">0</property>
+            <property name="enabled">1</property>
+            <property name="fg"></property>
+            <property name="font"></property>
+            <property name="hidden">0</property>
+            <property name="id">wxID_ANY</property>
+            <property name="maximum_size"></property>
+            <property name="minimum_size"></property>
+            <property name="name">____list_ctrl_database_tables</property>
+            <property name="permission">protected</property>
+            <property name="pos"></property>
+            <property name="size"></property>
+            <property name="style"></property>
+            <property name="subclass">; ; forward_declare</property>
+            <property name="tooltip"></property>
+            <property name="window_extra_style"></property>
+            <property name="window_name"></property>
+            <property name="window_style"></property>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn5</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn6</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn7</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn8</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn9</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn10</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewColumn" expanded="true">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="model_column">0</property>
+              <property name="name">m_dataViewColumn11</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+          </object>
+        </object>
+        <object class="sizeritem" expanded="true">
+          <property name="border">5</property>
+          <property name="flag">wxALL|wxEXPAND</property>
+          <property name="proportion">1</property>
+          <object class="wxDataViewListCtrl" expanded="true">
+            <property name="bg"></property>
+            <property name="context_help"></property>
+            <property name="context_menu">1</property>
+            <property name="drag_accept_files">0</property>
+            <property name="enabled">1</property>
+            <property name="fg"></property>
+            <property name="font"></property>
+            <property name="hidden">0</property>
+            <property name="id">wxID_ANY</property>
+            <property name="maximum_size"></property>
+            <property name="minimum_size"></property>
+            <property name="name">___list_ctrl_database_tables</property>
+            <property name="permission">protected</property>
+            <property name="pos"></property>
+            <property name="size"></property>
+            <property name="style"></property>
+            <property name="subclass"></property>
+            <property name="tooltip"></property>
+            <property name="window_extra_style"></property>
+            <property name="window_name"></property>
+            <property name="window_style"></property>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Name</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn6</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Lines</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn7</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Size</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn8</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Created at</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn9</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Updated at</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn10</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Engine</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn11</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
+            <object class="dataViewListColumn" expanded="false">
+              <property name="align">wxALIGN_LEFT</property>
+              <property name="ellipsize"></property>
+              <property name="flags">wxDATAVIEW_COL_RESIZABLE</property>
+              <property name="label">Comments</property>
+              <property name="mode">wxDATAVIEW_CELL_INERT</property>
+              <property name="name">m_dataViewListColumn12</property>
+              <property name="permission">protected</property>
+              <property name="type">Text</property>
+              <property name="width">-1</property>
+            </object>
           </object>
         </object>
       </object>

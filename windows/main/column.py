@@ -7,7 +7,7 @@ from icons import combine_bitmaps
 
 from helpers.logger import logger
 from helpers.observables import Loader
-from helpers.dataview import BaseDataViewIndexListModel
+from helpers.dataview import BaseDataViewIndexListModel, ColumnField
 
 from windows import TableColumnsDataViewCtrl
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
@@ -15,7 +15,6 @@ from windows.main.table import NEW_TABLE
 
 from structures.session import Session
 from structures.engines import merge_original_current
-from structures.engines.sqlite import ColumnField
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
 from structures.engines.indextype import SQLIndexType
 
@@ -158,7 +157,7 @@ class TableColumnsController:
         self.model = ColumnModel(None)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
-        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+        CURRENT_SESSION.subscribe(self._load_session)
         CURRENT_TABLE.subscribe(self._load_table)
         NEW_TABLE.subscribe(self._load_table)
 

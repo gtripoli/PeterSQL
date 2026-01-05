@@ -103,7 +103,7 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         self._current_column: Optional[int] = None
         self._current_dataview: Optional[int] = None
 
-        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+        CURRENT_SESSION.subscribe(self._load_session)
 
     def _load_session(self, session: Session):
         if not self._current_dataview:
@@ -366,3 +366,8 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
                 col = wx.dataview.DataViewColumn(column.name, renderer, i, width=self.calculate_column_width(column.name), flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
                 self.AppendColumn(col)
+
+
+class DatabaseTablesDataViewCtrl(BaseDataViewCtrl):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

@@ -159,7 +159,8 @@ class MariaDBContext(AbstractContext):
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
-            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
+            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT,
+            CREATE_TIME, UPDATE_TIME, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = '{database.name}'
             AND TABLE_TYPE = 'BASE TABLE'
@@ -167,7 +168,7 @@ class MariaDBContext(AbstractContext):
         """)
 
         results = []
-        for i, row in enumerate(self.cursor.fetchall()):
+        for i, row in enumerate(self.fetchall()):
             results.append(
                 MariaDBTable(
                     id=i,
@@ -178,6 +179,8 @@ class MariaDBContext(AbstractContext):
                     auto_increment=int(row['AUTO_INCREMENT'] or 0),
                     total_bytes=row['total_bytes'],
                     total_rows=row["TABLE_ROWS"],
+                    created_at=row['CREATE_TIME'],
+                    updated_at=row['UPDATE_TIME'],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
@@ -323,20 +326,13 @@ class MariaDBContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[MariaDBRecord]:
-        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
-        if table is None or table.is_new:
-            return []
-
-        query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
-        self.execute(query)
-
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[MariaDBRecord]:
         results = []
-        for i, record in enumerate(self.cursor.fetchall(), start=offset):
+        for i, record in enumerate(super().get_records(table, filters, limit, offset, orders), start=offset):
             results.append(
                 MariaDBRecord(id=i, table=table, values=dict(record))
             )
-        logger.debug(f"get records for table={table.name}")
+
         return results
 
     def build_empty_table(self, database: SQLDatabase):

@@ -1,17 +1,12 @@
 import re
-from typing import NamedTuple
+
+from helpers.dataview import ColumnField
 
 COLLATIONS = {
     "BINARY": "utf8",
     "NOCASE": "utf8",
     "RTRIM": "utf8"
 }
-
-
-class ColumnField(NamedTuple):
-    attr: str
-    transform: callable
-
 
 MAP_COLUMN_FIELDS = {
     0: ColumnField("#", lambda v: str(v + 1) if v >= 0 else ''),

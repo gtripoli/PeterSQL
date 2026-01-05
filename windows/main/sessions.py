@@ -90,8 +90,8 @@ class TreeSessionsController:
             elif isinstance(obj, SQLDatabase):
                 self.select_database(obj, item, event)
             elif isinstance(
-                obj,
-                (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent),
+                    obj,
+                    (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent),
             ):
                 self.select_sql_object(obj)
 
@@ -132,7 +132,7 @@ class TreeSessionsController:
                 if isinstance(obj, SQLTable):
                     percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
 
-                    gauge_panel = GaugeWithLabel(self.tree_ctrl_sessions, max_range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1) - 15, self.tree_ctrl_sessions.CharHeight))
+                    gauge_panel = GaugeWithLabel(self.tree_ctrl_sessions, max_range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1) - 20, self.tree_ctrl_sessions.CharHeight))
                     gauge_panel.SetValue(percentage)
                     self.tree_ctrl_sessions.SetItemWindow(obj_item, gauge_panel, column=1)
                 else:

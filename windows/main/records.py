@@ -108,7 +108,7 @@ class TableRecordsController:
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)
 
-        CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+        CURRENT_SESSION.subscribe(self._load_session)
         CURRENT_DATABASE.subscribe(self._load_database)
         CURRENT_TABLE.subscribe(self._load_table)
 
@@ -121,10 +121,11 @@ class TableRecordsController:
     def _load_table(self, table: SQLTable):
         if table is not None:
             self.table = table
-            if getattr(self.table, "records", None) :
-                self.model = RecordsModel(self.table, len(self.table.columns))
-                self.model.set_observable(self.table.records)
-                self.list_ctrl_records.AssociateModel(self.model)
+
+    def load_model(self):
+        self.model = RecordsModel(self.table, len(self.table.columns))
+        self.model.set_observable(self.table.records)
+        self.list_ctrl_records.AssociateModel(self.model)
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_records.GetColumn(model_column)

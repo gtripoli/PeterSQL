@@ -24,11 +24,11 @@ class MariaDBTable(SQLTable):
 
         return True
 
-    def alter_collation(self, convert: bool = True):
+    def alter_collation(self, collation_name, convert: bool = True):
         charset = ""
         if convert:
-            charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[self.collation_name]}"
-        return self.database.context.execute(f"""ALTER TABLE `{self.database.name}`.`{self.name}` {charset} COLLATE {self.collation_name};""")
+            charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[collation_name]}"
+        return self.database.context.execute(f"""ALTER TABLE `{self.database.name}`.`{self.name}` {charset} COLLATE {collation_name};""")
 
     def alter_engine(self, engine: str):
         sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` ENGINE {engine};"

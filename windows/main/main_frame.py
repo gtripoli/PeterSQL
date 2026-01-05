@@ -4,6 +4,7 @@ import math
 import datetime
 import psutil
 import os
+import textwrap
 
 from typing import Optional, List, Union
 
@@ -20,13 +21,15 @@ from structures.engines.context import QUERY_LOGS
 
 from windows import MainFrameView
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
-from windows.main.sessions import TreeSessionsController
+from windows.sessions import wx_colour_to_hex
+
+from windows.main.database import ListDatabaseTable
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
 from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
+from windows.main.sessions import TreeSessionsController
 from windows.main.foreign_key import TableForeignKeyController
-from windows.sessions import wx_colour_to_hex
 
 
 class MainFrameController(MainFrameView):
@@ -43,6 +46,8 @@ class MainFrameController(MainFrameView):
             collation=self.table_collation,
             engine=self.table_engine,
         )
+
+        self.list_database_tables = ListDatabaseTable(self.list_ctrl_database_tables)
 
         self.controller_tree_sessions = TreeSessionsController(self.tree_ctrl_sessions)
         self.controller_tree_sessions.on_cancel_table = self.on_cancel_table
@@ -298,11 +303,11 @@ class MainFrameController(MainFrameView):
             self.MainFrameNotebook.SetSelection(3)
 
     def on_page_chaged(self, event):
-
         if int(event.Selection) == 5:
             if table := CURRENT_TABLE.get_value():
-                table._load_records()
+                table.load_records()
 
+                self.controller_list_table_records.load_model()
 
     def _on_current_session(self, session: Session):
         self.toggle_panel(session)
@@ -342,13 +347,13 @@ class MainFrameController(MainFrameView):
         if NEW_TABLE.get_value() and not self.on_cancel_table(None):
             return
 
-        if table :
+        if table:
             # `%(database_name)s`.`%(table_name)s`
             self.name_database_table.SetLabel(
                 self.name_database_table.GetLabel() % {
                     "database_name": table.database.name,
                     "table_name": table.name,
-                    "total_rows" : table.total_rows
+                    "total_rows": table.total_rows
                 }
             )
 
@@ -536,6 +541,15 @@ class MainFrameController(MainFrameView):
 
         if dialog.ShowModal() == wx.ID_YES:
             self.controller_list_table_records.do_delete_record()
+
+    def on_apply_filters(self, event):
+        # self.controller_list_table_records.do_apply_filters()
+        table = CURRENT_TABLE.get_value()
+        if table:
+            filters = (self.sql_query_filters.GetSelectedText() or self.sql_query_filters.GetText()).strip()
+            table.load_records(filters)
+
+            self.controller_list_table_records.load_model()
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()

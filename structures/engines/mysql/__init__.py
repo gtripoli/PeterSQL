@@ -1,11 +1,4 @@
-import re
-from typing import NamedTuple
-
-
-class ColumnField(NamedTuple):
-    attr: str
-    transform: callable
-
+from helpers.dataview import ColumnField
 
 MAP_COLUMN_FIELDS = {
     0: ColumnField("#", lambda v: str(v + 1) if v >= 0 else ""),

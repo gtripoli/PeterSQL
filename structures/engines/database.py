@@ -1,6 +1,7 @@
 import abc
 import copy
 import dataclasses
+import datetime
 import uuid
 
 from typing import Optional, Callable, Literal, List, Any, Self, Dict
@@ -30,21 +31,21 @@ class SQLDatabase(abc.ABC):
     get_events_handler: Optional[Callable[[Self], List['SQLEvent']]] = dataclasses.field(compare=False, default=None)
 
     def __post_init__(self):
-        self.tables = ObservableLazyList(lambda: self.get_tables_handler(self))
-        if self.get_views_handler:
-            self.views = ObservableLazyList(lambda: self.get_views_handler(self))
+        self.tables = ObservableLazyList(lambda db=self: self.get_tables_handler(db))
+        if callable(self.get_views_handler):
+            self.views = ObservableLazyList(lambda db=self: self.get_views_handler(db))
 
-        if self.get_procedures_handler:
-            self.procedures = ObservableLazyList(lambda: self.get_procedures_handler(self))
+        if callable(self.get_procedures_handler):
+            self.procedures = ObservableLazyList(lambda db=self: self.get_procedures_handler(db))
 
-        if self.get_functions_handler:
-            self.functions = ObservableLazyList(lambda: self.get_functions_handler(self))
+        if callable(self.get_functions_handler):
+            self.functions = ObservableLazyList(lambda db=self: self.get_functions_handler(db))
 
-        if self.get_triggers_handler:
-            self.triggers = ObservableLazyList(lambda: self.get_triggers_handler(self))
+        if callable(self.get_triggers_handler):
+            self.triggers = ObservableLazyList(lambda db=self: self.get_triggers_handler(db))
 
-        if self.get_events_handler:
-            self.events = ObservableLazyList(lambda: self.get_events_handler(self))
+        if callable(self.get_events_handler):
+            self.events = ObservableLazyList(lambda db=self: self.get_events_handler(db))
 
     def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLDatabase):
@@ -75,22 +76,24 @@ class SQLTable(abc.ABC):
     total_bytes: float = 0
     total_rows: Optional[int] = None
     auto_increment: Optional[int] = 0
+    created_at: Optional[datetime.datetime] = None
+    updated_at: Optional[datetime.datetime] = None
 
     comment: Optional[str] = None
     collation_name: Optional[str] = None
 
-    get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
-    get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
-    get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list([]))
-    get_records_handler: Callable[[Self, int, int], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, limit=1000, offset=0: list([]))
+    get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_records_handler: Callable[[Self, Optional[str], int, int, Optional[str]], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, filters=None, limit=1000, offset=0, orders=None: list())
 
     def __post_init__(self):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
 
-    def _load_records(self):
-        self.records = ObservableLazyList(lambda: self.get_records_handler(self))
+    def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
+        self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters, limit, offset, orders))
 
     def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLTable):

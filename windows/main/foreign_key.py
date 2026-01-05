@@ -32,7 +32,7 @@ class TableForeignKeyModel(BaseDataViewIndexListModel):
             try :
                 return ",".join(fk.columns)
             except Exception as  ex:
-                print(ex)
+                logger.error(ex, exc_info=True)
         elif col == 2:
             return fk.reference_table
         elif col == 3:

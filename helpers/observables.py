@@ -2,7 +2,6 @@ import copy
 import enum
 import inspect
 import weakref
-from sys import exc_info
 from typing import List, Callable, TypeVar, Generic, Any, overload, Union, Tuple, Optional, Dict, cast, Self, NewType
 from typing import SupportsIndex
 from contextlib import contextmanager
@@ -36,7 +35,7 @@ class Observable(Generic[T]):
             self._value = initial
             self._last_value= initial
 
-        self._callbacks: Dict[CallbackEvent, Dict[Any, Callable]] = {event: {} for event in CallbackEvent}
+        self._callbacks: Dict[CallbackEvent, Dict[int, Callable]] = {event: {} for event in CallbackEvent}
 
     @property
     def callbacks(self) -> Dict[CallbackEvent, Dict[Any, Callable]]:
@@ -52,7 +51,7 @@ class Observable(Generic[T]):
 
     @property
     def is_dirty(self) -> bool:
-        return hasattr(self, "_value") and self._value != getattr(self, '_last_value', None)
+        return not self.is_empty and (hasattr(self, "_value") or getattr(self, '_value', None) != getattr(self, '_last_value', None))
 
     def _set_value(self, value: Any, **kwargs) -> None:
         if getattr(self, "_value", None) != value:
@@ -71,10 +70,11 @@ class Observable(Generic[T]):
                 dead.append(callback)
                 continue
 
-            try:
-                ref(self.get_value())
-            except Exception as ex:
-                logger.error(ex, exc_info=True)
+            if not self.is_empty :
+                try:
+                    ref(getattr(self, "_value"))
+                except Exception as ex:
+                    logger.error(ex, exc_info=True)
 
         for callback in dead:
             self._callbacks[event].pop(callback)
@@ -103,16 +103,16 @@ class Observable(Generic[T]):
     def get_value(self) -> Optional[T]:
         return getattr(self, "_value", None)
 
-    def subscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE, execute_immediately: bool = False) -> Self:
+    def subscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE) -> Self:
         if callable(callback):
             if inspect.ismethod(callback):
                 ref = weakref.WeakMethod(callback)
             else:
                 ref = weakref.ref(callback)
 
-            self._callbacks[callback_event][callback] = ref
+            self._callbacks[callback_event][id(callback)] = ref
 
-            if callback_event in [CallbackEvent.BEFORE_CHANGE, CallbackEvent.AFTER_CHANGE] and (self.is_dirty or execute_immediately):
+            if callback_event in [CallbackEvent.BEFORE_CHANGE, CallbackEvent.AFTER_CHANGE] and self.is_dirty:
                 self.execute_callback(event=callback_event)
 
         return self

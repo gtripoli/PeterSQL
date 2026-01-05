@@ -667,15 +667,16 @@ class MainFrameView ( wx.Frame ):
 
 		bSizer80.Add( bSizer531, 0, wx.EXPAND, 5 )
 
-		self.m_dataViewListCtrl2 = wx.dataview.DataViewListCtrl( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_dataViewListColumn6 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Name"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn7 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Lines"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn8 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Size"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn9 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Created at"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn10 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Updated at"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn11 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Engine"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		self.m_dataViewListColumn12 = self.m_dataViewListCtrl2.AppendTextColumn( _(u"Comments"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-		bSizer80.Add( self.m_dataViewListCtrl2, 1, wx.ALL|wx.EXPAND, 5 )
+		self.list_ctrl_database_tables = wx.dataview.DataViewCtrl( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_dataViewColumn12 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn13 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Rows"), 1, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn14 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Size"), 2, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn15 = self.list_ctrl_database_tables.AppendDateColumn( _(u"Created at"), 3, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn16 = self.list_ctrl_database_tables.AppendDateColumn( _(u"Updated at"), 4, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn17 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Engine"), 5, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn19 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Collation"), 6, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		self.m_dataViewColumn18 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Comments"), 7, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
+		bSizer80.Add( self.list_ctrl_database_tables, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.m_panel30.SetSizer( bSizer80 )
@@ -1685,6 +1686,26 @@ class Trash ( wx.Panel ):
 		self.m_staticText44.Wrap( -1 )
 
 		bSizer90.Add( self.m_staticText44, 0, wx.ALL, 5 )
+
+		self.____list_ctrl_database_tables = wx.dataview.DataViewCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_dataViewColumn5 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn6 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn7 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn8 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn9 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn10 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewColumn11 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		bSizer90.Add( self.____list_ctrl_database_tables, 0, wx.ALL, 5 )
+
+		self.___list_ctrl_database_tables = wx.dataview.DataViewListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_dataViewListColumn6 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Name"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn7 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Lines"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn8 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Size"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn9 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Created at"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn10 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Updated at"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn11 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Engine"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		self.m_dataViewListColumn12 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Comments"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+		bSizer90.Add( self.___list_ctrl_database_tables, 1, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.SetSizer( bSizer90 )

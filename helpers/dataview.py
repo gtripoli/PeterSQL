@@ -1,11 +1,24 @@
 import abc
-from typing import Optional, List, Any, Union
+from typing import Optional, List, Any, Union, NamedTuple, Callable
 
 import wx
 import wx.dataview
 
 from helpers.logger import logger
 from helpers.observables import ObservableList, ObservableLazyList, CallbackEvent
+
+
+class ColumnField(NamedTuple):
+    attr: str
+    transform: Optional[Callable] = None
+
+    def __call__(self, *args, **kwargs):
+        if not self.transform:
+            return getattr(args[0], self.attr)
+        return self.transform(getattr(args[0], self.attr))
+
+    def has_value(self, *args):
+        return getattr(args[0], self.attr, None) != None
 
 
 class AbstractBaseDataModel():
@@ -80,15 +93,6 @@ class AbstractBaseDataModel():
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
         raise NotImplementedError
 
-    def GetCount(self):
-        return len(self._data)
-
-    def GetColumnCount(self):
-        return self.column_count
-
-    def GetColumnType(self, col):
-        return "string"
-
     data = property(lambda self: self._data, lambda self, *args: None, lambda self: None)
 
 
@@ -152,7 +156,7 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
 
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
         self._observable = observable
-        self._observable.subscribe(self._load, execute_immediately=True)
+        self._observable.subscribe(self._load)
         self._observable.subscribe(self._append, callback_event=CallbackEvent.ON_APPEND)
         self._observable.subscribe(self._replace, callback_event=CallbackEvent.ON_REPLACE)
         self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
@@ -161,6 +165,15 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
     def clear(self):
         super().clear()
         self.Cleared()
+
+    def GetCount(self):
+        return len(self._data)
+
+    def GetColumnCount(self):
+        return self.column_count
+
+    def GetColumnType(self, col):
+        return "string"
 
 
 class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexListModel):
@@ -214,7 +227,7 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
 
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
         self._observable = observable
-        self._observable.subscribe(self._load, execute_immediately=True)
+        self._observable.subscribe(self._load)
         self._observable.subscribe(self._append, callback_event=CallbackEvent.ON_APPEND)
         self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
         self._observable.subscribe(self._remove, callback_event=CallbackEvent.ON_REMOVE)
@@ -224,6 +237,14 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
         row = self.GetRow(item)
 
         return self.get_data_by_row(row)
+
+    def HasValue(self, item, col):
+        if not self.data:
+            return False
+        if not hasattr(self, "MAP_COLUMN_FIELDS"):
+            return True
+        
+        return self.MAP_COLUMN_FIELDS[col].has_value(self.get_data_by_item(item))
 
     def clear(self):
         AbstractBaseDataModel.clear(self)

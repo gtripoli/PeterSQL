@@ -13,7 +13,6 @@ from structures.engines.datatype import StandardDataType
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
-
 QUERY_LOGS: ObservableList[str] = ObservableList()
 
 SQLTypeAlias: TypeAlias = Union['SQLView', 'SQLTrigger', 'SQLTable', 'SQLColumn', 'SQLIndex', 'SQLForeignKey', 'SQLRecord']
@@ -166,7 +165,7 @@ class AbstractContext(abc.ABC):
         self.disconnect()
 
     @staticmethod
-    def get_temporary_id(container: Union[List[SQLTypeAlias]]) -> int:
+    def get_temporary_id(container: List[SQLTypeAlias]) -> int:
         return min([0] + [t.id for t in container]) - 1
 
     @abc.abstractmethod
@@ -205,9 +204,30 @@ class AbstractContext(abc.ABC):
     def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLRecord]:
-        raise NotImplementedError
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[Dict[str, Any]]:
+        logger.debug(f"get records for table={table.name}")
+        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
+        if table is None or table.is_new:
+            return []
+
+        order = ""
+        where = ""
+        if filters:
+            where = f"WHERE {filters}"
+
+        if orders:
+            order = f"ORDER BY {orders}"
+
+        query = [f"SELECT *",
+                 f"FROM `{table.database.name}`.`{table.name}`",
+                 f"{where}",
+                 f"{order}",
+                 f"LIMIT {limit} OFFSET {offset}",
+                 ]
+
+        self.execute(" ".join(query))
+
+        return self.fetchall()
 
     @abc.abstractmethod
     def build_empty_table(self, database: SQLDatabase) -> SQLTable:
