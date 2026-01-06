@@ -43,14 +43,14 @@ class SQLiteTable(SQLTable):
 
         return True
 
-    def create(self, map_columns: List[Tuple[Optional['SQLiteColumn'], Optional['SQLiteColumn']]]) -> bool:
+    def create(self) -> bool:
         constraints = []
         primary_keys = []
         columns_definitions: Dict[str, str] = {}
 
         unique_indexes_multiple_columns = [index for index in self.indexes if index.type == SQLiteIndexType.UNIQUE and len(index.columns) > 1 and index.name.startswith('sqlite_autoindex_')]
 
-        for original, current in map_columns:
+        for current in self.columns.get_value():
             if current:
                 if current.is_primary_key or current.is_auto_increment:
                     primary_keys.append(current)
@@ -142,7 +142,7 @@ class SQLiteTable(SQLTable):
 
                     self.name = temp_name
 
-                    self.create(map_columns)
+                    self.create()
 
                     columns = []
 
@@ -209,10 +209,10 @@ class SQLiteTable(SQLTable):
 @dataclasses.dataclass(eq=False)
 class SQLiteColumn(SQLColumn):
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {SQLiteColumnBuilder(self)}"
-        if hasattr(self, 'after') and self.after:
-            sql += f" AFTER `{self.after}`"
-
+        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
+        if  (after := getattr(self, "after", None)) is not None:
+            sql += f" AFTER {after}"
+            
         return self.table.database.context.execute(sql)
 
     def modify(self):
@@ -238,23 +238,23 @@ class SQLiteColumn(SQLColumn):
     def drop(self, table: SQLTable, column: SQLColumn) -> bool:
         return self.table.database.context.execute(f"ALTER TABLE `{table.name}` DROP COLUMN `{self.name}`")
 
-    def recreate_table_for_foreign_keys(self):
-        new_name = f"_{self.table.name}_{self.generate_uuid()}"
-
-        self.table.rename(new_name)
-
-        self.table.create()
-
-        cols = ", ".join([f"`{c.name}`" for c in self.table.columns])
-        self.database.context.execute(f"INSERT INTO `{self.table.name}` ({cols}) SELECT {cols} FROM {new_name};")
-
-        # Drop old table
-        self.database.context.execute(f"DROP TABLE {new_name};")
-
-        # Recreate non-primary indexes
-        for index in self.table.indexes:
-            if index.type != SQLiteIndexType.PRIMARY:
-                index.create()
+    # def recreate_table_for_foreign_keys(self):
+    #     new_name = f"_{self.table.name}_{self.generate_uuid()}"
+    #
+    #     self.table.rename(new_name)
+    #
+    #     self.table.create()
+    #
+    #     cols = ", ".join([f"`{c.name}`" for c in self.table.columns])
+    #     self.database.context.execute(f"INSERT INTO `{self.table.name}` ({cols}) SELECT {cols} FROM {new_name};")
+    #
+    #     # Drop old table
+    #     self.database.context.execute(f"DROP TABLE {new_name};")
+    #
+    #     # Recreate non-primary indexes
+    #     for index in self.table.indexes:
+    #         if index.type != SQLiteIndexType.PRIMARY:
+    #             index.create()
 
 
 @dataclasses.dataclass(eq=False)
@@ -360,21 +360,30 @@ class SQLiteRecord(SQLRecord):
     def insert(self) -> bool:
         with self.table.database.context.transaction() as transaction:
             if raw_insert_record := self.raw_insert_record():
-                return transaction.execute(raw_insert_record)
+                try:
+                    return transaction.execute(raw_insert_record)
+                except:
+                    return False
 
-            return False
+        return False
 
     def update(self) -> bool:
         with self.table.database.context.transaction() as transaction:
             if raw_update_record := self.raw_update_record():
-                return transaction.execute(raw_update_record)
+                try:
+                    return transaction.execute(raw_update_record)
+                except:
+                    return False
 
             return False
 
     def delete(self) -> bool:
         with self.table.database.context.transaction() as transaction:
             if raw_delete_record := self.raw_delete_record():
-                return transaction.execute(raw_delete_record)
+                try:
+                    return transaction.execute(raw_delete_record)
+                except:
+                    return False
 
         return False
 

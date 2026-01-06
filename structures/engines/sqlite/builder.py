@@ -9,6 +9,8 @@ class SQLiteColumnBuilder(AbstractColumnBuilder):
         super().__init__(column, exclude)
 
         self.parts.update({
+            'primary_key': self.primary_key,
+            'auto_increment': self.auto_increment,
             'check': self.check,
             'unique': self.unique,
             'generated': self.generated,

@@ -99,7 +99,7 @@ class AbstractColumnBuilder(abc.ABC):
             try:
                 formatted = template_part % self.parts
             except Exception as ex:
-                logger.Error(ex, exc_info=True)
+                logger.error(ex, exc_info=True)
 
             if formatted_strip := formatted.strip():  # Only include non-empty parts
                 formatted_parts.append(formatted_strip)
