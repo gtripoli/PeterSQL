@@ -107,10 +107,13 @@ class Observable(Generic[T]):
         if callable(callback):
             if inspect.ismethod(callback):
                 ref = weakref.WeakMethod(callback)
+                key = id(callback.__func__)
             else:
                 ref = weakref.ref(callback)
+                key = id(callback)
 
-            self._callbacks[callback_event][id(callback)] = ref
+            self._callbacks[callback_event][key] = ref
+
 
             if callback_event in [CallbackEvent.BEFORE_CHANGE, CallbackEvent.AFTER_CHANGE] and self.is_dirty:
                 self.execute_callback(event=callback_event)

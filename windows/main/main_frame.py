@@ -15,6 +15,7 @@ import wx.lib.wordwrap
 from gettext import gettext as _
 
 from helpers import bytes_to_human
+from helpers.logger import logger
 from helpers.observables import CallbackEvent
 
 from structures.session import Session, SessionEngine
@@ -185,11 +186,11 @@ class MainFrameController(MainFrameView):
 
         CURRENT_RECORDS.subscribe(self._on_current_records)
 
+        # SELECTED_TABLE.subscribe(self._on_selected_table)
+
         NEW_TABLE.subscribe(self._on_new_table)
 
         AUTO_APPLY.subscribe(self._on_auto_apply)
-
-        # NEW_COLUMN.subscribe(self._on_new_column)
 
     def _write_query_log(self, text: str):
         self.sql_query_logs.AppendText(f"{text}\n")
@@ -223,7 +224,7 @@ class MainFrameController(MainFrameView):
 
     def _update_memory(self, event):
         memory_info = psutil.Process(os.getpid()).memory_info()
-        used = memory_info.rss # B
+        used = memory_info.rss  # B
         total = psutil.virtual_memory().total  # MB
         percentage = used / total
 
@@ -366,17 +367,22 @@ class MainFrameController(MainFrameView):
             CURRENT_INDEX.set_value(None)
             CURRENT_FOREIGN_KEY.set_value(None)
 
+        self.btn_clone_table.Enable(table is not None)
         self.btn_delete_table.Enable(table is not None)
 
     def _on_new_table(self, table: SQLTable):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
         self.btn_cancel_table.Enable(bool(table is not None))
 
+    # def _on_selected_table(self, table : SQLTable):
+    #     self.btn_delete_table.Enable(table is not None)
+
     def on_insert_table(self, event):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
 
         CURRENT_TABLE.set_value(None)
+        # SELECTED_TABLE.set_value(None)
 
         NEW_TABLE.set_value(
             session.context.build_empty_table(database)
@@ -403,6 +409,8 @@ class MainFrameController(MainFrameView):
             table.save()
 
         except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+
             wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
 
         else:
@@ -434,6 +442,7 @@ class MainFrameController(MainFrameView):
         table = CURRENT_TABLE.get_value()
 
         NEW_TABLE.set_value(None)
+
         CURRENT_TABLE.set_value(None)
 
         if table and (table := next((t for t in database.tables if t.id == table.id), None)):
@@ -446,6 +455,7 @@ class MainFrameController(MainFrameView):
 
         dialog = wx.MessageDialog(None,
                                   message=_(f'Do you want delete the table {table.name}?'),
+                                  caption=_("Delete table"),
                                   style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION
                                   )
 
@@ -455,12 +465,38 @@ class MainFrameController(MainFrameView):
     def do_delete_table(self):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
-        table = CURRENT_TABLE.get_value()
+        table =  CURRENT_TABLE.get_value()
         if table.drop():
             CURRENT_TABLE.set_value(None)
-            # self._refresh_database()
 
-            self._select_tree_item(name=database.name)
+    def on_clone_table( self, event ):
+        table = CURRENT_TABLE.get_value()
+
+        if table:
+            new_table = table.copy()
+            new_table.id = -1
+            new_table.name = _(f"{new_table.name} (COPY)")
+
+            for column in new_table.columns:
+                column.id = -1
+                column.table = new_table
+
+            for index in new_table.indexes:
+                index.id = -1
+                index.table = new_table
+
+            for foreign_key in new_table.foreign_keys:
+                foreign_key.id = -1
+                foreign_key.table = new_table
+
+            NEW_TABLE.set_value(new_table)
+
+            # SELECTED_TABLE.set_value(None)
+            CURRENT_TABLE.set_value(None)
+
+            self._toggle_panel(2, True)
+            self.MainFrameNotebook.SetSelection(2)
+            self.table_name.SetFocus()
 
     # COLUMNS
     def _on_current_column(self, column: SQLColumn):

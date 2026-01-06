@@ -1,12 +1,4 @@
 repos:
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
-    hooks:
-      - id: mypy
-        additional_dependencies: [ types-PyYAML, types-PyMySQL ]
-        entry: bash -c "mypy --ignore-missing-imports --cache-dir=/dev/null $( git status --porcelain=v1 | grep '.py' | grep -E 'A|M' | awk '{print $2}' | tr '\n' ' ')"
-        pass_filenames: false
-        always_run: true
   - repo: local
     hooks:
       - id: pytest

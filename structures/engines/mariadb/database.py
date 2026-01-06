@@ -97,10 +97,8 @@ class MariaDBTable(SQLTable):
                         current.add()
                     elif current is None:
                         original.drop()
-                    elif current.name != original.name:
-                        original.rename(current.name)
                     elif current != original:
-                        original.modify(current)
+                        original.change(current)
 
                 for original_index, current_index in map_indexes:
                     if current_index is None:
@@ -120,7 +118,7 @@ class MariaDBTable(SQLTable):
 
         except Exception as ex:
             QUERY_LOGS.append(f"/* alter_table exception: {ex} */")
-            logger.error(ex)
+            logger.error(ex, exc_info=True)
             raise
 
         return True
@@ -146,6 +144,10 @@ class MariaDBColumn(SQLColumn):
 
     def modify(self, current: Self):
         sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MariaDBColumnBuilder(current)}"
+        self.table.database.context.execute(sql)
+
+    def change(self, current: Self):
+        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` CHANGE `{self.name}` {MariaDBColumnBuilder(current)}"
         self.table.database.context.execute(sql)
 
     def rename(self, new_name: str) -> bool:

@@ -350,7 +350,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(table.columns)
         return MariaDBColumn(
             id=id,
-            name=_(f"Column{str(id * -1):03}"),
+            name=_(f"Column{str(id * -1):0>3}"),
             table=table,
             datatype=datatype,
             **default_values

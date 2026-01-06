@@ -210,7 +210,7 @@ class SQLTable(abc.ABC):
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
 
         for observable_lazy_list_name in ["columns", "indexes", "foreign_keys"]:
-            if (observable_lazy_list := getattr(original_table, observable_lazy_list_name)) != getattr(self, observable_lazy_list):
+            if (observable_lazy_list := getattr(original_table, observable_lazy_list_name)) != getattr(self, observable_lazy_list_name):
                 observable_lazy_list.refresh()
 
     def save(self) -> Optional[bool]:
@@ -414,7 +414,10 @@ class SQLForeignKey(abc.ABC):
     on_update: str
     on_delete: str
 
-    bitmap: wx.Bitmap = BitmapList.KEY_FOREIGN
+    bitmap: wx.Bitmap = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        self.bitmap = BitmapList.KEY_FOREIGN
 
     def __eq__(self, other):
         if not isinstance(other, SQLForeignKey):
