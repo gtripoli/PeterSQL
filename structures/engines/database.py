@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 import uuid
 
-from typing import Optional, Callable, Literal, List, Any, Self, Dict
+from typing import Optional, Callable, Literal, List, Self, Dict
 
 import wx
 
@@ -16,7 +16,7 @@ from structures.engines.indextype import SQLIndexType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLDatabase(abc.ABC):
     id: Optional[int]
     name: str
@@ -64,6 +64,13 @@ class SQLDatabase(abc.ABC):
 
         return True
 
+    def refresh(self):
+        original_database = next((d for d in self.context.databases.get_value() if d.id == self.id), None)
+
+        for observable_lazy_list_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+            if getattr(self, observable_lazy_list_name, None) != (observable_lazy_list := getattr(original_database, observable_lazy_list_name, None)):
+                observable_lazy_list.refresh()
+
 
 @dataclasses.dataclass(eq=False)
 class SQLTable(abc.ABC):
@@ -108,20 +115,11 @@ class SQLTable(abc.ABC):
         if not self.compare_fields(other):
             return False
 
-        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
-            if not self._compare_observable_lazy_list(other, observable_lazy_list):
+        for observable_lazy_list_name in ["columns", "indexes", "foreign_keys"]:
+            if getattr(other, observable_lazy_list_name) != getattr(self, observable_lazy_list_name):
                 return False
 
         return True
-
-    def _compare_observable_lazy_list(self, other: Self, name_observable_lazy_list: str):
-        l1 = getattr(self, name_observable_lazy_list)
-        l2 = getattr(other, name_observable_lazy_list)
-
-        if len(l1) != len(l2):
-            return False
-
-        return not all([o1 != o2 for o1, o2 in zip(l1, l2)])
 
     def compare_fields(self, other: Self):
         return all([
@@ -129,15 +127,6 @@ class SQLTable(abc.ABC):
             for field in dataclasses.fields(self)
             if field.compare and not isinstance(field, ObservableLazyList)
         ])
-
-    def compare_columns(self, other: Self):
-        return self._compare_observable_lazy_list(other, "columns")
-
-    def compare_indexes(self, other: Self):
-        return self._compare_observable_lazy_list(other, "indexes")
-
-    def compare_foreign_keys(self, other: Self):
-        return self._compare_observable_lazy_list(other, "foreign_keys")
 
     @abc.abstractmethod
     def rename(self, table: 'SQLTable', new_name: str):
@@ -204,9 +193,9 @@ class SQLTable(abc.ABC):
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         new_cls = cls(**field_values)
 
-        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
-            o1: ObservableLazyList = getattr(self, observable_lazy_list)
-            o2: ObservableLazyList = getattr(new_cls, observable_lazy_list)
+        for observable_lazy_list_name in ["columns", "indexes", "foreign_keys"]:
+            o1: ObservableLazyList = getattr(self, observable_lazy_list_name)
+            o2: ObservableLazyList = getattr(new_cls, observable_lazy_list_name)
 
             if not o1.is_loaded:
                 o1.refresh()
@@ -220,20 +209,19 @@ class SQLTable(abc.ABC):
     def refresh(self):
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
 
-        for observable_lazy_list in ["columns", "indexes", "foreign_keys"]:
-            if not self._compare_observable_lazy_list(original_table, observable_lazy_list):
-                getattr(original_table, observable_lazy_list).refresh()
+        for observable_lazy_list_name in ["columns", "indexes", "foreign_keys"]:
+            if (observable_lazy_list := getattr(original_table, observable_lazy_list_name)) != getattr(self, observable_lazy_list):
+                observable_lazy_list.refresh()
 
     def save(self) -> Optional[bool]:
-        if is_new := self.is_new:
-            method = self.create
+        if self.is_new:
+            self.create()
+            self.database.refresh()
         else:
-            method = self.alter
-
-        if result := method():
+            self.alter()
             self.refresh()
 
-        return result
+        return True
 
 
 @dataclasses.dataclass(eq=False)
@@ -556,7 +544,7 @@ class SQLRecord(abc.ABC):
         return method()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLView(abc.ABC):
     id: int
     name: str
@@ -582,7 +570,7 @@ class SQLView(abc.ABC):
         raise NotImplementedError
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLTrigger(abc.ABC):
     id: int
     name: str
@@ -598,7 +586,7 @@ class SQLTrigger(abc.ABC):
         return new_view
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLProcedure(abc.ABC):
     id: int
     name: str
@@ -611,7 +599,7 @@ class SQLProcedure(abc.ABC):
         return new_view
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLFunction(abc.ABC):
     id: int
     name: str
@@ -624,7 +612,7 @@ class SQLFunction(abc.ABC):
         return new_view
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLEvent(abc.ABC):
     id: int
     name: str

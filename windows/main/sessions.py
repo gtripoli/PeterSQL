@@ -108,7 +108,7 @@ class TreeSessionsController:
         self.root_item = self.tree_ctrl_sessions.GetRootItem()
 
         session_item = self.tree_ctrl_sessions.AppendItem(self.root_item, session.name, image=getattr(IconList, f"ENGINE_{session.engine.name}"), data=session)
-        for database in session.context.get_databases():
+        for database in session.context.databases.get_value():
             db_item = self.tree_ctrl_sessions.AppendItem(session_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
             self.tree_ctrl_sessions.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
             self.tree_ctrl_sessions.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)

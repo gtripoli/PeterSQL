@@ -7,10 +7,6 @@ from structures.engines import SessionEngine
 from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
 from structures.engines.context import AbstractContext
 
-from structures.engines.sqlite.context import SQLiteContext
-from structures.engines.mariadb.context import MariaDBContext
-from structures.engines.mysql.context import MySQLContext
-
 
 @dataclasses.dataclass(eq=False)
 class Session:
@@ -26,12 +22,18 @@ class Session:
 
     def __post_init__(self):
         if self.engine == SessionEngine.SQLITE:
+            from structures.engines.sqlite.context import SQLiteContext
+
             self.context = SQLiteContext(self)
 
         elif self.engine == SessionEngine.MARIADB:
+            from structures.engines.mariadb.context import MariaDBContext
+
             self.context = MariaDBContext(self)
 
         elif self.engine == SessionEngine.MYSQL:
+            from structures.engines.mysql.context import MySQLContext
+
             self.context = MySQLContext(self)
 
         elif self.engine == SessionEngine.POSTGRESQL:

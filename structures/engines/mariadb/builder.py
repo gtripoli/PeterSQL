@@ -6,7 +6,7 @@ from structures.engines.context import AbstractColumnBuilder
 class MariaDBColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(unsigned)s", "%(zerofill)s",
                 "%(collate)s", "%(nullable)s", "%(default)s", "%(auto_increment)s",
-                "%(unique)s", "%(primary_key)s", "%(comment)s", "%(check)s",
+                "%(comment)s", "%(check)s",
                 # TODO: COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT} - STORAGE {DISK|MEMORY}]
                 # "%(format)s","%(storage)s",
                 "%(generated)s"]

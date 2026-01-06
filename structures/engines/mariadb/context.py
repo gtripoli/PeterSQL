@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any
 from gettext import gettext as _
 
 from helpers.logger import logger
+from helpers.observables import ObservableLazyList
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
@@ -33,8 +34,6 @@ class MariaDBContext(AbstractContext):
         self.password = session.configuration.password
         # self.database = session.configuration.database
         self.port = getattr(session.configuration, 'port', 3306)
-
-        self.connection_url = f"mariadb://{self.user}:{self.password}@{self.host}:{self.port}"
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)

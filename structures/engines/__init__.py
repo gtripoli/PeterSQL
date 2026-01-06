@@ -1,4 +1,5 @@
 import enum
+
 from functools import lru_cache
 from typing import List, Union, TypeAlias, NamedTuple
 

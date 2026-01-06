@@ -1,11 +1,11 @@
+import abc
 import contextlib
 import re
-import abc
 
 from typing import Dict, Any, Optional, List, Union, TypeAlias
 
 from helpers.logger import logger
-from helpers.observables import ObservableList
+from helpers.observables import ObservableList, ObservableLazyList
 
 from structures.ssh_tunnel import SSHTunnel
 
@@ -30,7 +30,6 @@ class AbstractColumnBuilder(abc.ABC):
         self.parts = {
             'name': self.name,
             'datatype': self.datatype,
-            'primary_key': self.primary_key,
             'unique': self.unique,
             'auto_increment': self.auto_increment,
             'nullable': self.nullable,
@@ -59,10 +58,6 @@ class AbstractColumnBuilder(abc.ABC):
             datatype_str += f"({self.column.set or self.column.datatype.default_set})"
 
         return datatype_str
-
-    @property
-    def primary_key(self):
-        return 'PRIMARY KEY' if self.column.is_primary_key else ''
 
     @property
     def auto_increment(self):
@@ -122,8 +117,12 @@ class AbstractContext(abc.ABC):
     INDEXTYPE: StandardIndexType
     COLLATIONS: List[str]
 
+    databases: ObservableLazyList[SQLDatabase]
+
     def __init__(self, session):
         self.session = session
+
+        self.databases = ObservableLazyList(self.get_databases)
 
     @abc.abstractmethod
     def connect(self, **connect_kwargs) -> None:
@@ -287,4 +286,6 @@ class AbstractContext(abc.ABC):
             self.execute("COMMIT")
         except Exception as ex:
             self.execute("ROLLBACK")
+            logger.error(ex, exc_info=True)
+            QUERY_LOGS.append(f"/* {str(ex)} */")
             raise

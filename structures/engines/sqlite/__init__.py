@@ -2,23 +2,23 @@ import re
 
 from helpers.dataview import ColumnField
 
+MAP_COLUMN_FIELDS = {
+    0: ColumnField("#", lambda s, v: str(s.id + 1) if s.id >= 0 else ""),
+    1: ColumnField("name"),
+    2: ColumnField("datatype", str),
+    3: ColumnField("length_scale_set"),
+    4: ColumnField("is_nullable"),
+    5: ColumnField("check"),
+    6: ColumnField("default"),
+    7: ColumnField("virtuality"),
+    8: ColumnField("expression"),
+    9: ColumnField("collation_name"),
+}
+
 COLLATIONS = {
     "BINARY": "utf8",
     "NOCASE": "utf8",
     "RTRIM": "utf8"
-}
-
-MAP_COLUMN_FIELDS = {
-    0: ColumnField("#", lambda v: str(v + 1) if v >= 0 else ''),
-    1: ColumnField("name", lambda v: str(v)),
-    2: ColumnField("datatype", str),
-    3: ColumnField("length_scale_set", str),
-    4: ColumnField("is_nullable", bool),
-    5: ColumnField("check", str),
-    6: ColumnField("default", str),
-    7: ColumnField("virtuality", str),
-    8: ColumnField("expression", str),
-    9: ColumnField("collation_name", str),
 }
 
 #   https://sqlite.org/syntax/column-constraint.html

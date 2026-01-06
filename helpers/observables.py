@@ -27,13 +27,13 @@ class CallbackEvent(enum.Enum):
 
 
 class Observable(Generic[T]):
-    
+
     def __init__(self, initial: Any = None):
         self._initial = initial
-        
+
         if initial is not None:
             self._value = initial
-            self._last_value= initial
+            self._last_value = initial
 
         self._callbacks: Dict[CallbackEvent, Dict[int, Callable]] = {event: {} for event in CallbackEvent}
 
@@ -70,7 +70,7 @@ class Observable(Generic[T]):
                 dead.append(callback)
                 continue
 
-            if not self.is_empty :
+            if not self.is_empty:
                 try:
                     ref(getattr(self, "_value"))
                 except Exception as ex:
@@ -290,6 +290,12 @@ class ObservableLazyList(ObservableList[T]):
         super().__init__(default=[])
         self._loaded = False
         self._loader = loader
+
+    def __eq__(self, other: Self):
+        if len(self) != len(other):
+            return False
+
+        return not all([o1 != o2 for o1, o2 in zip(self.get_value(), other.get_value())])
 
     @property
     def is_loaded(self) -> bool:

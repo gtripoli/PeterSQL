@@ -652,14 +652,21 @@ class MainFrameView ( wx.Frame ):
 		self.btn_insert_table = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
 		self.btn_insert_table.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-		bSizer531.Add( self.btn_insert_table, 0, wx.LEFT|wx.RIGHT, 2 )
+		bSizer531.Add( self.btn_insert_table, 0, wx.ALL|wx.EXPAND, 2 )
+
+		self.btn_clone_table = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Clone"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+		self.btn_clone_table.SetBitmap( wx.Bitmap( u"icons/16x16/table_multiple.png", wx.BITMAP_TYPE_ANY ) )
+		self.btn_clone_table.Enable( False )
+
+		bSizer531.Add( self.btn_clone_table, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.btn_delete_table = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
 		self.btn_delete_table.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
 		self.btn_delete_table.Enable( False )
 
-		bSizer531.Add( self.btn_delete_table, 0, wx.LEFT|wx.RIGHT, 2 )
+		bSizer531.Add( self.btn_delete_table, 0, wx.ALL|wx.EXPAND, 2 )
 
 
 		bSizer531.Add( ( 0, 0), 1, wx.EXPAND, 5 )
@@ -1408,6 +1415,7 @@ class MainFrameView ( wx.Frame ):
 		self.Bind( wx.EVT_TOOL, self.do_disconnect, id = self.m_tool4.GetId() )
 		self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
 		self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
+		self.btn_clone_table.Bind( wx.EVT_BUTTON, self.on_clone_table )
 		self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
 		self.btn_delete_index.Bind( wx.EVT_BUTTON, self.on_delete_index )
 		self.btn_clear_index.Bind( wx.EVT_BUTTON, self.on_clear_index )
@@ -1450,6 +1458,9 @@ class MainFrameView ( wx.Frame ):
 		event.Skip()
 
 	def on_insert_table( self, event ):
+		event.Skip()
+
+	def on_clone_table( self, event ):
 		event.Skip()
 
 	def on_delete_table( self, event ):
@@ -1706,6 +1717,10 @@ class Trash ( wx.Panel ):
 		self.m_dataViewListColumn11 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Engine"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		self.m_dataViewListColumn12 = self.___list_ctrl_database_tables.AppendTextColumn( _(u"Comments"), wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
 		bSizer90.Add( self.___list_ctrl_database_tables, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_gauge1 = wx.Gauge( self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_gauge1.SetValue( 0 )
+		bSizer90.Add( self.m_gauge1, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		self.SetSizer( bSizer90 )

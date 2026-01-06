@@ -244,6 +244,11 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
 
         return self.get_data_by_row(row)
 
+    def clear(self):
+        AbstractBaseDataModel.clear(self)
+        self.Reset(0)
+        self.Cleared()
+
     def HasValue(self, item, col):
         if not self.data:
             return False
@@ -253,7 +258,3 @@ class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewInde
 
         return self.MAP_COLUMN_FIELDS[col].has_value(self.get_data_by_item(item))
 
-    def clear(self):
-        AbstractBaseDataModel.clear(self)
-        self.Reset(0)
-        self.Cleared()

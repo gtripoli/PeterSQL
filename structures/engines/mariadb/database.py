@@ -52,54 +52,18 @@ class MariaDBTable(SQLTable):
 
         return True
 
-    def create(self, map_columns: List[Tuple[Optional['MariaDBColumn'], Optional['MariaDBColumn']]]) -> bool:
-        constraints = []
-        primary_keys = []
-        columns_definitions: Dict[str, str] = {}
+    def create(self) -> bool:
+        with self.database.context.transaction() as transaction:
+            sql = f"CREATE TABLE `{self.database.name}`.`{self.name}` ({', '.join([str(MariaDBColumnBuilder(column)) for column in self.columns])})"
+            self.database.context.execute(sql)
 
-        for original, current in map_columns:
-            if current:
-                if current.is_primary_key or current.is_auto_increment:
-                    primary_keys.append(current)
+            for index in self.indexes:
+                index.create()
 
-                exclude = ['unique']
+            for foreign_key in self.foreign_keys:
+                foreign_key.create()
 
-                if len(primary_keys) > 1:
-                    exclude += ['primary_key', 'auto_increment']
-
-                columns_definitions[current.name] = str(MariaDBColumnBuilder(current, exclude=exclude))
-
-        # Handle primary keys
-        if len(primary_keys) > 1:
-            # Check if any autoincrement
-            auto_increment = next((pk for pk in primary_keys if pk.is_auto_increment), None)
-            if auto_increment:
-                # If autoincrement and multiple primary keys, use UNIQUE
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
-                constraints.append(f"UNIQUE ({cols})")
-            else:
-                columns_definitions = {col_name: col_def.replace(' PRIMARY KEY', '') for col_name, col_def in columns_definitions.items()}
-                # Use PRIMARY KEY table constraint
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
-                constraints.append(f"PRIMARY KEY ({cols})")
-
-        # Handle foreign keys
-        foreign_key_is_already_present = any(['FOREIGN KEY' in column_definition for column_definition in columns_definitions])
-
-        if not foreign_key_is_already_present:
-            for fk in self.foreign_keys:
-                cols = ", ".join([f"`{c}`" for c in fk.columns])
-                ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
-                constraint = f"FOREIGN KEY ({cols}) REFERENCES {fk.reference_table} ({ref_cols})"
-                if fk.on_update:
-                    constraint += f" ON UPDATE {fk.on_update}"
-                if fk.on_delete:
-                    constraint += f" ON DELETE {fk.on_delete}"
-                constraints.append(constraint)
-
-        sql = f"CREATE TABLE `{self.name}` ({', '.join(list(columns_definitions.values()) + constraints)})"
-
-        return self.database.context.execute(sql)
+        return True
 
     def alter(self) -> bool:
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
