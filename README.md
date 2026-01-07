@@ -74,32 +74,24 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
 
 2. Install dependencies (including dev tools for testing):
    ```bash
-   uv sync --group dev
+   uv sync
    ```
 
 3. Run the application:
    ```bash
-   uv run python main.py
+   uv run main.py
    ```
 
 ### Development
 
-For production deployments, install only functional dependencies:
-
 ```bash
-uv sync
+uv sync --extra dev
 ```
 
 To run tests:
 
 ```bash
-uv run --group dev pytest
-```
-
-To run mypy:
-
-```bash
-uv run --group dev mypy
+uv run pytest
 ```
 
 ## 📸 Screenshot
