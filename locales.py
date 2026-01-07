@@ -1,48 +1,68 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
-import os
-import os.path
 import shutil
 import subprocess
+from pathlib import Path
 
+APP_NAME = "petersql"
 LANGUAGES = ["fr_FR", "it_IT", "es_ES", "en_US", "de_DE"]
-OUTPUT_DIRECTORY = "locales"
 
-parser = argparse.ArgumentParser()
+BASE_DIR = Path(__file__).parent
+LOCALE_DIR = BASE_DIR.joinpath("locale")
+POT_FILE = LOCALE_DIR.joinpath(f"{APP_NAME}.pot")
 
-
-def execute_command(command):
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result.stdout, result.stderr
-
-
-def update(loco_key):
-    os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
-
-    source_messages = os.path.join(OUTPUT_DIRECTORY, "messages.pot")
-
-    execute_command(f"pybabel extract -F babel.cfg -o {source_messages} ./ --omit-header")
+def run(cmd):
+    subprocess.run(cmd, shell=True, check=True)
 
 
-    for language in LANGUAGES:
-        lc_messages = os.path.join(OUTPUT_DIRECTORY, language, "LC_MESSAGES")
-        os.makedirs(lc_messages, exist_ok=True)
+def extract():
+    LOCALE_DIR.mkdir(parents=True, exist_ok=True)
 
-        language_messages = os.path.join(lc_messages, "messages.po")
+    run(
+        f"pybabel extract "
+        f"-F babel.cfg "
+        f"-o {POT_FILE} "
+        f"./ "
+        f"--omit-header"
+    )
 
-        if not os.path.exists(language_messages):
-            shutil.copy(source_messages, language_messages)
+
+def update():
+    for lang in LANGUAGES:
+        message_dir = LOCALE_DIR.joinpath(lang, "LC_MESSAGES")
+        message_dir.mkdir(parents=True, exist_ok=True)
+
+        po_file = message_dir.joinpath(f"{APP_NAME}.po")
+
+        if not po_file.exists():
+            shutil.copy(POT_FILE, po_file)
+
         else:
-            execute_command(f"pybabel update -i {source_messages} -d locales -l {language} --omit-header")
+            run(
+                f"pybabel update "
+                f"-i {POT_FILE} "
+                f"-o {po_file} "
+                f"-l {lang} "
+                f"--omit-header"
+            )
 
 
 def compile():
+    for lang in LANGUAGES:
+        message_dir = LOCALE_DIR.joinpath(lang, "LC_MESSAGES")
+        po_file = message_dir.joinpath(f"{APP_NAME}.po")
+        mo_file = message_dir.joinpath(f"{APP_NAME}.mo")
 
-    execute_command(f"pybabel compile -d {OUTPUT_DIRECTORY} -f")
+        if po_file.exists():
+            run(f"msgfmt {po_file} -o {mo_file}")
+
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--clean", action="store_true")
     args = parser.parse_args()
 
-    update(getattr(args, "loco_key", None))
+    extract()
+    update()
     compile()
