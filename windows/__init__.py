@@ -9,6 +9,7 @@
 
 from .components.dataview import TableIndexesDataViewCtrl
 from .components.dataview import TableForeignKeysDataViewCtrl
+from .components.dataview import TableConstraintDataViewCtrl
 from .components.dataview import TableColumnsDataViewCtrl
 from .components.dataview import TableRecordsDataViewCtrl
 import wx
@@ -910,6 +911,50 @@ class MainFrameView ( wx.Frame ):
             self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
             m_notebook3Index += 1
 
+        self.PanelTableConstraint = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer771 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer781 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer792 = wx.BoxSizer( wx.VERTICAL )
+
+        self.btn_insert_foreign_key1 = wx.Button( self.PanelTableConstraint, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.btn_insert_foreign_key1.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer792.Add( self.btn_insert_foreign_key1, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.btn_delete_foreign_key1 = wx.Button( self.PanelTableConstraint, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.btn_delete_foreign_key1.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+        self.btn_delete_foreign_key1.Enable( False )
+
+        bSizer792.Add( self.btn_delete_foreign_key1, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.btn_clear_foreign_key1 = wx.Button( self.PanelTableConstraint, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.btn_clear_foreign_key1.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer792.Add( self.btn_clear_foreign_key1, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        bSizer781.Add( bSizer792, 0, wx.ALIGN_CENTER, 5 )
+
+        self.dv_table_constraints = TableConstraintDataViewCtrl( self.PanelTableConstraint, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer781.Add( self.dv_table_constraints, 1, wx.ALL|wx.EXPAND, 0 )
+
+
+        bSizer771.Add( bSizer781, 1, wx.EXPAND, 5 )
+
+
+        self.PanelTableConstraint.SetSizer( bSizer771 )
+        self.PanelTableConstraint.Layout()
+        bSizer771.Fit( self.PanelTableConstraint )
+        self.m_notebook3.AddPage( self.PanelTableConstraint, _(u"Constraints"), False )
+        m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/tick.png", wx.BITMAP_TYPE_ANY )
+        if ( m_notebook3Bitmap.IsOk() ):
+            m_notebook3Images.Add( m_notebook3Bitmap )
+            self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
+            m_notebook3Index += 1
+
 
         bSizer55.Add( self.m_notebook3, 1, wx.EXPAND | wx.ALL, 5 )
 
@@ -1422,6 +1467,9 @@ class MainFrameView ( wx.Frame ):
         self.btn_insert_foreign_key.Bind( wx.EVT_BUTTON, self.on_insert_foreign_key )
         self.btn_delete_foreign_key.Bind( wx.EVT_BUTTON, self.on_delete_foreign_key )
         self.btn_clear_foreign_key.Bind( wx.EVT_BUTTON, self.on_clear_foreign_key )
+        self.btn_insert_foreign_key1.Bind( wx.EVT_BUTTON, self.on_insert_foreign_key )
+        self.btn_delete_foreign_key1.Bind( wx.EVT_BUTTON, self.on_delete_foreign_key )
+        self.btn_clear_foreign_key1.Bind( wx.EVT_BUTTON, self.on_clear_foreign_key )
         self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_insert_column )
         self.btn_delete_column.Bind( wx.EVT_BUTTON, self.on_delete_column )
         self.btn_move_up_column.Bind( wx.EVT_BUTTON, self.on_move_up_column )
@@ -1480,6 +1528,9 @@ class MainFrameView ( wx.Frame ):
 
     def on_clear_foreign_key( self, event ):
         event.Skip()
+
+
+
 
     def on_insert_column( self, event ):
         event.Skip()

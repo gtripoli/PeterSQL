@@ -44,7 +44,7 @@ COLUMNS_PATTERN = re.compile(r"""
 (?P<attributes>.*)$
 """, re.IGNORECASE | re.VERBOSE)
 
-ATTRIBUTES_PATTERN = [
+COLUMN_ATTRIBUTES_PATTERN = [
     re.compile(r"""(?P<is_primary_key>PRIMARY\s+KEY)(?:\s+(?P<primary_key_order>ASC|DESC)?)?(?:\s+ON\s+CONFLICT\s+(?P<primary_key_conflict>ROLLBACK|ABORT|FAIL|IGNORE|REPLACE))?"""),
     re.compile(r"""(?P<is_auto_increment>AUTOINCREMENT)"""),
     re.compile(r"""(?P<is_nullable>NOT\s+NULL|NULL)(?:\s+ON\s+CONFLICT\s+(?P<nullability_conflict>ROLLBACK|ABORT|FAIL|IGNORE|REPLACE))?"""),

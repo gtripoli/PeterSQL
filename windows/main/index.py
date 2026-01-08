@@ -3,7 +3,7 @@ from typing import List
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewIndexListModel
+from helpers.dataview import BaseDataViewListModel
 
 from structures.engines import merge_original_current
 
@@ -13,7 +13,7 @@ from windows.main.column import NEW_TABLE
 from structures.engines.database import SQLTable, SQLIndex
 
 
-class TableIndexModel(BaseDataViewIndexListModel):
+class TableIndexModel(BaseDataViewListModel):
     def GetValueByRow(self, row, col):
         if row >= len(self.data):
             print(row, len(self.data))

@@ -91,12 +91,14 @@ class SQLTable(abc.ABC):
 
     get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_constraints_handler: Callable[[Self], List['SQLConstraint']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_records_handler: Callable[[Self, Optional[str], int, int, Optional[str]], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, filters=None, limit=1000, offset=0, orders=None: list())
 
     def __post_init__(self):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
+        self.constraints = ObservableLazyList(lambda: self.get_constraints_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
 
     def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
@@ -193,7 +195,7 @@ class SQLTable(abc.ABC):
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         new_cls = cls(**field_values)
 
-        for observable_lazy_list_name in ["columns", "indexes", "foreign_keys"]:
+        for observable_lazy_list_name in ["columns", "constraints", "indexes", "foreign_keys"]:
             o1: ObservableLazyList = getattr(self, observable_lazy_list_name)
             o2: ObservableLazyList = getattr(new_cls, observable_lazy_list_name)
 
@@ -222,6 +224,20 @@ class SQLTable(abc.ABC):
             self.refresh()
 
         return True
+
+
+@dataclasses.dataclass(eq=False)
+class SQLConstraint(abc.ABC):
+    id: int
+    type: str
+    table: SQLTable = dataclasses.field(compare=False)
+    expression: str
+    name: Optional[str] = None
+
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        return cls(**field_values)
 
 
 @dataclasses.dataclass(eq=False)

@@ -7,7 +7,7 @@ from icons import combine_bitmaps
 
 from helpers.logger import logger
 from helpers.observables import Loader
-from helpers.dataview import BaseDataViewIndexListModel, ColumnField
+from helpers.dataview import BaseDataViewListModel, ColumnField
 
 from windows import TableColumnsDataViewCtrl
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
@@ -19,7 +19,7 @@ from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDataba
 from structures.engines.indextype import SQLIndexType
 
 
-class ColumnModel(BaseDataViewIndexListModel):
+class ColumnModel(BaseDataViewListModel):
     MAP_COLUMN_FIELDS: Dict[int, ColumnField]
 
     def GetColumnCount(self):
@@ -190,14 +190,16 @@ class TableColumnsController:
         table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
         database: SQLDatabase = CURRENT_DATABASE.get_value()
-        original_table = next((t for t in list(database.tables) if t.id == table.id), None)
-        original_columns = list(original_table.columns)
-        # original_columns = list(table.columns)
+
+        if not table.is_new :
+            original_table = next((t for t in list(database.tables) if t.id == table.id), None)
+            original_columns = list(original_table.columns)
+        else :
+            original_columns = []
 
         map_columns = merge_original_current(original_columns, current_columns)
 
         if not all(o == c for o, c in map_columns):
-
             for original_column, current_column in map_columns:
                 if original_column is None:
                     continue
@@ -235,7 +237,8 @@ class TableColumnsController:
             current_column: SQLColumn = self.model.get_data_by_item(selected)
             datatype = current_column.datatype
             index = table.columns.index(current_column) + 1
-            default_values["after"] = current_column.name
+            if hasattr(current_column, "after") :
+                default_values["after"] = current_column.name
 
         if datatype.has_length:
             default_values['length'] = datatype.default_length

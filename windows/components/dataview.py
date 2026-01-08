@@ -202,6 +202,20 @@ class TableIndexesDataViewCtrl(BaseDataViewCtrl):
         self.AppendTextColumn(_(u"Condition"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
+class TableConstraintDataViewCtrl(BaseDataViewCtrl):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        column0 = wx.dataview.DataViewIconTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column0 = wx.dataview.DataViewColumn(_(u"Type"), column0, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        self.AppendColumn(column0)
+
+        self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        self.AppendTextColumn(_(u"Expression"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+
 class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
     on_foreign_key_insert: Callable[[wx.Event], None]
     on_foreign_key_delete: Callable[[wx.Event], None]

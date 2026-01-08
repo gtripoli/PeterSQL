@@ -61,11 +61,18 @@ class TreeSessionsController:
 
         self.populate_tree()
 
-        SESSIONS.subscribe(self.append_session, CallbackEvent.ON_APPEND)
-
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
         self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
+
+        SESSIONS.subscribe(self.append_session, CallbackEvent.ON_APPEND)
+        #
+        # CURRENT_DATABASE.get_value().tables.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+        # CURRENT_DATABASE.get_value().views.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+        # CURRENT_DATABASE.get_value().procedures.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+        # CURRENT_DATABASE.get_value().functions.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+        # CURRENT_DATABASE.get_value().triggers.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+        # CURRENT_DATABASE.get_value().events.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
 
     def _load_items(self, event: wx.lib.agw.hypertreelist.TreeEvent):
         with Loader.cursor_wait():
@@ -121,10 +128,17 @@ class TreeSessionsController:
     def load_observables(self, db_item, database: SQLDatabase):
         for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
             observable = getattr(database, observable_name, None)
+
             if observable is None:
                 continue
+
             if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
                 continue
+
+            observable.subscribe(lambda db_item=db_item, database=database: self.load_observables(db_item, database))
+
+
+            # self.tree_ctrl_sessions.Delete(db_item)
 
             for obj in observable.get_value():
                 obj_item = self.tree_ctrl_sessions.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
@@ -141,6 +155,8 @@ class TreeSessionsController:
         loading_item, index_item = self.tree_ctrl_sessions.GetFirstChild(db_item)
         if loading_item and loading_item.GetData() is None:
             self.tree_ctrl_sessions.Delete(loading_item)
+
+    # def _append_items(self):
 
     def reset_current_objects(self):
         CURRENT_TABLE.set_value(None)

@@ -33,7 +33,7 @@ from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
 from windows.main.sessions import TreeSessionsController
 from windows.main.foreign_key import TableForeignKeyController
-
+from windows.main.constraint import TableConstraintController
 
 class MainFrameController(MainFrameView):
     app = wx.GetApp()
@@ -59,6 +59,7 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
 
         self.controller_list_table_index = TableIndexController(self.dv_table_indexes)
+        self.controller_list_table_constraint = TableConstraintController(self.dv_table_constraints)
         self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
         self._setup_query_editors()
@@ -463,13 +464,12 @@ class MainFrameController(MainFrameView):
             self.do_delete_table()
 
     def do_delete_table(self):
-        session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
-        table =  CURRENT_TABLE.get_value()
-        if table.drop():
+        if (table := CURRENT_TABLE.get_value()) and table.drop():
             CURRENT_TABLE.set_value(None)
+            database.tables.refresh()
 
-    def on_clone_table( self, event ):
+    def on_clone_table(self, event):
         table = CURRENT_TABLE.get_value()
 
         if table:

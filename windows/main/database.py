@@ -4,12 +4,16 @@ import wx
 import wx.dataview
 
 from helpers import bytes_to_human
-from helpers.dataview import AbstractBaseDataModel, BaseDataViewModel, BaseDataViewIndexListModel, ColumnField
+from helpers.dataview import BaseDataViewListModel, ColumnField
+
 from structures.engines.database import SQLTable, SQLDatabase
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE
+
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE
 
 
-class ModelDatabaseTable(BaseDataViewIndexListModel):
+# SELECTED_TABLE: Observable[SQLTable] = Observable()
+
+class ModelDatabaseTable(BaseDataViewListModel):
     MAP_COLUMN_FIELDS = {
         0: ColumnField("name", str),
         1: ColumnField("total_rows", str),
@@ -37,15 +41,31 @@ class ListDatabaseTable:
     def __init__(self, list_ctrl_database_tables: wx.dataview.DataViewCtrl):
         self.list_ctrl_database_tables = list_ctrl_database_tables
         self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+        self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
 
         self.model = ModelDatabaseTable(7)
         self.list_ctrl_database_tables.AssociateModel(self.model)
 
         CURRENT_DATABASE.subscribe(self._load_database)
+        CURRENT_TABLE.subscribe(self._select_table)
 
     def _load_database(self, database: SQLDatabase):
         if database:
             self.model.set_observable(database.tables)
+
+    def _select_table(self, table: SQLTable):
+        if table:
+            database = CURRENT_DATABASE.get_value()
+            if index := database.tables.index(table):
+                self.list_ctrl_database_tables.Select(self.model.GetItem(index))
+
+    def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        if table := self.model.get_data_by_item(item):
+            CURRENT_TABLE.set_value(table.copy())
 
     def _on_item_activated(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()

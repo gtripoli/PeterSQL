@@ -182,7 +182,7 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         return "string"
 
 
-class BaseDataViewIndexListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexListModel):
+class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexListModel):
     def __init__(self, column_count: Optional[int] = None):
         AbstractBaseDataModel.__init__(self, column_count)
         wx.dataview.DataViewIndexListModel.__init__(self)

@@ -1,5 +1,6 @@
 import re
 import sqlite3
+from collections import defaultdict
 from typing import Optional, List, Dict, Any
 
 from gettext import gettext as _
@@ -11,8 +12,8 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from structures.engines.datatype import SQLDataType
 from structures.engines.indextype import SQLIndexType
 
-from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, ATTRIBUTES_PATTERN
-from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase
+from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN
+from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase, SQLiteConstraint
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
@@ -24,6 +25,8 @@ class SQLiteContext(AbstractContext):
 
     DATATYPE = SQLiteDataType()
     INDEXTYPE = SQLiteIndexType()
+
+    _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 
     def __init__(self, session):
         super().__init__(session)
@@ -116,9 +119,8 @@ class SQLiteContext(AbstractContext):
         ]
         if has_sqlite_sequence:
             selects.append("IFNULL(sS.seq, 0) AS autoincrement_value")
-        else :
+        else:
             selects.append("0 AS autoincrement_value")
-
 
         self.execute(f"""
             SELECT {', '.join(selects)}
@@ -131,7 +133,14 @@ class SQLiteContext(AbstractContext):
         """)
 
         results = []
-        for i, row in enumerate(self.cursor.fetchall()):
+        for i, row in enumerate(self.fetchall()):
+            self.execute(f"SELECT * FROM sqlite_master WHERE tbl_name='{row['name']}';")
+            for info in self.fetchall():
+                self._map_sqlite_master[row['name']][info["type"]][info["name"]] = {
+                    "rootpage": info["rootpage"],
+                    "sql": info["sql"]
+                }
+
             results.append(
                 SQLiteTable(
                     id=i,
@@ -146,47 +155,84 @@ class SQLiteContext(AbstractContext):
                     get_indexes_handler=self.get_indexes,
                     get_foreign_keys_handler=self.get_foreign_keys,
                     get_records_handler=self.get_records,
+                    get_constraints_handler=self.get_constraints,
                 )
             )
 
         return results
 
-    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+    @staticmethod
+    def _split_sql_table_column(sql_text):
+        sql_text = re.sub(r'\)\s*\),', ')),', sql_text)
+
+        parts = []
+        current = ""
+        depth = 0
+        in_quote = False
+
+        for char in sql_text:
+            if char in ("'", '"'):
+                in_quote = not in_quote
+                current += char
+            elif not in_quote:
+                if char == '(':
+                    depth += 1
+                    current += char
+                elif char == ')':
+                    depth -= 1
+                    current += char
+                elif char == ',' and depth == 0:
+                    part = current.strip()
+                    if part:
+                        parts.append(part)
+                    current = ""
+                else:
+                    current += char
+            else:
+                current += char
+
+        if current.strip():
+            parts.append(current.strip())
+
+        cleaned = []
+        for part in parts:
+            part = part.rstrip(',')
+            part = re.sub(r'\s+', ' ', part).strip()
+            if part:
+                cleaned.append(part)
+
+        return cleaned
+
+    def get_columns(self, table: SQLiteTable) -> List[SQLColumn]:
         results = []
-        if table.id == -1:
+        if table is None or table.is_new:
+            return results
+
+        if not (table_match := re.search(r"""CREATE\s+TABLE\s+(?:[`'"]?\w+[`'"]?\s+)?\((?P<columns>.*)\)""", self._map_sqlite_master[table.name]["table"][table.name]["sql"], re.IGNORECASE | re.DOTALL)):
             return results
 
         QUERY_LOGS.append(f"/* get_columns for table={table.name} */")
-
-        self.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table.name}'")
-        if not (sql_table_result := self.cursor.fetchone()):
-            return results
-
-        sql_create_table = sql_table_result['sql']
-
-        if not (table_match := re.search(r"""CREATE\s+TABLE\s+(?:[`'"]?\w+[`'"]?\s+)?\((?P<columns>.*)\)""", sql_create_table, re.IGNORECASE | re.DOTALL)):
-            return results
 
         table_match = table_match.groupdict()
 
         columns = re.sub(r'\s*--\s*.*', '', table_match['columns'])
 
-        columns = re.split(r',\W+', columns)
+        self._map_sqlite_master[table.name]["constraints"]["sql"] = []
 
-        columns = [re.sub(r"\s{2,}|\n+", ' ', c).strip() for c in columns]
+        for i, column in enumerate(self._split_sql_table_column(columns)):
 
-        for i, column in enumerate(columns):
             if not (columns_match := COLUMNS_PATTERN.match(column)):
                 continue
 
-            if column.startswith("PRIMARY KEY") or column.startswith("UNIQUE") or column.startswith("FOREIGN KEY"):
+            if column.startswith("CONSTRAINT") or column.startswith("PRIMARY KEY") or column.startswith("UNIQUE") or column.startswith("FOREIGN KEY") or column.startswith("CHECK"):
+                self._map_sqlite_master[table.name]["constraints"]["sql"].append(column)
                 continue
 
             column_dict = columns_match.groupdict()
 
             attributes_str = column_dict.pop('attributes').strip()
             attr_dict = {}
-            for pattern in ATTRIBUTES_PATTERN:
+            for pattern in COLUMN_ATTRIBUTES_PATTERN:
                 if m := pattern.search(attributes_str):
                     attr_dict.update({k: v for k, v in m.groupdict().items() if v is not None})
             column_dict.update(attr_dict)
@@ -212,8 +258,32 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
-        if table.id == -1:
+    def get_constraints(self, table: SQLiteTable) -> List[SQLiteConstraint]:
+        results = []
+        if table is None or table.is_new:
+            return results
+
+        QUERY_LOGS.append(f"/* get_constraint for table={table.name} */")
+
+        constraints = self._map_sqlite_master[table.name]["constraints"]["sql"]
+        for i, constraint in enumerate(constraints):
+            for type, pattern in TABLE_CONSTRAINTS_PATTERN.items():
+                if (constraint_column := re.search(pattern.pattern, constraint, re.IGNORECASE | re.DOTALL)):
+                    constraint_column_dict = constraint_column.groupdict()
+                    results.append(
+                        SQLiteConstraint(
+                            id=i,
+                            name=constraint_column_dict.get("constraint_name"),
+                            table=table,
+                            type=type,
+                            expression=constraint_column_dict.get("check")
+                        )
+                    )
+
+        return results
+
+    def get_indexes(self, table: SQLiteTable) -> List[SQLIndex]:
+        if table is None or table.is_new:
             return []
         logger.debug(f"get_indexes for table={table.name}")
 
@@ -222,8 +292,7 @@ class SQLiteContext(AbstractContext):
         results = []
 
         self.execute(f"SELECT * FROM pragma_table_info('{table.name}') WHERE pk != 0 ORDER BY pk;")
-        pk_index = self.cursor.fetchall()
-        if len(pk_index):
+        if (pk_index := self.fetchall()) and len(pk_index):
             results.append(
                 SQLiteIndex(
                     id=0,
@@ -259,9 +328,7 @@ class SQLiteContext(AbstractContext):
                     columns.append(row['name'])
 
             if is_expression or is_partial:
-                self.execute(f"SELECT sql FROM sqlite_master WHERE `tbl_name` = '{table.name}' AND `name` = '{name}';")
-                sql_row = self.cursor.fetchone()
-                sql = sql_row['sql'] if sql_row else None
+                sql = self._map_sqlite_master[table.name]["index"][name]["sql"]
 
                 if groups := re.search(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<condition>.+))?', sql, re.IGNORECASE | re.DOTALL).groupdict():
                     if is_partial:
@@ -298,8 +365,8 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
-        if table.id == -1:
+    def get_foreign_keys(self, table: SQLiteTable) -> List[SQLForeignKey]:
+        if table is None or table.is_new:
             return []
         logger.debug(f"get_foreign_keys for table={table.name}")
 
@@ -331,7 +398,7 @@ class SQLiteContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[SQLiteRecord]:
+    def get_records(self, table: SQLiteTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[SQLiteRecord]:
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
@@ -347,7 +414,7 @@ class SQLiteContext(AbstractContext):
         logger.debug(f"get records for table={table.name}")
         return results
 
-    def build_empty_table(self, database: SQLDatabase):
+    def build_empty_table(self, database: SQLDatabase) -> SQLiteTable:
         return SQLiteTable(
             id=SQLiteContext.get_temporary_id(database.tables),
             name='',
@@ -359,8 +426,8 @@ class SQLiteContext(AbstractContext):
             get_records_handler=self.get_records,
         )
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
-        id = SQLiteContext.get_temporary_id(table.columns),
+    def build_empty_column(self, table: SQLiteTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
+        id = SQLiteContext.get_temporary_id(table.columns)
 
         return SQLiteColumn(
             id=id,

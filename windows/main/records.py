@@ -4,7 +4,7 @@ import wx.dataview
 
 from helpers.logger import logger
 
-from helpers.dataview import BaseDataViewIndexListModel
+from helpers.dataview import BaseDataViewListModel
 from helpers.observables import ObservableList
 
 from structures.session import Session
@@ -17,7 +17,7 @@ from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
 
-class RecordsModel(BaseDataViewIndexListModel):
+class RecordsModel(BaseDataViewListModel):
     def __init__(self, table: SQLTable, column_count: Optional[int] = None):
         super().__init__(column_count)
 

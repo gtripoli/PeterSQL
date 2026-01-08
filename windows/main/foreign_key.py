@@ -6,7 +6,7 @@ import wx.dataview
 from icons import BitmapList
 
 from helpers.logger import logger
-from helpers.dataview import BaseDataViewIndexListModel
+from helpers.dataview import BaseDataViewListModel
 from helpers.observables import Loader
 
 from structures.engines import merge_original_current
@@ -18,7 +18,7 @@ from windows.main.table import NEW_TABLE
 from structures.engines.database import SQLForeignKey, SQLTable
 
 
-class TableForeignKeyModel(BaseDataViewIndexListModel):
+class TableForeignKeyModel(BaseDataViewListModel):
 
     def GetValueByRow(self, row, col):
         if row >= len(self.data):
