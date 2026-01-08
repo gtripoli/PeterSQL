@@ -1,11 +1,12 @@
 import dataclasses
-from typing import Self, List, Optional, Dict, Tuple
+from typing import Self, Optional, Dict
 
 from helpers.logger import logger
 
+
 from structures.engines import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLConstraint
 
 from structures.engines.sqlite.builder import SQLiteColumnBuilder
 
@@ -207,12 +208,15 @@ class SQLiteTable(SQLTable):
 
 
 @dataclasses.dataclass(eq=False)
+class SQLiteConstraint(SQLConstraint):
+    pass
+
+
+@dataclasses.dataclass(eq=False)
 class SQLiteColumn(SQLColumn):
     def add(self) -> bool:
         sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
-        if  (after := getattr(self, "after", None)) is not None:
-            sql += f" AFTER {after}"
-            
+
         return self.table.database.context.execute(sql)
 
     def modify(self):
@@ -238,23 +242,6 @@ class SQLiteColumn(SQLColumn):
     def drop(self, table: SQLTable, column: SQLColumn) -> bool:
         return self.table.database.context.execute(f"ALTER TABLE `{table.name}` DROP COLUMN `{self.name}`")
 
-    # def recreate_table_for_foreign_keys(self):
-    #     new_name = f"_{self.table.name}_{self.generate_uuid()}"
-    #
-    #     self.table.rename(new_name)
-    #
-    #     self.table.create()
-    #
-    #     cols = ", ".join([f"`{c.name}`" for c in self.table.columns])
-    #     self.database.context.execute(f"INSERT INTO `{self.table.name}` ({cols}) SELECT {cols} FROM {new_name};")
-    #
-    #     # Drop old table
-    #     self.database.context.execute(f"DROP TABLE {new_name};")
-    #
-    #     # Recreate non-primary indexes
-    #     for index in self.table.indexes:
-    #         if index.type != SQLiteIndexType.PRIMARY:
-    #             index.create()
 
 
 @dataclasses.dataclass(eq=False)
