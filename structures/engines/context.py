@@ -252,6 +252,7 @@ class AbstractContext(abc.ABC):
     def execute(self, query: str) -> bool:
         query = re.sub(r'\s+', ' ', str(query)).strip()
 
+        logger.debug("execute query: %s", query)
         QUERY_LOGS.append(query)
 
         try:

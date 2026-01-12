@@ -3,7 +3,6 @@ from typing import Self, Optional, Dict
 
 from helpers.logger import logger
 
-
 from structures.engines import merge_original_current
 from structures.engines.context import QUERY_LOGS
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLConstraint
@@ -44,61 +43,87 @@ class SQLiteTable(SQLTable):
 
         return True
 
-    def create(self) -> bool:
+    def _create(self) -> bool:
+        # PeterSQL schema emission policy (SQLite):
+        #
+        # - PRIMARY KEY
+        #   * Single-column PRIMARY KEY is emitted inline in the column definition.
+        #   * Multi-column PRIMARY KEY is always emitted as a table-level constraint.
+        #   This mirrors SQLite requirements and preserves rowid / AUTOINCREMENT semantics.
+        #
+        # - UNIQUE
+        #   * All UNIQUE constraints (single or multi-column) are emitted as explicit
+        #     CREATE UNIQUE INDEX statements.
+        #   * UNIQUE is never emitted inline nor as a table-level constraint.
+        #   This avoids sqlite_autoindex_* artifacts, guarantees stable naming,
+        #   and ensures reproducible schemas.
+        #
+        # - FOREIGN KEY
+        #   * All FOREIGN KEY constraints are emitted as table-level constraints.
+        #   * Inline foreign keys are not used.
+        #   * ON UPDATE / ON DELETE clauses are emitted only when different from
+        #     SQLite defaults (NO ACTION).
+        #   This ensures named constraints, support for composite keys,
+        #   and reliable schema reconstruction.
+        #
+        # This strategy keeps the DDL explicit, deterministic, tool-friendly,
+        # and consistent with SQLite internal behavior.
+
         constraints = []
         primary_keys = []
         columns_definitions: Dict[str, str] = {}
 
-        unique_indexes_multiple_columns = [index for index in self.indexes if index.type == SQLiteIndexType.UNIQUE and len(index.columns) > 1 and index.name.startswith('sqlite_autoindex_')]
+        for index in self.indexes :
+            if index.type == SQLiteIndexType.PRIMARY :
+                primary_keys.extend(index.columns)
 
-        for current in self.columns.get_value():
-            if current:
-                if current.is_primary_key or current.is_auto_increment:
-                    primary_keys.append(current)
+        for column in self.columns.get_value():
+            exclude = ["unique", "references"]
 
-                exclude = ['unique']
+            if len(primary_keys) > 1 and column.name in primary_keys:
+                exclude.extend(['primary_key', 'auto_increment'])
 
-                if len(primary_keys) > 1:
-                    exclude += ['primary_key', 'auto_increment']
-
-                columns_definitions[current.name] = str(SQLiteColumnBuilder(current, exclude=exclude))
-
-        for unique_index_multiple_columns in unique_indexes_multiple_columns:
-            cols = ", ".join([f'`{c}`' for c in unique_index_multiple_columns.columns])
-
-            constraints.append(f"UNIQUE ({cols})")
+            columns_definitions[column.name] = str(SQLiteColumnBuilder(column, exclude=exclude))
 
         # Handle primary keys
         if len(primary_keys) > 1:
-            # Check if any autoincrement
-            auto_increment = next((pk for pk in primary_keys if pk.is_auto_increment), None)
-            if auto_increment:
-                # If autoincrement and multiple primary keys, use UNIQUE
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
-                constraints.append(f"UNIQUE ({cols})")
-            else:
-                columns_definitions = {col_name: col_def.replace(' PRIMARY KEY', '') for col_name, col_def in columns_definitions.items()}
-                # Use PRIMARY KEY table constraint
-                cols = ", ".join([f'`{pk.name}`' for pk in primary_keys])
-                constraints.append(f"PRIMARY KEY ({cols})")
+            constraints.append(f"CONSTRAINT pk_{self.name} PRIMARY KEY ({', '.join([f'`{pk}`' for pk in primary_keys])})")
 
-        # Handle foreign keys
-        foreign_key_is_already_present = any(['FOREIGN KEY' in column_definition for column_definition in columns_definitions])
+        for fk in self.foreign_keys:
+            cols = ", ".join([f"`{c}`" for c in fk.columns])
+            ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
+            constraint = [
+                f"CONSTRAINT `{fk.name}`",
+                f"FOREIGN KEY ({cols})",
+                f"REFERENCES `{fk.reference_table}` ({ref_cols})"
+            ]
+            if fk.on_update and fk.on_update != "NO ACTION":
+                constraint.append(f"ON UPDATE {fk.on_update}")
 
-        if not foreign_key_is_already_present:
-            for fk in self.foreign_keys:
-                cols = ", ".join([f"`{c}`" for c in fk.columns])
-                ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
-                constraint = f"FOREIGN KEY ({cols}) REFERENCES {fk.reference_table} ({ref_cols})"
-                if fk.on_update and fk.on_update != "NO ACTION":
-                    constraint += f" ON UPDATE {fk.on_update}"
-                if fk.on_delete and fk.on_delete != "NO ACTION":
-                    constraint += f" ON DELETE {fk.on_delete}"
-                constraints.append(constraint)
+            if fk.on_delete and fk.on_delete != "NO ACTION":
+                constraint.append(f"ON DELETE {fk.on_delete}")
+
+            constraints.append(" ".join(constraint))
 
         sql = f"CREATE TABLE `{self.name}` ({', '.join(list(columns_definitions.values()) + constraints)})"
 
         return self.database.context.execute(sql)
+
+    def create(self) -> bool:
+        try:
+            with self.database.context.transaction() as transaction:
+                self._create()
+
+                for index in self.indexes:
+                    index.create()
+
+
+        except Exception as ex:
+            QUERY_LOGS.append(f"/* alter_table exception: {ex} */")
+            logger.error(ex, exc_info=True)
+            return False
+
+        return True
 
     def alter(self) -> bool:
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
@@ -127,6 +152,8 @@ class SQLiteTable(SQLTable):
             needs_recreate = True
 
         try:
+            self.database.context.execute("PRAGMA foreign_keys = OFF")
+
             with self.database.context.transaction() as transaction:
                 if original_table:
                     if self.name != original_table.name:
@@ -137,13 +164,12 @@ class SQLiteTable(SQLTable):
                 # SQLite does not support ALTER COLUMN or ADD CONSTRAINT,
                 # so rename and recreate the table with the new columns and constraints
                 if needs_recreate:
-                    transaction.execute("PRAGMA foreign_keys = OFF")
 
                     temp_name = f"_{original_name}_{self.generate_uuid()}"
 
                     self.name = temp_name
 
-                    self.create()
+                    self._create()
 
                     columns = []
 
@@ -169,8 +195,6 @@ class SQLiteTable(SQLTable):
                     self.name = original_name
 
                     map_indexes = merge_original_current([], current_indexes)
-
-                    transaction.execute("PRAGMA foreign_keys = ON")
 
                 else:
                     # Perform supported ALTER operations
@@ -200,6 +224,9 @@ class SQLiteTable(SQLTable):
             QUERY_LOGS.append(f"/* alter_table exception: {ex} */")
             logger.error(ex, exc_info=True)
             return False
+
+        finally:
+            self.database.context.execute("PRAGMA foreign_keys = ON")
 
         return True
 
@@ -243,7 +270,6 @@ class SQLiteColumn(SQLColumn):
         return self.table.database.context.execute(f"ALTER TABLE `{table.name}` DROP COLUMN `{self.name}`")
 
 
-
 @dataclasses.dataclass(eq=False)
 class SQLiteIndex(SQLIndex):
     def create(self) -> bool:
@@ -251,18 +277,18 @@ class SQLiteIndex(SQLIndex):
             return False  # PRIMARY is handled in table creation
 
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # UNIQUE is handled in table creation
+            return False  # CONSTRAINT UNIQUE is handled in table creation
 
         unique_index = "UNIQUE INDEX" if self.type == SQLiteIndexType.UNIQUE else "INDEX"
 
         if self.type == SQLiteIndexType.EXPRESSION:
-            expression = ", ".join(self.expression)
+            expression = f"({', '.join(self.expression)})"
         else:
-            expression = ", ".join(self.columns)
+            expression = f"(`{'`, `'.join(self.expression)}`)"
 
         where_str = f"WHERE {self.condition}" if self.condition else ""
 
-        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS {self.name} ON {self.table.name}({expression}) {where_str}")
+        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS `{self.name}` ON `{self.table.name}`{expression} {where_str}")
 
     def drop(self) -> bool:
         if self.type == SQLiteIndexType.PRIMARY:

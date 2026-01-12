@@ -405,13 +405,17 @@ class Loader:
 
 
 def debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):
-    call_later: Optional[wx.CallLater] = None
+    waiting = False
 
     def _debounced(*args, **kwargs):
-        nonlocal call_later
-        if call_later:
-            call_later.Stop()
-        call_later = wx.CallLater(int(wait_time * 1000), callback, *args, **kwargs)
+        nonlocal waiting
+        if not waiting:
+            waiting = True
+            def call_and_reset():
+                nonlocal waiting
+                callback(*args, **kwargs)
+                waiting = False
+            wx.CallAfter(call_and_reset)
 
     for obs in observables:
         setattr(obs, '_debounce_callback', _debounced)

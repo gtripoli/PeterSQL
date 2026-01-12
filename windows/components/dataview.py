@@ -129,7 +129,7 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         add_item.SetBitmap(BitmapList.ADD)
         menu.Append(add_item)
 
-        self.Bind(wx.EVT_MENU, self.on_column_insert, add_item)
+        self.Bind(wx.EVT_MENU, lambda e : wx.CallAfter(self.on_column_insert, e), add_item)
 
         delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove column\tCTRL+DEL"), wx.EmptyString, wx.ITEM_NORMAL)
         delete_item.SetBitmap(BitmapList.DELETE)
