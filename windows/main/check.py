@@ -3,44 +3,32 @@ from typing import List
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewListModel
+from helpers.dataview import BaseDataViewListModel, ColumnField
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 
 from windows.main import CURRENT_TABLE, CURRENT_INDEX
 from windows.main.column import NEW_TABLE
 
-from structures.engines.database import SQLTable, SQLConstraint
+from structures.engines.database import SQLTable, SQLCheck
 
 
-class TableConstraintModel(BaseDataViewListModel):
-    def GetValueByRow(self, row, col):
-        if row >= len(self.data):
-            print(row, len(self.data))
-            return ""
-
-        constraint: SQLConstraint = self.get_data_by_row(row)
-
-        if col == 0:
-            return wx.dataview.DataViewIconText(constraint.type, wx.NullBitmap)
-            return constraint.type
-        elif col == 1:
-            return constraint.name
-        elif col == 2:
-            return constraint.expression
+class TableCheckModel(BaseDataViewListModel):
+    MAP_COLUMN_FIELDS = {
+        0: ColumnField("name", lambda s, x: wx.dataview.DataViewIconText(s.name or "", wx.NullBitmap)),
+        1: ColumnField("expression"),
+    }
 
     def SetValueByRow(self, value, row, col):
         if row >= len(self.data):
             return False
 
         original = self.get_data_by_row(row)
-        new: SQLConstraint = original.copy()
+        new: SQLCheck = original.copy()
 
-        # if col == 0:
-        #     new.name = value.Text
-        if col == 1:
+        if col == 0:
             new.name = value
-        elif col == 2:
+        elif col == 1:
             new.expression = value
 
         if new != original:
@@ -50,14 +38,14 @@ class TableConstraintModel(BaseDataViewListModel):
         return True
 
 
-class TableConstraintController:
+class TableCheckController:
     def __init__(self, list_ctrl_constraint: wx.dataview.DataViewCtrl):
         self.list_ctrl_constraint = list_ctrl_constraint
 
         self.list_ctrl_constraint.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_constraint.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)
 
-        self.model = TableConstraintModel(3)
+        self.model = TableCheckModel(3)
         self.list_ctrl_constraint.AssociateModel(self.model)
 
         CURRENT_TABLE.subscribe(self._load_table)
@@ -66,7 +54,7 @@ class TableConstraintController:
     def _load_table(self, table: SQLTable):
         self.model.clear()
         if table := NEW_TABLE.get_value() or CURRENT_TABLE.get_value():
-            self.model.set_observable(table.constraints)
+            self.model.set_observable(table.checks)
 
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
@@ -88,15 +76,15 @@ class TableConstraintController:
             event.Skip()
             return
 
-        current_constraints: List[SQLConstraint] = self.model.data
+        current_checks: List[SQLCheck] = self.model.data
 
         table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
-        original_constraints: List[SQLConstraint] = list(table.constraints)
+        original_checks: List[SQLCheck] = list(table.checks)
 
-        map_constraints = merge_original_current(original_constraints, current_constraints)
+        map_checks = merge_original_current(original_checks, current_checks)
 
-        if not all([o == c for o, c in map_constraints]):
-            table.constraints.set_value(current_constraints)
+        if not all([o == c for o, c in map_checks]):
+            table.checks.set_value(current_checks)
 
             NEW_TABLE.set_value(table)
 
@@ -112,8 +100,8 @@ class TableConstraintController:
         row = self.model.GetRow(selected)
         constraint = self.model.get_data_by_row(row)
 
-        if constraint in table.constraints:
-            table.constraints.remove(constraint)
+        if constraint in table.checks:
+            table.checks.remove(constraint)
 
         NEW_TABLE.set_value(table)
 
@@ -122,6 +110,6 @@ class TableConstraintController:
 
         self.model.clear()
 
-        table.constraints.clear()
+        table.checks.clear()
 
         NEW_TABLE.set_value(table)

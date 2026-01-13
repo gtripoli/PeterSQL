@@ -37,11 +37,19 @@ COLLATIONS = {
 
 COLUMNS_PATTERN = re.compile(r"""
 ^\s*
-(?:`|\"|\[)?(?P<name>\w+)(?:`|\"|\])?                                                       # column name
-\s+
-(?P<datatype>\w+)                                                                           # data type (ex. VARCHAR, INT)
-(?:\s*\((?:(?P<length>\d+)|(?P<precision>\d+)\s*,\s*(?P<scale>\d+)|(?P<set>[^)]+))\))?      # length or precision and scale or set
-(?P<attributes>.*)$
+    (?P<quote>["'`])?
+    (?P<name>(?(quote)[^"'\`]+|\w+))
+    (?(quote)(?P=quote))
+    \s+
+    (?P<datatype>\w+)
+    (?:\s*\(
+        (?:
+            (?P<length>\d+) |
+            (?P<precision>\d+)\s*,\s*(?P<scale>\d+) |
+            (?P<set>[^)]+)
+        )
+    \))?
+    (?P<attributes>.*)$
 """, re.IGNORECASE | re.VERBOSE)
 
 COLUMN_ATTRIBUTES_PATTERN = [
@@ -57,4 +65,13 @@ COLUMN_ATTRIBUTES_PATTERN = [
     re.compile(r"""COLLATE\s+(?P<collate>\w+)"""),
     re.compile(r"""GENERATED\s+ALWAYS\s+AS\s*\((?P<expression>.*?)\)\s*(?P<virtuality>VIRTUAL|STORED)"""),
     re.compile(r"""REFERENCES\s+(?P<references>\w+)(?:\s+ON\s+DELETE\s+(?P<on_delete>SET\s+NULL|SET\s+DEFAULT|CASCADE|RESTRICT|NO\s+ACTION))?(?:\s+ON\s+UPDATE\s+(?P<on_update>SET\s+NULL|SET\s+DEFAULT|CASCADE|RESTRICT|NO\s+ACTION))?"""),
+]
+
+TABLE_CONSTRAINTS_PATTERN = {
+    # CHECK table-level
+    "CHECK" : re.compile(r"""(?:CONSTRAINT\s+(?P<constraint_name>\w+)\s+)?CHECK\s*\((?P<check>(?:[^()]+|\([^()]*\))*)\)"""),
+}
+
+INDEX_PATTERN = [
+    re.compile(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<condition>.+))?'),
 ]

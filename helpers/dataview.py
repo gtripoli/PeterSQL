@@ -24,7 +24,6 @@ class ColumnField(NamedTuple):
 
     def has_value(self, *args):
         return self.get_value(args[0]) is not None
-        
 
 
 class AbstractBaseDataModel():
@@ -249,6 +248,18 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
         self.Reset(0)
         self.Cleared()
 
+    def GetValueByRow(self, row, col):
+        if not self.data:
+            return ""
+
+        if row >= len(self.data):
+            return ""
+
+        if not hasattr(self, "MAP_COLUMN_FIELDS"):
+            return ""
+
+        return self.MAP_COLUMN_FIELDS[col].get_value(self.get_data_by_row(row))
+
     def HasValue(self, item, col):
         if not self.data:
             return False
@@ -257,4 +268,3 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
             return True
 
         return self.MAP_COLUMN_FIELDS[col].has_value(self.get_data_by_item(item))
-

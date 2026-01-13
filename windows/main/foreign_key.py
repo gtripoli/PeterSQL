@@ -9,7 +9,7 @@ from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel
 from helpers.observables import Loader
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 
 from windows import TableForeignKeysDataViewCtrl
 from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_SESSION
@@ -68,9 +68,9 @@ class TableForeignKeyModel(BaseDataViewListModel):
             table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
             new_fk.name = f"fk_{table.name}_{'_'.join(new_fk.columns)}-{new_fk.reference_table}_{'_'.join(new_fk.reference_columns)}"
 
-        if new_fk != org_fk:
-            self.set_data_by_row(row, new_fk)
-            self.ItemChanged(self.GetItem(row))
+        if new_fk.is_valid and new_fk != org_fk:
+                self.set_data_by_row(row, new_fk)
+                self.ItemChanged(self.GetItem(row))
 
         return True
 

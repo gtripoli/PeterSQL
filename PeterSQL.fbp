@@ -6874,7 +6874,7 @@
                                                           </object>
                                                           <object class="notebookpage" expanded="false">
                                                             <property name="bitmap">Load From File; icons/16x16/table_relationship.png</property>
-                                                            <property name="label">Foreign Key</property>
+                                                            <property name="label">Foreign Keys</property>
                                                             <property name="select">0</property>
                                                             <object class="wxPanel" expanded="false">
                                                               <property name="BottomDockable">1</property>
@@ -7213,7 +7213,7 @@
                                                           </object>
                                                           <object class="notebookpage" expanded="true">
                                                             <property name="bitmap">Load From File; icons/16x16/tick.png</property>
-                                                            <property name="label">Constraints</property>
+                                                            <property name="label">Checks</property>
                                                             <property name="select">0</property>
                                                             <object class="wxPanel" expanded="true">
                                                               <property name="BottomDockable">1</property>
@@ -7251,7 +7251,7 @@
                                                               <property name="minimize_button">0</property>
                                                               <property name="minimum_size"></property>
                                                               <property name="moveable">1</property>
-                                                              <property name="name">PanelTableConstraint</property>
+                                                              <property name="name">PanelTableCheck</property>
                                                               <property name="pane_border">1</property>
                                                               <property name="pane_position"></property>
                                                               <property name="pane_size"></property>
@@ -7339,7 +7339,7 @@
                                                                             <property name="minimize_button">0</property>
                                                                             <property name="minimum_size"></property>
                                                                             <property name="moveable">1</property>
-                                                                            <property name="name">btn_insert_foreign_key1</property>
+                                                                            <property name="name">btn_insert_check</property>
                                                                             <property name="pane_border">1</property>
                                                                             <property name="pane_position"></property>
                                                                             <property name="pane_size"></property>
@@ -7414,7 +7414,7 @@
                                                                             <property name="minimize_button">0</property>
                                                                             <property name="minimum_size"></property>
                                                                             <property name="moveable">1</property>
-                                                                            <property name="name">btn_delete_foreign_key1</property>
+                                                                            <property name="name">btn_delete_check</property>
                                                                             <property name="pane_border">1</property>
                                                                             <property name="pane_position"></property>
                                                                             <property name="pane_size"></property>
@@ -7489,7 +7489,7 @@
                                                                             <property name="minimize_button">0</property>
                                                                             <property name="minimum_size"></property>
                                                                             <property name="moveable">1</property>
-                                                                            <property name="name">btn_clear_foreign_key1</property>
+                                                                            <property name="name">btn_clear_check</property>
                                                                             <property name="pane_border">1</property>
                                                                             <property name="pane_position"></property>
                                                                             <property name="pane_size"></property>
@@ -7533,12 +7533,12 @@
                                                                         <property name="id">wxID_ANY</property>
                                                                         <property name="maximum_size"></property>
                                                                         <property name="minimum_size"></property>
-                                                                        <property name="name">dv_table_constraints</property>
+                                                                        <property name="name">dv_table_checks</property>
                                                                         <property name="permission">protected</property>
                                                                         <property name="pos"></property>
                                                                         <property name="size"></property>
                                                                         <property name="style"></property>
-                                                                        <property name="subclass">TableConstraintDataViewCtrl; .components.dataview; forward_declare</property>
+                                                                        <property name="subclass">TableCheckDataViewCtrl; .components.dataview; forward_declare</property>
                                                                         <property name="tooltip"></property>
                                                                         <property name="window_extra_style"></property>
                                                                         <property name="window_name"></property>

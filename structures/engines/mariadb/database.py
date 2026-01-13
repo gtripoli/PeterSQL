@@ -3,7 +3,7 @@ from typing import Self, List, Optional, Dict, Tuple
 
 from helpers.logger import logger
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 

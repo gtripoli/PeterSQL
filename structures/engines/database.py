@@ -91,14 +91,14 @@ class SQLTable(abc.ABC):
 
     get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
-    get_constraints_handler: Callable[[Self], List['SQLConstraint']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_checks_handler: Callable[[Self], List['SQLCheck']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
     get_records_handler: Callable[[Self, Optional[str], int, int, Optional[str]], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, filters=None, limit=1000, offset=0, orders=None: list())
 
     def __post_init__(self):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
-        self.constraints = ObservableLazyList(lambda: self.get_constraints_handler(self))
+        self.checks = ObservableLazyList(lambda: self.get_checks_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
 
     def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
@@ -195,7 +195,7 @@ class SQLTable(abc.ABC):
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         new_cls = cls(**field_values)
 
-        for observable_lazy_list_name in ["columns", "constraints", "indexes", "foreign_keys"]:
+        for observable_lazy_list_name in ["columns", "checks", "indexes", "foreign_keys"]:
             o1: ObservableLazyList = getattr(self, observable_lazy_list_name)
             o2: ObservableLazyList = getattr(new_cls, observable_lazy_list_name)
 
@@ -227,12 +227,11 @@ class SQLTable(abc.ABC):
 
 
 @dataclasses.dataclass(eq=False)
-class SQLConstraint(abc.ABC):
+class SQLCheck(abc.ABC):
     id: int
-    type: str
+    name: str
     table: SQLTable = dataclasses.field(compare=False)
     expression: str
-    name: Optional[str] = None
 
     def copy(self):
         cls = self.__class__
@@ -390,7 +389,7 @@ class SQLIndex(abc.ABC):
     columns: List[str]
     table: SQLTable = dataclasses.field(compare=False)
     condition: str = dataclasses.field(default_factory=str)
-    expression: List[str] = dataclasses.field(default_factory=list)
+    # expression: List[str] = dataclasses.field(default_factory=list)
 
     def __eq__(self, other):
         if not isinstance(other, SQLIndex):

@@ -1,7 +1,7 @@
 from typing import List
 
-from structures.engines import SQLColumn
 from structures.engines.context import AbstractColumnBuilder
+from structures.engines.database import SQLColumn
 
 
 class MySQLColumnBuilder(AbstractColumnBuilder):

@@ -202,18 +202,16 @@ class TableIndexesDataViewCtrl(BaseDataViewCtrl):
         self.AppendTextColumn(_(u"Condition"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
-class TableConstraintDataViewCtrl(BaseDataViewCtrl):
+class TableCheckDataViewCtrl(BaseDataViewCtrl):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         column0 = wx.dataview.DataViewIconTextRenderer(mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
-        column0 = wx.dataview.DataViewColumn(_(u"Type"), column0, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
+        column0 = wx.dataview.DataViewColumn(_(u"Name"), column0, 0, width=wx.COL_WIDTH_AUTOSIZE, align=wx.ALIGN_LEFT)
         self.AppendColumn(column0)
 
-        self.AppendTextColumn(_(u"Name"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
-
-        self.AppendTextColumn(_(u"Expression"), 2, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+        self.AppendTextColumn(_(u"Expression"), 1, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 
 class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):

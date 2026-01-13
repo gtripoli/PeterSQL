@@ -13,8 +13,8 @@ from windows import TableColumnsDataViewCtrl
 from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
 from windows.main.table import NEW_TABLE
 
+from structures.helpers import merge_original_current
 from structures.session import Session
-from structures.engines import merge_original_current
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
 from structures.engines.indextype import SQLIndexType
 
@@ -36,7 +36,7 @@ class ColumnModel(BaseDataViewListModel):
         if getattr(column_field, "attr") == "#":
             bitmaps = wx.NullBitmap
             if column.table:
-                indexes = [i.type for i in column.table.indexes if column.name in i.columns + i.expression]
+                indexes = [i.type for i in column.table.indexes if column.name in i.columns ]
 
                 indexes += [i for i in column.table.foreign_keys if column.name in i.columns]
 

@@ -3,9 +3,9 @@ from typing import Self, Optional, Dict
 
 from helpers.logger import logger
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLConstraint
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLCheck
 
 from structures.engines.sqlite.builder import SQLiteColumnBuilder
 
@@ -59,35 +59,71 @@ class SQLiteTable(SQLTable):
         #   and ensures reproducible schemas.
         #
         # - FOREIGN KEY
-        #   * All FOREIGN KEY constraints are emitted as table-level constraints.
+        #   * All FOREIGN KEY constraints are always emitted as table-level constraints.
         #   * Inline foreign keys are not used.
         #   * ON UPDATE / ON DELETE clauses are emitted only when different from
         #     SQLite defaults (NO ACTION).
         #   This ensures named constraints, support for composite keys,
         #   and reliable schema reconstruction.
         #
-        # This strategy keeps the DDL explicit, deterministic, tool-friendly,
-        # and consistent with SQLite internal behavior.
+        # - CHECK
+        #   * CHECK constraints are preserved and re-emitted exactly as defined.
+        #   * Inline CHECK clauses are preferred when originally defined on a column;
+        #     table-level CHECK constraints are emitted when the original scope
+        #     is table-level.
+        #   CHECK constraints do not generate sqlite_autoindex objects and can be
+        #   safely round-tripped.
+        #
+        # - sqlite_autoindex_*
+        #   * sqlite_autoindex_* objects are not treated as schema elements.
+        #   * They are interpreted as the physical manifestation of PRIMARY KEY
+        #     or UNIQUE constraints defined in the original table.
+        #   * When rebuilding a table, PeterSQL reconstructs the logical constraints
+        #     (PRIMARY KEY / UNIQUE) rather than recreating sqlite_autoindex_* objects
+        #     directly.
+        #
+        # This strategy keeps the DDL explicit, deterministic, lossless,
+        # and fully reproducible, while remaining aligned with SQLite internal behavior.
 
         constraints = []
         primary_keys = []
+        unique_indexes = []
         columns_definitions: Dict[str, str] = {}
 
-        for index in self.indexes :
-            if index.type == SQLiteIndexType.PRIMARY :
+        for index in self.indexes:
+            if index.type == SQLiteIndexType.PRIMARY:
                 primary_keys.extend(index.columns)
 
-        for column in self.columns.get_value():
-            exclude = ["unique", "references"]
+            if index.type == SQLiteIndexType.UNIQUE:
+                unique_indexes.append(index.columns)
 
-            if len(primary_keys) > 1 and column.name in primary_keys:
+                if index.name.startswith("sqlite_autoindex_"):
+                    constraints.append(f"UNIQUE ({', '.join([f'`{col}`' for col in index.columns])})")
+
+        for column in self.columns.get_value():
+            exclude = ["references"]
+
+            if column.is_primary_key and len(primary_keys) > 1:
                 exclude.extend(['primary_key', 'auto_increment'])
+
+            if column.is_unique_key and all([len(columns) > 1 for columns in unique_indexes if column.name in columns]):
+                exclude.append("unique")
 
             columns_definitions[column.name] = str(SQLiteColumnBuilder(column, exclude=exclude))
 
         # Handle primary keys
         if len(primary_keys) > 1:
             constraints.append(f"CONSTRAINT pk_{self.name} PRIMARY KEY ({', '.join([f'`{pk}`' for pk in primary_keys])})")
+
+        for check in self.checks:
+            constraint = []
+            if check.name :
+                constraint.append(f"CONSTRAINT {check.name}")
+
+            constraint.append(f"CHECK ({check.expression})")
+
+            constraints.append(" ".join(constraint))
+
 
         for fk in self.foreign_keys:
             cols = ", ".join([f"`{c}`" for c in fk.columns])
@@ -235,7 +271,8 @@ class SQLiteTable(SQLTable):
 
 
 @dataclasses.dataclass(eq=False)
-class SQLiteConstraint(SQLConstraint):
+class SQLiteCheck(SQLCheck):
+    # name: Optional[str] = None
     pass
 
 

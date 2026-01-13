@@ -1,7 +1,6 @@
 import time
 
 import math
-import datetime
 import psutil
 import os
 import textwrap
@@ -29,11 +28,11 @@ from windows.sessions import wx_colour_to_hex
 from windows.main.database import ListDatabaseTable
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
+from windows.main.check import TableCheckController
 from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
 from windows.main.sessions import TreeSessionsController
 from windows.main.foreign_key import TableForeignKeyController
-from windows.main.constraint import TableConstraintController
 
 class MainFrameController(MainFrameView):
     app = wx.GetApp()
@@ -59,7 +58,7 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
 
         self.controller_list_table_index = TableIndexController(self.dv_table_indexes)
-        self.controller_list_table_constraint = TableConstraintController(self.dv_table_constraints)
+        self.controller_list_table_check = TableCheckController(self.dv_table_checks)
         self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
         self._setup_query_editors()

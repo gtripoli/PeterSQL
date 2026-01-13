@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional, List, Union, TypeAlias
 
 from helpers.logger import logger
 from helpers.observables import ObservableList, ObservableLazyList
+from structures.helpers import SQLTypeAlias
 
 from structures.ssh_tunnel import SSHTunnel
 
@@ -14,8 +15,6 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 QUERY_LOGS: ObservableList[str] = ObservableList()
-
-SQLTypeAlias: TypeAlias = Union['SQLView', 'SQLTrigger', 'SQLTable', 'SQLColumn', 'SQLIndex', 'SQLForeignKey', 'SQLRecord']
 
 
 class AbstractColumnBuilder(abc.ABC):
@@ -86,10 +85,6 @@ class AbstractColumnBuilder(abc.ABC):
     # @property
     # def references(self):
     #     return f"REFERENCES {self.column.references}" if self.column.references else ''
-
-    # @property
-    # def constraint(self):
-    #     return f"CONSTRAINT {self.column.constraint}" if self.column.constraint else ''
 
     def __str__(self) -> str:
         formatted_parts = []

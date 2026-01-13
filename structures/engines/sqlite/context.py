@@ -12,8 +12,8 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from structures.engines.datatype import SQLDataType
 from structures.engines.indextype import SQLIndexType
 
-from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN
-from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase, SQLiteConstraint
+from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN, TABLE_CONSTRAINTS_PATTERN
+from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase, SQLiteCheck
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
@@ -66,7 +66,12 @@ class SQLiteContext(AbstractContext):
         return None
 
     def get_databases(self) -> List[SQLDatabase]:
+        self.execute("SELECT * from sqlite_master ORDER BY name")
+        for i, result in enumerate(self.fetchall()):
+            self._map_sqlite_master[result['tbl_name']][result['type']][result['name']] = result['sql']
+
         self.execute("SELECT page_count * page_size as total_bytes FROM pragma_page_count(), pragma_page_size();")
+
         return [SQLiteDatabase(
             id=0,
             name='main',
@@ -76,32 +81,6 @@ class SQLiteContext(AbstractContext):
             get_views_handler=self.get_views,
             get_triggers_handler=self.get_triggers,
         )]
-
-    def get_views(self, database: SQLDatabase):
-        results: List[SQLiteView] = []
-        self.execute("SELECT * FROM sqlite_master WHERE type='view' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-        for i, result in enumerate(self.fetchall()):
-            results.append(SQLiteView(
-                id=i,
-                name=result['name'],
-                database=database,
-                sql=result['sql']
-            ))
-
-        return results
-
-    def get_triggers(self, database: SQLDatabase) -> List[SQLiteTrigger]:
-        results: List[SQLiteTrigger] = []
-        self.execute("SELECT * FROM sqlite_master WHERE type='trigger' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-        for i, result in enumerate(self.fetchall()):
-            results.append(SQLiteTrigger(
-                id=i,
-                name=result['name'],
-                database=database,
-                sql=result['sql']
-            ))
-
-        return results
 
     def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
@@ -113,7 +92,7 @@ class SQLiteContext(AbstractContext):
             has_sqlite_sequence = True
 
         selects = [
-            "sM.name",
+            "sM.*",
             "SUM(dbS.pgsize) AS total_bytes",
             "SUM(dbS.ncell) AS total_rows",
         ]
@@ -126,106 +105,69 @@ class SQLiteContext(AbstractContext):
             SELECT {', '.join(selects)}
             FROM sqlite_master as sM
             JOIN dbstat As dbS ON dbS.name = sM.name
-            {f"JOIN sqlite_sequence as sS ON sS.name = sM.name" if has_sqlite_sequence else ""}
-            WHERE sM.type = 'table' AND sM.name NOT LIKE 'sqlite_%'
-            GROUP BY sM.name
-            ORDER BY sM.name;
+            {f"LEFT JOIN sqlite_sequence as sS ON sS.name = sM.tbl_name" if has_sqlite_sequence else ""}
+            WHERE sM.name NOT LIKE 'sqlite_%'
+            GROUP BY sM.tbl_name
+            ORDER BY sM.tbl_name;
         """)
 
         results = []
         for i, row in enumerate(self.fetchall()):
-            self.execute(f"SELECT * FROM sqlite_master WHERE tbl_name='{row['name']}';")
-            for info in self.fetchall():
-                self._map_sqlite_master[row['name']][info["type"]][info["name"]] = {
-                    "rootpage": info["rootpage"],
-                    "sql": info["sql"]
-                }
-
-            results.append(
-                SQLiteTable(
-                    id=i,
-                    name=row['name'],
-                    database=database,
-                    engine='default',
-                    auto_increment=int(row["autoincrement_value"]),
-                    total_bytes=row['total_bytes'],
-                    total_rows=row["total_rows"],
-                    collation_name="BINARY",
-                    get_columns_handler=self.get_columns,
-                    get_indexes_handler=self.get_indexes,
-                    get_foreign_keys_handler=self.get_foreign_keys,
-                    get_records_handler=self.get_records,
-                    get_constraints_handler=self.get_constraints,
+            if row['type'] == 'table':
+                results.append(
+                    SQLiteTable(
+                        id=i,
+                        name=row['tbl_name'],
+                        database=database,
+                        engine='default',
+                        auto_increment=int(row["autoincrement_value"]),
+                        total_bytes=row['total_bytes'],
+                        total_rows=row["total_rows"],
+                        collation_name="BINARY",
+                        get_columns_handler=self.get_columns,
+                        get_indexes_handler=self.get_indexes,
+                        get_checks_handler=self.get_checks,
+                        get_foreign_keys_handler=self.get_foreign_keys,
+                        get_records_handler=self.get_records,
+                    )
                 )
-            )
 
         return results
-
-    @staticmethod
-    def _split_sql_table_column(sql_text):
-        sql_text = re.sub(r'\)\s*\),', ')),', sql_text)
-
-        parts = []
-        current = ""
-        depth = 0
-        in_quote = False
-
-        for char in sql_text:
-            if char in ("'", '"'):
-                in_quote = not in_quote
-                current += char
-            elif not in_quote:
-                if char == '(':
-                    depth += 1
-                    current += char
-                elif char == ')':
-                    depth -= 1
-                    current += char
-                elif char == ',' and depth == 0:
-                    part = current.strip()
-                    if part:
-                        parts.append(part)
-                    current = ""
-                else:
-                    current += char
-            else:
-                current += char
-
-        if current.strip():
-            parts.append(current.strip())
-
-        cleaned = []
-        for part in parts:
-            part = part.rstrip(',')
-            part = re.sub(r'\s+', ' ', part).strip()
-            if part:
-                cleaned.append(part)
-
-        return cleaned
 
     def get_columns(self, table: SQLiteTable) -> List[SQLColumn]:
         results = []
         if table is None or table.is_new:
             return results
 
-        if not (table_match := re.search(r"""CREATE\s+TABLE\s+(?:[`'"]?\w+[`'"]?\s+)?\((?P<columns>.*)\)""", self._map_sqlite_master[table.name]["table"][table.name]["sql"], re.IGNORECASE | re.DOTALL)):
+        if not (table_match := re.search(r"""CREATE\s+TABLE\s+(?:[`'"]?\w+[`'"]?\s+)?\((?P<columns>.*)\)""", self._map_sqlite_master[table.name]["table"][table.name], re.IGNORECASE | re.DOTALL)):
             return results
 
-        QUERY_LOGS.append(f"/* get_columns for table={table.name} */")
+        table_group_dict = table_match.groupdict()
 
-        table_match = table_match.groupdict()
+        columns = re.sub(r'\s*--\s*.*', '', table_group_dict['columns'])
 
-        columns = re.sub(r'\s*--\s*.*', '', table_match['columns'])
+        columns_matches = re.findall(r'([^,(]+(?:\([^)]*\)[^,(]*)*)(?:\s*,\s*|$)', columns, re.DOTALL)
 
-        self._map_sqlite_master[table.name]["constraints"]["sql"] = []
+        columns = [re.sub(r'\s+', ' ', match).strip().rstrip(',') for match in columns_matches if match.strip()]
 
-        for i, column in enumerate(self._split_sql_table_column(columns)):
+        for i, column in enumerate(columns):
+            is_special_syntax = False
 
-            if not (columns_match := COLUMNS_PATTERN.match(column)):
+            for prefix in ["PRIMARY KEY", "UNIQUE", "FOREIGN KEY"]:
+                if re.match(f"^{re.escape(prefix)}", column, re.IGNORECASE):
+                    is_special_syntax = True
+                    break
+
+            for prefix in ["CONSTRAINT", "CHECK"]:
+                if re.match(f"^{re.escape(prefix)}", column[:len(prefix)], re.IGNORECASE):
+                    self._map_sqlite_master[table.name]["constraints"].setdefault(prefix, []).append(column)
+                    is_special_syntax = True
+                    break
+
+            if is_special_syntax:
                 continue
 
-            if column.startswith("CONSTRAINT") or column.startswith("PRIMARY KEY") or column.startswith("UNIQUE") or column.startswith("FOREIGN KEY") or column.startswith("CHECK"):
-                self._map_sqlite_master[table.name]["constraints"]["sql"].append(column)
+            if not (columns_match := COLUMNS_PATTERN.match(column)):
                 continue
 
             column_dict = columns_match.groupdict()
@@ -258,27 +200,27 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_constraints(self, table: SQLiteTable) -> List[SQLiteConstraint]:
+    def get_checks(self, table: SQLiteTable) -> List[SQLiteCheck]:
         results = []
         if table is None or table.is_new:
             return results
 
-        QUERY_LOGS.append(f"/* get_constraint for table={table.name} */")
-
-        constraints = self._map_sqlite_master[table.name]["constraints"]["sql"]
-        for i, constraint in enumerate(constraints):
-            for type, pattern in TABLE_CONSTRAINTS_PATTERN.items():
-                if (constraint_column := re.search(pattern.pattern, constraint, re.IGNORECASE | re.DOTALL)):
+        for type, constraints in self._map_sqlite_master[table.name]["constraints"].items():
+            # for type, pattern in TABLE_CONSTRAINTS_PATTERN.items():
+            #     if type != "CHECK":
+            #         continue
+            for i, constraint in enumerate(constraints) :
+                if constraint_column := re.search( TABLE_CONSTRAINTS_PATTERN[type].pattern, constraint, re.IGNORECASE | re.DOTALL):
                     constraint_column_dict = constraint_column.groupdict()
                     results.append(
-                        SQLiteConstraint(
+                        SQLiteCheck(
                             id=i,
                             name=constraint_column_dict.get("constraint_name"),
                             table=table,
-                            type=type,
                             expression=constraint_column_dict.get("check")
                         )
                     )
+
 
         return results
 
@@ -310,33 +252,25 @@ class SQLiteContext(AbstractContext):
             name = idx['name']
             is_unique = bool(idx.get('unique', False))
             is_partial = bool(idx.get('partial', False))
-            # is_primary = bool(idx.get('primary', idx.get('origin') == 'pk'))
-            # origin = idx.get('origin', '')
-            is_expression = False
 
             self.execute(f"SELECT * FROM pragma_index_info('{name}');")
-            index_info = self.cursor.fetchall()
+            pragma_index_info = self.fetchone()
+
+            is_expression = True if pragma_index_info['cid'] == -2 else False
 
             columns = []
             condition = ""
-            expression = []
 
-            for row in index_info:
-                if row['cid'] == -2:
-                    is_expression = True
-                else:
-                    columns.append(row['name'])
+            if name.startswith("sqlite_"):
+                columns = [pragma_index_info['name']]
+            else:
+                sql = self._map_sqlite_master[table.name]["index"][name]
 
-            if is_expression or is_partial:
-                sql = self._map_sqlite_master[table.name]["index"][name]["sql"]
+                if search := re.search(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<conditions>.+))?', sql, re.IGNORECASE | re.DOTALL):
+                    groups = search.groupdict()
 
-                if groups := re.search(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<condition>.+))?', sql, re.IGNORECASE | re.DOTALL).groupdict():
-                    if is_partial:
-                        columns = groups['columns'].strip().split(',')
-                    else:
-                        expression = groups['columns'].strip().split(',')
-
-                    condition = groups.get('condition', None)
+                    columns = groups['columns'].strip().split(',')
+                    condition = groups.get('conditions', [])
 
             # Determine index type
             index_type = SQLiteIndexType.INDEX
@@ -355,7 +289,6 @@ class SQLiteContext(AbstractContext):
                     type=index_type,
                     columns=columns,
                     condition=condition,
-                    expression=expression,
                     table=table,
                 )
             )
@@ -412,6 +345,32 @@ class SQLiteContext(AbstractContext):
                 SQLiteRecord(id=i, table=table, values=dict(record))
             )
         logger.debug(f"get records for table={table.name}")
+        return results
+
+    def get_views(self, database: SQLDatabase):
+        results: List[SQLiteView] = []
+        self.execute("SELECT * FROM sqlite_master WHERE type='view' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        for i, result in enumerate(self.fetchall()):
+            results.append(SQLiteView(
+                id=i,
+                name=result['name'],
+                database=database,
+                sql=result['sql']
+            ))
+
+        return results
+
+    def get_triggers(self, database: SQLDatabase) -> List[SQLiteTrigger]:
+        results: List[SQLiteTrigger] = []
+        self.execute("SELECT * FROM sqlite_master WHERE type='trigger' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        for i, result in enumerate(self.fetchall()):
+            results.append(SQLiteTrigger(
+                id=i,
+                name=result['name'],
+                database=database,
+                sql=result['sql']
+            ))
+
         return results
 
     def build_empty_table(self, database: SQLDatabase) -> SQLiteTable:
