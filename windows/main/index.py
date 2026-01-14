@@ -3,9 +3,9 @@ from typing import List
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewListModel
+from helpers.dataview import BaseDataViewListModel, ColumnField
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 
 from windows.main import CURRENT_TABLE, CURRENT_INDEX
 from windows.main.column import NEW_TABLE
@@ -14,22 +14,11 @@ from structures.engines.database import SQLTable, SQLIndex
 
 
 class TableIndexModel(BaseDataViewListModel):
-    def GetValueByRow(self, row, col):
-        if row >= len(self.data):
-            print(row, len(self.data))
-            return ""
-
-        index: SQLIndex = self.get_data_by_row(row)
-
-        if col == 0:
-            return wx.dataview.DataViewIconText(index.name, index.type.bitmap)
-        elif col == 1:
-            if index.expression:
-                return ", ".join(index.expression)
-            else:
-                return ", ".join(index.columns)
-        elif col == 2:
-            return index.condition if index.condition else ""
+    MAP_COLUMN_FIELDS = {
+        0: ColumnField("name", lambda i, x: wx.dataview.DataViewIconText(i.name, i.type.bitmap)),
+        1: ColumnField("expression", lambda i, x: ", ".join(i.columns)),
+        2: ColumnField("condition"),
+    }
 
     def SetValueByRow(self, value, row, col):
         if row >= len(self.data):

@@ -64,7 +64,7 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def nullable(self):
-        return 'NOT NULL' if not self.column.is_nullable or self.column.is_auto_increment else 'NULL'
+        return 'NOT NULL' if any([not self.column.is_nullable, self.column.is_primary_key , self.column.is_auto_increment]) else 'NULL'
 
     @property
     def default(self):
