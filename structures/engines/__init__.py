@@ -10,13 +10,14 @@ from icons import BitmapList
 
 class Engine(NamedTuple):
     name: str
+    dialect: str
     bitmap: wx.Bitmap
 
 class SessionEngine(enum.Enum):
-    SQLITE = Engine("SQLite", BitmapList.ENGINE_SQLITE)
-    MARIADB = Engine("MariaDB", BitmapList.ENGINE_MARIADB)
-    MYSQL = Engine("MySQL", BitmapList.ENGINE_MYSQL)
-    POSTGRESQL = Engine("PostgreSQL", BitmapList.ENGINE_POSTGRESQL)
+    SQLITE = Engine("SQLite", "sqlite", BitmapList.ENGINE_SQLITE)
+    MARIADB = Engine("MariaDB", "mariadb", BitmapList.ENGINE_MARIADB)
+    MYSQL = Engine("MySQL", "mariasql", BitmapList.ENGINE_MYSQL)
+    POSTGRESQL = Engine("PostgreSQL", "postgresql", BitmapList.ENGINE_POSTGRESQL)
 
     @classmethod
     def get_all(cls) -> List["SessionEngine"]:

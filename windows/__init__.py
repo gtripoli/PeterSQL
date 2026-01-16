@@ -955,6 +955,53 @@ class MainFrameView ( wx.Frame ):
             self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
             m_notebook3Index += 1
 
+        self.PanelTableCreate = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer109 = wx.BoxSizer( wx.VERTICAL )
+
+        self.sql_create_table = wx.stc.StyledTextCtrl( self.PanelTableCreate, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+        self.sql_create_table.SetUseTabs ( True )
+        self.sql_create_table.SetTabWidth ( 4 )
+        self.sql_create_table.SetIndent ( 4 )
+        self.sql_create_table.SetTabIndents( True )
+        self.sql_create_table.SetBackSpaceUnIndents( True )
+        self.sql_create_table.SetViewEOL( False )
+        self.sql_create_table.SetViewWhiteSpace( False )
+        self.sql_create_table.SetMarginWidth( 2, 0 )
+        self.sql_create_table.SetIndentationGuides( True )
+        self.sql_create_table.SetReadOnly( False )
+        self.sql_create_table.SetMarginWidth( 1, 0 )
+        self.sql_create_table.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.sql_create_table.SetMarginWidth( 0, self.sql_create_table.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.sql_create_table.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.sql_create_table.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.sql_create_table.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.sql_create_table.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.sql_create_table.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.sql_create_table.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.sql_create_table.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.sql_create_table.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.sql_create_table.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.sql_create_table.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.sql_create_table.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        bSizer109.Add( self.sql_create_table, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.PanelTableCreate.SetSizer( bSizer109 )
+        self.PanelTableCreate.Layout()
+        bSizer109.Fit( self.PanelTableCreate )
+        self.m_notebook3.AddPage( self.PanelTableCreate, _(u"Create"), False )
+        m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/code-folding.png", wx.BITMAP_TYPE_ANY )
+        if ( m_notebook3Bitmap.IsOk() ):
+            m_notebook3Images.Add( m_notebook3Bitmap )
+            self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
+            m_notebook3Index += 1
+
 
         bSizer55.Add( self.m_notebook3, 1, wx.EXPAND | wx.ALL, 5 )
 

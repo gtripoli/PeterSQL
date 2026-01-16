@@ -43,7 +43,7 @@ class SQLiteTable(SQLTable):
 
         return True
 
-    def _create(self) -> bool:
+    def raw_create(self) -> str:
         # PeterSQL schema emission policy (SQLite):
         #
         # - PRIMARY KEY
@@ -117,13 +117,12 @@ class SQLiteTable(SQLTable):
 
         for check in self.checks:
             constraint = []
-            if check.name :
+            if check.name:
                 constraint.append(f"CONSTRAINT {check.name}")
 
             constraint.append(f"CHECK ({check.expression})")
 
             constraints.append(" ".join(constraint))
-
 
         for fk in self.foreign_keys:
             cols = ", ".join([f"`{c}`" for c in fk.columns])
@@ -141,14 +140,12 @@ class SQLiteTable(SQLTable):
 
             constraints.append(" ".join(constraint))
 
-        sql = f"CREATE TABLE `{self.name}` ({', '.join(list(columns_definitions.values()) + constraints)})"
-
-        return self.database.context.execute(sql)
+        return f"CREATE TABLE `{self.name}` ({', '.join(list(columns_definitions.values()) + constraints)})"
 
     def create(self) -> bool:
         try:
             with self.database.context.transaction() as transaction:
-                self._create()
+                transaction.execute(self.raw_create())
 
                 for index in self.indexes:
                     index.create()
@@ -205,7 +202,7 @@ class SQLiteTable(SQLTable):
 
                     self.name = temp_name
 
-                    self._create()
+                    transaction.execute(self.raw_create())
 
                     columns = []
 

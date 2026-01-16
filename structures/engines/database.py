@@ -182,6 +182,10 @@ class SQLTable(abc.ABC):
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
 
+    @abc.abstractmethod
+    def raw_create(self) -> str:
+        raise NotImplementedError
+
     def get_identifier_indexes(self) -> List['SQLIndex']:
         identifier_indexes = []
         for index in list(self.indexes):
@@ -389,6 +393,7 @@ class SQLIndex(abc.ABC):
     columns: List[str]
     table: SQLTable = dataclasses.field(compare=False)
     condition: str = dataclasses.field(default_factory=str)
+
     # expression: List[str] = dataclasses.field(default_factory=list)
 
     def __eq__(self, other):

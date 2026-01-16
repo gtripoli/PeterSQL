@@ -3,6 +3,7 @@ import time
 import math
 import psutil
 import os
+import sqlglot
 import textwrap
 
 from typing import Optional, List, Union
@@ -33,6 +34,7 @@ from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
 from windows.main.sessions import TreeSessionsController
 from windows.main.foreign_key import TableForeignKeyController
+
 
 class MainFrameController(MainFrameView):
     app = wx.GetApp()
@@ -97,19 +99,27 @@ class MainFrameController(MainFrameView):
             number = "#ff6600"
             operator = "#000000"
 
-        for name_styled_text_ctrl in ["sql_query_logs", "sql_view", "sql_query_filters"]:
+        for name_styled_text_ctrl in ["sql_query_logs", "sql_view", "sql_query_filters", "sql_create_table"]:
             styled_text_ctrl = getattr(self, name_styled_text_ctrl)
 
             font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
             styled_text_ctrl.SetLexer(wx.stc.STC_LEX_SQL)
             styled_text_ctrl.SetKeyWords(0, (
-                "select from where insert into update delete create alter drop table view "
-                "index primary key unique not null default auto_increment autoincrement values set pragma"
-                "and or as distinct order by group having join left right inner outer on "
-                "if exists like in is between limit offset case when then else end show describe"
-                "modify add drop column"
-                "sqlite_master begin rollback"
+                "select insert update delete replace merge "
+                "from where group by having order limit offset "
+                "union unionall intersect except "
+                "join left right inner outer cross on using "
+                "create alter drop rename truncate "
+                "table view index trigger function procedure "
+                "primary key foreign references unique check constraint "
+                "not null default "
+                "values set into returning "
+                "and or not is in exists between like "
+                "case when then else end "
+                "with recursive over partition window "
+                "begin commit rollback savepoint release transaction "
+                "pragma vacuum analyze explain "
             ))
 
             styled_text_ctrl.StyleClearAll()
@@ -367,12 +377,22 @@ class MainFrameController(MainFrameView):
             CURRENT_INDEX.set_value(None)
             CURRENT_FOREIGN_KEY.set_value(None)
 
+            self.sql_create_table.SetText(
+                sqlglot.parse_one(table.raw_create(), read=CURRENT_SESSION.get_value().engine.value.dialect).sql(pretty=True)
+            )
+
         self.btn_clone_table.Enable(table is not None)
         self.btn_delete_table.Enable(table is not None)
 
     def _on_new_table(self, table: SQLTable):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
         self.btn_cancel_table.Enable(bool(table is not None))
+
+        
+        self.sql_create_table.SetText(
+            sqlglot.parse_one(table.raw_create(), read=table.database.context.engine.dialect).sql(pretty=True)
+        )
+        
 
     # def _on_selected_table(self, table : SQLTable):
     #     self.btn_delete_table.Enable(table is not None)

@@ -206,10 +206,11 @@ class SQLiteContext(AbstractContext):
             return results
 
         for type, constraints in self._map_sqlite_master[table.name]["constraints"].items():
-            # for type, pattern in TABLE_CONSTRAINTS_PATTERN.items():
-            #     if type != "CHECK":
-            #         continue
+            
             for i, constraint in enumerate(constraints) :
+                if not TABLE_CONSTRAINTS_PATTERN.get(type) :
+                    continue
+
                 if constraint_column := re.search( TABLE_CONSTRAINTS_PATTERN[type].pattern, constraint, re.IGNORECASE | re.DOTALL):
                     constraint_column_dict = constraint_column.groupdict()
                     results.append(
