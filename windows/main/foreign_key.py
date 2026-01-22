@@ -3,16 +3,16 @@ from typing import List
 import wx
 import wx.dataview
 
+from helpers.loader import Loader
 from icons import BitmapList
 
 from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel
-from helpers.observables import Loader
 
 from structures.helpers import merge_original_current
 
 from windows import TableForeignKeysDataViewCtrl
-from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_SESSION
+from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_CONNECTION
 from windows.main.table import NEW_TABLE
 
 from structures.engines.database import SQLForeignKey, SQLTable
@@ -136,7 +136,7 @@ class TableForeignKeyController:
         event.Skip()
 
     def on_foreign_key_insert(self, event : wx.Event):
-        session = CURRENT_SESSION.get_value()
+        session = CURRENT_CONNECTION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         index = len(table.foreign_keys)

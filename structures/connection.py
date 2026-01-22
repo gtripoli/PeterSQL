@@ -3,47 +3,59 @@ import dataclasses
 
 from typing import Union, Optional, Any
 
-from structures.engines import SessionEngine
+from structures.engines import ConnectionEngine
 from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
-from structures.engines.context import AbstractContext
+
+
+@dataclasses.dataclass
+class ConnectionDirectory:
+    name: str
+    children: list[Union['ConnectionDirectory', 'Connection']] = dataclasses.field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            'type': 'directory',
+            'name': self.name,
+            'children': [child.to_dict() for child in self.children]
+        }
 
 
 @dataclasses.dataclass(eq=False)
-class Session:
+class Connection:
     id: int
     name: str
-    engine: Optional[SessionEngine]
+    engine: Optional[ConnectionEngine]
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
-    comments: Optional[str] = None
+    comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None
 
-    context: Optional[AbstractContext] = dataclasses.field(default=None, init=False, repr=False, compare=False)
+    context: Optional['AbstractContext'] = dataclasses.field(default=None, init=False, repr=False, compare=False)
     _ssh_tunnel_process: Any = dataclasses.field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self):
-        if self.engine == SessionEngine.SQLITE:
+        if self.engine == ConnectionEngine.SQLITE:
             from structures.engines.sqlite.context import SQLiteContext
 
             self.context = SQLiteContext(self)
 
-        elif self.engine == SessionEngine.MARIADB:
+        elif self.engine == ConnectionEngine.MARIADB:
             from structures.engines.mariadb.context import MariaDBContext
 
             self.context = MariaDBContext(self)
 
-        elif self.engine == SessionEngine.MYSQL:
+        elif self.engine == ConnectionEngine.MYSQL:
             from structures.engines.mysql.context import MySQLContext
 
             self.context = MySQLContext(self)
 
-        elif self.engine == SessionEngine.POSTGRESQL:
+        elif self.engine == ConnectionEngine.POSTGRESQL:
             pass
 
         else:
             raise ValueError(f"Unsupported engine {self.engine}")
 
     def __eq__(self, other: Any):
-        if not isinstance(other, Session):
+        if not isinstance(other, Connection):
             return False
 
         for field in dataclasses.fields(self):
@@ -60,6 +72,8 @@ class Session:
 
     def to_dict(self):
         return {
+            'id': self.id,
+            'type': 'connection',
             'name': self.name,
             'engine': self.engine.value.name if self.engine else None,
             'configuration': self.configuration._asdict() if self.configuration else None,

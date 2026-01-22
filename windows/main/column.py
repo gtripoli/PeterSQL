@@ -3,20 +3,20 @@ from typing import List, Optional, Dict, Any
 import wx
 import wx.dataview
 
+from helpers.loader import Loader
 from icons import combine_bitmaps
 
 from helpers.logger import logger
-from helpers.observables import Loader
 from helpers.dataview import BaseDataViewListModel, ColumnField
 
 from windows import TableColumnsDataViewCtrl
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
+from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
 from windows.main.table import NEW_TABLE
 
 from structures.helpers import merge_original_current
-from structures.session import Session
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
 from structures.engines.indextype import SQLIndexType
+from structures.connection import Connection
 
 
 class ColumnModel(BaseDataViewListModel):
@@ -146,7 +146,7 @@ class TableColumnsController:
         self.model = ColumnModel(None)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
-        CURRENT_SESSION.subscribe(self._load_session)
+        CURRENT_CONNECTION.subscribe(self._load_session)
         CURRENT_TABLE.subscribe(self._load_table)
         NEW_TABLE.subscribe(self._load_table)
 
@@ -223,7 +223,7 @@ class TableColumnsController:
         event.Skip()
 
     def on_column_insert(self, event: wx.Event):
-        session = CURRENT_SESSION.get_value()
+        session = CURRENT_CONNECTION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
@@ -323,7 +323,7 @@ class TableColumnsController:
         if not selected.IsOk():
             return
 
-        session: Session = CURRENT_SESSION.get_value()
+        session: Connection = CURRENT_CONNECTION.get_value()
 
         table = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 

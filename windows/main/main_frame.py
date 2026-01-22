@@ -1,6 +1,8 @@
 import time
 
 import math
+from collections import defaultdict
+
 import psutil
 import os
 import sqlglot
@@ -17,22 +19,23 @@ from gettext import gettext as _
 from helpers import bytes_to_human
 from helpers.logger import logger
 from helpers.observables import CallbackEvent
+from structures.connection import Connection
+from structures.engines import ConnectionEngine
 
-from structures.session import Session, SessionEngine
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 from structures.engines.context import QUERY_LOGS
 
 from windows import MainFrameView
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
-from windows.sessions import wx_colour_to_hex
+from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, ENGINE_COMMON_KEYWORDS
+from windows.connections import wx_colour_to_hex
 
 from windows.main.database import ListDatabaseTable
+from windows.main.explorer import TreeExplorerController
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
 from windows.main.check import TableCheckController
 from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
-from windows.main.sessions import TreeSessionsController
 from windows.main.foreign_key import TableForeignKeyController
 
 
@@ -41,6 +44,8 @@ class MainFrameController(MainFrameView):
 
     def __init__(self):
         super().__init__(None)
+
+        self.styled_text_ctrls_name = ["sql_query_logs", "sql_view", "sql_query_filters", "sql_create_table"]
 
         self.edit_table_model = EditTableModel()
         self.edit_table_model.bind_controls(
@@ -53,8 +58,8 @@ class MainFrameController(MainFrameView):
 
         self.list_database_tables = ListDatabaseTable(self.list_ctrl_database_tables)
 
-        self.controller_tree_sessions = TreeSessionsController(self.tree_ctrl_sessions)
-        self.controller_tree_sessions.on_cancel_table = self.on_cancel_table
+        self.controller_tree_connections = TreeExplorerController(self.tree_ctrl_explorer)
+        self.controller_tree_connections.on_cancel_table = self.on_cancel_table
 
         self.controller_list_table_columns = TableColumnsController(self.list_ctrl_table_columns)
         self.controller_list_table_records = TableRecordsController(self.list_ctrl_table_records)
@@ -99,28 +104,12 @@ class MainFrameController(MainFrameView):
             number = "#ff6600"
             operator = "#000000"
 
-        for name_styled_text_ctrl in ["sql_query_logs", "sql_view", "sql_query_filters", "sql_create_table"]:
-            styled_text_ctrl = getattr(self, name_styled_text_ctrl)
+        for styled_text_ctrl_name in self.styled_text_ctrls_name:
+            styled_text_ctrl = getattr(self, styled_text_ctrl_name)
 
             font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
             styled_text_ctrl.SetLexer(wx.stc.STC_LEX_SQL)
-            styled_text_ctrl.SetKeyWords(0, (
-                "select insert update delete replace merge "
-                "from where group by having order limit offset "
-                "union unionall intersect except "
-                "join left right inner outer cross on using "
-                "create alter drop rename truncate "
-                "table view index trigger function procedure "
-                "primary key foreign references unique check constraint "
-                "not null default "
-                "values set into returning "
-                "and or not is in exists between like "
-                "case when then else end "
-                "with recursive over partition window "
-                "begin commit rollback savepoint release transaction "
-                "pragma vacuum analyze explain "
-            ))
 
             styled_text_ctrl.StyleClearAll()
             styled_text_ctrl.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
@@ -138,7 +127,7 @@ class MainFrameController(MainFrameView):
 
             # Keys
             styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD, f"fore:{keyword},bold")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, f"fore:{keyword},bold")
+            # styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, f"fore:{keyword},bold")
 
             # String
             styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, f"fore:{string}")
@@ -176,9 +165,9 @@ class MainFrameController(MainFrameView):
 
         QUERY_LOGS.subscribe(self._write_query_log, CallbackEvent.ON_APPEND)
 
-        # SESSIONS.subscribe(self._load_session, CallbackEvent.ON_APPEND)
+        # SESSIONS.subscribe(self._load_connection, CallbackEvent.ON_APPEND)
 
-        CURRENT_SESSION.subscribe(self._on_current_session)
+        CURRENT_CONNECTION.subscribe(self._on_current_connection)
 
         CURRENT_DATABASE.subscribe(self._on_current_database)
 
@@ -214,14 +203,6 @@ class MainFrameController(MainFrameView):
     def _toggle_edit_table(self, visible: bool):
         self._toggle_panel(2, visible)
         self._toggle_panel(3, visible)
-
-    def _select_tree_item(self, **filters):
-        if table_item := self.controller_tree_sessions.find_by_data(**filters):
-            tree = self.controller_tree_sessions.tree_ctrl_sessions
-            tree.UnselectAll()
-
-            tree.SelectItem(table_item, True)
-            tree.EnsureVisible(table_item)
 
     def _format_server_uptime(self, uptime: Optional[float] = None) -> str:
         if not uptime:
@@ -263,18 +244,18 @@ class MainFrameController(MainFrameView):
         super().Destroy()
         wx.GetApp().ExitMainLoop()
 
-    def do_open_session_manager(self, event):
-        from windows.sessions.controller import SessionManagerController
+    def do_open_connection_manager(self, event):
+        from windows.connections.manager import ConnectionsManager
 
-        sm = SessionManagerController(self)
+        sm = ConnectionsManager(self)
         sm.Show()
 
-    def toggle_panel(self, current: Optional[Union[Session, SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
-        current_session = CURRENT_SESSION.get_value()
-        current_database = CURRENT_DATABASE.get_value()
-        current_table = CURRENT_TABLE.get_value()
-        current_view = CURRENT_VIEW.get_value()
-        current_trigger = CURRENT_TRIGGER.get_value()
+    def toggle_panel(self, current: Optional[Union[Connection, SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
+        current_connection = CURRENT_CONNECTION()
+        current_database = CURRENT_DATABASE()
+        current_table = CURRENT_TABLE()
+        current_view = CURRENT_VIEW()
+        current_trigger = CURRENT_TRIGGER()
 
         self.MainFrameNotebook.SetSelection(0)
 
@@ -293,7 +274,7 @@ class MainFrameController(MainFrameView):
         if not current_table and not current_view:
             self.MainFrameNotebook.GetPage(5).Hide()
 
-        if isinstance(current, Session):
+        if isinstance(current, Connection):
             self.MainFrameNotebook.SetSelection(0)
 
         elif isinstance(current, SQLDatabase):
@@ -317,20 +298,40 @@ class MainFrameController(MainFrameView):
 
     def on_page_chaged(self, event):
         if int(event.Selection) == 5:
-            if table := CURRENT_TABLE.get_value():
+            if table := CURRENT_TABLE():
                 table.load_records()
 
                 self.controller_list_table_records.load_model()
 
-    def _on_current_session(self, session: Session):
-        self.toggle_panel(session)
+    def _on_current_connection(self, connection: Connection):
+        self.toggle_panel(connection)
 
-        if session:
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Session')}: {session.name}", 0)
+        if connection:
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {connection.name}", 0)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {connection.context.get_server_version()}", 1)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(connection.context.get_server_uptime())}", 2)
+
+            common_keywords = f"{ENGINE_COMMON_KEYWORDS} {connection.context.KEYWORDS}".strip()
+
+            colors_datatypes = defaultdict(list)
+
+            for datatype in connection.context.DATATYPE.get_all():
+                colors_datatypes[datatype.category.value.color].append(datatype.name.lower())
+                colors_datatypes[datatype.category.value.color].extend([d.lower() for d in datatype.alias])
+
+            for stc_name in self.styled_text_ctrls_name:
+                stc_ctrl = getattr(self, stc_name)
+
+                stc_ctrl.SetKeyWords(0, common_keywords)
+
+                for idx, (color, words) in enumerate(colors_datatypes.items(), start=1):
+                    stc_ctrl.SetKeyWords(idx, " ".join(sorted(words)))
+
+                    stc_ctrl.StyleSetForeground(wx.stc.STC_SQL_WORD + idx, wx.Colour(*color))
+
+                stc_ctrl.Colourise(0, -1)
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
@@ -342,7 +343,7 @@ class MainFrameController(MainFrameView):
             self.table_collation.Enable(len(database.context.COLLATIONS.keys()) > 1)
             self.table_collation.SetItems(list(database.context.COLLATIONS.keys()))
 
-        if CURRENT_SESSION.get_value().engine in [SessionEngine.SQLITE]:
+        if CURRENT_CONNECTION.get_value().engine in [ConnectionEngine.SQLITE]:
             self.table_collation.Enable(False)
 
     # VIEW
@@ -378,7 +379,7 @@ class MainFrameController(MainFrameView):
             CURRENT_FOREIGN_KEY.set_value(None)
 
             self.sql_create_table.SetText(
-                sqlglot.parse_one(table.raw_create(), read=CURRENT_SESSION.get_value().engine.value.dialect).sql(pretty=True)
+                sqlglot.parse_one(table.raw_create(), read=CURRENT_CONNECTION.get_value().engine.value.dialect).sql(pretty=True)
             )
 
         self.btn_clone_table.Enable(table is not None)
@@ -388,24 +389,23 @@ class MainFrameController(MainFrameView):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
         self.btn_cancel_table.Enable(bool(table is not None))
 
-        
-        self.sql_create_table.SetText(
-            sqlglot.parse_one(table.raw_create(), read=table.database.context.engine.dialect).sql(pretty=True)
-        )
-        
+        if isinstance(table, SQLTable):
+            self.sql_create_table.SetText(
+                sqlglot.parse_one(table.raw_create(), read=table.database.context.connection.engine.value.dialect).sql(pretty=True)
+            )
 
     # def _on_selected_table(self, table : SQLTable):
     #     self.btn_delete_table.Enable(table is not None)
 
     def on_insert_table(self, event):
-        session = CURRENT_SESSION.get_value()
+        connection = CURRENT_CONNECTION.get_value()
         database = CURRENT_DATABASE.get_value()
 
         CURRENT_TABLE.set_value(None)
         # SELECTED_TABLE.set_value(None)
 
         NEW_TABLE.set_value(
-            session.context.build_empty_table(database)
+            connection.context.build_empty_table(database)
         )
 
         self._toggle_panel(2, True)
@@ -415,11 +415,11 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_columns.model.clear()
 
     def do_apply_table(self, event: wx.Event):
-        session = CURRENT_SESSION.get_value()
+        connection = CURRENT_CONNECTION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = NEW_TABLE.get_value()
 
-        if session is None or database is None or table is None:
+        if connection is None or database is None or table is None:
             return
 
         if not table.is_valid:
@@ -440,10 +440,10 @@ class MainFrameController(MainFrameView):
 
             if table := next((t for t in database.tables if t.id == table.id), None):
                 CURRENT_TABLE.set_value(None).set_value(table.copy())
-                # item = self.controller_tree_sessions.model.ObjectToItem(updated_table)
+                # item = self.controller_tree_connections.model.ObjectToItem(updated_table)
                 #
-                # self.tree_ctrl_sessions.UnselectAll()
-                # self.tree_ctrl_sessions.Select(item)
+                # self.tree_ctrl_connections.UnselectAll()
+                # self.tree_ctrl_connections.Select(item)
 
                 # self.list_ctrl_table_columns.Select(item)
 

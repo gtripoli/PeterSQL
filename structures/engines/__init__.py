@@ -13,20 +13,20 @@ class Engine(NamedTuple):
     dialect: str
     bitmap: wx.Bitmap
 
-class SessionEngine(enum.Enum):
+class ConnectionEngine(enum.Enum):
     SQLITE = Engine("SQLite", "sqlite", BitmapList.ENGINE_SQLITE)
-    MARIADB = Engine("MariaDB", "mariadb", BitmapList.ENGINE_MARIADB)
-    MYSQL = Engine("MySQL", "mariasql", BitmapList.ENGINE_MYSQL)
+    MARIADB = Engine("MariaDB", "mysql", BitmapList.ENGINE_MARIADB)
+    MYSQL = Engine("MySQL", "mysql", BitmapList.ENGINE_MYSQL)
     POSTGRESQL = Engine("PostgreSQL", "postgresql", BitmapList.ENGINE_POSTGRESQL)
 
     @classmethod
-    def get_all(cls) -> List["SessionEngine"]:
+    def get_all(cls) -> List["ConnectionEngine"]:
         return [e.value for e in list(cls)]
 
     @classmethod
     @lru_cache(maxsize=None)
-    def from_name(cls, name: str) -> "SessionEngine":
+    def from_name(cls, name: str) -> "ConnectionEngine":
         for engine in cls:
             if engine.value.name == name:
                 return engine
-        raise ValueError(f"SessionEngine not found for name: {name}")
+        raise ValueError(f"ConnectionEngine not found for name: {name}")

@@ -39,6 +39,12 @@ class AbstractBaseDataModel():
         if data:
             self._data = data.copy()
 
+    def filter(self, data: List[Any]):
+        logger.debug(f"{self.__class__.__name__}.filter: {data[:50]}")
+
+        if data:
+            self._data = data.copy()
+
     def append(self, data: Any) -> int:
         logger.debug(f"{self.__class__.__name__}.append: {data}")
 
@@ -71,11 +77,20 @@ class AbstractBaseDataModel():
         return current, future
 
     def remove(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}._remove: {data}")
+        logger.debug(f"{self.__class__.__name__}.remove: {data}")
 
         index = self._data.index(data)
 
         self._data.remove(data)
+
+        return index
+
+    def pop(self, data: Any) -> int:
+        logger.debug(f"{self.__class__.__name__}.pop: {data}")
+
+        index = self._data.index(data)
+
+        self._data.pop(index)
 
         return index
 
@@ -101,7 +116,7 @@ class AbstractBaseDataModel():
     data = property(lambda self: self._data, lambda self, *args: None, lambda self: None)
 
 
-class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
+class BaseDataViewTreeModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
     def __init__(self, column_count: Optional[int] = None):
         AbstractBaseDataModel.__init__(self, column_count)
         wx.dataview.PyDataViewModel.__init__(self)
@@ -159,6 +174,26 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
 
         return item
 
+    def _pop(self, data: Any):
+        AbstractBaseDataModel.pop(self, data)
+
+        item = self.ObjectToItem(data)
+
+        if item.IsOk():
+            self.ItemDeleted(wx.dataview.NullDataViewItem, item)
+
+        self.Cleared()
+
+        return item
+
+    def _filter(self, data: Any):
+        self.clear()
+        AbstractBaseDataModel.filter(self, data)
+        self.Cleared()
+
+    def find(self, resolution: Callable[[Any], bool]) -> Optional[Any]:
+        return next((v for v in self._data if resolution(v)), None)
+
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
         self._observable = observable
         self._observable.subscribe(self._load)
@@ -166,6 +201,8 @@ class BaseDataViewModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         self._observable.subscribe(self._replace, callback_event=CallbackEvent.ON_REPLACE)
         self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
         self._observable.subscribe(self._remove, callback_event=CallbackEvent.ON_REMOVE)
+        self._observable.subscribe(self._pop, callback_event=CallbackEvent.ON_POP)
+        self._observable.subscribe(self._filter, callback_event=CallbackEvent.ON_FILTER)
 
     def clear(self):
         super().clear()

@@ -7,7 +7,8 @@ import gettext
 
 import settings
 from helpers.logger import logger
-from helpers.observables import ObservableObject, Loader
+from helpers.loader import Loader
+from helpers.observables import ObservableObject
 
 WORKDIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -54,13 +55,13 @@ class PeterSQL(wx.App):
         locale.setlocale(locale.LC_ALL, _locale)
 
     def open_session_manager(self) -> None:
-        from windows.sessions.controller import SessionManagerController
+        from windows.connections.manager import ConnectionsManager
 
-        self.session_manager = SessionManagerController(None)
-        self.session_manager.SetIcon(
+        self.connection_manager = ConnectionsManager(None)
+        self.connection_manager.SetIcon(
             wx.Icon(os.path.join(WORKDIR, "icons", "petersql.ico"))
         )
-        self.session_manager.Show()
+        self.connection_manager.Show()
 
     def open_main_frame(self) -> None:
         try:

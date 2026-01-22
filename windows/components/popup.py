@@ -7,12 +7,12 @@ import wx.adv
 from gettext import gettext as _
 
 from helpers.logger import logger
+from structures.connection import Connection
 
-from windows.main import CURRENT_SESSION
 from windows.components import BasePopup
 
-from structures.session import Session
 from structures.engines.datatype import SQLDataType, DataTypeCategory, StandardDataType
+from windows.main import CURRENT_CONNECTION
 
 
 class PopupColumnDefault(BasePopup):
@@ -112,7 +112,7 @@ class PopupColumnDefault(BasePopup):
 
 
 class PopupColumnDatatype(BasePopup):
-    session: Session
+    connection: Connection
     choices_groups: Dict[DataTypeCategory, List[str]] = {}
 
     def __init__(self, parent):
@@ -130,10 +130,8 @@ class PopupColumnDatatype(BasePopup):
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_active)
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
 
-        self.session = CURRENT_SESSION.get_value()
-        self.set_choices(self.session.context.DATATYPE.get_all())
-
-        # CURRENT_SESSION.subscribe(self._load_session, execute_immediately=True)
+        self.connection = CURRENT_CONNECTION()
+        self.set_choices(self.connection.context.DATATYPE.get_all())
 
     def _on_active(self, event):
         item = event.GetItem()
@@ -164,7 +162,7 @@ class PopupColumnDatatype(BasePopup):
         return self
 
     def get_value(self):
-        return self.session.context.DATATYPE.get_by_name(self._value)
+        return self.connection.context.DATATYPE.get_by_name(self._value)
 
     def open(self, value: Any, position: wx.Point) -> Self:
 

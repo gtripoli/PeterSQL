@@ -6,13 +6,14 @@ from typing import Optional, List, Dict, Any
 from gettext import gettext as _
 
 from helpers.logger import logger
+from structures.connection import Connection
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
 from structures.engines.indextype import SQLIndexType
 
-from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN, TABLE_CONSTRAINTS_PATTERN
+from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN, TABLE_CONSTRAINTS_PATTERN, ENGINE_KEYWORDS
 from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase, SQLiteCheck
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
@@ -20,6 +21,7 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 
 class SQLiteContext(AbstractContext):
     ENGINES = ["default"]
+    KEYWORDS = ENGINE_KEYWORDS
     COLLATIONS = COLLATIONS
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
@@ -28,10 +30,10 @@ class SQLiteContext(AbstractContext):
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 
-    def __init__(self, session):
-        super().__init__(session)
+    def __init__(self, connection: Connection):
+        super().__init__(connection)
 
-        self.filename = session.configuration.filename
+        self.filename = connection.configuration.filename
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
@@ -172,11 +174,16 @@ class SQLiteContext(AbstractContext):
 
             column_dict = columns_match.groupdict()
 
-            attributes_str = column_dict.pop('attributes').strip()
             attr_dict = {}
+            attributes_str = column_dict.pop('attributes').strip()
             for pattern in COLUMN_ATTRIBUTES_PATTERN:
+                if not attributes_str:
+                    break
+
                 if m := pattern.search(attributes_str):
+                    attributes_str = attributes_str.replace(m.group(0), '', 1).strip()
                     attr_dict.update({k: v for k, v in m.groupdict().items() if v is not None})
+
             column_dict.update(attr_dict)
 
             results.append(
@@ -206,12 +213,12 @@ class SQLiteContext(AbstractContext):
             return results
 
         for type, constraints in self._map_sqlite_master[table.name]["constraints"].items():
-            
-            for i, constraint in enumerate(constraints) :
-                if not TABLE_CONSTRAINTS_PATTERN.get(type) :
+
+            for i, constraint in enumerate(constraints):
+                if not TABLE_CONSTRAINTS_PATTERN.get(type):
                     continue
 
-                if constraint_column := re.search( TABLE_CONSTRAINTS_PATTERN[type].pattern, constraint, re.IGNORECASE | re.DOTALL):
+                if constraint_column := re.search(TABLE_CONSTRAINTS_PATTERN[type].pattern, constraint, re.IGNORECASE | re.DOTALL):
                     constraint_column_dict = constraint_column.groupdict()
                     results.append(
                         SQLiteCheck(
@@ -221,7 +228,6 @@ class SQLiteContext(AbstractContext):
                             expression=constraint_column_dict.get("check")
                         )
                     )
-
 
         return results
 

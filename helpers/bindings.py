@@ -162,15 +162,15 @@ class AbstractMetaModel(abc.ABCMeta):
 class AbstractModel(metaclass=AbstractMetaModel):
     observables: List[Observable] = []
 
-    def bind_control(self, control: CONTROLS, observable: Observable, **kwargs):
+    def bind_control(self, control: CONTROLS, observable: Observable):
         if isinstance(control, wx.StaticText):
-            BindLabelControl(control, observable, **kwargs)
+            BindLabelControl(control, observable)
         elif isinstance(control, (wx.TextCtrl, wx.SpinCtrl, wx.CheckBox)):
             BindValueControl(control, observable)
         elif isinstance(control, (wx.FilePickerCtrl, wx.DirPickerCtrl)):
             BindPathControl(control, observable)
         elif isinstance(control, wx.Choice):
-            BindSelectionControl(control, observable, **kwargs)
+            BindSelectionControl(control, observable)
 
         self.observables.append(observable)
 

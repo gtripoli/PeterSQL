@@ -5,8 +5,8 @@ import wx.dataview
 
 from gettext import gettext as _
 
-from structures.session import Session, SessionEngine
-
+from structures.connection import Connection
+from structures.engines import ConnectionEngine
 from structures.engines.database import SQLColumn, SQLTable, SQLIndex
 from structures.engines.datatype import DataTypeCategory
 from structures.engines.indextype import SQLIndexType, StandardIndexType
@@ -15,7 +15,7 @@ from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer
 
-from windows.main import CURRENT_SESSION, CURRENT_TABLE, CURRENT_DATABASE
+from windows.main import CURRENT_CONNECTION, CURRENT_TABLE, CURRENT_DATABASE
 from windows.main.table import NEW_TABLE
 
 
@@ -38,7 +38,7 @@ class _SQLiteTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Expression"), 8, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
         column_collation_renderer = PopupRenderer(PopupChoice)
-        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION.get_value().context.COLLATIONS])
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
         column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 9, width=-1, align=wx.ALIGN_LEFT)
         dataview.AppendColumn(column)
 
@@ -62,7 +62,7 @@ class _MariaDBMySQLTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Expression"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
         column_collation_renderer = PopupRenderer(PopupChoice)
-        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION.get_value().context.COLLATIONS])
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
         column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 10, width=-1, align=wx.ALIGN_LEFT)
         dataview.AppendColumn(column)
 
@@ -103,20 +103,20 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         self._current_column: Optional[int] = None
         self._current_dataview: Optional[int] = None
 
-        CURRENT_SESSION.subscribe(self._load_session)
+        CURRENT_CONNECTION.subscribe(self._load_session)
 
-    def _load_session(self, session: Session):
+    def _load_session(self, connection: Connection):
         if not self._current_dataview:
-            if session.engine == SessionEngine.SQLITE:
+            if connection.engine == ConnectionEngine.SQLITE:
                 self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
-            elif session.engine in [SessionEngine.MYSQL, SessionEngine.MARIADB]:
+            elif connection.engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
                 self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
         from icons import BitmapList
 
-        session = CURRENT_SESSION.get_value()
-        table = CURRENT_TABLE.get_value() or NEW_TABLE.get_value()
+        session = CURRENT_CONNECTION()
+        table = CURRENT_TABLE() or NEW_TABLE()
 
         selected = self.GetSelection()
         model = self.GetModel()
@@ -311,8 +311,8 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:
             if column.name in foreign_key.columns:
-                session = CURRENT_SESSION.get_value()
-                database = CURRENT_DATABASE.get_value()
+                session = CURRENT_CONNECTION()
+                database = CURRENT_DATABASE()
 
                 records = []
                 references = []

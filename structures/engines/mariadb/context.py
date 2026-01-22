@@ -5,13 +5,13 @@ from typing import Optional, List, Dict, Any
 from gettext import gettext as _
 
 from helpers.logger import logger
-from helpers.observables import ObservableLazyList
+from structures.connection import Connection
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
 
-from structures.engines.mariadb import MAP_COLUMN_FIELDS
+from structures.engines.mariadb import MAP_COLUMN_FIELDS, ENGINE_KEYWORDS
 from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
@@ -19,6 +19,7 @@ from structures.engines.mariadb.indextype import MariaDBIndexType
 
 class MariaDBContext(AbstractContext):
     ENGINES = []
+    KEYWORDS = ENGINE_KEYWORDS
     COLLATIONS = {}
 
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
@@ -26,14 +27,14 @@ class MariaDBContext(AbstractContext):
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
-    def __init__(self, session):
-        super().__init__(session)
+    def __init__(self, connection : Connection):
+        super().__init__(connection)
 
-        self.host = session.configuration.hostname
-        self.user = session.configuration.username
-        self.password = session.configuration.password
+        self.host = connection.configuration.hostname
+        self.user = connection.configuration.username
+        self.password = connection.configuration.password
         # self.database = session.configuration.database
-        self.port = getattr(session.configuration, 'port', 3306)
+        self.port = getattr(connection.configuration, 'port', 3306)
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
@@ -334,7 +335,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def build_empty_table(self, database: SQLDatabase):
+    def build_empty_table(self, database: SQLDatabase) -> MariaDBTable:
         return MariaDBTable(
             id=MariaDBContext.get_temporary_id(database.tables),
             name='',

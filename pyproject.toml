@@ -2,28 +2,28 @@
 name = "petersql"
 version = "0.1.0"
 description = "graphical client for database management"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
-    "babel>=2.17.0",
-    "cx-oracle>=8.3.0",
-    "psutil>=7.1.0",
-    "psycopg2-binary>=2.9.10",
-    "pymysql>=1.1.2",
-    "pyyaml>=6.0.2",
-    "requests>=2.32.5",
-    "sqlglot>=28.6.0",
-    "wxpython==4.2.4",
+    "babel",
+    "oracledb",
+    "psutil",
+    "psycopg2-binary",
+    "pymysql",
+    "pyyaml",
+    "requests",
+    "sqlglot",
+    "wxpython",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.18.2",
-    "pre-commit>=4.3.0",
-    "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
-    "pytest-mock>=3.15.1",
-    "types-pymysql>=1.1.0.20250916",
-    "types-pyyaml>=6.0.12.20250915",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "types-pymysql",
+    "types-pyyaml",
 ]
 
 [tool.pytest]

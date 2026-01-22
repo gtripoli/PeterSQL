@@ -32,6 +32,7 @@ class SQLDatabase(abc.ABC):
 
     def __post_init__(self):
         self.tables = ObservableLazyList(lambda db=self: self.get_tables_handler(db))
+
         if callable(self.get_views_handler):
             self.views = ObservableLazyList(lambda db=self: self.get_views_handler(db))
 
@@ -208,7 +209,7 @@ class SQLTable(abc.ABC):
 
             o2._value = copy.copy(o1._value)
             o2._loaded = True
-            o2._callbacks = o1._callbacks
+            o2.callbacks = o1.callbacks
 
         return new_cls
 

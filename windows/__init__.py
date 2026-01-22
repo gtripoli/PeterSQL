@@ -22,13 +22,13 @@ import gettext
 _ = gettext.gettext
 
 ###########################################################################
-## Class SessionManagerView
+## Class ConnectionsDialog
 ###########################################################################
 
-class SessionManagerView ( wx.Dialog ):
+class ConnectionsDialog ( wx.Dialog ):
 
     def __init__( self, parent ):
-        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Session Manager"), pos = wx.DefaultPosition, size = wx.Size( 800,600 ), style = wx.DEFAULT_DIALOG_STYLE|wx.DIALOG_NO_PARENT|wx.RESIZE_BORDER )
+        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Connection"), pos = wx.DefaultPosition, size = wx.Size( 800,600 ), style = wx.DEFAULT_DIALOG_STYLE|wx.DIALOG_NO_PARENT|wx.RESIZE_BORDER )
 
         self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
@@ -41,10 +41,15 @@ class SessionManagerView ( wx.Dialog ):
         self.m_panel16 = wx.Panel( self.m_splitter3, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
         bSizer35 = wx.BoxSizer( wx.VERTICAL )
 
-        self.session_tree_ctrl = wx.dataview.DataViewCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
-        self.m_dataViewColumn3 = self.session_tree_ctrl.AppendIconTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-        self.m_dataViewColumn4 = self.session_tree_ctrl.AppendTextColumn( _(u"Last connection"), 1, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
-        bSizer35.Add( self.session_tree_ctrl, 1, wx.ALL|wx.EXPAND, 5 )
+        self.connections_tree_ctrl = wx.dataview.DataViewCtrl( self.m_panel16, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
+        self.connection_name = self.connections_tree_ctrl.AppendIconTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.connection_last_connection = self.connections_tree_ctrl.AppendTextColumn( _(u"Last connection"), 1, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        bSizer35.Add( self.connections_tree_ctrl, 1, wx.ALL|wx.EXPAND|wx.TOP, 5 )
+
+        self.search_connection = wx.SearchCtrl( self.m_panel16, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.search_connection.ShowSearchButton( True )
+        self.search_connection.ShowCancelButton( True )
+        bSizer35.Add( self.search_connection, 0, wx.BOTTOM|wx.EXPAND|wx.LEFT|wx.RIGHT, 5 )
 
 
         self.m_panel16.SetSizer( bSizer35 )
@@ -68,19 +73,19 @@ class SessionManagerView ( wx.Dialog ):
         bSizer36 = wx.BoxSizer( wx.VERTICAL )
 
         self.m_notebook4 = wx.Notebook( self.m_panel17, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.NB_FIXEDWIDTH )
-        self.panel_session = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.Size( 600,-1 ), wx.BORDER_NONE|wx.TAB_TRAVERSAL )
-        self.panel_session.SetMinSize( wx.Size( 600,-1 ) )
+        self.panel_connection = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.Size( 600,-1 ), wx.BORDER_NONE|wx.TAB_TRAVERSAL )
+        self.panel_connection.SetMinSize( wx.Size( 600,-1 ) )
 
         bSizer12 = wx.BoxSizer( wx.VERTICAL )
 
         bSizer1211 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText211 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Session name"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText211 = wx.StaticText( self.panel_connection, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText211.Wrap( -1 )
 
         bSizer1211.Add( self.m_staticText211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.name = wx.TextCtrl( self.panel_session, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.name = wx.TextCtrl( self.panel_connection, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer1211.Add( self.name, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -89,20 +94,23 @@ class SessionManagerView ( wx.Dialog ):
         bSizer13 = wx.BoxSizer( wx.HORIZONTAL )
 
         bSizer13.SetMinSize( wx.Size( -1,0 ) )
-        self.m_staticText2 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Connection type"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText2 = wx.StaticText( self.panel_connection, wx.ID_ANY, _(u"Engine"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText2.Wrap( -1 )
 
         bSizer13.Add( self.m_staticText2, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
         engineChoices = []
-        self.engine = wx.Choice( self.panel_session, wx.ID_ANY, wx.DefaultPosition, wx.Size( 400,-1 ), engineChoices, 0 )
+        self.engine = wx.Choice( self.panel_connection, wx.ID_ANY, wx.DefaultPosition, wx.Size( 400,-1 ), engineChoices, 0 )
         self.engine.SetSelection( 0 )
         bSizer13.Add( self.engine, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
         bSizer12.Add( bSizer13, 0, wx.EXPAND, 5 )
 
-        self.panel_credentials = wx.Panel( self.panel_session, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_staticline41 = wx.StaticLine( self.panel_connection, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+        bSizer12.Add( self.m_staticline41, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.panel_credentials = wx.Panel( self.panel_connection, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer103 = wx.BoxSizer( wx.VERTICAL )
 
         bSizer121 = wx.BoxSizer( wx.HORIZONTAL )
@@ -147,13 +155,27 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer103.Add( bSizer1221, 0, wx.EXPAND, 5 )
 
+        bSizer116 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer116.Add( ( 156, 0), 0, wx.EXPAND, 5 )
+
+        self.ssh_tunnel_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
+
+
+        bSizer103.Add( bSizer116, 0, wx.EXPAND, 5 )
+
+        self.m_staticline5 = wx.StaticLine( self.panel_credentials, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+        bSizer103.Add( self.m_staticline5, 0, wx.EXPAND | wx.ALL, 5 )
+
 
         self.panel_credentials.SetSizer( bSizer103 )
         self.panel_credentials.Layout()
         bSizer103.Fit( self.panel_credentials )
         bSizer12.Add( self.panel_credentials, 0, wx.EXPAND | wx.ALL, 0 )
 
-        self.panel_source = wx.Panel( self.panel_session, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_source = wx.Panel( self.panel_connection, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         self.panel_source.Hide()
 
         bSizer105 = wx.BoxSizer( wx.VERTICAL )
@@ -179,43 +201,35 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer122111 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText22111 = wx.StaticText( self.panel_session, wx.ID_ANY, _(u"Comments"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText22111 = wx.StaticText( self.panel_connection, wx.ID_ANY, _(u"Comments"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText22111.Wrap( -1 )
 
         bSizer122111.Add( self.m_staticText22111, 0, wx.ALL, 5 )
 
-        self.comments = wx.TextCtrl( self.panel_session, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,200 ), wx.TE_MULTILINE )
+        self.comments = wx.TextCtrl( self.panel_connection, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,200 ), wx.TE_MULTILINE )
         bSizer122111.Add( self.comments, 1, wx.ALL|wx.EXPAND, 5 )
 
 
         bSizer12.Add( bSizer122111, 0, wx.EXPAND, 5 )
 
 
-        self.panel_session.SetSizer( bSizer12 )
-        self.panel_session.Layout()
-        self.m_notebook4.AddPage( self.panel_session, _(u"Settings"), True )
-        self.m_panel36 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_connection.SetSizer( bSizer12 )
+        self.panel_connection.Layout()
+        self.m_notebook4.AddPage( self.panel_connection, _(u"Settings"), True )
+        self.panel_ssh_tunnel = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_ssh_tunnel.Enable( False )
+        self.panel_ssh_tunnel.Hide()
+
         bSizer102 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer116 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        bSizer116.Add( ( 150, 0), 0, wx.EXPAND, 5 )
-
-        self.ssh_tunnel_enabled = wx.CheckBox( self.m_panel36, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
-
-
-        bSizer102.Add( bSizer116, 0, wx.EXPAND, 5 )
 
         bSizer1213 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText213 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH executable"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText213 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"SSH executable"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText213.Wrap( -1 )
 
         bSizer1213.Add( self.m_staticText213, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_executable = wx.TextCtrl( self.m_panel36, wx.ID_ANY, _(u"ssh"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.ssh_tunnel_executable = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, _(u"ssh"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer1213.Add( self.ssh_tunnel_executable, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -223,15 +237,15 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer12131 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText2131 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH host + port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText2131 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"SSH host + port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText2131.Wrap( -1 )
 
         bSizer12131.Add( self.m_staticText2131, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_hostname = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.ssh_tunnel_hostname = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer12131.Add( self.ssh_tunnel_hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_port = wx.SpinCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 22 )
+        self.ssh_tunnel_port = wx.SpinCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 22 )
         bSizer12131.Add( self.ssh_tunnel_port, 0, wx.ALL, 5 )
 
 
@@ -239,12 +253,12 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer12132 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText2132 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH username"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText2132 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"SSH username"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText2132.Wrap( -1 )
 
         bSizer12132.Add( self.m_staticText2132, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_username = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.ssh_tunnel_username = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer12132.Add( self.ssh_tunnel_username, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -252,12 +266,12 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer121321 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText21321 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"SSH password"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText21321 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"SSH password"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText21321.Wrap( -1 )
 
         bSizer121321.Add( self.m_staticText21321, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_password = wx.TextCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
+        self.ssh_tunnel_password = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
         bSizer121321.Add( self.ssh_tunnel_password, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
@@ -265,12 +279,12 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer1213211 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText213211 = wx.StaticText( self.m_panel36, wx.ID_ANY, _(u"Local port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText213211 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"Local port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
         self.m_staticText213211.Wrap( -1 )
 
         bSizer1213211.Add( self.m_staticText213211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.ssh_tunnel_local_port = wx.SpinCtrl( self.m_panel36, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 0 )
+        self.ssh_tunnel_local_port = wx.SpinCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 0 )
         self.ssh_tunnel_local_port.SetToolTip( _(u"if the value is set to 0, the first available port will be used") )
 
         bSizer1213211.Add( self.ssh_tunnel_local_port, 1, wx.ALL, 5 )
@@ -279,23 +293,23 @@ class SessionManagerView ( wx.Dialog ):
         bSizer102.Add( bSizer1213211, 0, wx.EXPAND, 5 )
 
 
-        self.m_panel36.SetSizer( bSizer102 )
-        self.m_panel36.Layout()
-        bSizer102.Fit( self.m_panel36 )
-        self.m_notebook4.AddPage( self.m_panel36, _(u"SSH Tunnel"), False )
-        self.m_panel18 = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_ssh_tunnel.SetSizer( bSizer102 )
+        self.panel_ssh_tunnel.Layout()
+        bSizer102.Fit( self.panel_ssh_tunnel )
+        self.m_notebook4.AddPage( self.panel_ssh_tunnel, _(u"SSH Tunnel"), False )
+        self.panel_statistics = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer361 = wx.BoxSizer( wx.VERTICAL )
 
         bSizer37 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText15 = wx.StaticText( self.m_panel18, wx.ID_ANY, _(u"Created at"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText15 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Created at"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText15.Wrap( -1 )
 
         self.m_staticText15.SetMinSize( wx.Size( 200,-1 ) )
 
         bSizer37.Add( self.m_staticText15, 0, wx.ALL, 5 )
 
-        self.created_at = wx.StaticText( self.m_panel18, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.created_at = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.created_at.Wrap( -1 )
 
         bSizer37.Add( self.created_at, 0, wx.ALL, 5 )
@@ -305,14 +319,14 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer371 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText151 = wx.StaticText( self.m_panel18, wx.ID_ANY, _(u"Last connection"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText151 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Last connection"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText151.Wrap( -1 )
 
         self.m_staticText151.SetMinSize( wx.Size( 200,-1 ) )
 
         bSizer371.Add( self.m_staticText151, 0, wx.ALL, 5 )
 
-        self.last_connection_at = wx.StaticText( self.m_panel18, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.last_connection_at = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.last_connection_at.Wrap( -1 )
 
         bSizer371.Add( self.last_connection_at, 0, wx.ALL, 5 )
@@ -322,14 +336,14 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer3711 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText1511 = wx.StaticText( self.m_panel18, wx.ID_ANY, _(u"Successful connections"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText1511 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Successful connections"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText1511.Wrap( -1 )
 
         self.m_staticText1511.SetMinSize( wx.Size( 200,-1 ) )
 
         bSizer3711.Add( self.m_staticText1511, 0, wx.ALL, 5 )
 
-        self.successful_connections = wx.StaticText( self.m_panel18, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.successful_connections = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.successful_connections.Wrap( -1 )
 
         bSizer3711.Add( self.successful_connections, 0, wx.ALL, 5 )
@@ -339,14 +353,14 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer37111 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText15111 = wx.StaticText( self.m_panel18, wx.ID_ANY, _(u"Unsuccessful connections"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText15111 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Unsuccessful connections"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText15111.Wrap( -1 )
 
         self.m_staticText15111.SetMinSize( wx.Size( 200,-1 ) )
 
         bSizer37111.Add( self.m_staticText15111, 0, wx.ALL, 5 )
 
-        self.unsuccessful_connections = wx.StaticText( self.m_panel18, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.unsuccessful_connections = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.unsuccessful_connections.Wrap( -1 )
 
         bSizer37111.Add( self.unsuccessful_connections, 0, wx.ALL, 5 )
@@ -355,10 +369,10 @@ class SessionManagerView ( wx.Dialog ):
         bSizer361.Add( bSizer37111, 0, wx.EXPAND, 5 )
 
 
-        self.m_panel18.SetSizer( bSizer361 )
-        self.m_panel18.Layout()
-        bSizer361.Fit( self.m_panel18 )
-        self.m_notebook4.AddPage( self.m_panel18, _(u"Statistics"), False )
+        self.panel_statistics.SetSizer( bSizer361 )
+        self.panel_statistics.Layout()
+        bSizer361.Fit( self.panel_statistics )
+        self.m_notebook4.AddPage( self.panel_statistics, _(u"Statistics"), False )
 
         bSizer36.Add( self.m_notebook4, 1, wx.ALL|wx.EXPAND, 5 )
 
@@ -377,20 +391,29 @@ class SessionManagerView ( wx.Dialog ):
         bSizer301 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.btn_create = wx.Button( self, wx.ID_ANY, _(u"Create"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.btn_create.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
         bSizer301.Add( self.btn_create, 0, wx.ALL|wx.BOTTOM, 5 )
 
-        self.btn_save = wx.Button( self, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_save.Enable( False )
+        self.btn_create_directory = wx.Button( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.BU_EXACTFIT|wx.BU_NOTEXT )
 
-        bSizer301.Add( self.btn_save, 0, wx.ALL, 5 )
+        self.btn_create_directory.SetBitmap( wx.Bitmap( u"icons/16x16/folder.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer301.Add( self.btn_create_directory, 0, wx.ALL, 5 )
 
         self.btn_delete = wx.Button( self, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.btn_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
         self.btn_delete.Enable( False )
 
         bSizer301.Add( self.btn_delete, 0, wx.ALL, 5 )
 
 
         bSizer28.Add( bSizer301, 1, wx.EXPAND, 5 )
+
+        bSizer110 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer28.Add( bSizer110, 1, wx.EXPAND, 5 )
 
         bSizer29 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -399,7 +422,23 @@ class SessionManagerView ( wx.Dialog ):
 
         bSizer29.Add( self.btn_cancel, 0, wx.ALL, 5 )
 
-        self.btn_open = wx.Button( self, wx.ID_ANY, _(u"Open"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_save = wx.Button( self, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.btn_save.SetBitmap( wx.Bitmap( u"icons/16x16/disk.png", wx.BITMAP_TYPE_ANY ) )
+        self.btn_save.Enable( False )
+
+        bSizer29.Add( self.btn_save, 0, wx.ALL, 5 )
+
+        self.btn_test = wx.Button( self, wx.ID_ANY, _(u"Test"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.btn_test.SetBitmap( wx.Bitmap( u"icons/16x16/world_go.png", wx.BITMAP_TYPE_ANY ) )
+        self.btn_test.Enable( False )
+
+        bSizer29.Add( self.btn_test, 0, wx.ALL, 5 )
+
+        self.btn_open = wx.Button( self, wx.ID_ANY, _(u"Connect"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.btn_open.SetBitmap( wx.Bitmap( u"icons/16x16/server_go.png", wx.BITMAP_TYPE_ANY ) )
         self.btn_open.Enable( False )
 
         bSizer29.Add( self.btn_open, 0, wx.ALL, 5 )
@@ -423,9 +462,10 @@ class SessionManagerView ( wx.Dialog ):
         self.Bind( wx.EVT_MENU, self.on_import, id = self.m_menuItem10.GetId() )
         self.engine.Bind( wx.EVT_CHOICE, self.on_choice_engine )
         self.btn_create.Bind( wx.EVT_BUTTON, self.on_create_session )
-        self.btn_save.Bind( wx.EVT_BUTTON, self.on_save )
+        self.btn_create_directory.Bind( wx.EVT_BUTTON, self.on_create_directory )
         self.btn_delete.Bind( wx.EVT_BUTTON, self.on_delete )
-        self.btn_open.Bind( wx.EVT_BUTTON, self.on_open )
+        self.btn_save.Bind( wx.EVT_BUTTON, self.on_save )
+        self.btn_open.Bind( wx.EVT_BUTTON, self.on_connect )
 
     def __del__( self ):
         pass
@@ -450,13 +490,16 @@ class SessionManagerView ( wx.Dialog ):
     def on_create_session( self, event ):
         event.Skip()
 
-    def on_save( self, event ):
+    def on_create_directory( self, event ):
         event.Skip()
 
     def on_delete( self, event ):
         event.Skip()
 
-    def on_open( self, event ):
+    def on_save( self, event ):
+        event.Skip()
+
+    def on_connect( self, event ):
         event.Skip()
 
     def m_splitter3OnIdle( self, event ):
@@ -576,11 +619,11 @@ class MainFrameView ( wx.Frame ):
         self.m_panel14 = wx.Panel( self.m_splitter4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer24 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.tree_ctrl_sessions = wx.lib.agw.hypertreelist.HyperTreeList(
+        self.tree_ctrl_explorer = wx.lib.agw.hypertreelist.HyperTreeList(
         self.m_panel14, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
         agwStyle=wx.TR_DEFAULT_STYLE|wx.TR_SINGLE|wx.TR_FULL_ROW_HIGHLIGHT|wx.TR_HIDE_ROOT|wx.TR_LINES_AT_ROOT
         )
-        bSizer24.Add( self.tree_ctrl_sessions, 1, wx.ALL|wx.EXPAND, 5 )
+        bSizer24.Add( self.tree_ctrl_explorer, 1, wx.ALL|wx.EXPAND, 5 )
 
 
         self.m_panel14.SetSizer( bSizer24 )
@@ -1819,6 +1862,9 @@ class Trash ( wx.Panel ):
         self.m_gauge1 = wx.Gauge( self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_gauge1.SetValue( 0 )
         bSizer90.Add( self.m_gauge1, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        bSizer90.Add( ( 150, 0), 0, wx.EXPAND, 5 )
 
 
         self.SetSizer( bSizer90 )

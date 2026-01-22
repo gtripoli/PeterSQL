@@ -69,9 +69,32 @@ COLUMN_ATTRIBUTES_PATTERN = [
 
 TABLE_CONSTRAINTS_PATTERN = {
     # CHECK table-level
-    "CHECK" : re.compile(r"""(?:CONSTRAINT\s+(?P<constraint_name>\w+)\s+)?CHECK\s*\((?P<check>(?:[^()]+|\([^()]*\))*)\)"""),
+    "CHECK": re.compile(r"""(?:CONSTRAINT\s+(?P<constraint_name>\w+)\s+)?CHECK\s*\((?P<check>(?:[^()]+|\([^()]*\))*)\)"""),
 }
 
 INDEX_PATTERN = [
     re.compile(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<condition>.+))?'),
 ]
+
+ENGINE_KEYWORDS = (
+    "pragma "
+    "rowid "
+    "without "
+    "vacuum "
+    "analyze "
+    "reindex "
+    "explain "
+    "autoincrement "
+    "conflict "
+    "abort "
+    "fail "
+    "ignore "
+    "replace "
+    "rollback "
+    "virtual "
+    "fts3 "
+    "fts4 "
+    "fts5 "
+    "sqlite_master "
+    "sqlite_schema "
+)

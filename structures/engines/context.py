@@ -2,10 +2,11 @@ import abc
 import contextlib
 import re
 
-from typing import Dict, Any, Optional, List, Union, TypeAlias
+from typing import Dict, Any, Optional, List, Tuple
 
 from helpers.logger import logger
 from helpers.observables import ObservableList, ObservableLazyList
+from structures.connection import Connection
 from structures.helpers import SQLTypeAlias
 
 from structures.ssh_tunnel import SSHTunnel
@@ -64,7 +65,7 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def nullable(self):
-        return 'NOT NULL' if any([not self.column.is_nullable, self.column.is_primary_key , self.column.is_auto_increment]) else 'NULL'
+        return 'NOT NULL' if any([not self.column.is_nullable, self.column.is_primary_key, self.column.is_auto_increment]) else 'NULL'
 
     @property
     def default(self):
@@ -102,20 +103,63 @@ class AbstractColumnBuilder(abc.ABC):
         return " ".join(formatted_parts)
 
 
+class AbstractIndexBuilder(abc.ABC):
+    TEMPLATE: List[str]
+
+    parts: Dict[str, str]
+
+    def __init__(self, index: 'SQLIndex', exclude: Optional[List[str]] = None):
+        self.index = index
+        self.exclude = exclude
+
+        self.parts = {
+            'type': self.type,
+            'name': self.name,
+            'columns': self.columns,
+        }
+
+    @property
+    def type(self):
+        return str(self.index.type)
+
+    @property
+    def name(self):
+        return f"`{self.index.name}`" if self.index.name and self.index.name != "PRIMARY KEY" else ""
+
+    @property
+    def columns(self):
+        return ", ".join([f"`{col}`" for col in self.index.columns])
+
+    def __str__(self) -> str:
+        formatted_parts = []
+        for template_part in self.TEMPLATE:
+            if self.exclude and any(part in template_part for part in self.exclude):
+                continue
+            try:
+                formatted = template_part % self.parts
+            except Exception as ex:
+                logger.error(ex, exc_info=True)
+
+            if formatted_strip := formatted.strip():  # Only include non-empty parts
+                formatted_parts.append(formatted_strip)
+
+        return " ".join(formatted_parts)
+
 class AbstractContext(abc.ABC):
     _connection: Any = None
     _cursor: Any = None
     _ssh_tunnel: Optional[SSHTunnel] = None
 
     ENGINES: List[str]
+    KEYWORDS: Tuple[str]
     DATATYPE: StandardDataType
     INDEXTYPE: StandardIndexType
     COLLATIONS: List[str]
 
     databases: ObservableLazyList[SQLDatabase]
 
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, connection: Connection):
+        self.connection = connection
 
         self.databases = ObservableLazyList(self.get_databases)
 
@@ -136,12 +180,6 @@ class AbstractContext(abc.ABC):
         if self._ssh_tunnel is not None:
             self._ssh_tunnel.stop()
             self._ssh_tunnel = None
-
-    @property
-    def connection(self) -> Any:
-        if self._connection is None:
-            raise RuntimeError("Not connected to the database. Call connect() first.")
-        return self._connection
 
     @property
     def cursor(self) -> Any:

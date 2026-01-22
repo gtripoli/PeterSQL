@@ -6,13 +6,14 @@ import wx.lib.agw.hypertreelist
 from gettext import gettext as _
 
 from helpers import bytes_to_human
+from helpers.loader import Loader
+from helpers.observables import CallbackEvent
 from icons import IconList, ImageList
-from helpers.observables import Loader, CallbackEvent
+from structures.connection import Connection
 
-from structures.session import Session
 from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER, SESSIONS, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_VIEW, CURRENT_TRIGGER, CONNECTIONS_LIST, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
 from windows.main.table import NEW_TABLE
 
 
@@ -41,32 +42,32 @@ class GaugeWithLabel(wx.Panel):
         self.label.Refresh()
 
 
-class TreeSessionsController:
+class TreeExplorerController:
     on_cancel_table: Callable
     do_cancel_table: Callable
 
-    def __init__(self, tree_ctrl_sessions: wx.lib.agw.hypertreelist.HyperTreeList):
+    def __init__(self, tree_ctrl_explorer: wx.lib.agw.hypertreelist.HyperTreeList):
         self.app = wx.GetApp()
 
-        self.tree_ctrl_sessions = tree_ctrl_sessions
+        self.tree_ctrl_explorer = tree_ctrl_explorer
 
-        self.tree_ctrl_sessions.AddColumn("Name", width=200)
-        self.tree_ctrl_sessions.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
+        self.tree_ctrl_explorer.AddColumn("Name", width=200)
+        self.tree_ctrl_explorer.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
 
-        self.tree_ctrl_sessions.SetMainColumn(0)
-        self.tree_ctrl_sessions.AssignImageList(ImageList)
-        self.tree_ctrl_sessions._main_win.Bind(
+        self.tree_ctrl_explorer.SetMainColumn(0)
+        self.tree_ctrl_explorer.AssignImageList(ImageList)
+        self.tree_ctrl_explorer._main_win.Bind(
             wx.EVT_MOUSE_EVENTS, lambda e: None if e.LeftDown() else e.Skip()
         )
 
         self.populate_tree()
 
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
-        self.tree_ctrl_sessions.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
+        self.tree_ctrl_explorer.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
+        self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
+        self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
 
-        SESSIONS.subscribe(self.append_session, CallbackEvent.ON_APPEND)
-        #
+        CONNECTIONS_LIST.subscribe(self.append_connection, CallbackEvent.ON_APPEND)
+
         # CURRENT_DATABASE.get_value().tables.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
         # CURRENT_DATABASE.get_value().views.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
         # CURRENT_DATABASE.get_value().procedures.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
@@ -87,13 +88,13 @@ class TreeSessionsController:
 
             self.reset_current_objects()
 
-            obj = self.tree_ctrl_sessions.GetItemPyData(item)
+            obj = self.tree_ctrl_explorer.GetItemPyData(item)
             if obj is None:
                 event.Skip()
                 return
 
-            if isinstance(obj, Session):
-                self.select_session(obj, event)
+            if isinstance(obj, Connection):
+                self.select_connection(obj, event)
             elif isinstance(obj, SQLDatabase):
                 self.select_database(obj, item, event)
             elif isinstance(
@@ -105,27 +106,28 @@ class TreeSessionsController:
             event.Skip()
 
     def populate_tree(self):
-        self.tree_ctrl_sessions.DeleteAllItems()
-        self.root_item = self.tree_ctrl_sessions.AddRoot("")
+        self.tree_ctrl_explorer.DeleteAllItems()
+        self.root_item = self.tree_ctrl_explorer.AddRoot("")
 
-        for session in SESSIONS.get_value():
-            self.append_session(session)
+        for connection in CONNECTIONS_LIST.get_value():
+            self.append_connection(connection)
 
-    def append_session(self, session: Session):
-        self.root_item = self.tree_ctrl_sessions.GetRootItem()
+    def append_connection(self, connection: Connection):
+        self.root_item = self.tree_ctrl_explorer.GetRootItem()
 
-        session_item = self.tree_ctrl_sessions.AppendItem(self.root_item, session.name, image=getattr(IconList, f"ENGINE_{session.engine.name}"), data=session)
-        for database in session.context.databases.get_value():
-            db_item = self.tree_ctrl_sessions.AppendItem(session_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
-            self.tree_ctrl_sessions.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
-            self.tree_ctrl_sessions.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
+        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=getattr(IconList, f"ENGINE_{connection.engine.name}"), data=connection)
+        for database in connection.context.databases.get_value():
+            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
+            self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
+            self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
 
-        self.tree_ctrl_sessions.Expand(session_item)
-        self.tree_ctrl_sessions.EnsureVisible(session_item)
+        self.tree_ctrl_explorer.Expand(connection_item)
+        self.tree_ctrl_explorer.EnsureVisible(connection_item)
 
-        self.tree_ctrl_sessions.Layout()
+        self.tree_ctrl_explorer.Layout()
 
     def load_observables(self, db_item, database: SQLDatabase):
+        print("id_db", id(database))
         for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
             observable = getattr(database, observable_name, None)
 
@@ -135,28 +137,34 @@ class TreeSessionsController:
             if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
                 continue
 
-            observable.subscribe(lambda db_item=db_item, database=database: self.load_observables(db_item, database))
+            # def callback(i=db_item, d=database):
+            #     self.load_observables(i, d)
+            #
+            # # database.tables.subscribe(lambda i=db_item, d=database: self.load_observables(i, d))
+            # observable.subscribe(callback)
 
 
-            # self.tree_ctrl_sessions.Delete(db_item)
+
+            # observable.subscribe(lambda i=db_item, d=database: self.load_observables(i, d))
+
+
+            # self.tree_ctrl_explorer.Delete(db_item)
 
             for obj in observable.get_value():
-                obj_item = self.tree_ctrl_sessions.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
+                obj_item = self.tree_ctrl_explorer.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
 
                 if isinstance(obj, SQLTable):
                     percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
 
-                    gauge_panel = GaugeWithLabel(self.tree_ctrl_sessions, max_range=100, size=(self.tree_ctrl_sessions.GetColumnWidth(1) - 20, self.tree_ctrl_sessions.CharHeight))
+                    gauge_panel = GaugeWithLabel(self.tree_ctrl_explorer, max_range=100, size=(self.tree_ctrl_explorer.GetColumnWidth(1) - 20, self.tree_ctrl_explorer.CharHeight))
                     gauge_panel.SetValue(percentage)
-                    self.tree_ctrl_sessions.SetItemWindow(obj_item, gauge_panel, column=1)
+                    self.tree_ctrl_explorer.SetItemWindow(obj_item, gauge_panel, column=1)
                 else:
-                    self.tree_ctrl_sessions.SetItemText(obj_item, "", column=1)
+                    self.tree_ctrl_explorer.SetItemText(obj_item, "", column=1)
 
-        loading_item, index_item = self.tree_ctrl_sessions.GetFirstChild(db_item)
+        loading_item, index_item = self.tree_ctrl_explorer.GetFirstChild(db_item)
         if loading_item and loading_item.GetData() is None:
-            self.tree_ctrl_sessions.Delete(loading_item)
-
-    # def _append_items(self):
+            self.tree_ctrl_explorer.Delete(loading_item)
 
     def reset_current_objects(self):
         CURRENT_TABLE.set_value(None)
@@ -166,30 +174,30 @@ class TreeSessionsController:
         CURRENT_EVENT.set_value(None)
         CURRENT_FUNCTION.set_value(None)
 
-    def select_session(self, session: Session, event):
-        if session == CURRENT_SESSION.get_value() and CURRENT_DATABASE.get_value():
+    def select_connection(self, connection: Connection, event):
+        if connection == CURRENT_CONNECTION.get_value() and CURRENT_DATABASE.get_value():
             event.Skip()
             return
-        CURRENT_SESSION.set_value(session)
+        CURRENT_CONNECTION.set_value(connection)
         CURRENT_DATABASE.set_value(None)
 
     def select_database(self, database: SQLDatabase, item, event):
         if database != CURRENT_DATABASE.get_value():
-            session = database.context.session
-            if session != CURRENT_SESSION.get_value():
-                CURRENT_SESSION.set_value(session)
+            connection = database.context.connection
+            if connection != CURRENT_CONNECTION.get_value():
+                CURRENT_CONNECTION.set_value(connection)
             CURRENT_DATABASE.set_value(database)
             self.load_observables(item, database)
 
-        if not self.tree_ctrl_sessions.IsExpanded(item):
-            wx.CallAfter(self.tree_ctrl_sessions.Expand, item)
+        if not self.tree_ctrl_explorer.IsExpanded(item):
+            wx.CallAfter(self.tree_ctrl_explorer.Expand, item)
 
     def select_sql_object(self, sql_obj):
         database = sql_obj.database
-        session = database.context.session
+        connection = database.context.connection
 
-        if session != CURRENT_SESSION.get_value():
-            CURRENT_SESSION.set_value(session)
+        if connection != CURRENT_CONNECTION.get_value():
+            CURRENT_CONNECTION.set_value(connection)
 
         if database != CURRENT_DATABASE.get_value():
             CURRENT_DATABASE.set_value(database)

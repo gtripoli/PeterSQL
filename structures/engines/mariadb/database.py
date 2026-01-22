@@ -8,7 +8,7 @@ from structures.engines.context import QUERY_LOGS
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 
 from structures.engines.mariadb.indextype import MariaDBIndexType
-from structures.engines.mariadb.builder import MariaDBColumnBuilder
+from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBIndexBuilder
 
 
 @dataclasses.dataclass
@@ -18,6 +18,21 @@ class MariaDBDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBTable(SQLTable):
+    def raw_create(self) -> str:
+        columns = [str(MariaDBColumnBuilder(column)) for column in self.columns]
+
+        indexes = [str(MariaDBIndexBuilder(index)) for index in self.indexes]
+
+        columns_and_indexes = columns + indexes
+
+        return f"""
+            CREATE TABLE `{self.database.name}`.`{self.name}` (
+                {', '.join(columns_and_indexes)}
+            )
+            COLLATE='{self.collation_name}'
+            ENGINE={self.engine};
+            """
+
     def alter_auto_increment(self, auto_increment: int):
         sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
         self.database.context.execute(sql)
@@ -54,8 +69,7 @@ class MariaDBTable(SQLTable):
 
     def create(self) -> bool:
         with self.database.context.transaction() as transaction:
-            sql = f"CREATE TABLE `{self.database.name}`.`{self.name}` ({', '.join([str(MariaDBColumnBuilder(column)) for column in self.columns])})"
-            self.database.context.execute(sql)
+            transaction.execute(self.raw_create())
 
             for index in self.indexes:
                 index.create()
