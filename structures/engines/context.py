@@ -278,7 +278,7 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: List[str]) -> SQLRecord:
+    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: List[str]) -> SQLForeignKey:
         raise NotImplementedError
 
     # EXECUTION

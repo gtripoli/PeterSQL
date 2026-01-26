@@ -93,11 +93,8 @@ class Connection:
         return bool(self.ssh_tunnel and self.ssh_tunnel.is_enabled)
 
     @property
-    def tunnel_process(self):
+    def ssh_tunnel_process(self):
         return getattr(self, "_ssh_tunnel_process", None)
-
-    def set_tunnel_process(self, process: Any):
-        self._ssh_tunnel_process = process
 
     def stop_tunnel(self):
         if process := getattr(self, "_ssh_tunnel_process", None):

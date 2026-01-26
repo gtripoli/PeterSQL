@@ -357,7 +357,7 @@ class MariaDBContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, table: MariaDBTable, type: MariaDBIndexType, columns: List[str]) -> MariaDBIndex:
+    def build_empty_index(self, name: str, type: MariaDBIndexType, table: MariaDBTable, columns: List[str]) -> MariaDBIndex:
         return MariaDBIndex(
             id=MariaDBContext.get_temporary_id(table.indexes),
             name=name,

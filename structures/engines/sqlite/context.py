@@ -403,7 +403,7 @@ class SQLiteContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, table: SQLiteTable, type: SQLIndexType, columns: List[str]) -> SQLiteIndex:
+    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLiteTable, columns: List[str]) -> SQLiteIndex:
         return SQLiteIndex(
             id=SQLiteContext.get_temporary_id(table.indexes),
             name=name,

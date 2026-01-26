@@ -365,7 +365,7 @@ class MySQLContext(AbstractContext):
         logger.debug(f"get records for table={table.name}")
         return results
 
-    def build_empty_table(self, database: SQLDatabase):
+    def build_empty_table(self, database: SQLDatabase) -> MySQLTable:
         return MySQLTable(
             id=MySQLContext.get_temporary_id(database.tables),
             name="",
@@ -387,7 +387,7 @@ class MySQLContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, table: MySQLTable, type: MySQLIndexType, columns: List[str]) -> MySQLIndex:
+    def build_empty_index(self, name: str, type: MySQLIndexType, table: MySQLTable, columns: List[str]) -> MySQLIndex:
         return MySQLIndex(
             id=MySQLContext.get_temporary_id(table.indexes),
             name=name,
