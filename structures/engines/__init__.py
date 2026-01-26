@@ -5,19 +5,20 @@ from typing import List, NamedTuple
 
 import wx
 
-from icons import BitmapList
+from icons import IconList, Icon
 
 
 class Engine(NamedTuple):
     name: str
     dialect: str
-    bitmap: wx.Bitmap
+    bitmap: Icon
+
 
 class ConnectionEngine(enum.Enum):
-    SQLITE = Engine("SQLite", "sqlite", BitmapList.ENGINE_SQLITE)
-    MARIADB = Engine("MariaDB", "mysql", BitmapList.ENGINE_MARIADB)
-    MYSQL = Engine("MySQL", "mysql", BitmapList.ENGINE_MYSQL)
-    POSTGRESQL = Engine("PostgreSQL", "postgresql", BitmapList.ENGINE_POSTGRESQL)
+    SQLITE = Engine("SQLite", "sqlite", IconList.SQLITE)
+    MARIADB = Engine("MariaDB", "mysql", IconList.MARIADB)
+    MYSQL = Engine("MySQL", "mysql", IconList.MYSQL)
+    POSTGRESQL = Engine("PostgreSQL", "postgresql", IconList.POSTGRESQL)
 
     @classmethod
     def get_all(cls) -> List["ConnectionEngine"]:

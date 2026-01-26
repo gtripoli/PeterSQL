@@ -1,20 +1,27 @@
-from typing import Callable, List
+import dataclasses
+from typing import Callable
 
 import wx
+import wx.dataview
 import wx.lib.agw.hypertreelist
-
-from gettext import gettext as _
 
 from helpers import bytes_to_human
 from helpers.loader import Loader
 from helpers.observables import CallbackEvent
-from icons import IconList, ImageList
-from structures.connection import Connection
+from icons import IconList, iconRegistry
 
+from structures.connection import Connection
 from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
 
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_VIEW, CURRENT_TRIGGER, CONNECTIONS_LIST, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
 from windows.main.table import NEW_TABLE
+
+
+@dataclasses.dataclass
+class TreeCategory:
+    name: str
+    icon: wx.BitmapBundle
+    database: SQLDatabase
 
 
 class GaugeWithLabel(wx.Panel):
@@ -55,7 +62,7 @@ class TreeExplorerController:
         self.tree_ctrl_explorer.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
 
         self.tree_ctrl_explorer.SetMainColumn(0)
-        self.tree_ctrl_explorer.AssignImageList(ImageList)
+        self.tree_ctrl_explorer.AssignImageList(iconRegistry.imagelist)
         self.tree_ctrl_explorer._main_win.Bind(
             wx.EVT_MOUSE_EVENTS, lambda e: None if e.LeftDown() else e.Skip()
         )
@@ -115,11 +122,11 @@ class TreeExplorerController:
     def append_connection(self, connection: Connection):
         self.root_item = self.tree_ctrl_explorer.GetRootItem()
 
-        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=getattr(IconList, f"ENGINE_{connection.engine.name}"), data=connection)
+        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=iconRegistry.get_index(getattr(IconList, connection.engine.name, IconList.NOT_FOUND)), data=connection)
         for database in connection.context.databases.get_value():
-            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
+            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=iconRegistry.get_index(IconList.DATABASE), data=database)
             self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
-            self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
+            self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=iconRegistry.get_index(IconList.CLOCK), data=None)
 
         self.tree_ctrl_explorer.Expand(connection_item)
         self.tree_ctrl_explorer.EnsureVisible(connection_item)
@@ -127,9 +134,15 @@ class TreeExplorerController:
         self.tree_ctrl_explorer.Layout()
 
     def load_observables(self, db_item, database: SQLDatabase):
-        print("id_db", id(database))
         for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
             observable = getattr(database, observable_name, None)
+
+            category_item = self.tree_ctrl_explorer.AppendItem(
+                db_item,
+                observable_name.capitalize(),
+                image=iconRegistry.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
+                data=None
+            )
 
             if observable is None:
                 continue
@@ -137,21 +150,19 @@ class TreeExplorerController:
             if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
                 continue
 
-            # def callback(i=db_item, d=database):
-            #     self.load_observables(i, d)
-            #
-            # # database.tables.subscribe(lambda i=db_item, d=database: self.load_observables(i, d))
-            # observable.subscribe(callback)
+            objs = observable.get_value()
+            if not objs:
+                continue
 
+            # wx.CallAfter(self.tree_ctrl_explorer.Expand, category_item)
 
-
-            # observable.subscribe(lambda i=db_item, d=database: self.load_observables(i, d))
-
-
-            # self.tree_ctrl_explorer.Delete(db_item)
-
-            for obj in observable.get_value():
-                obj_item = self.tree_ctrl_explorer.AppendItem(db_item, obj.name, image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND), data=obj)
+            for obj in objs:
+                obj_item = self.tree_ctrl_explorer.AppendItem(
+                    category_item,
+                    obj.name,
+                    image=iconRegistry.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
+                    data=obj
+                )
 
                 if isinstance(obj, SQLTable):
                     percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0

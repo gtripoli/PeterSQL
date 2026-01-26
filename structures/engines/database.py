@@ -8,7 +8,7 @@ from typing import Optional, Callable, Literal, List, Self, Dict
 
 import wx
 
-from icons import BitmapList
+from icons import IconList
 from helpers.observables import ObservableLazyList
 
 from structures.engines.datatype import SQLDataType
@@ -438,7 +438,7 @@ class SQLForeignKey(abc.ABC):
     bitmap: wx.Bitmap = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self.bitmap = BitmapList.KEY_FOREIGN
+        self.bitmap = IconList.KEY_FOREIGN
 
     def __eq__(self, other):
         if not isinstance(other, SQLForeignKey):

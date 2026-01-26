@@ -4,10 +4,10 @@ import wx
 import wx.dataview
 
 from helpers.loader import Loader
-from icons import BitmapList
 
 from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel
+from icons import IconList, iconRegistry
 
 from structures.helpers import merge_original_current
 
@@ -27,7 +27,7 @@ class TableForeignKeyModel(BaseDataViewListModel):
         fk = self.get_data_by_row(row)
 
         if col == 0:
-            return wx.dataview.DataViewIconText(fk.name, BitmapList.KEY_FOREIGN)
+            return wx.dataview.DataViewIconText(fk.name, iconRegistry.get_bitmap(IconList.KEY_FOREIGN))
         elif col == 1:
             try :
                 return ",".join(fk.columns)

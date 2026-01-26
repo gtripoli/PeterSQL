@@ -4,7 +4,7 @@ from typing import List, Self
 
 import wx
 
-from icons import BitmapList
+from icons import IconList
 
 
 @dataclasses.dataclass
@@ -32,9 +32,9 @@ class SQLIndexType:
 
 
 class StandardIndexType():
-    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk_", bitmap=BitmapList.KEY_PRIMARY, is_primary=True)
-    UNIQUE = SQLIndexType(name="UNIQUE INDEX", prefix="uq_", bitmap=BitmapList.KEY_UNIQUE, is_unique=True)
-    INDEX = SQLIndexType(name="INDEX", prefix="ix_", bitmap=BitmapList.KEY_NORMAL)
+    PRIMARY = SQLIndexType(name="PRIMARY", prefix="pk_", bitmap=IconList.KEY_PRIMARY, is_primary=True)
+    UNIQUE = SQLIndexType(name="UNIQUE INDEX", prefix="uq_", bitmap=IconList.KEY_UNIQUE, is_unique=True)
+    INDEX = SQLIndexType(name="INDEX", prefix="ix_", bitmap=IconList.KEY_NORMAL)
 
     @classmethod
     @functools.lru_cache()

@@ -44,11 +44,11 @@ class ConnectionModel(AbstractModel):
         CURRENT_CONNECTION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
         CURRENT_CONNECTION.subscribe(self.apply, CallbackEvent.AFTER_CHANGE)
 
-    def _set_default_port(self, session_engine_name: str):
-        session_engine = ConnectionEngine.from_name(session_engine_name)
-        if session_engine == ConnectionEngine.POSTGRESQL:
+    def _set_default_port(self, connection_engine_name: str):
+        connection_engine = ConnectionEngine.from_name(connection_engine_name)
+        if connection_engine == ConnectionEngine.POSTGRESQL:
             self.port(5432)
-        elif session_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
+        elif connection_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
             self.port(3306)
 
     def clear(self, *args):

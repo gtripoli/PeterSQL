@@ -4,10 +4,10 @@ import wx
 import wx.dataview
 
 from helpers.loader import Loader
-from icons import combine_bitmaps
 
 from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel, ColumnField
+from icons import iconRegistry
 
 from windows import TableColumnsDataViewCtrl
 from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
@@ -41,7 +41,7 @@ class ColumnModel(BaseDataViewListModel):
                 indexes += [i for i in column.table.foreign_keys if column.name in i.columns]
 
                 if len(indexes):
-                    bitmaps = combine_bitmaps(*set([i.bitmap for i in indexes]))
+                    bitmaps = iconRegistry.get_bitmap(*set(i.bitmap for i in indexes))
 
             return wx.dataview.DataViewIconText(column_field_value, bitmaps)
 

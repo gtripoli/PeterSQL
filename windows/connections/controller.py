@@ -6,6 +6,7 @@ import wx.dataview
 
 from helpers.dataview import BaseDataViewTreeModel
 from helpers.observables import ObservableList
+from icons import iconRegistry
 
 from structures.connection import Connection
 
@@ -52,7 +53,7 @@ class ConnectionsTreeModel(BaseDataViewTreeModel):
 
         if isinstance(node, Connection):
             bitmap = node.engine.value.bitmap
-            mapper = {0: wx.dataview.DataViewIconText(node.name, bitmap), 1: ""}
+            mapper = {0: wx.dataview.DataViewIconText(node.name, iconRegistry.get_bitmap(bitmap) ), 1: ""}
         elif isinstance(node, ConnectionDirectory):
             mapper = {0: wx.dataview.DataViewIconText(node.name), 1: ""}
         else:
