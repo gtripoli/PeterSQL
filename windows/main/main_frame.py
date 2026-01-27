@@ -378,9 +378,15 @@ class MainFrameController(MainFrameView):
             CURRENT_INDEX.set_value(None)
             CURRENT_FOREIGN_KEY.set_value(None)
 
-            self.sql_create_table.SetText(
-                sqlglot.parse_one(table.raw_create(), read=CURRENT_CONNECTION.get_value().engine.value.dialect).sql(pretty=True)
-            )
+            try :
+                self.sql_create_table.SetText(
+                    sqlglot.parse_one(table.raw_create(), read=CURRENT_CONNECTION.get_value().engine.value.dialect).sql(pretty=True)
+                )
+            except Exception as ex:
+                self.sql_create_table.SetText(
+                    table.raw_create()
+                )
+
 
         self.btn_clone_table.Enable(table is not None)
         self.btn_delete_table.Enable(table is not None)

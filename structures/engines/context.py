@@ -156,6 +156,8 @@ class AbstractContext(abc.ABC):
     INDEXTYPE: StandardIndexType
     COLLATIONS: List[str]
 
+    QUOTE_ID = "`"
+
     databases: ObservableLazyList[SQLDatabase]
 
     def __init__(self, connection: Connection):
@@ -251,7 +253,7 @@ class AbstractContext(abc.ABC):
             order = f"ORDER BY {orders}"
 
         query = [f"SELECT *",
-                 f"FROM `{table.database.name}`.`{table.name}`",
+                 f"FROM {self.QUOTE_ID}{table.database.name}{self.QUOTE_ID}.{self.QUOTE_ID}{table.name}{self.QUOTE_ID}",
                  f"{where}",
                  f"{order}",
                  f"LIMIT {limit} OFFSET {offset}",

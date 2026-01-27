@@ -144,23 +144,16 @@ class ConnectionsManager(ConnectionsDialog):
 
 
         item_new_connection = self.connections_tree_controller.model.ObjectToItem(connection)
+
         print("item_new_connection",item_new_connection)
+
         self.connections_tree_ctrl.Select(item_new_connection)
-        self.connections_tree_ctrl.Expand(parent_item)
+
+        if parent_item :
+            self.connections_tree_ctrl.Expand(parent_item)
 
         CURRENT_CONNECTION(connection)
 
-
-        # def _select_new_connection(parent_item, item_connection):
-        #     if item_connection.IsOk():
-        #         logger.debug("select parent item")
-        #         self.connections_tree_ctrl.Select(item_connection)
-        #         self.connections_tree_ctrl.EnsureVisible(item_new_connection)
-        #         if parent_item:
-        #             logger.debug("Expanding parent item")
-        #             self.connections_tree_ctrl.ExpandChildren(parent_item)
-        #
-        # wx.CallAfter(_select_new_connection, parent_item, item_new_connection)
 
         return True
 

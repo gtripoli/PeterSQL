@@ -18,7 +18,7 @@ class ConnectionEngine(enum.Enum):
     SQLITE = Engine("SQLite", "sqlite", IconList.SQLITE)
     MARIADB = Engine("MariaDB", "mysql", IconList.MARIADB)
     MYSQL = Engine("MySQL", "mysql", IconList.MYSQL)
-    POSTGRESQL = Engine("PostgreSQL", "postgresql", IconList.POSTGRESQL)
+    POSTGRESQL = Engine("PostgreSQL", "postgres", IconList.POSTGRESQL)
 
     @classmethod
     def get_all(cls) -> List["ConnectionEngine"]:

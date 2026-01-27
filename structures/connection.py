@@ -49,7 +49,9 @@ class Connection:
             self.context = MySQLContext(self)
 
         elif self.engine == ConnectionEngine.POSTGRESQL:
-            pass
+            from structures.engines.postgresql.context import PostgreSQLContext
+
+            self.context = PostgreSQLContext(self)
 
         else:
             raise ValueError(f"Unsupported engine {self.engine}")

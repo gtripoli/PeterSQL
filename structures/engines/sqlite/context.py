@@ -23,10 +23,13 @@ class SQLiteContext(AbstractContext):
     ENGINES = ["default"]
     KEYWORDS = ENGINE_KEYWORDS
     COLLATIONS = COLLATIONS
+
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
     DATATYPE = SQLiteDataType()
     INDEXTYPE = SQLiteIndexType()
+
+    QUOTE_ID = "`"
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 

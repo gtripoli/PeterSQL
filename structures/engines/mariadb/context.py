@@ -27,6 +27,8 @@ class MariaDBContext(AbstractContext):
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
+    QUOTE_ID = "`"
+
     def __init__(self, connection : Connection):
         super().__init__(connection)
 

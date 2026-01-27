@@ -30,6 +30,8 @@ class MySQLContext(AbstractContext):
     DATATYPE = MySQLDataType
     INDEXTYPE = MySQLIndexType
 
+    QUOTE_ID = "`"
+
     def __init__(self, connection: Connection):
         super().__init__(connection)
 

@@ -68,6 +68,26 @@ class _MariaDBMySQLTableColumnsDataViewCtrl:
 
         dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
+class _PostgreSQLTableColumnsDataViewCtrl:
+    def __init__(self, dataview):
+        dataview.AppendToggleColumn(_(u"Allow NULL"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        column_default_renderer = PopupRenderer(PopupColumnDefault)
+        column = wx.dataview.DataViewColumn(_(u"Default"), column_default_renderer, 5, width=200, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        choice_virtuality_renderer = wx.dataview.DataViewChoiceRenderer(["", "STORED"], mode=wx.dataview.DATAVIEW_CELL_EDITABLE)
+        column = wx.dataview.DataViewColumn(_(u"Virtuality"), choice_virtuality_renderer, 6, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        dataview.AppendTextColumn(_(u"Expression"), 7, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
+        column_collation_renderer = PopupRenderer(PopupChoice)
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
+        column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 8, width=-1, align=wx.ALIGN_LEFT)
+        dataview.AppendColumn(column)
+
+        dataview.AppendTextColumn(_(u"Comments"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
 class TableColumnsDataViewCtrl(BaseDataViewCtrl):
     on_column_insert: Callable[[wx.Event], None]
@@ -101,7 +121,11 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
 
         self._current_column: Optional[int] = None
-        self._current_dataview: Optional[int] = None
+        self._current_dataview: Optional[
+            _SQLiteTableColumnsDataViewCtrl,
+            _MariaDBMySQLTableColumnsDataViewCtrl,
+            _PostgreSQLTableColumnsDataViewCtrl
+        ] = None
 
         CURRENT_CONNECTION.subscribe(self._load_session)
 
@@ -111,6 +135,8 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
                 self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
             elif connection.engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
                 self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
+            elif connection.engine == ConnectionEngine.POSTGRESQL:
+                self._current_dataview = _PostgreSQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
         from icons import BitmapList
