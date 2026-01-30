@@ -15,8 +15,8 @@ from .components.dataview import TableRecordsDataViewCtrl
 import wx
 import wx.xrc
 import wx.dataview
-import wx.lib.agw.hypertreelist
 import wx.stc
+import wx.lib.agw.hypertreelist
 
 import gettext
 _ = gettext.gettext
@@ -561,6 +561,104 @@ class Settings ( wx.Dialog ):
 
 
 ###########################################################################
+## Class AdvancedCellEditorDialog
+###########################################################################
+
+class AdvancedCellEditorDialog ( wx.Dialog ):
+
+    def __init__( self, parent ):
+        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Edit Value"), pos = wx.DefaultPosition, size = wx.Size( 900,550 ), style = wx.DEFAULT_DIALOG_STYLE )
+
+        self.SetSizeHints( wx.Size( 640,480 ), wx.DefaultSize )
+
+        bSizer111 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer112 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer113 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText51 = wx.StaticText( self, wx.ID_ANY, _(u"Syntax"), wx.DefaultPosition, wx.Size( -1,-1 ), 0 )
+        self.m_staticText51.Wrap( -1 )
+
+        bSizer113.Add( self.m_staticText51, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        syntax_choiceChoices = []
+        self.syntax_choice = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, syntax_choiceChoices, 0 )
+        self.syntax_choice.SetSelection( 0 )
+        bSizer113.Add( self.syntax_choice, 0, wx.ALL, 5 )
+
+
+        bSizer112.Add( bSizer113, 1, wx.EXPAND, 5 )
+
+
+        bSizer111.Add( bSizer112, 0, wx.EXPAND, 5 )
+
+        self.advanced_stc_editor = wx.stc.StyledTextCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        self.advanced_stc_editor.SetUseTabs ( False )
+        self.advanced_stc_editor.SetTabWidth ( 4 )
+        self.advanced_stc_editor.SetIndent ( 4 )
+        self.advanced_stc_editor.SetTabIndents( True )
+        self.advanced_stc_editor.SetBackSpaceUnIndents( True )
+        self.advanced_stc_editor.SetViewEOL( False )
+        self.advanced_stc_editor.SetViewWhiteSpace( False )
+        self.advanced_stc_editor.SetMarginWidth( 2, 0 )
+        self.advanced_stc_editor.SetIndentationGuides( True )
+        self.advanced_stc_editor.SetReadOnly( False )
+        self.advanced_stc_editor.SetMarginWidth( 1, 0 )
+        self.advanced_stc_editor.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.advanced_stc_editor.SetMarginWidth( 0, self.advanced_stc_editor.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.advanced_stc_editor.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.advanced_stc_editor.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.advanced_stc_editor.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.advanced_stc_editor.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.advanced_stc_editor.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.advanced_stc_editor.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.advanced_stc_editor.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.advanced_stc_editor.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.advanced_stc_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.advanced_stc_editor.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.advanced_stc_editor.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        bSizer111.Add( self.advanced_stc_editor, 1, wx.EXPAND | wx.ALL, 5 )
+
+        bSizer114 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer114.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+        self.m_button49 = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer114.Add( self.m_button49, 0, wx.ALL, 5 )
+
+        self.m_button48 = wx.Button( self, wx.ID_ANY, _(u"Ok"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer114.Add( self.m_button48, 0, wx.ALL, 5 )
+
+
+        bSizer111.Add( bSizer114, 0, wx.EXPAND, 5 )
+
+
+        self.SetSizer( bSizer111 )
+        self.Layout()
+
+        self.Centre( wx.BOTH )
+
+        # Connect Events
+        self.syntax_choice.Bind( wx.EVT_CHOICE, self.on_syntax_changed )
+
+    def __del__( self ):
+        pass
+
+
+    # Virtual event handlers, override them in your derived class
+    def on_syntax_changed( self, event ):
+        event.Skip()
+
+
+###########################################################################
 ## Class MainFrameView
 ###########################################################################
 
@@ -584,7 +682,7 @@ class MainFrameView ( wx.Frame ):
         self.SetMenuBar( self.m_menubar2 )
 
         self.m_toolBar1 = self.CreateToolBar( wx.TB_HORIZONTAL, wx.ID_ANY )
-        self.m_tool5 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Open session manager"), wx.Bitmap( u"icons/16x16/server_connect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
+        self.m_tool5 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Open connection manager"), wx.Bitmap( u"icons/16x16/server_connect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
         self.m_tool4 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Disconnect from server"), wx.Bitmap( u"icons/16x16/disconnect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
@@ -1546,7 +1644,7 @@ class MainFrameView ( wx.Frame ):
         # Connect Events
         self.Bind( wx.EVT_CLOSE, self.do_close )
         self.Bind( wx.EVT_MENU, self.on_menu_about, id = self.m_menuItem15.GetId() )
-        self.Bind( wx.EVT_TOOL, self.do_open_session_manager, id = self.m_tool5.GetId() )
+        self.Bind( wx.EVT_TOOL, self.do_open_connection_manager, id = self.m_tool5.GetId() )
         self.Bind( wx.EVT_TOOL, self.do_disconnect, id = self.m_tool4.GetId() )
         self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
         self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
@@ -1586,7 +1684,7 @@ class MainFrameView ( wx.Frame ):
     def on_menu_about( self, event ):
         event.Skip()
 
-    def do_open_session_manager( self, event ):
+    def do_open_connection_manager( self, event ):
         event.Skip()
 
     def do_disconnect( self, event ):
@@ -1705,6 +1803,11 @@ class Trash ( wx.Panel ):
         bSizer90.Add( self.m_textCtrl221, 1, wx.ALL|wx.EXPAND, 5 )
 
         bSizer93 = wx.BoxSizer( wx.VERTICAL )
+
+        self.tree_ctrl_explorer____ = wx.dataview.TreeListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.TL_DEFAULT_STYLE )
+        self.tree_ctrl_explorer____.AppendColumn( _(u"Column5"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
+
+        bSizer93.Add( self.tree_ctrl_explorer____, 1, wx.EXPAND | wx.ALL, 5 )
 
 
         bSizer90.Add( bSizer93, 1, wx.EXPAND, 5 )
@@ -1847,6 +1950,8 @@ class Trash ( wx.Panel ):
         self.m_dataViewColumn9 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
         self.m_dataViewColumn10 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
         self.m_dataViewColumn11 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.m_dataViewColumn20 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.m_dataViewColumn21 = self.____list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
         bSizer90.Add( self.____list_ctrl_database_tables, 0, wx.ALL, 5 )
 
         self.___list_ctrl_database_tables = wx.dataview.DataViewListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1865,6 +1970,21 @@ class Trash ( wx.Panel ):
 
 
         bSizer90.Add( ( 150, 0), 0, wx.EXPAND, 5 )
+
+
+        bSizer90.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+        self.tree_ctrl_explorer__ = wx.dataview.DataViewCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.tree_ctrl_explorer__.Hide()
+
+        bSizer90.Add( self.tree_ctrl_explorer__, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_vlistBox1 = wx.VListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer90.Add( self.m_vlistBox1, 0, wx.ALL, 5 )
+
+        m_listBox1Choices = []
+        self.m_listBox1 = wx.ListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox1Choices, 0 )
+        bSizer90.Add( self.m_listBox1, 0, wx.ALL, 5 )
 
 
         self.SetSizer( bSizer90 )
@@ -1889,6 +2009,20 @@ class Trash ( wx.Panel ):
 
     def TrashOnContextMenu( self, event ):
         self.PopupMenu( self.m_menu11, event.GetPosition() )
+
+
+###########################################################################
+## Class MyPanel1
+###########################################################################
+
+class MyPanel1 ( wx.Panel ):
+
+    def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
+        wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
+
+
+    def __del__( self ):
+        pass
 
 
 ###########################################################################
@@ -2074,20 +2208,6 @@ class EditColumnView ( wx.Dialog ):
         self.Layout()
 
         self.Centre( wx.BOTH )
-
-    def __del__( self ):
-        pass
-
-
-###########################################################################
-## Class MyPanel1
-###########################################################################
-
-class MyPanel1 ( wx.Panel ):
-
-    def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
-        wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
-
 
     def __del__( self ):
         pass

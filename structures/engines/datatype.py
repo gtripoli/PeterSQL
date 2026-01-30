@@ -20,6 +20,7 @@ class DataTypeCategory(enum.Enum):
     SPATIAL = Category(name="Spatial", color=(125, 151, 143))
     TEMPORAL = Category(name="Temporal", color=(190, 46, 31))
     OTHER = Category(name="Other", color=(148, 147, 29))
+    CUSTOM = Category(name="User Defined", color=(100, 100, 100))
 
 
 class DataTypeFormat(enum.Enum):
@@ -55,9 +56,11 @@ class SQLDataType:
     has_zerofill: bool = dataclasses.field(default=False)  # for the integer and real
     has_unsigned: bool = dataclasses.field(default=False)  # for the integer and real
 
+    set: List[str] = dataclasses.field(default_factory=list)
+
     def __post_init__(self):
         if self.has_set is None:
-            object.__setattr__(self, "has_set", self.name in ["ENUM", "SET"])
+            object.__setattr__(self, "has_set", self.name in ["ENUM", "SET"] or bool(self.set))
 
         if self.has_length is None:
             object.__setattr__(self, "has_length", self.name in ["VARCHAR"])

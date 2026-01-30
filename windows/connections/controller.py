@@ -5,8 +5,6 @@ import wx
 import wx.dataview
 
 from helpers.dataview import BaseDataViewTreeModel
-from helpers.observables import ObservableList
-from icons import iconRegistry
 
 from structures.connection import Connection
 
@@ -15,6 +13,7 @@ from windows.connections.repository import ConnectionsRepository
 
 
 class ConnectionsTreeModel(BaseDataViewTreeModel):
+
     def __init__(self):
         super().__init__(column_count=2)
         self._parent_map = {}
@@ -53,7 +52,7 @@ class ConnectionsTreeModel(BaseDataViewTreeModel):
 
         if isinstance(node, Connection):
             bitmap = node.engine.value.bitmap
-            mapper = {0: wx.dataview.DataViewIconText(node.name, iconRegistry.get_bitmap(bitmap) ), 1: ""}
+            mapper = {0: wx.dataview.DataViewIconText(node.name, wx.GetApp().icon_registry_16.get_bitmap(bitmap) ), 1: ""}
         elif isinstance(node, ConnectionDirectory):
             mapper = {0: wx.dataview.DataViewIconText(node.name), 1: ""}
         else:

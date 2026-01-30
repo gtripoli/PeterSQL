@@ -2,19 +2,19 @@ import pytest
 import tempfile
 import os
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.session import Connection
+from structures.engines import ConnectionEngine
 from structures.configurations import SourceConfiguration, CredentialsConfiguration
 
 
-class TestSession:
+class TestConnection:
     def test_sqlite_session_creation(self):
         config = SourceConfiguration(filename=':memory:')
-        session = Session(id=1, name='test_session', engine=SessionEngine.SQLITE, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.SQLITE, configuration=config)
 
         assert session.id == 1
         assert session.name == 'test_session'
-        assert session.engine == SessionEngine.SQLITE
+        assert session.engine == ConnectionEngine.SQLITE
         assert session.configuration == config
         assert session.context is not None
         assert hasattr(session.context, 'filename')
@@ -24,19 +24,19 @@ class TestSession:
         config1 = SourceConfiguration(filename='test1.db')
         config2 = SourceConfiguration(filename='test2.db')
 
-        session1 = Session(id=1, name='session1', engine=SessionEngine.SQLITE, configuration=config1)
-        session2 = Session(id=1, name='session1', engine=SessionEngine.SQLITE, configuration=config1)
-        session3 = Session(id=2, name='session2', engine=SessionEngine.SQLITE, configuration=config2)
+        session1 = Connection(id=1, name='session1', engine=ConnectionEngine.SQLITE, configuration=config1)
+        session2 = Connection(id=1, name='session1', engine=ConnectionEngine.SQLITE, configuration=config1)
+        session3 = Connection(id=2, name='session2', engine=ConnectionEngine.SQLITE, configuration=config2)
 
         assert session1 == session2
         assert session1 != session3
 
     def test_session_with_comments(self):
         config = SourceConfiguration(filename='test.db')
-        session = Session(
+        session = Connection(
             id=4,
             name='session_with_comments',
-            engine=SessionEngine.SQLITE,
+            engine=ConnectionEngine.SQLITE,
             configuration=config,
             comments='Test session'
         )
@@ -56,10 +56,10 @@ class TestSession:
             password='sshpwd',
             local_port=3307
         )
-        session = Session(
+        session = Connection(
             id=5,
             name='session_with_ssh',
-            engine=SessionEngine.SQLITE,
+            engine=ConnectionEngine.SQLITE,
             configuration=config,
             ssh_tunnel=ssh_config
         )
@@ -68,8 +68,8 @@ class TestSession:
 
     def test_session_repr(self):
         config = SourceConfiguration(filename='test.db')
-        session = Session(id=1, name='test', engine=SessionEngine.SQLITE, configuration=config)
+        session = Connection(id=1, name='test', engine=ConnectionEngine.SQLITE, configuration=config)
         # Test that repr doesn't crash
         repr_str = repr(session)
-        assert 'Session' in repr_str
+        assert 'Connection' in repr_str
         assert 'test' in repr_str

@@ -3,7 +3,7 @@ import os
 
 
 WORKDIR = "."
-FILENAME = "petersql.png"
+FILENAME = "../petersql_hat.png"
 OUTPUT = "petersql.ico"
 
 

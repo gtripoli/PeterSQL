@@ -2,8 +2,8 @@ import pytest
 import tempfile
 import os
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.connection import Connection
+from structures.engines import ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mariadb.database import MariaDBDatabase, MariaDBTable
 
@@ -19,7 +19,7 @@ class TestMariaDBTable:
     @pytest.fixture
     def session(self):
         config = CredentialsConfiguration(hostname='localhost', username='user', password='pass', port=3306)
-        session = Session(id=1, name='test_session', engine=SessionEngine.MARIADB, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.MARIADB, configuration=config)
         yield session
 
     @pytest.fixture

@@ -10,7 +10,7 @@ from structures.connection import Connection
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 
-from structures.engines.datatype import SQLDataType
+from structures.engines.datatype import SQLDataType, DataTypeCategory, DataTypeFormat
 
 from structures.engines.postgresql import MAP_COLUMN_FIELDS, ENGINE_KEYWORDS
 from structures.engines.postgresql.database import PostgreSQLTable, PostgreSQLColumn, PostgreSQLIndex, PostgreSQLForeignKey, PostgreSQLRecord, PostgreSQLView, PostgreSQLTrigger, PostgreSQLDatabase
@@ -44,6 +44,37 @@ class PostgreSQLContext(AbstractContext):
         super()._on_connect(*args, **kwargs)
         self.execute("SELECT collname FROM pg_collation;")
         self.COLLATIONS = {row['collname']: row['collname'] for row in self.fetchall()}
+
+        # Fetch user-defined types (enums for now)
+        self.execute("""
+            SELECT t.typname, t.typtype
+            FROM pg_type t
+            JOIN pg_namespace n ON t.typnamespace = n.oid
+            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+            AND t.typtype = 'e'
+            ORDER BY t.typname
+        """)
+
+        for row in self.fetchall():
+            # Get enum labels
+            self.execute(f"""
+                SELECT enumlabel
+                FROM pg_enum e
+                JOIN pg_type t ON e.enumtypid = t.oid
+                WHERE t.typname = '{row['typname']}'
+                ORDER BY e.enumsortorder
+            """)
+            print(self.fetchall())
+            labels = [r['enumlabel'] for r in self.fetchall()]
+            datatype = SQLDataType(
+                name=row['typname'],
+                category=DataTypeCategory.CUSTOM,
+                has_set=True,
+                set=labels,
+                format=DataTypeFormat.STRING
+            )
+            print(datatype)
+            setattr(PostgreSQLDataType, row['typname'].upper(), datatype)
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:

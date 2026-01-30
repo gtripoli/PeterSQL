@@ -1,12 +1,10 @@
-import enum
+import os
+import dataclasses
 from typing import Hashable
 
 import wx
-import os
-import dataclasses
-from pathlib import Path
 
-BASE_PATH = os.path.join(os.getcwd(), "icons")
+
 
 
 @dataclasses.dataclass(frozen=True)
@@ -14,8 +12,8 @@ class Icon:
     id: str
     filename: str
 
-    def load(self, size: int) -> wx.Bitmap:
-        path = os.path.join(BASE_PATH, f"{size}x{size}", self.filename)
+    def load(self, base_path: str, size: int) -> wx.Bitmap:
+        path = os.path.join(base_path, f"{size}x{size}", self.filename)
         bmp = wx.Bitmap(str(path), wx.BITMAP_TYPE_PNG)
         return bmp if bmp.IsOk() else wx.NullBitmap
 
@@ -53,11 +51,14 @@ class IconList:
     DELETE = Icon("delete", "delete.png")
     RUN = Icon("run", "lightning.png")
     CLOCK = Icon("clock", "time.png")
+    ARROW_UP = Icon("arrow_up", "arrow_up.png")
+    ARROW_DOWN = Icon("arrow_down", "arrow_down.png")
 
 
 class IconRegistry:
-    def __init__(self, size: int = 16):
+    def __init__(self, base_path: str, size: int = 16):
         self.size = size
+        self.base_path = base_path
         self._imagelist = wx.ImageList(size, size)
 
         self._idx_cache: dict[Hashable, int] = {}
@@ -106,7 +107,7 @@ class IconRegistry:
 
         if len(icons) == 1:
             # load single
-            bmp = icons[0].load(self.size)
+            bmp = icons[0].load(self.base_path, self.size)
             if not bmp or not bmp.IsOk():
                 return wx.NullBitmap
 
@@ -144,6 +145,3 @@ class IconRegistry:
         idx = self._imagelist.Add(bmp)
         self._idx_cache[key] = idx
         return idx
-
-
-iconRegistry = IconRegistry(16)

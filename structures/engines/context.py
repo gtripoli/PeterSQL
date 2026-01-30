@@ -184,6 +184,10 @@ class AbstractContext(abc.ABC):
             self._ssh_tunnel = None
 
     @property
+    def is_connected(self):
+        return self._connection is not None and self._cursor is not None
+
+    @property
     def cursor(self) -> Any:
         if self._cursor is None:
             raise RuntimeError("Not connected to the database. Call connect() first.")

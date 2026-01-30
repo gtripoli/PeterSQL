@@ -1,14 +1,14 @@
 import pytest
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.session import Connection
+from structures.engines import ConnectionEngine
 from structures.configurations import SourceConfiguration
 
 
 class TestSQLiteContext:
     def test_context_creation(self):
         config = SourceConfiguration(filename=':memory:')
-        session = Session(id=1, name='test_session', engine=SessionEngine.SQLITE, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.SQLITE, configuration=config)
 
         assert session.context is not None
         assert session.context.session == session
@@ -16,7 +16,7 @@ class TestSQLiteContext:
 
     def test_context_connection(self):
         config = SourceConfiguration(filename=':memory:')
-        session = Session(id=1, name='test_session', engine=SessionEngine.SQLITE, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.SQLITE, configuration=config)
 
         session.context.connect()
         assert session.context._connection is not None

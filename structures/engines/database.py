@@ -432,8 +432,8 @@ class SQLForeignKey(abc.ABC):
     reference_table: str
     reference_columns: List[str]
 
-    on_update: str
-    on_delete: str
+    on_update: Optional[str] = None
+    on_delete: Optional[str] = None
 
     bitmap: wx.Bitmap = dataclasses.field(init=False)
 

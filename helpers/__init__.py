@@ -1,6 +1,4 @@
 import enum
-import functools
-import warnings
 from typing import Callable
 
 import babel.numbers
@@ -17,6 +15,10 @@ class SizeUnit(enum.Enum):
     MEGABYTE = pgettext("unit", "MB")
     GIGABYTE = pgettext("unit", "GB")
     TERABYTE = pgettext("unit", "TB")
+
+
+def wx_colour_to_hex(colour: wx.Colour):
+    return f"#{colour.Red():02x}{colour.Green():02x}{colour.Blue():02x}"
 
 
 def bytes_to_human(bytes: float, locale: str = "en_US") -> str:

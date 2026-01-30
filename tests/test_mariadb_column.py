@@ -2,8 +2,8 @@ import pytest
 import tempfile
 import os
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.session import Connection
+from structures.engines import ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mariadb.database import MariaDBDatabase, MariaDBTable, MariaDBColumn
 from structures.engines.mariadb.datatype import MariaDBDataType
@@ -20,7 +20,7 @@ class TestMariaDBColumn:
     @pytest.fixture
     def session(self, temp_db_path):
         config = CredentialsConfiguration(hostname='localhost', username='user', password='pass', port=3306)
-        session = Session(id=1, name='test_session', engine=SessionEngine.MARIADB, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.MARIADB, configuration=config)
         # Note: MariaDB context may need different setup, but for testing dataclass, perhaps mock
         # For now, skip connection
         yield session

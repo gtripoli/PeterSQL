@@ -1,9 +1,10 @@
 import pytest
 import wx
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.engines import ConnectionEngine
+from structures.connection import Connection
 from structures.configurations import SourceConfiguration
+
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -18,7 +19,7 @@ def wx_app():
 def sqlite_session():
     """Provide an in-memory SQLite session for tests"""
     config = SourceConfiguration(filename=':memory:')
-    session = Session(id=1, name='test_session', engine=SessionEngine.SQLITE, configuration=config)
+    session = Connection(id=1, name='test_session', engine=ConnectionEngine.SQLITE, configuration=config)
     session.context.connect()
     yield session
     session.context.disconnect()

@@ -4,7 +4,7 @@ import wx.dataview
 
 from typing import Type, Optional, Callable
 
-from windows.components import BaseDataViewCustomRenderer, BaseTextRenderer, Validator
+from windows.components import BaseDataViewCustomRenderer, BaseTextRenderer, Validator, TextCtrlWithDialogButton
 from windows.components.popup import BasePopup
 
 
@@ -84,6 +84,49 @@ class LengthSetRender(BaseTextRenderer):
 
 class TextRenderer(BaseTextRenderer):
     pass
+
+
+class AdvancedTextRenderer(BaseTextRenderer):
+    def __init__(self, varianttype="string",
+                 mode=wx.dataview.DATAVIEW_CELL_EDITABLE,
+                 align=wx.ALIGN_LEFT,
+                 validators=None,
+                 dialog_factory=None):
+        super().__init__(varianttype=varianttype, mode=mode, align=align, validators=validators)
+
+        # funzione che crea il dialog (così la tieni separata)
+        self.dialog_factory = dialog_factory
+
+    def CreateEditorCtrl(self, parent, rect, value):
+        initial = str(value or "")
+
+        def open_dialog(panel: TextCtrlWithDialogButton):
+            if not self.dialog_factory:
+                return
+
+            dlg = self.dialog_factory(parent, panel.GetValue())
+            try:
+                if dlg.ShowModal() == wx.ID_OK:
+                    panel.SetValue(dlg.get_value())
+            finally:
+                dlg.Destroy()
+
+        editor = TextCtrlWithDialogButton(
+            parent=parent,
+            value=initial,
+            on_open_dialog=open_dialog,
+            validators=self.validators
+        )
+
+        # IMPORTANT: dimensiona il panel come il rect dell'editor
+        editor.SetSize(rect.GetSize())
+        editor.SetMinSize(rect.GetSize())
+
+        return editor
+
+    def GetValueFromEditorCtrl(self, editor):
+        # editor qui è il panel restituito da CreateEditorCtrl
+        return editor.GetValue()
 
 
 class IntegerRenderer(BaseTextRenderer):

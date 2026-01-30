@@ -2,8 +2,8 @@ import pytest
 import tempfile
 import os
 
-from structures.session import Session
-from structures.engines import SessionEngine
+from structures.session import Connection
+from structures.engines import ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mysql.database import MySQLDatabase, MySQLTable, MySQLColumn
 from structures.engines.mysql.datatype import MySQLDataType
@@ -20,7 +20,7 @@ class TestMySQLColumn:
     @pytest.fixture
     def session(self):
         config = CredentialsConfiguration(hostname='localhost', username='user', password='pass', port=3306)
-        session = Session(id=1, name='test_session', engine=SessionEngine.MYSQL, configuration=config)
+        session = Connection(id=1, name='test_session', engine=ConnectionEngine.MYSQL, configuration=config)
         yield session
 
     @pytest.fixture

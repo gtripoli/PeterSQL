@@ -6,6 +6,9 @@ import wx
 import gettext
 
 import settings
+
+from icons import IconRegistry
+
 from helpers.logger import logger
 from helpers.loader import Loader
 from helpers.observables import ObservableObject
@@ -20,9 +23,17 @@ class PeterSQL(wx.App):
 
     main_frame: wx.Frame = None
 
+    icon_registry_16: IconRegistry
+
     def OnInit(self) -> bool:
+        from windows.components.stc.themes import ThemeManager
+        from windows.components.stc.styles import apply_stc_theme
 
         Loader.loading.subscribe(self._on_loading_change)
+
+        self.icon_registry_16 = IconRegistry(os.path.join(WORKDIR, "icons"), 16)
+
+        self.theme_manager = ThemeManager(apply_fn=apply_stc_theme)
 
         self._init_locale()
 

@@ -38,7 +38,7 @@ class PostgreSQLDataType(StandardDataType):
     # Date and time
     DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
     TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
-    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING, alias=["TIMESTAMP WITHOUT TIME ZONE"])
     TIMESTAMPTZ = SQLDataType(name="TIMESTAMPTZ", category=DataTypeCategory.TEMPORAL, alias=["TIMESTAMP WITH TIME ZONE"], format=DataTypeFormat.STRING)
     INTERVAL = SQLDataType(name="INTERVAL", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
 
@@ -48,3 +48,4 @@ class PostgreSQLDataType(StandardDataType):
 
     # UUID
     UUID = SQLDataType(name="UUID", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
+    CUSTOM = SQLDataType(name="UUID", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING, alias=["USER-DEFINED"])

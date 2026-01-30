@@ -4,7 +4,6 @@ import wx
 import wx.dataview
 
 from helpers.dataview import BaseDataViewListModel, ColumnField
-from icons import iconRegistry
 
 from structures.helpers import merge_original_current
 
@@ -16,7 +15,7 @@ from structures.engines.database import SQLTable, SQLIndex
 
 class TableIndexModel(BaseDataViewListModel):
     MAP_COLUMN_FIELDS = {
-        0: ColumnField("name", lambda i, x: wx.dataview.DataViewIconText(i.name, iconRegistry.get_bitmap(i.type.bitmap))),
+        0: ColumnField("name", lambda i, x: wx.dataview.DataViewIconText(i.name, wx.GetApp().icon_registry_16.get_bitmap(i.type.bitmap))),
         1: ColumnField("expression", lambda i, x: ", ".join(i.columns)),
         2: ColumnField("condition"),
     }

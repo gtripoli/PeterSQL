@@ -1,16 +1,20 @@
+import datetime
 from typing import Optional
 
 import wx.dataview
 
 from helpers.logger import logger
-
 from helpers.dataview import BaseDataViewListModel
 from helpers.observables import ObservableList
 
+from structures.connection import Connection
 from structures.engines.database import SQLTable, SQLDatabase, SQLColumn, SQLRecord
 from structures.engines.datatype import DataTypeCategory
 
-from windows import TableRecordsDataViewCtrl
+from windows import TableRecordsDataViewCtrl, AdvancedCellEditorDialog
+from windows.components.stc.profiles import syntaxRegistry, detect_syntax_id
+from windows.components.stc.styles import apply_stc_theme
+from windows.components.stc.syntax import SyntaxProfile
 from windows.main import CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
@@ -39,17 +43,17 @@ class RecordsModel(BaseDataViewListModel):
             return ''
 
         if column.datatype.category == DataTypeCategory.TEMPORAL:
-            # if column.datatype.name == "DATE":
-            #     return datetime.datetime.strptime(value, "%Y-%m-%d")
-            # elif column.datatype.name == "TIME":
-            #     return datetime.datetime.strptime(value, "%H:%M:%S")
-            # elif column.datatype.name == "DATETIME":
-            #     return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-            # elif column.datatype.name == "TIMESTAMP":
-            #     return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-            # elif column.datatype.name == "YEAR":
-            #     return datetime.datetime.strptime(value, "%Y")
-            # print("TODO: transform this", column.datatype.category, value)
+            if isinstance(value, datetime.datetime) :
+                if column.datatype.name == "DATE":
+                    return value.strftime("%Y-%m-%d")
+                elif column.datatype.name == "TIME":
+                    return value.strftime("%H:%M:%S")
+                elif column.datatype.name == "DATETIME":
+                    return value.strftime("%Y-%m-%d %H:%M:%S")
+                elif column.datatype.name == "TIMESTAMP":
+                    return value.strftime("%Y-%m-%d %H:%M:%S")
+                elif column.datatype.name == "YEAR":
+                    return value.strftime("%Y")
 
             return value
 
@@ -103,6 +107,7 @@ class TableRecordsController:
 
     def __init__(self, list_ctrl_records: TableRecordsDataViewCtrl):
         self.list_ctrl_records = list_ctrl_records
+        self.list_ctrl_records.make_advanced_dialog = self.make_advanced_dialog
 
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)
@@ -164,6 +169,12 @@ class TableRecordsController:
         CURRENT_RECORDS.set_value(self.get_selected_records())
         event.Skip()
 
+    def make_advanced_dialog(self, parent, value: str):
+        dialog = AdvancedCellEditorController(parent, value)
+        
+
+        return dialog
+
     def get_selected_records(self):
         return [self.model.data[self.model.GetRow(row)] for row in self.list_ctrl_records.GetSelections()]
 
@@ -194,8 +205,8 @@ class TableRecordsController:
 
             if use_server_defaults and column.server_default:
                 if not column_server_default.get(column.server_default):
-                    if table.context.execute(f"SELECT {column.server_default} as column_default"):
-                        column_server_default[column.server_default] = table.context.fetchone()['column_default']
+                    if table.database.context.execute(f"SELECT {column.server_default} as column_default"):
+                        column_server_default[column.server_default] = table.database.context.fetchone()['column_default']
 
                 values[column.name] = column_server_default[column.server_default]
             elif copy_from_selected and current_record:
@@ -288,3 +299,62 @@ class TableRecordsController:
     #         records = sorted(self.list_ctrl_records.GetModel().records, key=sort_func)
     #         model = RecordsModel(self.table, records)
     #         self.list_ctrl_records.AssociateModel(model)
+
+
+class AdvancedCellEditorController(AdvancedCellEditorDialog):
+    app = wx.GetApp()
+
+    def __init__(self, parent, value: str):
+        super().__init__(parent)
+
+        self.syntax_registry = syntaxRegistry
+
+        self.syntax_choice.AppendItems(self.syntax_registry.labels())
+        self.advanced_stc_editor.SetText(value or "")
+        self.advanced_stc_editor.EmptyUndoBuffer()
+
+        self.app.theme_manager.register(self.advanced_stc_editor, self._get_current_syntax_profile)
+
+        self.syntax_choice.SetStringSelection(self._auto_syntax_profile().label)
+
+        self.do_apply_syntax(do_format=True)
+
+    def _auto_syntax_profile(self) -> SyntaxProfile:
+        text = self.advanced_stc_editor.GetText()
+
+        syntax_id = detect_syntax_id(text)
+        return self.syntax_registry.get(syntax_id)
+
+    def _get_current_syntax_profile(self) -> SyntaxProfile:
+        label = self.syntax_choice.GetStringSelection()
+        # text = self.advanced_stc_editor.GetText()
+        #
+        # syntax_id = detect_syntax_id(text)
+        return self.syntax_registry.get(label)
+
+    def on_syntax_changed(self, _evt):
+        label = self.syntax_choice.GetStringSelection()
+        self.do_apply_syntax(label)
+
+    def do_apply_syntax(self, do_format: bool = True):
+        label = self.syntax_choice.GetStringSelection()
+        syntax_profile = self.syntax_registry.by_label(label)
+
+        apply_stc_theme(self.advanced_stc_editor, syntax_profile)
+
+        if do_format and syntax_profile.formatter:
+            old = self.advanced_stc_editor.GetText()
+            try:
+                formatted = syntax_profile.formatter(old)
+            except Exception:
+                return
+
+            if formatted != old:
+                self._replace_text_undo_friendly(formatted)
+
+    def _replace_text_undo_friendly(self, new_text: str):
+        self.advanced_stc_editor.BeginUndoAction()
+        try:
+            self.advanced_stc_editor.SetText(new_text)
+        finally:
+            self.advanced_stc_editor.EndUndoAction()

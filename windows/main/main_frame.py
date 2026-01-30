@@ -16,19 +16,17 @@ import wx.lib.wordwrap
 
 from gettext import gettext as _
 
-from helpers import bytes_to_human
+from helpers import bytes_to_human, wx_colour_to_hex
 from helpers.logger import logger
 from helpers.observables import CallbackEvent
+
 from structures.connection import Connection
 from structures.engines import ConnectionEngine
-
 from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 from structures.engines.context import QUERY_LOGS
 
 from windows import MainFrameView
 from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, ENGINE_COMMON_KEYWORDS
-from windows.connections import wx_colour_to_hex
-
 from windows.main.database import ListDatabaseTable
 from windows.main.explorer import TreeExplorerController
 from windows.main.table import EditTableModel, NEW_TABLE
@@ -81,6 +79,9 @@ class MainFrameController(MainFrameView):
 
     def on_sys_colour_changed(self, event):
         self._setup_query_editors()
+
+        wx.CallAfter(self.app.theme_manager.refresh)
+        event.Skip()
 
     def _setup_query_editors(self):
         bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
