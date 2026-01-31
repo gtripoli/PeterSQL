@@ -12,13 +12,13 @@ class _Entry:
 class ThemeManager:
     def __init__(self, apply_fn):
         self._apply_fn = apply_fn  # (stc_ctrl, syntax_id) -> None
-        self._entries: list[_Entry] = []
+        self._entries: List[_Entry] = []
 
     def register(self, stc_ctrl, get_syntax_id):
         self._entries.append(_Entry(weakref.ref(stc_ctrl), get_syntax_id))
 
     def refresh(self):
-        alive: list[_Entry] = []
+        alive: List[_Entry] = []
         for e in self._entries:
             ctrl = e.ref()
             if ctrl is None:

@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from structures.engines.context import AbstractColumnBuilder, AbstractIndexBuilder
+from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuilder
 
 
 class MariaDBColumnBuilder(AbstractColumnBuilder):

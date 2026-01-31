@@ -61,8 +61,8 @@ class IconRegistry:
         self.base_path = base_path
         self._imagelist = wx.ImageList(size, size)
 
-        self._idx_cache: dict[Hashable, int] = {}
-        self._bmp_cache: dict[Hashable, wx.Bitmap] = {}
+        self._idx_cache: Dict[Hashable, int] = {}
+        self._bmp_cache: Dict[Hashable, wx.Bitmap] = {}
 
     @property
     def imagelist(self) -> wx.ImageList:
@@ -91,7 +91,7 @@ class IconRegistry:
         return img.ConvertToBitmap()
 
     @staticmethod
-    def _key(*icons: "Icon") -> tuple[Hashable, ...]:
+    def _key(*icons: "Icon") -> Tuple[Hashable, ...]:
         # single -> (id,), combo -> (id1, id2, ...)
         return tuple(icon.id for icon in icons)
 
@@ -115,7 +115,7 @@ class IconRegistry:
             return bmp
 
         # combo: ensure single bitmaps exist (and are cached with (id,))
-        parts: list[wx.Bitmap] = []
+        parts: List[wx.Bitmap] = []
         for icon in icons:
             part = self.get_bitmap(icon)  # caches (id,)
             if part and part.IsOk():

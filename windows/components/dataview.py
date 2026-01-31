@@ -1,21 +1,22 @@
-from typing import Callable, Optional, List
+from typing import Callable, List, Optional
 
 import wx
 import wx.dataview
 
 from gettext import gettext as _
 
-from structures.connection import Connection
-from structures.engines import ConnectionEngine
+from icons import IconList
+from structures.connection import Connection, ConnectionEngine
+
 from structures.engines.database import SQLColumn, SQLTable, SQLIndex
 from structures.engines.datatype import DataTypeCategory
 from structures.engines.indextype import SQLIndexType, StandardIndexType
-
 from windows.components import BaseDataViewCtrl
-from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
-from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer
 
-from windows.main import CURRENT_CONNECTION, CURRENT_TABLE, CURRENT_DATABASE
+from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
+from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
+
+from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE
 from windows.main.table import NEW_TABLE
 
 
@@ -68,6 +69,7 @@ class _MariaDBMySQLTableColumnsDataViewCtrl:
 
         dataview.AppendTextColumn(_(u"Comments"), 11, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
+
 class _PostgreSQLTableColumnsDataViewCtrl:
     def __init__(self, dataview):
         dataview.AppendToggleColumn(_(u"Allow NULL"), 4, wx.dataview.DATAVIEW_CELL_ACTIVATABLE, -1, wx.ALIGN_CENTER, wx.dataview.DATAVIEW_COL_RESIZABLE)
@@ -88,6 +90,7 @@ class _PostgreSQLTableColumnsDataViewCtrl:
         dataview.AppendColumn(column)
 
         dataview.AppendTextColumn(_(u"Comments"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
+
 
 class TableColumnsDataViewCtrl(BaseDataViewCtrl):
     on_column_insert: Callable[[wx.Event], None]
@@ -139,8 +142,6 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
                 self._current_dataview = _PostgreSQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
-        from icons import BitmapList
-
         session = CURRENT_CONNECTION()
         table = CURRENT_TABLE() or NEW_TABLE()
 
@@ -152,13 +153,13 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         menu = wx.Menu()
 
         add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add column\tCTRL+INS"), wx.EmptyString, wx.ITEM_NORMAL)
-        add_item.SetBitmap(BitmapList.ADD)
+        add_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ADD))
         menu.Append(add_item)
 
-        self.Bind(wx.EVT_MENU, lambda e : wx.CallAfter(self.on_column_insert, e), add_item)
+        self.Bind(wx.EVT_MENU, lambda e: wx.CallAfter(self.on_column_insert, e), add_item)
 
         delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove column\tCTRL+DEL"), wx.EmptyString, wx.ITEM_NORMAL)
-        delete_item.SetBitmap(BitmapList.DELETE)
+        delete_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.DELETE))
         # delete_item.Enable(selected.IsOk())
         menu.Append(delete_item)
         menu.Enable(delete_item.GetId(), selected.IsOk())
@@ -166,14 +167,14 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         self.Bind(wx.EVT_MENU, self.on_column_delete, delete_item)
 
         move_up_item = wx.MenuItem(menu, wx.ID_ANY, _("Move up\tCTRL+UP"), wx.EmptyString, wx.ITEM_NORMAL)
-        move_up_item.SetBitmap(BitmapList.ARROW_UP)
+        move_up_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ARROW_UP))
         menu.Append(move_up_item)
         menu.Enable(move_up_item.GetId(), selected.IsOk())
 
         self.Bind(wx.EVT_MENU, self.on_column_move_up, move_up_item)
 
         move_down_item = wx.MenuItem(menu, wx.ID_ANY, _("Move down\tCTRL+D"), wx.EmptyString, wx.ITEM_NORMAL)
-        move_down_item.SetBitmap(BitmapList.ARROW_DOWN)
+        move_down_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ARROW_DOWN))
         menu.Append(move_down_item)
         menu.Enable(move_down_item.GetId(), selected.IsOk())
 
@@ -328,6 +329,7 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
 class TableRecordsDataViewCtrl(BaseDataViewCtrl):
     on_record_insert: Callable[[...], Optional[bool]]
     on_record_delete: Callable[[...], Optional[bool]]
+    make_advanced_dialog: Callable[[wx.Window, str], 'AdvancedCellEditorDialog']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -361,38 +363,42 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
             popoup_render.on_open = lambda popup: popup.set_choices(column.set)
             return popoup_render
 
-        elif column.datatype.name == 'SET':
+        if column.datatype.name == 'SET':
             popoup_render = PopupRenderer(PopupCheckList)
             popoup_render.on_open = lambda popup: popup.set_choices(column.set)
             return popoup_render
 
-        elif column.datatype.name == 'BOOLEAN':
+        if column.datatype.name == 'BOOLEAN':
             return wx.dataview.DataViewToggleRenderer(
                 mode=wx.dataview.DATAVIEW_CELL_ACTIVATABLE, align=wx.ALIGN_CENTER)
 
-        elif column.datatype.category == DataTypeCategory.INTEGER:
-            return IntegerRenderer()
-
-        elif column.datatype.category == DataTypeCategory.REAL:
-            return FloatRenderer()
-
-        elif column.datatype.name == 'DATE':
+        if column.datatype.name == 'DATE':
             popoup_render = PopupRenderer(PopupCalendar)
             # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
             return popoup_render
-        elif column.datatype.name == 'TIME':
+        if column.datatype.name == 'TIME':
             # popoup_render = PopupRenderer(PopupTime)
             # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
             return TimeRenderer()
 
-        elif column.datatype.name in ['DATETIME', 'TIMESTAMP']:
+        if column.datatype.name in ['DATETIME', 'TIMESTAMP']:
             popoup_render = PopupRenderer(PopupCalendarTime)
             # popoup_render.on_open = lambda popup: popup.set_choices(column.set)
             return popoup_render
 
+        if column.datatype.category == DataTypeCategory.INTEGER:
+            return IntegerRenderer()
 
-        else:
-            return TextRenderer()
+        if column.datatype.category == DataTypeCategory.REAL:
+            return FloatRenderer()
+
+        if column.datatype.category == DataTypeCategory.TEXT:
+            return AdvancedTextRenderer(
+                dialog_factory=self.make_advanced_dialog
+                # validators=[Validator(lambda event: event.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER])]
+            )
+
+        return TextRenderer()
 
     def _load_table(self, table: SQLTable):
         while self.GetColumnCount() > 0:
@@ -402,8 +408,41 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
             for i, column in enumerate(table.columns):
                 renderer = self._get_column_renderer(column)
 
-                col = wx.dataview.DataViewColumn(column.name, renderer, i, width=self.calculate_column_width(column.name), flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
+                col = wx.dataview.DataViewColumn(column.name, renderer, i, width=self.measure_text(column.name), flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
                 self.AppendColumn(col)
+
+            wx.CallAfter(self.autosize_columns_from_content)
+
+    def autosize_columns_from_content(self, sample_rows: int = 30):
+        model = self.GetModel()
+        if not model:
+            return
+
+        n_cols = self.GetColumnCount()
+        n_rows = min(model.GetCount(), sample_rows)
+
+        dc = wx.ClientDC(self)
+        dc.SetFont(self.GetFont())
+
+        for col_idx in range(n_cols):
+            col = self.GetColumn(col_idx)
+
+            # header
+            max_w, _ = dc.GetTextExtent(col.GetTitle())
+
+            # sample rows
+            for row in range(n_rows):
+                v = model.GetValueByRow(row, col_idx)
+                if v is None:
+                    continue
+                w, _ = dc.GetTextExtent(str(v))
+                if w > max_w:
+                    max_w = w
+
+            # clamp
+            width = max_w + 24
+            width = max(60, min(width, 360))  # max 360 evita colonne infinite
+            col.SetWidth(width)
 
 
 class DatabaseTablesDataViewCtrl(BaseDataViewCtrl):

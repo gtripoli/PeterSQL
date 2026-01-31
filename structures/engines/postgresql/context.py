@@ -12,23 +12,19 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 
 from structures.engines.datatype import SQLDataType, DataTypeCategory, DataTypeFormat
 
-from structures.engines.postgresql import MAP_COLUMN_FIELDS, ENGINE_KEYWORDS
+from structures.engines.postgresql import MAP_COLUMN_FIELDS
 from structures.engines.postgresql.database import PostgreSQLTable, PostgreSQLColumn, PostgreSQLIndex, PostgreSQLForeignKey, PostgreSQLRecord, PostgreSQLView, PostgreSQLTrigger, PostgreSQLDatabase
 from structures.engines.postgresql.datatype import PostgreSQLDataType
 from structures.engines.postgresql.indextype import PostgreSQLIndexType
 
 
 class PostgreSQLContext(AbstractContext):
-    ENGINES = []
-    KEYWORDS = ENGINE_KEYWORDS
-    COLLATIONS = {}
-
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
     DATATYPE = PostgreSQLDataType
     INDEXTYPE = PostgreSQLIndexType
 
-    QUOTE_ID = '"'
+    QUOTE_IDENTIFIER = '"'
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -75,6 +71,20 @@ class PostgreSQLContext(AbstractContext):
             )
             print(datatype)
             setattr(PostgreSQLDataType, row['typname'].upper(), datatype)
+
+        self.execute("""
+            SELECT word FROM pg_get_keywords()
+            WHERE catcode = 'R'
+            ORDER BY word;
+        """)
+        self.KEYWORDS = tuple(row["word"] for row in self.fetchall())
+
+        self.execute("""
+            SELECT routine_name FROM information_schema.routines
+            WHERE routine_type = 'FUNCTION'
+            ORDER BY routine_name;
+        """)
+        self.FUNCTIONS = tuple(row["routine_name"] for row in self.fetchall())
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:

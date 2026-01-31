@@ -15,7 +15,7 @@ from structures.engines.database import (
     SQLTrigger,
     SQLView,
 )
-from structures.engines.mysql.builder import MySQLColumnBuilder
+from structures.engines.mysql.builder import MySQLColumnBuilder, MySQLIndexBuilder
 from structures.engines.mysql.indextype import MySQLIndexType
 
 
@@ -24,8 +24,24 @@ class MySQLDatabase(SQLDatabase):
     default_collation: str = None
 
 
+
 @dataclasses.dataclass(eq=False)
 class MySQLTable(SQLTable):
+    def raw_create(self) -> str:
+        columns = [str(MySQLColumnBuilder(column)) for column in self.columns]
+
+        indexes = [str(MySQLIndexBuilder(index)) for index in self.indexes]
+
+        columns_and_indexes = columns + indexes
+
+        return f"""
+            CREATE TABLE {self.database.sql_safe_name}.{self.sql_safe_name} (
+                {', '.join(columns_and_indexes)}
+            )
+            COLLATE='{self.collation_name}'
+            ENGINE={self.engine};
+            """
+
     def alter_auto_increment(self, auto_increment: int):
         sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
         self.database.context.execute(sql)
@@ -63,7 +79,7 @@ class MySQLTable(SQLTable):
     def create(self, map_columns: List[Tuple[Optional["MySQLColumn"], Optional["MySQLColumn"]]]) -> bool:
         constraints = []
         primary_keys = []
-        columns_definitions: dict[str, str] = {}
+        columns_definitions: Dict[str, str] = {}
 
         for original, current in map_columns:
             if current:

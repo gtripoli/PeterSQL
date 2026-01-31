@@ -1,9 +1,9 @@
-import pytest
-import tempfile
 import os
+import tempfile
 
-from structures.session import Connection
-from structures.engines import ConnectionEngine
+import pytest
+
+from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mariadb.database import MariaDBDatabase, MariaDBTable, MariaDBColumn
 from structures.engines.mariadb.datatype import MariaDBDataType

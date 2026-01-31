@@ -23,7 +23,7 @@ class SyntaxRegistry:
         self._by_id: Dict[str, SyntaxProfile] = {p.id: p for p in self._profiles}
         self._by_label: Dict[str, SyntaxProfile] = {p.label: p for p in self._profiles}
 
-    def labels(self) -> list[str]:
+    def labels(self) -> List[str]:
         return [p.label for p in self._profiles]
 
     def get(self, syntax_id: str) -> SyntaxProfile:
@@ -32,7 +32,7 @@ class SyntaxRegistry:
     def by_label(self, label: str) -> SyntaxProfile:
         return self._by_label[label]
 
-    def all(self) -> list[SyntaxProfile]:
+    def all(self) -> List[SyntaxProfile]:
         return list(self._profiles)
 
 

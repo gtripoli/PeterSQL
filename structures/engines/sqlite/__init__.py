@@ -21,6 +21,108 @@ COLLATIONS = {
     "RTRIM": "utf8"
 }
 
+ENGINE_KEYWORDS = (
+    "pragma",
+    "rowid",
+    "without",
+    "vacuum",
+    "analyze",
+    "reindex",
+    "explain",
+    "autoincrement",
+    "conflict",
+    "abort",
+    "fail",
+    "ignore",
+    "replace",
+    "rollback",
+    "virtual",
+    "fts3",
+    "fts4",
+    "fts5",
+    "sqlite_master",
+    "sqlite_schema",
+)
+
+ENGINE_FUNCTIONS = (
+    "abs",
+    "changes",
+    "char",
+    "coalesce",
+    "format",
+    "glob",
+    "hex",
+    "ifnull",
+    "instr",
+    "last_insert_rowid",
+    "length",
+    "like",
+    "likelihood",
+    "likely",
+    "load_extension",
+    "lower",
+    "ltrim",
+    "max",
+    "min",
+    "nullif",
+    "printf",
+    "quote",
+    "random",
+    "randomblob",
+    "replace",
+    "round",
+    "rtrim",
+    "soundex",
+    "sqlite_compileoption_get",
+    "sqlite_compileoption_used",
+    "sqlite_offset",
+    "sqlite_source_id",
+    "sqlite_version",
+    "substr",
+    "total_changes",
+    "trim",
+    "typeof",
+    "unicode",
+    "unlikely",
+    "upper",
+    "zeroblob",
+    "avg",
+    "count",
+    "group_concat",
+    "sum",
+    "total",
+    "date",
+    "datetime",
+    "julianday",
+    "strftime",
+    "time",
+    "json",
+    "json_array",
+    "json_array_length",
+    "json_extract",
+    "json_group_array",
+    "json_group_object",
+    "json_insert",
+    "json_object",
+    "json_patch",
+    "json_remove",
+    "json_replace",
+    "json_set",
+    "json_type",
+    "json_valid",
+    "row_number",
+    "rank",
+    "dense_rank",
+    "percent_rank",
+    "cume_dist",
+    "ntile",
+    "lag",
+    "lead",
+    "first_value",
+    "last_value",
+    "nth_value",
+)
+
 #   https://sqlite.org/syntax/column-constraint.html
 #   column_name data_type
 #       [PRIMARY KEY [ASC|DESC] [AUTOINCREMENT]]
@@ -75,26 +177,3 @@ TABLE_CONSTRAINTS_PATTERN = {
 INDEX_PATTERN = [
     re.compile(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\((?P<columns>(?:[^()]+|\([^()]*\))+)\)(?:\s+WHERE\s+(?P<condition>.+))?'),
 ]
-
-ENGINE_KEYWORDS = (
-    "pragma "
-    "rowid "
-    "without "
-    "vacuum "
-    "analyze "
-    "reindex "
-    "explain "
-    "autoincrement "
-    "conflict "
-    "abort "
-    "fail "
-    "ignore "
-    "replace "
-    "rollback "
-    "virtual "
-    "fts3 "
-    "fts4 "
-    "fts5 "
-    "sqlite_master "
-    "sqlite_schema "
-)

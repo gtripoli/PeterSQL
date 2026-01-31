@@ -19,22 +19,3 @@ CURRENT_FOREIGN_KEY: Observable[SQLForeignKey] = Observable()
 CURRENT_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
 AUTO_APPLY: Observable[bool] = Observable(True)
-
-ENGINE_COMMON_KEYWORDS = (
-    "select from where insert into values update set delete "
-    "create alter drop rename "
-    "table view index "
-    "distinct as "
-    "and or not "
-    "null is in exists like between "
-    "join inner left right full cross on using "
-    "group by having "
-    "order by "
-    "limit offset fetch first rows only "
-    "union union all intersect except "
-    "case when then else end "
-    "with recursive "
-    "begin commit rollback savepoint release transaction "
-    "primary key foreign key references unique check constraint "
-    "default "
-)

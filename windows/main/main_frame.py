@@ -1,39 +1,39 @@
+import math
+import os
 import time
 
-import math
 from collections import defaultdict
-
-import psutil
-import os
-import sqlglot
-import textwrap
-
+from gettext import gettext as _
 from typing import Optional, List, Union
 
+import psutil
+import sqlglot
 import wx.adv
-import wx.stc
 import wx.lib.wordwrap
+import wx.stc
 
-from gettext import gettext as _
-
-from helpers import bytes_to_human, wx_colour_to_hex
+from helpers import bytes_to_human
 from helpers.logger import logger
 from helpers.observables import CallbackEvent
 
-from structures.connection import Connection
-from structures.engines import ConnectionEngine
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.connection import Connection, ConnectionEngine
 from structures.engines.context import QUERY_LOGS
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
 
 from windows import MainFrameView
-from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, ENGINE_COMMON_KEYWORDS
-from windows.main.database import ListDatabaseTable
-from windows.main.explorer import TreeExplorerController
+
+from windows.components.stc.auto_complete import SQLCompletionProvider, SQLAutoCompleteController
+from windows.components.stc.profiles import SQL
+from windows.components.stc.styles import apply_stc_theme
+
+from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
 from windows.main.check import TableCheckController
 from windows.main.column import TableColumnsController
 from windows.main.records import TableRecordsController
+from windows.main.database import ListDatabaseTable
+from windows.main.explorer import TreeExplorerController
 from windows.main.foreign_key import TableForeignKeyController
 
 
@@ -43,7 +43,7 @@ class MainFrameController(MainFrameView):
     def __init__(self):
         super().__init__(None)
 
-        self.styled_text_ctrls_name = ["sql_query_logs", "sql_view", "sql_query_filters", "sql_create_table"]
+        self.styled_text_ctrls_name = ["sql_query_logs", "sql_view", "sql_query_filters", "sql_create_table", "sql_query"]
 
         self.edit_table_model = EditTableModel()
         self.edit_table_model.bind_controls(
@@ -84,82 +84,24 @@ class MainFrameController(MainFrameView):
         event.Skip()
 
     def _setup_query_editors(self):
-        bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
-        fg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT)
-
-        ln_bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
-        ln_fg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
-
-        is_dark = wx.SystemSettings.GetAppearance().IsDark()
-
-        if is_dark:
-            keyword = "#569cd6"
-            string = "#ce9178"
-            comment = "#6a9955"
-            number = "#b5cea8"
-            operator = wx_colour_to_hex(fg)
-        else:
-            keyword = "#0000ff"
-            string = "#990099"
-            comment = "#007f00"
-            number = "#ff6600"
-            operator = "#000000"
-
         for styled_text_ctrl_name in self.styled_text_ctrls_name:
             styled_text_ctrl = getattr(self, styled_text_ctrl_name)
 
-            font = wx.Font(10, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+            styled_text_ctrl.EmptyUndoBuffer()
 
-            styled_text_ctrl.SetLexer(wx.stc.STC_LEX_SQL)
+            wx.GetApp().theme_manager.register(styled_text_ctrl, lambda: wx.GetApp().syntax_registry.get("sql"))
 
-            styled_text_ctrl.StyleClearAll()
-            styled_text_ctrl.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
+            apply_stc_theme(styled_text_ctrl, SQL)
 
-            styled_text_ctrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, bg)
-            # styled_text_ctrl.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, fg)
-
-            # Numbers
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_NUMBER, f"fore:{number}")
-
-            # Comments
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENT, f"fore:{comment},italic")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTLINE, f"fore:{comment},italic")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_COMMENTDOC, f"fore:{comment},italic")
-
-            # Keys
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD, f"fore:{keyword},bold")
-            # styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_WORD2, f"fore:{keyword},bold")
-
-            # String
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_CHARACTER, f"fore:{string}")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_STRING, f"fore:{string}")
-
-            # Operator
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_OPERATOR, f"fore:{operator},bold")
-
-            # Table name, Columns, etc.
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_IDENTIFIER, "fore:#333333")
-            styled_text_ctrl.StyleSetSpec(wx.stc.STC_SQL_QUOTEDIDENTIFIER, "fore:#333333")
-
-            # Line numbers
-            styled_text_ctrl.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
-            styled_text_ctrl.SetMarginWidth(0, 40)
-            # print(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
-            styled_text_ctrl.StyleSetSpec(
-                wx.stc.STC_STYLE_LINENUMBER,
-                f"back:{wx_colour_to_hex(ln_bg)},"
-                f"fore:{wx_colour_to_hex(ln_fg)}"
+            sql_completion_provider = SQLCompletionProvider(
+                get_database=lambda: CURRENT_DATABASE.get_value(),
+                get_current_table=lambda: CURRENT_TABLE.get_value(),
             )
-            styled_text_ctrl.SetMarginBackground(0, ln_bg)
 
-            # Caret e selection
-            styled_text_ctrl.SetCaretForeground(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
-            styled_text_ctrl.SetSelBackground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT))
-            styled_text_ctrl.SetSelForeground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
-
-            # styled_text_ctrl.SetCaretForeground(wx.Colour("#000000"))
-            # styled_text_ctrl.SetSelBackground(True, wx.Colour("#cce8ff"))
-            # styled_text_ctrl.SetSelForeground(True, wx.Colour("#ff0000P"))
+            sql_autocomplete_controller = SQLAutoCompleteController(
+                editor=styled_text_ctrl,
+                provider=sql_completion_provider,
+            )
 
     def _setup_subscribers(self):
         self.toggle_panel()
@@ -314,7 +256,7 @@ class MainFrameController(MainFrameView):
 
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(connection.context.get_server_uptime())}", 2)
 
-            common_keywords = f"{ENGINE_COMMON_KEYWORDS} {connection.context.KEYWORDS}".strip()
+            keywords = " ".join(k.lower() for k in connection.context.KEYWORDS)
 
             colors_datatypes = defaultdict(list)
 
@@ -325,7 +267,7 @@ class MainFrameController(MainFrameView):
             for stc_name in self.styled_text_ctrls_name:
                 stc_ctrl = getattr(self, stc_name)
 
-                stc_ctrl.SetKeyWords(0, common_keywords)
+                stc_ctrl.SetKeyWords(0, keywords)
 
                 for idx, (color, words) in enumerate(colors_datatypes.items(), start=1):
                     stc_ctrl.SetKeyWords(idx, " ".join(sorted(words)))
@@ -379,7 +321,7 @@ class MainFrameController(MainFrameView):
             CURRENT_INDEX.set_value(None)
             CURRENT_FOREIGN_KEY.set_value(None)
 
-            try :
+            try:
                 self.sql_create_table.SetText(
                     sqlglot.parse_one(table.raw_create(), read=CURRENT_CONNECTION.get_value().engine.value.dialect).sql(pretty=True)
                 )
@@ -387,7 +329,6 @@ class MainFrameController(MainFrameView):
                 self.sql_create_table.SetText(
                     table.raw_create()
                 )
-
 
         self.btn_clone_table.Enable(table is not None)
         self.btn_delete_table.Enable(table is not None)

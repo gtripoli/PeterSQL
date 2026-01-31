@@ -12,7 +12,7 @@ def load(settings_file):
     return settings
 
 
-def save(settings: dict[str, Any], settings_file) -> None:
+def save(settings: Dict[str, Any], settings_file) -> None:
     settings = copy.copy(settings)
 
     with open(settings_file, "w") as outfile:

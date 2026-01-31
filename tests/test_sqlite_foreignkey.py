@@ -1,10 +1,9 @@
 import pytest
 
-from structures.engines.sqlite.datatype import SQLiteDataType
-from structures.session import Connection
-from structures.engines import ConnectionEngine
+from structures.connection import Connection, ConnectionEngine
 from structures.configurations import SourceConfiguration
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable, SQLiteForeignKey, SQLiteColumn
+from structures.engines.sqlite.datatype import SQLiteDataType
 
 
 class TestSQLiteForeignKey:

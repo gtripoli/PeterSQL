@@ -6,8 +6,7 @@ import wx
 from helpers.logger import logger
 from helpers.loader import Loader
 
-from structures.connection import Connection
-from structures.engines import ConnectionEngine
+from structures.connection import Connection, ConnectionEngine
 
 from windows import ConnectionsDialog
 from windows.main import CONNECTIONS_LIST

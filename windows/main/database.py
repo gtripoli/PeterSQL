@@ -3,6 +3,8 @@ from typing import Optional
 import wx
 import wx.dataview
 
+from gettext import gettext as _
+
 from helpers import bytes_to_human
 from helpers.dataview import BaseDataViewListModel, ColumnField
 
@@ -38,6 +40,8 @@ class ModelDatabaseTable(BaseDataViewListModel):
 
 
 class ListDatabaseTable:
+    _app = wx.GetApp()
+
     def __init__(self, list_ctrl_database_tables: wx.dataview.DataViewCtrl):
         self.list_ctrl_database_tables = list_ctrl_database_tables
         self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
@@ -50,8 +54,38 @@ class ListDatabaseTable:
         CURRENT_TABLE.subscribe(self._select_table)
 
     def _load_database(self, database: SQLDatabase):
-        if database:
-            self.model.set_observable(database.tables)
+        if not database:
+            return
+
+        parent = self._app.GetTopWindow()
+
+        while True:
+            try:
+                self.model.set_observable(database.tables)
+                return
+
+            except Exception as ex:
+                if wx.MessageDialog(
+                        parent=parent,
+                        message=(
+                                _("The connection to the database was lost.")
+                                + "\n\n"
+                                + _("Do you want to reconnect?")
+                        ),
+                        caption=_("Connection lost"),
+                        style=wx.OK | wx.CANCEL | wx.ICON_WARNING,
+                ).ShowModal() != wx.ID_OK:
+                    return
+
+                try:
+                    database.context.connect()
+                except Exception as reconnect_ex:
+                    wx.MessageBox(
+                        _("Reconnection failed:") + "\n" + str(reconnect_ex),
+                        _("Error"),
+                        wx.OK | wx.ICON_ERROR,
+                        parent=parent,
+                    )
 
     def _select_table(self, table: SQLTable):
         if table:

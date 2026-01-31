@@ -12,7 +12,7 @@ from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLColumn, SQLDatabase, SQLForeignKey, SQLIndex, SQLTable
 from structures.engines.datatype import SQLDataType
 
-from structures.engines.mysql import MAP_COLUMN_FIELDS, ENGINE_KEYWORDS
+from structures.engines.mysql import MAP_COLUMN_FIELDS
 from structures.engines.mysql.database import MySQLColumn, MySQLDatabase, MySQLForeignKey, MySQLIndex, MySQLRecord, MySQLTable, MySQLTrigger, MySQLView
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
@@ -21,16 +21,12 @@ from structures.ssh_tunnel import SSHTunnel
 
 
 class MySQLContext(AbstractContext):
-    ENGINES = []
-    KEYWORDS = ENGINE_KEYWORDS
-    COLLATIONS = {}
-
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
     DATATYPE = MySQLDataType
     INDEXTYPE = MySQLIndexType
 
-    QUOTE_ID = "`"
+    QUOTE_IDENTIFIER = "`"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -53,6 +49,28 @@ class MySQLContext(AbstractContext):
 
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
+
+        self.execute("""
+            SELECT WORD FROM information_schema.KEYWORDS
+            WHERE RESERVED = 1
+            ORDER BY WORD;
+        """)
+        self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+
+        self.execute("""
+            SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
+            ORDER BY FUNCTION;
+        """)
+        builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+
+        self.execute("""
+            SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
+            WHERE ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME;
+        """)
+        user_functions = tuple(row["ROUTINE_NAME"] for row in self.fetchall())
+
+        self.FUNCTIONS = builtin_functions + user_functions
 
     def _parse_type(self, column_type: str):
         types = MySQLDataType.get_all()
@@ -410,7 +428,7 @@ class MySQLContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: MySQLTable, values: dict[str, Any]) -> MySQLRecord:
+    def build_empty_record(self, table: MySQLTable, values: Dict[str, Any]) -> MySQLRecord:
         return MySQLRecord(
             id=MySQLContext.get_temporary_id(table.records),
             table=table,

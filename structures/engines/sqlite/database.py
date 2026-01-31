@@ -315,14 +315,17 @@ class SQLiteIndex(SQLIndex):
 
         unique_index = "UNIQUE INDEX" if self.type == SQLiteIndexType.UNIQUE else "INDEX"
 
-        if self.type == SQLiteIndexType.EXPRESSION:
-            expression = f"({', '.join(self.expression)})"
-        else:
-            expression = f"(`{'`, `'.join(self.expression)}`)"
+        build_sql_safe_name = self.table.database.context.build_sql_safe_name
 
-        where_str = f"WHERE {self.condition}" if self.condition else ""
+        columns_clause = ", ".join([build_sql_safe_name(column) for column in self.columns])
+        where_clause = f" WHERE {self.condition}" if self.condition else ""
 
-        return self.table.database.context.execute(f"CREATE {unique_index} IF NOT EXISTS `{self.name}` ON `{self.table.name}`{expression} {where_str}")
+        statement = (
+            f"CREATE {unique_index} IF NOT EXISTS {self.sql_safe_name} "
+            f"ON {self.table.sql_safe_name}({columns_clause}){where_clause} "
+        )
+
+        return self.table.database.context.execute(statement)
 
     def drop(self) -> bool:
         if self.type == SQLiteIndexType.PRIMARY:
@@ -331,7 +334,9 @@ class SQLiteIndex(SQLIndex):
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
             return False  # sqlite_ UNIQUE is handled in table creation
 
-        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name}")
+        return self.table.database.context.execute(
+            f"DROP INDEX IF EXISTS {self.sql_safe_name}"
+        )
 
     def modify(self, new_index: Self):
         self.drop()

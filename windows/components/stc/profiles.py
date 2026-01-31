@@ -174,5 +174,3 @@ REGEX = SyntaxProfile(id="regex", label="Regex", stc_lexer=stc.STC_LEX_NULL)  # 
 CSV = SyntaxProfile(id="csv", label="CSV/TSV", stc_lexer=stc.STC_LEX_NULL, formatter=fmt_csv)
 BASE64 = SyntaxProfile(id="base64", label="Base64", stc_lexer=stc.STC_LEX_NULL, formatter=fmt_base64)
 TEXT = SyntaxProfile(id="text", label="Plain text", stc_lexer=stc.STC_LEX_NULL)
-
-syntaxRegistry = SyntaxRegistry([JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT])

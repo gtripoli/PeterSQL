@@ -1,9 +1,9 @@
-import pytest
-import tempfile
 import os
+import tempfile
 
-from structures.session import Connection
-from structures.engines import ConnectionEngine
+import pytest
+
+from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mysql.database import MySQLDatabase, MySQLTable, MySQLColumn
 from structures.engines.mysql.datatype import MySQLDataType

@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from structures.engines.context import AbstractColumnBuilder
+from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuilder
 from structures.engines.database import SQLColumn
 
 
@@ -46,3 +46,29 @@ class MySQLColumnBuilder(AbstractColumnBuilder):
     @property
     def generated(self):
         return f"AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality is not None else ""
+
+
+class MySQLIndexBuilder(AbstractIndexBuilder):
+    TEMPLATE = ["%(type)s", "%(name)s", "(%(columns)s)"]
+
+    def __init__(self, index: 'MariaDBIndex', exclude: Optional[List[str]] = None):
+        super().__init__(index, exclude)
+
+    @property
+    def type(self):
+        if self.index.type.name == "PRIMARY":
+            return "PRIMARY KEY"
+        elif self.index.type.name == "UNIQUE INDEX":
+            return "UNIQUE KEY"
+        elif self.index.type.name == "INDEX":
+            return "KEY"
+        elif self.index.type.name in ["FULLTEXT", "SPATIAL"]:
+            return f"{self.index.type.name} KEY"
+        else:
+            return f"{self.index.type.name} KEY"
+
+    @property
+    def name(self):
+        if self.index.type.name == "PRIMARY":
+            return ""
+        return f"`{self.index.name}`" if self.index.name else ""

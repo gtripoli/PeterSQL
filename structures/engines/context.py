@@ -6,157 +6,32 @@ from typing import Dict, Any, Optional, List, Tuple
 
 from helpers.logger import logger
 from helpers.observables import ObservableList, ObservableLazyList
-from structures.connection import Connection
+
 from structures.helpers import SQLTypeAlias
-
 from structures.ssh_tunnel import SSHTunnel
-
+from structures.connection import Connection
 from structures.engines.datatype import StandardDataType
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 QUERY_LOGS: ObservableList[str] = ObservableList()
 
+SQL_SAFE_NAME_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
-class AbstractColumnBuilder(abc.ABC):
-    TEMPLATE: str
-
-    parts: Dict[str, str]
-
-    def __init__(self, column: 'SQLColumn', exclude: Optional[List[str]] = None):
-        self.column = column
-        self.exclude = exclude
-
-        self.parts = {
-            'name': self.name,
-            'datatype': self.datatype,
-            'unique': self.unique,
-            'auto_increment': self.auto_increment,
-            'nullable': self.nullable,
-            'default': self.default,
-            'collate': self.collate
-        }
-
-    @property
-    def name(self):
-        return f"`{self.column.name}`"
-
-    @property
-    def datatype(self):
-        datatype_str = str(self.column.datatype.name)
-
-        if self.column.datatype.has_length:
-            datatype_str += f"({self.column.length or self.column.datatype.default_length})"
-
-        if self.column.datatype.has_precision:
-            if self.column.datatype.has_scale:
-                datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision},{self.column.numeric_scale or self.column.datatype.default_scale})"
-            else:
-                datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision})"
-
-        if self.column.datatype.has_set:
-            datatype_str += f"({self.column.set or self.column.datatype.default_set})"
-
-        return datatype_str
-
-    @property
-    def auto_increment(self):
-        raise Exception("the auto increment should be defined in the engine column's table builder")
-
-    @property
-    def nullable(self):
-        return 'NOT NULL' if any([not self.column.is_nullable, self.column.is_primary_key, self.column.is_auto_increment]) else 'NULL'
-
-    @property
-    def default(self):
-        return f"DEFAULT {self.column.server_default}" if self.column.server_default and self.column.server_default != '' else ''
-
-    @property
-    def collate(self):
-        return f"CHARSET SET {self.column.table.database.context.COLLATION[self.column.collation_name]} COLLATE {self.column.collation_name}" if self.column.collation_name else ''
-
-    @property
-    def virtual(self):
-        return f"GENERATED ALWAYS AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality and self.column.expression else ''
-
-    @property
-    def unique(self):
-        return 'UNIQUE' if self.column.is_unique_key else ''
-
-    # @property
-    # def references(self):
-    #     return f"REFERENCES {self.column.references}" if self.column.references else ''
-
-    def __str__(self) -> str:
-        formatted_parts = []
-        for template_part in self.TEMPLATE:
-            if self.exclude and any(part in template_part for part in self.exclude):
-                continue
-            try:
-                formatted = template_part % self.parts
-            except Exception as ex:
-                logger.error(ex, exc_info=True)
-
-            if formatted_strip := formatted.strip():  # Only include non-empty parts
-                formatted_parts.append(formatted_strip)
-
-        return " ".join(formatted_parts)
-
-
-class AbstractIndexBuilder(abc.ABC):
-    TEMPLATE: List[str]
-
-    parts: Dict[str, str]
-
-    def __init__(self, index: 'SQLIndex', exclude: Optional[List[str]] = None):
-        self.index = index
-        self.exclude = exclude
-
-        self.parts = {
-            'type': self.type,
-            'name': self.name,
-            'columns': self.columns,
-        }
-
-    @property
-    def type(self):
-        return str(self.index.type)
-
-    @property
-    def name(self):
-        return f"`{self.index.name}`" if self.index.name and self.index.name != "PRIMARY KEY" else ""
-
-    @property
-    def columns(self):
-        return ", ".join([f"`{col}`" for col in self.index.columns])
-
-    def __str__(self) -> str:
-        formatted_parts = []
-        for template_part in self.TEMPLATE:
-            if self.exclude and any(part in template_part for part in self.exclude):
-                continue
-            try:
-                formatted = template_part % self.parts
-            except Exception as ex:
-                logger.error(ex, exc_info=True)
-
-            if formatted_strip := formatted.strip():  # Only include non-empty parts
-                formatted_parts.append(formatted_strip)
-
-        return " ".join(formatted_parts)
 
 class AbstractContext(abc.ABC):
     _connection: Any = None
     _cursor: Any = None
     _ssh_tunnel: Optional[SSHTunnel] = None
 
-    ENGINES: List[str]
-    KEYWORDS: Tuple[str]
+    ENGINES: List[str] = []
+    KEYWORDS: Tuple[str] = ()
+    FUNCTIONS: Tuple[str] = ()
     DATATYPE: StandardDataType
     INDEXTYPE: StandardIndexType
-    COLLATIONS: List[str]
+    COLLATIONS: Dict[str, str] = {}
 
-    QUOTE_ID = "`"
+    QUOTE_IDENTIFIER: str = "'"
 
     databases: ObservableLazyList[SQLDatabase]
 
@@ -165,23 +40,14 @@ class AbstractContext(abc.ABC):
 
         self.databases = ObservableLazyList(self.get_databases)
 
-    @abc.abstractmethod
-    def connect(self, **connect_kwargs) -> None:
-        """Establish connection to the database using native driver"""
-        raise NotImplementedError
+    def __del__(self):
+        self.disconnect()
 
-    def disconnect(self) -> None:
-        if self._cursor is not None:
-            self._cursor.close()
-            self._cursor = None
+    def _on_connect(self, *args, **kwargs):
+        logger.debug("connected")
 
-        if self._connection is not None:
-            self._connection.close()
-            self._connection = None
-
-        if self._ssh_tunnel is not None:
-            self._ssh_tunnel.stop()
-            self._ssh_tunnel = None
+    def _on_disconnect(self, *args, **kwargs):
+        logger.debug("disconnected")
 
     @property
     def is_connected(self):
@@ -193,18 +59,14 @@ class AbstractContext(abc.ABC):
             raise RuntimeError("Not connected to the database. Call connect() first.")
         return self._cursor
 
-    def _on_connect(self, *args, **kwargs):
-        logger.debug("connected")
-
-    def _on_disconnect(self, *args, **kwargs):
-        logger.debug("disconnected")
-
-    def __del__(self):
-        self.disconnect()
-
     @staticmethod
     def get_temporary_id(container: List[SQLTypeAlias]) -> int:
         return min([0] + [t.id for t in container]) - 1
+
+    @abc.abstractmethod
+    def connect(self, **connect_kwargs) -> None:
+        """Establish connection to the database using native driver"""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def get_server_version(self) -> str:
@@ -242,31 +104,6 @@ class AbstractContext(abc.ABC):
     def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
         raise NotImplementedError
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[Dict[str, Any]]:
-        logger.debug(f"get records for table={table.name}")
-        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
-        if table is None or table.is_new:
-            return []
-
-        order = ""
-        where = ""
-        if filters:
-            where = f"WHERE {filters}"
-
-        if orders:
-            order = f"ORDER BY {orders}"
-
-        query = [f"SELECT *",
-                 f"FROM {self.QUOTE_ID}{table.database.name}{self.QUOTE_ID}.{self.QUOTE_ID}{table.name}{self.QUOTE_ID}",
-                 f"{where}",
-                 f"{order}",
-                 f"LIMIT {limit} OFFSET {offset}",
-                 ]
-
-        self.execute(" ".join(query))
-
-        return self.fetchall()
-
     @abc.abstractmethod
     def build_empty_table(self, database: SQLDatabase) -> SQLTable:
         raise NotImplementedError
@@ -286,6 +123,50 @@ class AbstractContext(abc.ABC):
     @abc.abstractmethod
     def build_empty_foreign_key(self, name: str, table: SQLTable, columns: List[str]) -> SQLForeignKey:
         raise NotImplementedError
+
+    def build_sql_safe_name(self, name: Optional[str]) -> str:
+        value = (name or "").strip()
+        if not value:
+            return value
+
+        if SQL_SAFE_NAME_REGEX.match(value):
+            return value
+
+        escaped_name = value.replace(self.QUOTE_IDENTIFIER, self.QUOTE_IDENTIFIER * 2)
+        return f"{self.QUOTE_IDENTIFIER}{escaped_name}{self.QUOTE_IDENTIFIER}"
+
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[Dict[str, Any]]:
+        logger.debug(f"get records for table={table.name}")
+        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
+        if table is None or table.is_new:
+            return []
+
+        order = ""
+        where = ""
+        if filters:
+            where = f"WHERE {filters}"
+
+        if orders:
+            order = f"ORDER BY {orders}"
+
+        database_identifier = table.database.sql_safe_name if table.database else ""
+        table_identifier = table.sql_safe_name
+
+        if database_identifier:
+            from_clause = f"{database_identifier}.{table_identifier}"
+        else:
+            from_clause = table_identifier
+
+        query = [f"SELECT *",
+                 f"FROM {from_clause}",
+                 f"{where}",
+                 f"{order}",
+                 f"LIMIT {limit} OFFSET {offset}",
+                 ]
+
+        self.execute(" ".join(query))
+
+        return self.fetchall()
 
     # EXECUTION
     def execute(self, query: str) -> bool:
@@ -317,6 +198,19 @@ class AbstractContext(abc.ABC):
         except Exception as ex:
             logger.error(ex, exc_info=True)
             raise
+
+    def disconnect(self) -> None:
+        if self._cursor is not None:
+            self._cursor.close()
+            self._cursor = None
+
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
+
+        if self._ssh_tunnel is not None:
+            self._ssh_tunnel.stop()
+            self._ssh_tunnel = None
 
     @contextlib.contextmanager
     def transaction(self):

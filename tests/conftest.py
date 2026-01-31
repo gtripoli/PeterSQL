@@ -1,8 +1,7 @@
 import pytest
 import wx
 
-from structures.engines import ConnectionEngine
-from structures.connection import Connection
+from structures.connection import Connection, ConnectionEngine
 from structures.configurations import SourceConfiguration
 
 

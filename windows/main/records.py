@@ -1,10 +1,12 @@
 import datetime
+
 from typing import Optional
 
 import wx.dataview
+import wx.stc
 
-from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel
+from helpers.logger import logger
 from helpers.observables import ObservableList
 
 from structures.connection import Connection
@@ -12,9 +14,12 @@ from structures.engines.database import SQLTable, SQLDatabase, SQLColumn, SQLRec
 from structures.engines.datatype import DataTypeCategory
 
 from windows import TableRecordsDataViewCtrl, AdvancedCellEditorDialog
-from windows.components.stc.profiles import syntaxRegistry, detect_syntax_id
+
+from windows.components.stc.auto_complete import SQLCompletionProvider, SQLAutoCompleteController
+from windows.components.stc.profiles import detect_syntax_id
 from windows.components.stc.styles import apply_stc_theme
 from windows.components.stc.syntax import SyntaxProfile
+
 from windows.main import CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
@@ -43,7 +48,7 @@ class RecordsModel(BaseDataViewListModel):
             return ''
 
         if column.datatype.category == DataTypeCategory.TEMPORAL:
-            if isinstance(value, datetime.datetime) :
+            if isinstance(value, datetime.datetime):
                 if column.datatype.name == "DATE":
                     return value.strftime("%Y-%m-%d")
                 elif column.datatype.name == "TIME":
@@ -171,7 +176,6 @@ class TableRecordsController:
 
     def make_advanced_dialog(self, parent, value: str):
         dialog = AdvancedCellEditorController(parent, value)
-        
 
         return dialog
 
@@ -307,9 +311,7 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
     def __init__(self, parent, value: str):
         super().__init__(parent)
 
-        self.syntax_registry = syntaxRegistry
-
-        self.syntax_choice.AppendItems(self.syntax_registry.labels())
+        self.syntax_choice.AppendItems(self.app.syntax_registry.labels())
         self.advanced_stc_editor.SetText(value or "")
         self.advanced_stc_editor.EmptyUndoBuffer()
 
@@ -323,14 +325,14 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
         text = self.advanced_stc_editor.GetText()
 
         syntax_id = detect_syntax_id(text)
-        return self.syntax_registry.get(syntax_id)
+        return self.app.syntax_registry.get(syntax_id)
 
     def _get_current_syntax_profile(self) -> SyntaxProfile:
         label = self.syntax_choice.GetStringSelection()
         # text = self.advanced_stc_editor.GetText()
         #
         # syntax_id = detect_syntax_id(text)
-        return self.syntax_registry.get(label)
+        return self.app.syntax_registry.get(label)
 
     def on_syntax_changed(self, _evt):
         label = self.syntax_choice.GetStringSelection()
@@ -338,7 +340,7 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
 
     def do_apply_syntax(self, do_format: bool = True):
         label = self.syntax_choice.GetStringSelection()
-        syntax_profile = self.syntax_registry.by_label(label)
+        syntax_profile = self.app.syntax_registry.by_label(label)
 
         apply_stc_theme(self.advanced_stc_editor, syntax_profile)
 

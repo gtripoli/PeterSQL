@@ -14,28 +14,3 @@ MAP_COLUMN_FIELDS = {
     10: ColumnField("collation_name"),
     11: ColumnField("comment"),
 }
-
-ENGINE_KEYWORDS = (
-    "show "
-    "describe "
-    "explain "
-    "replace "
-    "ignore "
-    "limit "
-    "offset "
-    "auto_increment "
-    "engine "
-    "charset "
-    "collate "
-    "unsigned "
-    "zerofill "
-    "if "
-    "exists "
-    "on "
-    "duplicate "
-    "key "
-    "update "
-    "lock "
-    "unlock "
-    "delimiter "
-)

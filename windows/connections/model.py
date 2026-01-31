@@ -6,8 +6,7 @@ from structures.configurations import CredentialsConfiguration, SourceConfigurat
 
 from helpers import wx_call_after_debounce
 
-from structures.engines import ConnectionEngine
-from structures.connection import Connection
+from structures.connection import Connection, ConnectionEngine
 
 from . import CURRENT_CONNECTION, PENDING_CONNECTION
 

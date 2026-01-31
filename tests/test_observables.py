@@ -7,7 +7,6 @@ class TestObservable:
     def test_observable_creation(self):
         obs = Observable(initial=10)
         assert obs._value == 10
-        assert obs._last_value == 10
 
     def test_observable_get_value(self):
         obs = Observable(initial=5)

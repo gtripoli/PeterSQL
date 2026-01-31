@@ -2,13 +2,13 @@ import dataclasses
 from typing import Callable
 
 import wx
-import wx.dataview
 import wx.lib.agw.hypertreelist
+
+from icons import IconList
 
 from helpers import bytes_to_human
 from helpers.loader import Loader
 from helpers.observables import CallbackEvent
-from icons import IconList, iconRegistry
 
 from structures.connection import Connection
 from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
@@ -62,14 +62,14 @@ class TreeExplorerController:
         self.tree_ctrl_explorer.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
 
         self.tree_ctrl_explorer.SetMainColumn(0)
-        self.tree_ctrl_explorer.AssignImageList(iconRegistry.imagelist)
+        self.tree_ctrl_explorer.AssignImageList(wx.GetApp().icon_registry_16.imagelist)
         self.tree_ctrl_explorer._main_win.Bind(
             wx.EVT_MOUSE_EVENTS, lambda e: None if e.LeftDown() else e.Skip()
         )
 
         self.populate_tree()
 
-        self.tree_ctrl_explorer.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
+        # self.tree_ctrl_explorer.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
 
@@ -122,11 +122,11 @@ class TreeExplorerController:
     def append_connection(self, connection: Connection):
         self.root_item = self.tree_ctrl_explorer.GetRootItem()
 
-        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=iconRegistry.get_index(getattr(IconList, connection.engine.name, IconList.NOT_FOUND)), data=connection)
+        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, connection.engine.name, IconList.NOT_FOUND)), data=connection)
         for database in connection.context.databases.get_value():
-            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=iconRegistry.get_index(IconList.DATABASE), data=database)
+            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=wx.GetApp().icon_registry_16.get_index(IconList.DATABASE), data=database)
             self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
-            self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=iconRegistry.get_index(IconList.CLOCK), data=None)
+            self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=wx.GetApp().icon_registry_16.get_index(IconList.CLOCK), data=None)
 
         self.tree_ctrl_explorer.Expand(connection_item)
         self.tree_ctrl_explorer.EnsureVisible(connection_item)
@@ -140,7 +140,7 @@ class TreeExplorerController:
             category_item = self.tree_ctrl_explorer.AppendItem(
                 db_item,
                 observable_name.capitalize(),
-                image=iconRegistry.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
+                image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
                 data=None
             )
 
@@ -160,7 +160,7 @@ class TreeExplorerController:
                 obj_item = self.tree_ctrl_explorer.AppendItem(
                     category_item,
                     obj.name,
-                    image=iconRegistry.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
+                    image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)),
                     data=obj
                 )
 
@@ -197,7 +197,14 @@ class TreeExplorerController:
             connection = database.context.connection
             if connection != CURRENT_CONNECTION.get_value():
                 CURRENT_CONNECTION.set_value(connection)
+
+            if not database.context.is_connected :
+                while wx.MessageDialog(None,
+                                   message="not connected").ShowModal() == wx.ID_OK:
+                    database.context.connect()
+
             CURRENT_DATABASE.set_value(database)
+
             self.load_observables(item, database)
 
         if not self.tree_ctrl_explorer.IsExpanded(item):

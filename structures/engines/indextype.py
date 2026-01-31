@@ -38,7 +38,7 @@ class StandardIndexType():
 
     @classmethod
     @functools.lru_cache()
-    def get_all(cls) -> list[SQLIndexType]:
+    def get_all(cls) -> List[SQLIndexType]:
         types = []
         for base in reversed(cls.__mro__):
             for key, value in base.__dict__.items():

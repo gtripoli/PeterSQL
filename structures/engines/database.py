@@ -65,6 +65,10 @@ class SQLDatabase(abc.ABC):
 
         return True
 
+    @property
+    def sql_safe_name(self):
+        return self.context.build_sql_safe_name(self.name)
+
     def refresh(self):
         original_database = next((d for d in self.context.databases.get_value() if d.id == self.id), None)
 
@@ -146,6 +150,10 @@ class SQLTable(abc.ABC):
     @abc.abstractmethod
     def drop(self):
         raise NotImplementedError
+
+    @property
+    def sql_safe_name(self):
+        return self.database.context.build_sql_safe_name(self.name)
 
     @property
     def is_valid(self) -> bool:
@@ -238,6 +246,10 @@ class SQLCheck(abc.ABC):
     table: SQLTable = dataclasses.field(compare=False)
     expression: str
 
+    @property
+    def sql_safe_name(self):
+        return self.table.database.context.build_sql_safe_name(self.name)
+
     def copy(self):
         cls = self.__class__
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
@@ -280,6 +292,10 @@ class SQLColumn(abc.ABC):
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(id={self.id}, name={self.name}, datatype={self.datatype}, is_nullable={self.is_nullable})"
+
+    @property
+    def sql_safe_name(self):
+        return self.table.database.context.build_sql_safe_name(self.name)
 
     @property
     def is_primary_key(self):
@@ -417,6 +433,10 @@ class SQLIndex(abc.ABC):
     def is_valid(self):
         return all([self.name, self.type, len(self.columns)])
 
+    @property
+    def sql_safe_name(self):
+        return self.table.database.context.build_sql_safe_name(self.name)
+
     def copy(self):
         cls = self.__class__
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
@@ -459,6 +479,14 @@ class SQLForeignKey(abc.ABC):
     @property
     def is_valid(self):
         return all([self.name, len(self.columns), self.reference_table, len(self.reference_columns)])
+
+    @property
+    def sql_safe_name(self):
+        return self.table.database.context.build_sql_safe_name(self.name)
+
+    @property
+    def reference_table_sql_safe_name(self) -> str:
+        return self.table.database.context.build_sql_safe_name(self.reference_table)
 
     def copy(self):
         cls = self.__class__

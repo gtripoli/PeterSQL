@@ -2,8 +2,7 @@ import pytest
 import tempfile
 import os
 
-from structures.connection import Connection
-from structures.engines import ConnectionEngine
+from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 from structures.engines.mariadb.database import MariaDBDatabase, MariaDBTable
 

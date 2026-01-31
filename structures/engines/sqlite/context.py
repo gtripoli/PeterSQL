@@ -1,11 +1,12 @@
 import re
 import sqlite3
-from collections import defaultdict
-from typing import Optional, List, Dict, Any
 
+from collections import defaultdict
 from gettext import gettext as _
+from typing import Any, Dict, List, Optional
 
 from helpers.logger import logger
+
 from structures.connection import Connection
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
@@ -13,15 +14,16 @@ from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLInd
 from structures.engines.datatype import SQLDataType
 from structures.engines.indextype import SQLIndexType
 
-from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN, TABLE_CONSTRAINTS_PATTERN, ENGINE_KEYWORDS
 from structures.engines.sqlite.database import SQLiteTable, SQLiteColumn, SQLiteIndex, SQLiteForeignKey, SQLiteRecord, SQLiteView, SQLiteTrigger, SQLiteDatabase, SQLiteCheck
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
+from structures.engines.sqlite import COLLATIONS, MAP_COLUMN_FIELDS, COLUMNS_PATTERN, COLUMN_ATTRIBUTES_PATTERN, TABLE_CONSTRAINTS_PATTERN, ENGINE_KEYWORDS, ENGINE_FUNCTIONS
 
 
 class SQLiteContext(AbstractContext):
     ENGINES = ["default"]
     KEYWORDS = ENGINE_KEYWORDS
+    FUNCTIONS = ENGINE_FUNCTIONS
     COLLATIONS = COLLATIONS
 
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
@@ -29,7 +31,7 @@ class SQLiteContext(AbstractContext):
     DATATYPE = SQLiteDataType()
     INDEXTYPE = SQLiteIndexType()
 
-    QUOTE_ID = "`"
+    QUOTE_IDENTIFIER = '"'
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 

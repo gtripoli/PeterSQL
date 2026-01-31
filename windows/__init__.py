@@ -1516,22 +1516,49 @@ class MainFrameView ( wx.Frame ):
             self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
             MainFrameNotebookIndex += 1
 
-        self.QueryPanel = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.QueryPanel.Enable( False )
+        self.panel_query = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_query.Enable( False )
 
         bSizer26 = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_textCtrl10 = wx.TextCtrl( self.QueryPanel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
-        bSizer26.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+        self.sql_query = wx.stc.StyledTextCtrl( self.panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        self.sql_query.SetUseTabs ( True )
+        self.sql_query.SetTabWidth ( 4 )
+        self.sql_query.SetIndent ( 4 )
+        self.sql_query.SetTabIndents( True )
+        self.sql_query.SetBackSpaceUnIndents( True )
+        self.sql_query.SetViewEOL( False )
+        self.sql_query.SetViewWhiteSpace( False )
+        self.sql_query.SetMarginWidth( 2, 0 )
+        self.sql_query.SetIndentationGuides( True )
+        self.sql_query.SetReadOnly( False )
+        self.sql_query.SetMarginWidth( 1, 0 )
+        self.sql_query.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.sql_query.SetMarginWidth( 0, self.sql_query.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.sql_query.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.sql_query.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        bSizer26.Add( self.sql_query, 1, wx.EXPAND | wx.ALL, 5 )
 
-        self.m_button12 = wx.Button( self.QueryPanel, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer26.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
-
-        self.QueryPanel.SetSizer( bSizer26 )
-        self.QueryPanel.Layout()
-        bSizer26.Fit( self.QueryPanel )
-        self.MainFrameNotebook.AddPage( self.QueryPanel, _(u"Query"), False )
+        self.panel_query.SetSizer( bSizer26 )
+        self.panel_query.Layout()
+        bSizer26.Fit( self.panel_query )
+        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1985,6 +2012,12 @@ class Trash ( wx.Panel ):
         m_listBox1Choices = []
         self.m_listBox1 = wx.ListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox1Choices, 0 )
         bSizer90.Add( self.m_listBox1, 0, wx.ALL, 5 )
+
+        self.m_textCtrl10 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
+        bSizer90.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_button12 = wx.Button( self, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer90.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
 
         self.SetSizer( bSizer90 )

@@ -1,8 +1,7 @@
 import pytest
 
-from structures.session import Connection
-from structures.engines import ConnectionEngine
 from structures.configurations import SourceConfiguration
+from structures.connection import Connection, ConnectionEngine
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable, SQLiteColumn, SQLiteRecord, SQLiteIndex
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
@@ -66,7 +65,15 @@ class TestSQLiteIntegration:
         db.tables._loaded = True
 
         # Set handlers
-        table.get_records_handler = lambda t, f=None, l=1000, o=0, ord=None: session.context.get_records(t, l, o)
+        table.get_records_handler = (
+            lambda t, f=None, l=1000, o=0, ord=None: session.context.get_records(
+                t,
+                filters=f,
+                limit=l,
+                offset=o,
+                orders=ord,
+            )
+        )
 
         # Check table validity
         assert table.is_valid == True

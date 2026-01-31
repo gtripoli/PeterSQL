@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
-from structures.engines import merge_original_current
+from structures.helpers import merge_original_current
 from structures.engines.database import SQLColumn, SQLIndex, SQLForeignKey
 
 

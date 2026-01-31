@@ -5,6 +5,8 @@ import yaml
 
 from helpers.observables import ObservableList, ObservableLazyList
 
+from windows.connections import ConnectionDirectory
+
 from structures.connection import (
     Connection,
     ConnectionEngine,
@@ -12,7 +14,6 @@ from structures.connection import (
     SourceConfiguration,
     SSHTunnelConfiguration,
 )
-from windows.connections import ConnectionDirectory
 
 WORKDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -20,7 +21,8 @@ CONNECTIONS_CONFIG_FILE = os.path.join(WORKDIR, "connections.yml")
 
 
 class ConnectionsRepository:
-    def __init__(self):
+    def __init__(self, config_file: Optional[str] = None):
+        self._config_file = config_file or CONNECTIONS_CONFIG_FILE
         self._id_counter = 0
 
         self.connections = ObservableLazyList(self.load)
@@ -32,14 +34,15 @@ class ConnectionsRepository:
 
     def _read(self) -> List[Dict[str, Any]]:
         try:
-            connections = yaml.full_load(open(CONNECTIONS_CONFIG_FILE))
+            connections = yaml.full_load(open(self._config_file))
             return connections or []
         except Exception:
             return []
 
     def _write(self) -> None:
-        payload = [item.to_dict() for item in self.connections()]
-        with open(CONNECTIONS_CONFIG_FILE, 'w') as file_handler:
+        connections = self.connections.get_value()
+        payload = [item.to_dict() for item in connections]
+        with open(self._config_file, 'w') as file_handler:
             yaml.dump(payload, file_handler, sort_keys=False)
 
     def load(self) -> List[Union[ConnectionDirectory, Connection]]:
@@ -68,8 +71,8 @@ class ConnectionsRepository:
 
         ssh_config = self._build_ssh_configuration(data.get('ssh_tunnel', {}))
 
-        if data.get("id"):
-            self._id_counter = max(self._id_counter, data["id"])
+        if data.get("id") is not None:
+            self._id_counter = max(self._id_counter, data["id"] + 1)
 
         comments = data.get('comments')
         if comments is None:
@@ -86,6 +89,8 @@ class ConnectionsRepository:
 
     def add_connection(self, connection: Connection, parent: Optional[ConnectionDirectory] = None) -> int:
 
+        self.connections.get_value()
+
         if connection.is_new:
             connection.id = self._next_id()
 
@@ -100,6 +105,8 @@ class ConnectionsRepository:
         return connection.id
 
     def save_connection(self, connection: Connection) -> int:
+        self.connections.get_value()
+
         def _find_and_replace(connections, target_id):
             for i, item in enumerate(connections):
                 if isinstance(item, ConnectionDirectory):
@@ -107,6 +114,7 @@ class ConnectionsRepository:
                         return True
                 elif isinstance(item, Connection) and item.id == target_id:
                     connections[i] = connection
+                    return True
             return False
 
         if _find_and_replace(self.connections(), connection.id):
@@ -121,6 +129,8 @@ class ConnectionsRepository:
         self._write()
 
     def add_directory(self, directory: ConnectionDirectory, parent: Optional[ConnectionDirectory] = None) -> None:
+        self.connections.get_value()
+
         if parent:
             parent.children.append(directory)
         else:
@@ -129,11 +139,15 @@ class ConnectionsRepository:
         self._write()
 
     def delete_directory(self, directory: ConnectionDirectory):
+        self.connections.get_value()
+
         self.connections.remove(directory)
 
         self._write()
 
     def delete_connection(self, connection: Connection) -> None:
+        self.connections.get_value()
+
         def _find_and_delete(connections, target_id):
             for i, item in enumerate(connections):
                 if isinstance(item, ConnectionDirectory):

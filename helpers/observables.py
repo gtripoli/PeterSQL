@@ -2,8 +2,8 @@ import copy
 import enum
 import inspect
 import weakref
-from typing import List, Callable, TypeVar, Generic, Any, overload, Union, Tuple, Optional, Dict, cast, Self, NewType, Hashable
-from typing import SupportsIndex
+
+from typing import List, Callable, TypeVar, Generic, Any, SupportsIndex, Union, Tuple, Optional, Dict, cast, Self, NewType, Hashable
 
 import wx
 

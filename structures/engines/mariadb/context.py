@@ -11,23 +11,19 @@ from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
 
-from structures.engines.mariadb import MAP_COLUMN_FIELDS, ENGINE_KEYWORDS
+from structures.engines.mariadb import MAP_COLUMN_FIELDS
 from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
 
 
 class MariaDBContext(AbstractContext):
-    ENGINES = []
-    KEYWORDS = ENGINE_KEYWORDS
-    COLLATIONS = {}
-
     MAP_COLUMN_FIELDS = MAP_COLUMN_FIELDS
 
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
-    QUOTE_ID = "`"
+    QUOTE_IDENTIFIER = "`"
 
     def __init__(self, connection : Connection):
         super().__init__(connection)
@@ -50,6 +46,27 @@ class MariaDBContext(AbstractContext):
 
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
+
+        self.execute("""
+            SELECT WORD FROM information_schema.KEYWORDS
+            ORDER BY WORD;
+        """)
+        self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+
+        self.execute("""
+            SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
+            ORDER BY FUNCTION;
+        """)
+        builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+
+        self.execute("""
+            SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
+            WHERE ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME;
+        """)
+        user_functions = tuple(row["ROUTINE_NAME"] for row in self.fetchall())
+
+        self.FUNCTIONS = builtin_functions + user_functions
 
     def _parse_type(self, column_type: str):
         types = MariaDBDataType.get_all()
@@ -93,7 +110,7 @@ class MariaDBContext(AbstractContext):
                 self._cursor = self._connection.cursor()
                 self._on_connect()
             except Exception as e:
-                logger.error(f"Failed to connect to MariaDB: {e}")
+                logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
 
     def get_server_version(self) -> str:

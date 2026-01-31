@@ -1,10 +1,5 @@
-import pytest
-import tempfile
-import os
-
-from structures.session import Connection
-from structures.engines import ConnectionEngine
-from structures.configurations import SourceConfiguration, CredentialsConfiguration
+from structures.connection import Connection, ConnectionEngine
+from structures.configurations import CredentialsConfiguration, SourceConfiguration
 
 
 class TestConnection:

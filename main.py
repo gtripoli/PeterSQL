@@ -1,17 +1,23 @@
+import gettext
 import locale
 import os
+
 from pathlib import Path
 
 import wx
-import gettext
 
 import settings
 
 from icons import IconRegistry
 
-from helpers.logger import logger
 from helpers.loader import Loader
+from helpers.logger import logger
 from helpers.observables import ObservableObject
+
+from windows.components.stc.profiles import JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT
+from windows.components.stc.syntax import SyntaxRegistry
+from windows.components.stc.themes import ThemeManager
+from windows.components.stc.styles import apply_stc_theme
 
 WORKDIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -25,15 +31,15 @@ class PeterSQL(wx.App):
 
     icon_registry_16: IconRegistry
 
-    def OnInit(self) -> bool:
-        from windows.components.stc.themes import ThemeManager
-        from windows.components.stc.styles import apply_stc_theme
+    syntax_registry: SyntaxRegistry
 
+    def OnInit(self) -> bool:
         Loader.loading.subscribe(self._on_loading_change)
 
         self.icon_registry_16 = IconRegistry(os.path.join(WORKDIR, "icons"), 16)
 
         self.theme_manager = ThemeManager(apply_fn=apply_stc_theme)
+        self.syntax_registry = SyntaxRegistry([JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT])
 
         self._init_locale()
 
