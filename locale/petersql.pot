@@ -1,24 +1,24 @@
-#: helpers/__init__.py:7
+#: helpers/__init__.py:14
 msgctxt "unit"
 msgid "B"
 msgstr ""
 
-#: helpers/__init__.py:8
+#: helpers/__init__.py:15
 msgctxt "unit"
 msgid "KB"
 msgstr ""
 
-#: helpers/__init__.py:9
+#: helpers/__init__.py:16
 msgctxt "unit"
 msgid "MB"
 msgstr ""
 
-#: helpers/__init__.py:10
+#: helpers/__init__.py:17
 msgctxt "unit"
 msgid "GB"
 msgstr ""
 
-#: helpers/__init__.py:11
+#: helpers/__init__.py:18
 msgctxt "unit"
 msgid "TB"
 msgstr ""
@@ -27,575 +27,595 @@ msgstr ""
 msgid "OpenSSH client not found."
 msgstr ""
 
-#: windows/__init__.py:30
-msgid "Session Manager"
+#: windows/__init__.py:31 windows/main/main_frame.py:224
+msgid "Connection"
 msgstr ""
 
-#: windows/__init__.py:44 windows/__init__.py:678 windows/__init__.py:738
-#: windows/__init__.py:1034 windows/__init__.py:1679 windows/__init__.py:1702
-#: windows/__init__.py:1703 windows/__init__.py:1704 windows/__init__.py:1705
-#: windows/__init__.py:1706 windows/__init__.py:1707 windows/__init__.py:1708
-#: windows/__init__.py:1712 windows/__init__.py:1765 windows/__init__.py:1980
-#: windows/components/dataview.py:90 windows/components/dataview.py:198
-#: windows/components/dataview.py:214
+#: windows/__init__.py:45 windows/__init__.py:83 windows/__init__.py:820
+#: windows/__init__.py:880 windows/__init__.py:1267 windows/__init__.py:1950
+#: windows/__init__.py:1973 windows/__init__.py:1974 windows/__init__.py:1975
+#: windows/__init__.py:1976 windows/__init__.py:1977 windows/__init__.py:1978
+#: windows/__init__.py:1979 windows/__init__.py:1980 windows/__init__.py:1981
+#: windows/__init__.py:1985 windows/__init__.py:2076 windows/__init__.py:2277
+#: windows/components/dataview.py:113 windows/components/dataview.py:225
+#: windows/components/dataview.py:238 windows/components/dataview.py:253
 msgid "Name"
 msgstr ""
 
-#: windows/__init__.py:45 windows/__init__.py:307
+#: windows/__init__.py:46 windows/__init__.py:322
 msgid "Last connection"
 msgstr ""
 
-#: windows/__init__.py:53
+#: windows/__init__.py:59 windows/connections/manager.py:174
 msgid "New directory"
 msgstr ""
 
-#: windows/__init__.py:56 windows/sessions/controller.py:117
+#: windows/__init__.py:62
 msgid "New Session"
 msgstr ""
 
-#: windows/__init__.py:61
+#: windows/__init__.py:67
 msgid "Import"
 msgstr ""
 
-#: windows/__init__.py:77
-msgid "Session name"
-msgstr ""
-
-#: windows/__init__.py:91
-msgid "Connection type"
-msgstr ""
-
-#: windows/__init__.py:109
-msgid "Host + port"
-msgstr ""
-
-#: windows/__init__.py:125
-msgid "Username"
-msgstr ""
-
-#: windows/__init__.py:138
-msgid "Password"
-msgstr ""
-
-#: windows/__init__.py:162 windows/__init__.py:1626
-msgid "Filename"
-msgstr ""
-
-#: windows/__init__.py:167 windows/__init__.py:1631
-msgid "Select a file"
-msgstr ""
-
-#: windows/__init__.py:167
-msgid "*.*"
-msgstr ""
-
-#: windows/__init__.py:181 windows/__init__.py:685 windows/__init__.py:751
-#: windows/__init__.py:1718 windows/__init__.py:1863 windows/__init__.py:1993
-#: windows/components/dataview.py:69
-msgid "Comments"
-msgstr ""
-
-#: windows/__init__.py:195 windows/__init__.py:476
-msgid "Settings"
-msgstr ""
-
-#: windows/__init__.py:204
-msgid "Use SSH tunnel"
-msgstr ""
-
-#: windows/__init__.py:212
-msgid "SSH executable"
-msgstr ""
-
-#: windows/__init__.py:217
-msgid "ssh"
-msgstr ""
-
-#: windows/__init__.py:225
-msgid "SSH host + port"
-msgstr ""
-
-#: windows/__init__.py:241
-msgid "SSH username"
-msgstr ""
-
-#: windows/__init__.py:254
-msgid "SSH password"
-msgstr ""
-
-#: windows/__init__.py:267
-msgid "Local port"
-msgstr ""
-
-#: windows/__init__.py:273
-msgid "if the value is set to 0, the first available port will be used"
-msgstr ""
-
-#: windows/__init__.py:284
-msgid "SSH Tunnel"
-msgstr ""
-
-#: windows/__init__.py:290 windows/__init__.py:681 windows/__init__.py:1715
-msgid "Created at"
-msgstr ""
-
-#: windows/__init__.py:324
-msgid "Successful connections"
-msgstr ""
-
-#: windows/__init__.py:341
-msgid "Unsuccessful connections"
-msgstr ""
-
-#: windows/__init__.py:360
-msgid "Statistics"
-msgstr ""
-
-#: windows/__init__.py:378
-msgid "Create"
-msgstr ""
-
-#: windows/__init__.py:381 windows/__init__.py:1115 windows/__init__.py:1920
-#: windows/__init__.py:2156
-msgid "Save"
-msgstr ""
-
-#: windows/__init__.py:386 windows/__init__.py:664 windows/__init__.py:940
-#: windows/__init__.py:972 windows/__init__.py:1107 windows/__init__.py:2116
-#: windows/__init__.py:2148
-msgid "Delete"
-msgstr ""
-
-#: windows/__init__.py:396 windows/__init__.py:975 windows/__init__.py:1110
-#: windows/__init__.py:1186 windows/__init__.py:1910 windows/__init__.py:2151
-msgid "Cancel"
-msgstr ""
-
-#: windows/__init__.py:401
-msgid "Open"
-msgstr ""
-
-#: windows/__init__.py:488
-msgid "Language"
-msgstr ""
-
-#: windows/__init__.py:493
-msgid "English"
-msgstr ""
-
-#: windows/__init__.py:493
-msgid "Italian"
-msgstr ""
-
-#: windows/__init__.py:493
-msgid "French"
-msgstr ""
-
-#: windows/__init__.py:505
-msgid "Locale"
-msgstr ""
-
-#: windows/__init__.py:526
-msgid "PeterSQL"
-msgstr ""
-
-#: windows/__init__.py:532
-msgid "File"
-msgstr ""
-
-#: windows/__init__.py:535
-msgid "About"
-msgstr ""
-
-#: windows/__init__.py:538
-msgid "Help"
-msgstr ""
-
-#: windows/__init__.py:543
-msgid "Open session manager"
-msgstr ""
-
-#: windows/__init__.py:545
-msgid "Disconnect from server"
-msgstr ""
-
-#: windows/__init__.py:549
-msgid "tool"
-msgstr ""
-
-#: windows/__init__.py:549
-msgid "Refresh"
-msgstr ""
-
-#: windows/__init__.py:553 windows/__init__.py:555
-msgid "Add"
-msgstr ""
-
-#: windows/__init__.py:589 windows/__init__.py:593 windows/__init__.py:1274
-#: windows/__init__.py:1343
-msgid "MyMenuItem"
-msgstr ""
-
-#: windows/__init__.py:596 windows/__init__.py:1003 windows/__init__.py:2179
-msgid "MyMenu"
-msgstr ""
-
-#: windows/__init__.py:611
-msgid "MyLabel"
-msgstr ""
-
-#: windows/__init__.py:617
-msgid "Databases"
-msgstr ""
-
-#: windows/__init__.py:618 windows/__init__.py:680 windows/__init__.py:1688
-#: windows/__init__.py:1714
-msgid "Size"
-msgstr ""
-
-#: windows/__init__.py:619
-msgid "Elements"
-msgstr ""
-
-#: windows/__init__.py:620
-msgid "Modified at"
-msgstr ""
-
-#: windows/__init__.py:621 windows/__init__.py:692
-msgid "Tables"
-msgstr ""
-
-#: windows/__init__.py:628
-msgid "System"
-msgstr ""
-
-#: windows/__init__.py:644
-msgid "Table:"
-msgstr ""
-
-#: windows/__init__.py:652 windows/__init__.py:876 windows/__init__.py:935
-#: windows/__init__.py:2111
-msgid "Insert"
-msgstr ""
-
-#: windows/__init__.py:657
-msgid "Clone"
-msgstr ""
-
-#: windows/__init__.py:679
-msgid "Rows"
-msgstr ""
-
-#: windows/__init__.py:682 windows/__init__.py:1716
-msgid "Updated at"
-msgstr ""
-
-#: windows/__init__.py:683 windows/__init__.py:793 windows/__init__.py:1717
-#: windows/__init__.py:2035
+#: windows/__init__.py:97 windows/__init__.py:825 windows/__init__.py:935
+#: windows/__init__.py:1990 windows/__init__.py:2332
 msgid "Engine"
 msgstr ""
 
-#: windows/__init__.py:684 windows/__init__.py:1809
-#: windows/components/dataview.py:42 windows/components/dataview.py:66
+#: windows/__init__.py:118
+msgid "Host + port"
+msgstr ""
+
+#: windows/__init__.py:134
+msgid "Username"
+msgstr ""
+
+#: windows/__init__.py:147
+msgid "Password"
+msgstr ""
+
+#: windows/__init__.py:163
+msgid "Use SSH tunnel"
+msgstr ""
+
+#: windows/__init__.py:185 windows/__init__.py:1897
+msgid "Filename"
+msgstr ""
+
+#: windows/__init__.py:190 windows/__init__.py:1902
+msgid "Select a file"
+msgstr ""
+
+#: windows/__init__.py:190
+msgid "*.*"
+msgstr ""
+
+#: windows/__init__.py:204 windows/__init__.py:827 windows/__init__.py:893
+#: windows/__init__.py:1991 windows/__init__.py:2174 windows/__init__.py:2290
+#: windows/components/dataview.py:70 windows/components/dataview.py:92
+msgid "Comments"
+msgstr ""
+
+#: windows/__init__.py:218 windows/__init__.py:520
+msgid "Settings"
+msgstr ""
+
+#: windows/__init__.py:227
+msgid "SSH executable"
+msgstr ""
+
+#: windows/__init__.py:232
+msgid "ssh"
+msgstr ""
+
+#: windows/__init__.py:240
+msgid "SSH host + port"
+msgstr ""
+
+#: windows/__init__.py:256
+msgid "SSH username"
+msgstr ""
+
+#: windows/__init__.py:269
+msgid "SSH password"
+msgstr ""
+
+#: windows/__init__.py:282
+msgid "Local port"
+msgstr ""
+
+#: windows/__init__.py:288
+msgid "if the value is set to 0, the first available port will be used"
+msgstr ""
+
+#: windows/__init__.py:299
+msgid "SSH Tunnel"
+msgstr ""
+
+#: windows/__init__.py:305 windows/__init__.py:823 windows/__init__.py:1988
+msgid "Created at"
+msgstr ""
+
+#: windows/__init__.py:339
+msgid "Successful connections"
+msgstr ""
+
+#: windows/__init__.py:356
+msgid "Unsuccessful connections"
+msgstr ""
+
+#: windows/__init__.py:375
+msgid "Statistics"
+msgstr ""
+
+#: windows/__init__.py:393 windows/__init__.py:1139
+msgid "Create"
+msgstr ""
+
+#: windows/__init__.py:403 windows/__init__.py:806 windows/__init__.py:1173
+#: windows/__init__.py:1205 windows/__init__.py:1340 windows/__init__.py:2413
+#: windows/__init__.py:2445
+msgid "Delete"
+msgstr ""
+
+#: windows/__init__.py:420 windows/__init__.py:634 windows/__init__.py:1208
+#: windows/__init__.py:1343 windows/__init__.py:1419 windows/__init__.py:2221
+#: windows/__init__.py:2448
+msgid "Cancel"
+msgstr ""
+
+#: windows/__init__.py:425 windows/__init__.py:1348 windows/__init__.py:2231
+#: windows/__init__.py:2453
+msgid "Save"
+msgstr ""
+
+#: windows/__init__.py:432
+msgid "Test"
+msgstr ""
+
+#: windows/__init__.py:439
+msgid "Connect"
+msgstr ""
+
+#: windows/__init__.py:532
+msgid "Language"
+msgstr ""
+
+#: windows/__init__.py:537
+msgid "English"
+msgstr ""
+
+#: windows/__init__.py:537
+msgid "Italian"
+msgstr ""
+
+#: windows/__init__.py:537
+msgid "French"
+msgstr ""
+
+#: windows/__init__.py:549
+msgid "Locale"
+msgstr ""
+
+#: windows/__init__.py:570
+msgid "Edit Value"
+msgstr ""
+
+#: windows/__init__.py:580
+msgid "Syntax"
+msgstr ""
+
+#: windows/__init__.py:637
+msgid "Ok"
+msgstr ""
+
+#: windows/__init__.py:668
+msgid "PeterSQL"
+msgstr ""
+
+#: windows/__init__.py:674
+msgid "File"
+msgstr ""
+
+#: windows/__init__.py:677
+msgid "About"
+msgstr ""
+
+#: windows/__init__.py:680
+msgid "Help"
+msgstr ""
+
+#: windows/__init__.py:685
+msgid "Open connection manager"
+msgstr ""
+
+#: windows/__init__.py:687
+msgid "Disconnect from server"
+msgstr ""
+
+#: windows/__init__.py:691
+msgid "tool"
+msgstr ""
+
+#: windows/__init__.py:691
+msgid "Refresh"
+msgstr ""
+
+#: windows/__init__.py:695 windows/__init__.py:697
+msgid "Add"
+msgstr ""
+
+#: windows/__init__.py:731 windows/__init__.py:735 windows/__init__.py:1507
+#: windows/__init__.py:1603
+msgid "MyMenuItem"
+msgstr ""
+
+#: windows/__init__.py:738 windows/__init__.py:1236 windows/__init__.py:2476
+msgid "MyMenu"
+msgstr ""
+
+#: windows/__init__.py:753
+msgid "MyLabel"
+msgstr ""
+
+#: windows/__init__.py:759
+msgid "Databases"
+msgstr ""
+
+#: windows/__init__.py:760 windows/__init__.py:822 windows/__init__.py:1959
+#: windows/__init__.py:1987
+msgid "Size"
+msgstr ""
+
+#: windows/__init__.py:761
+msgid "Elements"
+msgstr ""
+
+#: windows/__init__.py:762
+msgid "Modified at"
+msgstr ""
+
+#: windows/__init__.py:763 windows/__init__.py:834
+msgid "Tables"
+msgstr ""
+
+#: windows/__init__.py:770
+msgid "System"
+msgstr ""
+
+#: windows/__init__.py:786
+msgid "Table:"
+msgstr ""
+
+#: windows/__init__.py:794 windows/__init__.py:1018 windows/__init__.py:1062
+#: windows/__init__.py:1168 windows/__init__.py:2408
+msgid "Insert"
+msgstr ""
+
+#: windows/__init__.py:799
+msgid "Clone"
+msgstr ""
+
+#: windows/__init__.py:821
+msgid "Rows"
+msgstr ""
+
+#: windows/__init__.py:824 windows/__init__.py:1989
+msgid "Updated at"
+msgstr ""
+
+#: windows/__init__.py:826 windows/__init__.py:2120
+#: windows/components/dataview.py:43 windows/components/dataview.py:67
+#: windows/components/dataview.py:89
 msgid "Collation"
 msgstr ""
 
-#: windows/__init__.py:700
+#: windows/__init__.py:842
 msgid "Diagram"
 msgstr ""
 
-#: windows/__init__.py:711 windows/__init__.py:1687
+#: windows/__init__.py:853 windows/__init__.py:1958
 msgid "Database"
 msgstr ""
 
-#: windows/__init__.py:766 windows/__init__.py:2008
+#: windows/__init__.py:908 windows/__init__.py:2305
 msgid "Base"
 msgstr ""
 
-#: windows/__init__.py:780 windows/__init__.py:2022
+#: windows/__init__.py:922 windows/__init__.py:2319
 msgid "Auto Increment"
 msgstr ""
 
-#: windows/__init__.py:808 windows/__init__.py:2050
+#: windows/__init__.py:950 windows/__init__.py:2347
 msgid "Default Collation"
 msgstr ""
 
-#: windows/__init__.py:828 windows/__init__.py:1068 windows/__init__.py:2068
+#: windows/__init__.py:970 windows/__init__.py:1301 windows/__init__.py:2365
 msgid "Options"
 msgstr ""
 
-#: windows/__init__.py:840 windows/__init__.py:881
+#: windows/__init__.py:982 windows/__init__.py:1023 windows/__init__.py:1067
 msgid "Remove"
 msgstr ""
 
-#: windows/__init__.py:847 windows/__init__.py:888
+#: windows/__init__.py:989 windows/__init__.py:1030 windows/__init__.py:1074
 msgid "Clear"
 msgstr ""
 
-#: windows/__init__.py:862 windows/__init__.py:2082
+#: windows/__init__.py:1004 windows/__init__.py:2379
 msgid "Indexes"
 msgstr ""
 
-#: windows/__init__.py:906
-msgid "Foreign Key"
+#: windows/__init__.py:1048
+msgid "Foreign Keys"
 msgstr ""
 
-#: windows/__init__.py:927 windows/__init__.py:2103
+#: windows/__init__.py:1092
+msgid "Checks"
+msgstr ""
+
+#: windows/__init__.py:1160 windows/__init__.py:2400
 msgid "Columns:"
 msgstr ""
 
-#: windows/__init__.py:947 windows/__init__.py:2123
+#: windows/__init__.py:1180 windows/__init__.py:2420
 msgid "Up"
 msgstr ""
 
-#: windows/__init__.py:954 windows/__init__.py:2130
+#: windows/__init__.py:1187 windows/__init__.py:2427
 msgid "Down"
 msgstr ""
 
-#: windows/__init__.py:980 windows/__init__.py:1193 windows/__init__.py:1248
+#: windows/__init__.py:1213 windows/__init__.py:1426 windows/__init__.py:1481
 msgid "Apply"
 msgstr ""
 
-#: windows/__init__.py:993 windows/__init__.py:1000 windows/__init__.py:2169
-#: windows/__init__.py:2176
+#: windows/__init__.py:1226 windows/__init__.py:1233 windows/__init__.py:2466
+#: windows/__init__.py:2473
 msgid "Add Index"
 msgstr ""
 
-#: windows/__init__.py:997 windows/__init__.py:2173
+#: windows/__init__.py:1230 windows/__init__.py:2470
 msgid "Add PrimaryKey"
 msgstr ""
 
-#: windows/__init__.py:1014
+#: windows/__init__.py:1247
 msgid "Table"
 msgstr ""
 
-#: windows/__init__.py:1047
+#: windows/__init__.py:1280
 msgid "Temporary"
 msgstr ""
 
-#: windows/__init__.py:1127
+#: windows/__init__.py:1360
 msgid "Views"
 msgstr ""
 
-#: windows/__init__.py:1135
+#: windows/__init__.py:1368
 msgid "Triggers"
 msgstr ""
 
-#: windows/__init__.py:1147
+#: windows/__init__.py:1380
 #, python-format
 msgid "Table `%(database_name)s`.`%(table_name)s`: %(total_rows) rows total"
 msgstr ""
 
-#: windows/__init__.py:1157
+#: windows/__init__.py:1390
 msgid "Insert record"
 msgstr ""
 
-#: windows/__init__.py:1162
+#: windows/__init__.py:1395
 msgid "Duplicate record"
 msgstr ""
 
-#: windows/__init__.py:1169
+#: windows/__init__.py:1402
 msgid "Delete record"
 msgstr ""
 
-#: windows/__init__.py:1179
+#: windows/__init__.py:1412
 msgid "Apply changes automatically"
 msgstr ""
 
-#: windows/__init__.py:1181 windows/__init__.py:1182
+#: windows/__init__.py:1414 windows/__init__.py:1415
 msgid ""
 "If enabled, table edits are applied immediately without pressing Apply or"
 " Cancel"
 msgstr ""
 
-#: windows/__init__.py:1203
+#: windows/__init__.py:1436
 msgid "Next"
 msgstr ""
 
-#: windows/__init__.py:1211
+#: windows/__init__.py:1444
 msgid "Filters"
 msgstr ""
 
-#: windows/__init__.py:1251
+#: windows/__init__.py:1484
 msgid "CTRL+ENTER"
 msgstr ""
 
-#: windows/__init__.py:1271
+#: windows/__init__.py:1504
 msgid "Insert row"
 msgstr ""
 
-#: windows/__init__.py:1279
+#: windows/__init__.py:1512
 msgid "Data"
 msgstr ""
 
-#: windows/__init__.py:1294 windows/__init__.py:1324
-msgid "New"
-msgstr ""
-
-#: windows/__init__.py:1301
+#: windows/__init__.py:1561
 msgid "Query"
 msgstr ""
 
-#: windows/__init__.py:1321
+#: windows/__init__.py:1581
 msgid "Close"
 msgstr ""
 
-#: windows/__init__.py:1334
-msgid "Query #2"
-msgstr ""
-
-#: windows/__init__.py:1571
-msgid "collapsible"
-msgstr ""
-
-#: windows/__init__.py:1593
-msgid "Column3"
+#: windows/__init__.py:1584 windows/__init__.py:2019
+msgid "New"
 msgstr ""
 
 #: windows/__init__.py:1594
+msgid "Query #2"
+msgstr ""
+
+#: windows/__init__.py:1835
+msgid "Column5"
+msgstr ""
+
+#: windows/__init__.py:1842
+msgid "collapsible"
+msgstr ""
+
+#: windows/__init__.py:1864
+msgid "Column3"
+msgstr ""
+
+#: windows/__init__.py:1865
 msgid "Column4"
 msgstr ""
 
-#: windows/__init__.py:1631
+#: windows/__init__.py:1902
 msgid ""
 "Database "
 "(*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"
 msgstr ""
 
-#: windows/__init__.py:1663
+#: windows/__init__.py:1934
 msgid "Port"
 msgstr ""
 
-#: windows/__init__.py:1680
+#: windows/__init__.py:1951
 msgid "Usage"
 msgstr ""
 
-#: windows/__init__.py:1691
+#: windows/__init__.py:1962
 #, python-format
 msgid "%(total_rows)s"
 msgstr ""
 
-#: windows/__init__.py:1696
+#: windows/__init__.py:1967
 msgid "rows total"
 msgstr ""
 
-#: windows/__init__.py:1713
+#: windows/__init__.py:1986
 msgid "Lines"
 msgstr ""
 
-#: windows/__init__.py:1757
+#: windows/__init__.py:2068
 msgid "Edit Column"
 msgstr ""
 
-#: windows/__init__.py:1773
+#: windows/__init__.py:2084
 msgid "Datatype"
 msgstr ""
 
-#: windows/__init__.py:1788 windows/components/dataview.py:98
+#: windows/__init__.py:2099 windows/components/dataview.py:121
 msgid "Length/Set"
 msgstr ""
 
-#: windows/__init__.py:1827 windows/components/dataview.py:50
+#: windows/__init__.py:2138 windows/components/dataview.py:51
 msgid "Unsigned"
 msgstr ""
 
-#: windows/__init__.py:1833 windows/components/dataview.py:24
-#: windows/components/dataview.py:51
+#: windows/__init__.py:2144 windows/components/dataview.py:25
+#: windows/components/dataview.py:52 windows/components/dataview.py:75
 msgid "Allow NULL"
 msgstr ""
 
-#: windows/__init__.py:1839
+#: windows/__init__.py:2150
 msgid "Zero Fill"
 msgstr ""
 
-#: windows/__init__.py:1850 windows/components/dataview.py:31
-#: windows/components/dataview.py:55
+#: windows/__init__.py:2161 windows/components/dataview.py:32
+#: windows/components/dataview.py:56 windows/components/dataview.py:78
 msgid "Default"
 msgstr ""
 
-#: windows/__init__.py:1876 windows/components/dataview.py:35
-#: windows/components/dataview.py:59
+#: windows/__init__.py:2187 windows/components/dataview.py:36
+#: windows/components/dataview.py:60 windows/components/dataview.py:82
 msgid "Virtuality"
 msgstr ""
 
-#: windows/__init__.py:1891 windows/components/dataview.py:38
-#: windows/components/dataview.py:62
+#: windows/__init__.py:2202 windows/components/dataview.py:39
+#: windows/components/dataview.py:63 windows/components/dataview.py:85
+#: windows/components/dataview.py:241
 msgid "Expression"
 msgstr ""
 
-#: windows/components/dataview.py:27
+#: windows/components/dataview.py:28
 msgid "Check"
 msgstr ""
 
-#: windows/components/dataview.py:52
+#: windows/components/dataview.py:53
 msgid "Zerofill"
 msgstr ""
 
-#: windows/components/dataview.py:86
+#: windows/components/dataview.py:109
 msgid "#"
 msgstr ""
 
-#: windows/components/dataview.py:94
+#: windows/components/dataview.py:117
 msgid "Data type"
 msgstr ""
 
-#: windows/components/dataview.py:128
+#: windows/components/dataview.py:155
 msgid "Add column\tCTRL+INS"
 msgstr ""
 
-#: windows/components/dataview.py:134
+#: windows/components/dataview.py:161
 msgid "Remove column\tCTRL+DEL"
 msgstr ""
 
-#: windows/components/dataview.py:142
+#: windows/components/dataview.py:169
 msgid "Move up\tCTRL+UP"
 msgstr ""
 
-#: windows/components/dataview.py:149
+#: windows/components/dataview.py:176
 msgid "Move down\tCTRL+D"
 msgstr ""
 
-#: windows/components/dataview.py:172
+#: windows/components/dataview.py:199
 msgid "Create new index"
 msgstr ""
 
-#: windows/components/dataview.py:187
+#: windows/components/dataview.py:214
 msgid "Append to index"
 msgstr ""
 
-#: windows/components/dataview.py:201
+#: windows/components/dataview.py:228
 msgid "Column(s)/Expression"
 msgstr ""
 
-#: windows/components/dataview.py:202
+#: windows/components/dataview.py:229
 msgid "Condition"
 msgstr ""
 
-#: windows/components/dataview.py:220
+#: windows/components/dataview.py:259
 msgid "Column(s)"
 msgstr ""
 
-#: windows/components/dataview.py:226
+#: windows/components/dataview.py:265
 msgid "Reference table"
 msgstr ""
 
-#: windows/components/dataview.py:232
+#: windows/components/dataview.py:271
 msgid "Reference column(s)"
 msgstr ""
 
-#: windows/components/dataview.py:238
+#: windows/components/dataview.py:277
 msgid "On UPDATE"
 msgstr ""
 
-#: windows/components/dataview.py:244
+#: windows/components/dataview.py:283
 msgid "On DELETE"
 msgstr ""
 
-#: windows/components/dataview.py:260
+#: windows/components/dataview.py:299
 msgid "Add foreign key"
 msgstr ""
 
-#: windows/components/dataview.py:266
+#: windows/components/dataview.py:305
 msgid "Remove foreign key"
 msgstr ""
 
@@ -615,28 +635,84 @@ msgstr ""
 msgid "Text/Expression"
 msgstr ""
 
-#: windows/main/main_frame.py:231
+#: windows/connections/manager.py:125
+msgid "Confirm save"
+msgstr ""
+
+#: windows/connections/manager.py:193
+msgid "Connection error"
+msgstr ""
+
+#: windows/connections/manager.py:214
+msgid "connection"
+msgstr ""
+
+#: windows/connections/manager.py:215 windows/connections/manager.py:230
+msgid "Confirm delete"
+msgstr ""
+
+#: windows/connections/manager.py:229
+msgid "directory"
+msgstr ""
+
+#: windows/connections/model.py:101
+msgid "New connection"
+msgstr ""
+
+#: windows/main/database.py:70
+msgid "The connection to the database was lost."
+msgstr ""
+
+#: windows/main/database.py:72
+msgid "Do you want to reconnect?"
+msgstr ""
+
+#: windows/main/database.py:74
+msgid "Connection lost"
+msgstr ""
+
+#: windows/main/database.py:83
+msgid "Reconnection failed:"
+msgstr ""
+
+#: windows/main/database.py:84
+msgid "Error"
+msgstr ""
+
+#: windows/main/main_frame.py:124
+msgid "days"
+msgstr ""
+
+#: windows/main/main_frame.py:125
+msgid "hours"
+msgstr ""
+
+#: windows/main/main_frame.py:126
+msgid "minutes"
+msgstr ""
+
+#: windows/main/main_frame.py:127
+msgid "seconds"
+msgstr ""
+
+#: windows/main/main_frame.py:135
 #, python-brace-format
 msgid "Memory used: {used} ({percentage:.2%})"
 msgstr ""
 
-#: windows/main/main_frame.py:458
+#: windows/main/main_frame.py:226
+msgid "Version"
+msgstr ""
+
+#: windows/main/main_frame.py:228
+msgid "Uptime"
+msgstr ""
+
+#: windows/main/main_frame.py:431
 msgid "Delete table"
 msgstr ""
 
-#: windows/main/main_frame.py:575
+#: windows/main/main_frame.py:586
 msgid "Do you want delete the records?"
-msgstr ""
-
-#: windows/sessions/controller.py:348
-msgid "Confirm save"
-msgstr ""
-
-#: windows/sessions/controller.py:390
-msgid "Confirm delete"
-msgstr ""
-
-#: windows/sessions/controller.py:405
-msgid "Connection error"
 msgstr ""
 

@@ -1,4 +1,16 @@
 repos:
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.10.0
+    hooks:
+      - id: pip-audit
+        args: [ "--descendents" ]
+
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.408
+    hooks:
+      - id: pyright
+
+
   - repo: local
     hooks:
       - id: pytest
