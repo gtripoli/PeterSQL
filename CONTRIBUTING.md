@@ -85,11 +85,7 @@ Main requirements:
 
 ## 🎨 Code Style
 
-- Follow PEP 8
-- Use type hints where helpful
-- Keep code readable and simple
-- Prefer clarity over micro-optimizations
-- Ensure automated checks (ruff, isort) pass
+Follow the [code style guidelines](CODE_STYLE.md).
 
 ---
 

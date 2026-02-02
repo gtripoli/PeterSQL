@@ -9,7 +9,7 @@ repos:
         always_run: true
       - id: update_coverage_badge
         name: update coverage badge
-        entry: bash -c "pytest --cov=. --cov-report=term | grep TOTAL | awk '{print $4}' | sed 's/%//' | xargs -I {} sed -i 's/coverage-[0-9]*%/coverage-{}%/g' README.md"
+        entry: bash -c "pytest --cov=. --cov-report=term | grep TOTAL | awk '{print $4}' | sed 's/%//' | xargs -I {} sed -i 's/coverage-[0-9]*%/coverage-{}%/g' README.md && git add README.md"
         language: system
         pass_filenames: false
         always_run: true

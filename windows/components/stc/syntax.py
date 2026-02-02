@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from typing import Sequence, Optional, Callable, List, Dict
+from typing import Callable, Dict, List, Optional, Sequence
 
 import wx.stc
+
+from windows.components.stc.styles import apply_stc_theme
 
 Formatter = Callable[[str], str]
 Detector = Callable[[str], bool]
@@ -35,21 +37,13 @@ class SyntaxRegistry:
     def all(self) -> List[SyntaxProfile]:
         return list(self._profiles)
 
+    def select(self, *, syntax_id: Optional[str] = None, label: Optional[str] = None) -> SyntaxProfile:
+        if syntax_id is not None:
+            return self._by_id[syntax_id]
+        if label is not None:
+            return self._by_label[label]
+        raise ValueError("Either syntax_id or label must be provided")
+
 
 def apply_profile(ctrl: wx.stc.StyledTextCtrl, profile: SyntaxProfile) -> None:
-    """Apply lexer + keywords. (Colors/theme can be centralized here later.)"""
-    ctrl.SetLexer(profile.stc_lexer)
-
-    if profile.keywords:
-        ctrl.SetKeyWords(0, " ".join(profile.keywords))
-    else:
-        ctrl.SetKeyWords(0, "")
-
-    # Reasonable defaults (IDE-ish)
-    ctrl.SetTabWidth(4)
-    ctrl.SetUseTabs(False)
-    ctrl.SetWrapMode(wx.stc.STC_WRAP_NONE)
-
-    # Line numbers margin
-    ctrl.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
-    ctrl.SetMarginWidth(0, 40)
+    apply_stc_theme(ctrl, profile)

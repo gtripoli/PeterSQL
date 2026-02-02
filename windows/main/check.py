@@ -6,11 +6,10 @@ import wx.dataview
 from helpers.dataview import BaseDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
+from structures.engines.database import SQLCheck, SQLTable
 
-from windows.main import CURRENT_TABLE, CURRENT_INDEX
+from windows.main import CURRENT_INDEX, CURRENT_TABLE
 from windows.main.column import NEW_TABLE
-
-from structures.engines.database import SQLTable, SQLCheck
 
 
 class TableCheckModel(BaseDataViewListModel):
@@ -90,26 +89,39 @@ class TableCheckController:
 
         event.Skip()
 
-    def on_constraint_delete(self):
+    def on_constraint_delete(self, event: wx.Event | None = None) -> None:
+        if self._do_constraint_delete() and event is not None:
+            event.Skip()
+
+    def on_constraint_clear(self, event: wx.Event | None = None) -> None:
+        if self._do_constraint_clear() and event is not None:
+            event.Skip()
+
+    def _do_constraint_delete(self) -> bool:
         selected = self.list_ctrl_constraint.GetSelection()
         if not selected.IsOk():
-            return
+            return False
 
-        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+        if (table := self._active_table()) is None:
+            return False
 
         row = self.model.GetRow(selected)
         constraint = self.model.get_data_by_row(row)
 
         if constraint in table.checks:
             table.checks.remove(constraint)
+            NEW_TABLE.set_value(table)
+            return True
+        return False
 
-        NEW_TABLE.set_value(table)
-
-    def on_constraint_clear(self):
-        table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
+    def _do_constraint_clear(self) -> bool:
+        if (table := self._active_table()) is None:
+            return False
 
         self.model.clear()
-
         table.checks.clear()
-
         NEW_TABLE.set_value(table)
+        return True
+
+    def _active_table(self) -> SQLTable | None:
+        return NEW_TABLE.get_value() or CURRENT_TABLE.get_value()

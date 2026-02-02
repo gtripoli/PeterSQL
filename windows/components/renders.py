@@ -4,8 +4,8 @@ import wx.dataview
 
 from typing import Type, Optional, Callable
 
-from windows.components import BaseDataViewCustomRenderer, BaseTextRenderer, Validator, TextCtrlWithDialogButton
-from windows.components.popup import BasePopup
+from windows.components import BaseDataViewCustomRenderer, BaseTextRenderer, Validator
+from windows.components.popup import BasePopup, TextCtrlWithDialogButton
 
 
 class PopupRenderer(BaseDataViewCustomRenderer):

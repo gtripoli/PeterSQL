@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Self, Any, Dict
+from typing import List, Self, Any, Dict, Optional
 
 import wx
 import wx.adv
@@ -511,3 +511,36 @@ class PopupCalendarTime(BasePopup):
 # #         choice = wx.Choice(parent, choices=choices)
 # #         choice.SetSize(rect.GetSize())
 # #         return choice
+
+class TextCtrlWithDialogButton(wx.Panel):
+    def __init__(self, parent, value: str, on_open_dialog, validators: Optional[List] = None):
+        super().__init__(parent)
+
+        self.validators = validators or []
+        self.txt = wx.TextCtrl(self, value=value or "", style=wx.TE_PROCESS_ENTER)
+        self.btn = wx.Button(self, label="...", style=wx.BU_EXACTFIT)
+        self.btn.SetMinSize(wx.Size(28, -1))
+
+        s = wx.BoxSizer(wx.HORIZONTAL)
+        s.Add(self.txt, 1, wx.EXPAND)
+        s.Add(self.btn, 0, wx.LEFT, 4)
+        self.SetSizer(s)
+
+        self.txt.Bind(wx.EVT_CHAR, self._on_char)
+
+        self.btn.Bind(wx.EVT_BUTTON, lambda evt: on_open_dialog(self))
+
+    def _on_char(self, event):
+        for v in self.validators:
+            if not v.validator(event):
+                wx.Bell()
+                return
+        event.Skip()
+
+    def GetValue(self) -> str:
+        return self.txt.GetValue()
+
+    def SetValue(self, value: str) -> None:
+        self.txt.SetValue(value or "")
+        self.txt.SetInsertionPointEnd()
+        self.txt.SetFocus()

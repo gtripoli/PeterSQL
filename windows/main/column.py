@@ -1,21 +1,20 @@
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import wx
 import wx.dataview
 
 from helpers.loader import Loader
-
 from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel, ColumnField
 
-from windows import TableColumnsDataViewCtrl
-from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN
-from windows.main.table import NEW_TABLE
-
 from structures.helpers import merge_original_current
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLDatabase
-from structures.engines.indextype import SQLIndexType
 from structures.connection import Connection
+from structures.engines.database import SQLColumn, SQLDatabase, SQLIndex, SQLTable
+from structures.engines.indextype import SQLIndexType
+
+from windows import TableColumnsDataViewCtrl
+from windows.main import CURRENT_COLUMN, CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE
+from windows.main.table import NEW_TABLE
 
 
 class ColumnModel(BaseDataViewListModel):
