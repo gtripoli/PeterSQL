@@ -1,5 +1,5 @@
-from gettext import gettext as _
 from typing import Optional
+from gettext import gettext as _
 
 import wx
 
@@ -47,14 +47,6 @@ class ConnectionsManager(ConnectionsDialog):
 
         self._setup_event_handlers()
 
-    def _setup_event_handlers(self):
-        self.Bind(wx.EVT_CLOSE, self.on_exit)
-        self.search_connection.Bind(wx.EVT_TEXT, self._on_search_changed)
-
-        CURRENT_DIRECTORY.subscribe(self._on_current_directory)
-        CURRENT_CONNECTION.subscribe(self._on_current_connection)
-        PENDING_CONNECTION.subscribe(self._on_pending_connection)
-
     def _on_current_directory(self, directory: Optional[ConnectionDirectory]):
         self.btn_delete.Enable(bool(directory))
         self.btn_create_directory.Enable(not bool(directory))
@@ -71,25 +63,6 @@ class ConnectionsManager(ConnectionsDialog):
         self.btn_save.Enable(bool(connection and connection.is_valid))
         self.btn_test.Enable(bool(connection and connection.is_valid))
         self.btn_open.Enable(bool(connection and connection.is_valid))
-
-    def _on_delete_connection(self, event):
-        connection = self.connections_tree_ctrl.get_selected_connection()
-        if connection:
-            if wx.MessageBox(_(f"Are you sure you want to delete connection '{connection.name}'?"),
-                             "Confirm Delete", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION) == wx.YES:
-                self._repository.delete_item(connection)
-                self.connections_tree_ctrl.remove_connection(connection)
-
-    def do_open_connection(self, event):
-        connection = CURRENT_CONNECTION()
-
-        CONNECTIONS_LIST.append(connection)
-
-        if not self.GetParent():
-            CURRENT_CONNECTION(connection)
-            self._app.open_main_frame()
-
-        self.Hide()
 
     def _on_connection_activated(self, connection: Connection):
         CURRENT_CONNECTION(connection)
@@ -111,8 +84,39 @@ class ConnectionsManager(ConnectionsDialog):
         self.panel_ssh_tunnel.Enable(enable)
         self.panel_ssh_tunnel.GetParent().Layout()
 
+    def _on_delete_connection(self, event):
+        connection = self.connections_tree_ctrl.get_selected_connection()
+        if connection:
+            if wx.MessageBox(_(f"Are you sure you want to delete connection '{connection.name}'?"),
+                             "Confirm Delete", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION) == wx.YES:
+                self._repository.delete_item(connection)
+                self.connections_tree_ctrl.remove_connection(connection)
+
+    def _on_search_changed(self, event):
+        search_text = self.search_connection.GetValue()
+        self.connections_tree_controller.do_filter_connections(search_text)
+
+    def _setup_event_handlers(self):
+        self.Bind(wx.EVT_CLOSE, self.on_exit)
+        self.search_connection.Bind(wx.EVT_TEXT, self._on_search_changed)
+
+        CURRENT_DIRECTORY.subscribe(self._on_current_directory)
+        CURRENT_CONNECTION.subscribe(self._on_current_connection)
+        PENDING_CONNECTION.subscribe(self._on_pending_connection)
+
+    def do_open_connection(self, event):
+        connection = CURRENT_CONNECTION()
+
+        CONNECTIONS_LIST.append(connection)
+
+        if not self.GetParent():
+            CURRENT_CONNECTION(connection)
+            self._app.open_main_frame()
+
+        self.Hide()
+
     def on_save(self, *args):
-        connection = PENDING_CONNECTION()
+        connection = PENDING_CONNECTION.get_value()
         if not connection:
             return False
 
@@ -179,6 +183,17 @@ class ConnectionsManager(ConnectionsDialog):
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
             self.connections_tree_ctrl.Expand(parent_item)
 
+    def verify_connection(self, connection: Connection):
+        with Loader.cursor_wait():
+            try:
+                connection.context.connect(connect_timeout=10)
+            except Exception as ex:
+                wx.MessageDialog(None,
+                                 message=_(f'Connection error:\n{str(ex)}'),
+                                 caption=_("Connection error"),
+                                 style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
+                raise ConnectionError(ex)
+
     def on_open(self, event):
         if PENDING_CONNECTION() and not self.on_save(event):
             return
@@ -193,18 +208,6 @@ class ConnectionsManager(ConnectionsDialog):
                 logger.error(ex, exc_info=True)
             else:
                 self.do_open_connection(connection)
-
-    def on_delete(self, *args):
-        selected_item = self.connections_tree_ctrl.GetSelection()
-        if not selected_item.IsOk():
-            return
-
-        obj = self.connections_tree_controller.model.ItemToObject(selected_item)
-
-        if isinstance(obj, Connection):
-            self.on_delete_connection(obj)
-        elif isinstance(obj, ConnectionDirectory):
-            self.on_delete_directory(obj)
 
     def on_delete_connection(self, connection: Connection):
         dialog = wx.MessageDialog(None,
@@ -236,20 +239,17 @@ class ConnectionsManager(ConnectionsDialog):
 
         dialog.Destroy()
 
-    def verify_connection(self, connection: Connection):
-        with Loader.cursor_wait():
-            try:
-                connection.context.connect(connect_timeout=10)
-            except Exception as ex:
-                wx.MessageDialog(None,
-                                 message=_(f'Connection error:\n{str(ex)}'),
-                                 caption=_("Connection error"),
-                                 style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
-                raise ConnectionError(ex)
+    def on_delete(self, *args):
+        selected_item = self.connections_tree_ctrl.GetSelection()
+        if not selected_item.IsOk():
+            return
 
-    def _on_search_changed(self, event):
-        search_text = self.search_connection.GetValue()
-        self.connections_tree_controller.do_filter_connections(search_text)
+        obj = self.connections_tree_controller.model.ItemToObject(selected_item)
+
+        if isinstance(obj, Connection):
+            self.on_delete_connection(obj)
+        elif isinstance(obj, ConnectionDirectory):
+            self.on_delete_directory(obj)
 
     def on_exit(self, event):
         if not self._app.main_frame:

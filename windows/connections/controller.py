@@ -1,4 +1,3 @@
-from gettext import gettext as _
 from typing import Optional, Any, Callable
 
 import wx

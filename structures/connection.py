@@ -51,7 +51,7 @@ class ConnectionDirectory:
 class Connection:
     id: int
     name: str
-    engine: Optional[ConnectionEngine]
+    engine: ConnectionEngine
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
     comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None

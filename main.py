@@ -14,10 +14,10 @@ from helpers.loader import Loader
 from helpers.logger import logger
 from helpers.observables import ObservableObject
 
-from windows.components.stc.profiles import JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT
 from windows.components.stc.syntax import SyntaxRegistry
 from windows.components.stc.themes import ThemeManager
 from windows.components.stc.styles import apply_stc_theme
+from windows.components.stc.profiles import JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT
 
 WORKDIR = Path(os.path.abspath(os.path.dirname(__file__)))
 

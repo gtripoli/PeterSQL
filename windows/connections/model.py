@@ -1,34 +1,33 @@
 from gettext import gettext as _
 
+from helpers import wx_call_after_debounce
 from helpers.bindings import AbstractModel
 from helpers.observables import Observable, CallbackEvent
-from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
-
-from helpers import wx_call_after_debounce
 
 from structures.connection import Connection, ConnectionEngine
+from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
 
 from . import CURRENT_CONNECTION, PENDING_CONNECTION
 
 
 class ConnectionModel(AbstractModel):
     def __init__(self):
-        self.name = Observable()
-        self.engine = Observable(initial=ConnectionEngine.MYSQL.value.name)
-        self.hostname = Observable()
-        self.username = Observable()
-        self.password = Observable()
-        self.port = Observable(initial=3306)
-        self.filename = Observable()
-        self.comments = Observable("")
+        self.name = Observable[str]()
+        self.engine = Observable[str](initial=ConnectionEngine.MYSQL.value.name)
+        self.hostname = Observable[str]()
+        self.username = Observable[str]()
+        self.password = Observable[str]()
+        self.port = Observable[int](initial=3306)
+        self.filename = Observable[str]()
+        self.comments = Observable[str]("")
 
-        self.ssh_tunnel_enabled = Observable(initial=False)
-        self.ssh_tunnel_executable = Observable(initial="ssh")
-        self.ssh_tunnel_hostname = Observable()
-        self.ssh_tunnel_port = Observable(initial=22)
-        self.ssh_tunnel_username = Observable()
-        self.ssh_tunnel_password = Observable()
-        self.ssh_tunnel_local_port = Observable(initial=3307)
+        self.ssh_tunnel_enabled = Observable[bool](initial=False)
+        self.ssh_tunnel_executable = Observable[str](initial="ssh")
+        self.ssh_tunnel_hostname = Observable[str]()
+        self.ssh_tunnel_port = Observable[int](initial=22)
+        self.ssh_tunnel_username = Observable[str]()
+        self.ssh_tunnel_password = Observable[str]()
+        self.ssh_tunnel_local_port = Observable[int](initial=3307)
 
         self.engine.subscribe(self._set_default_port)
 
@@ -121,30 +120,30 @@ class ConnectionModel(AbstractModel):
 
         connection_engine = ConnectionEngine.from_name(self.engine())
 
-        pending_connection.name = self.name()
+        pending_connection.name = self.name() or ""
         pending_connection.engine = connection_engine
         pending_connection.comments = self.comments()
 
         if connection_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL]:
             pending_connection.configuration = CredentialsConfiguration(
-                hostname=self.hostname.get_value(),
-                username=self.username.get_value(),
-                password=self.password.get_value(),
-                port=self.port.get_value()
+                hostname=self.hostname.get_value() or "localhost",
+                username=self.username.get_value() or "root",
+                password=self.password.get_value() or "",
+                port=self.port.get_value() or 3306
             )
 
             if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled()):
                 pending_connection.ssh_tunnel = SSHTunnelConfiguration(
                     enabled=ssh_tunnel_enabled,
-                    executable=self.ssh_tunnel_executable.get_value(),
-                    hostname=self.ssh_tunnel_hostname.get_value(),
-                    port=self.ssh_tunnel_port.get_value(),
+                    executable=self.ssh_tunnel_executable.get_value() or "ssh",
+                    hostname=self.ssh_tunnel_hostname.get_value() or "",
+                    port=self.ssh_tunnel_port.get_value() or 22,
                     username=self.ssh_tunnel_username.get_value(),
                     password=self.ssh_tunnel_password.get_value(),
                     local_port=self.ssh_tunnel_local_port.get_value(),
                 )
 
-        elif pending_connection == ConnectionEngine.SQLITE:
+        elif connection_engine == ConnectionEngine.SQLITE:
             pending_connection.configuration = SourceConfiguration(
                 filename=self.filename()
             )

@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Self, List, Optional
+from typing import Self, List, Optional, Literal, Union
 
 from helpers.logger import logger
 
@@ -106,13 +106,15 @@ class MariaDBTable(SQLTable):
                 if self.engine != original_table.engine:
                     original_table.alter_engine(self.engine)
 
-                for original, current in map_columns:
+                for i, (original, current) in enumerate(map_columns):
                     if original is None:
                         current.add()
                     elif current is None:
                         original.drop()
                     elif current != original:
                         original.change(current)
+                    elif current_columns[i] != original_columns[i]:
+                        original.modify(current, original_columns[i - 1])
 
                 for original_index, current_index in map_indexes:
                     if current_index is None:
@@ -147,17 +149,26 @@ class MariaDBColumn(SQLColumn):
     is_unsigned: Optional[bool] = False
     is_zerofill: Optional[bool] = False
     comment: Optional[str] = None
-    after: Optional[str] = None
+    po: Optional[SQLColumn] = None
 
     def add(self) -> bool:
         sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD COLUMN {MariaDBColumnBuilder(self)}"
-        if hasattr(self, 'after') and self.after:
-            sql += f" AFTER `{self.after}`"
+        if self.after_index:
+            if self.after_index == 0:
+                sql += " FIRST"
+            else:
+                sql += f" AFTER {self.table.columns.get_value()[self.after_index].sql_safe_name}"
 
         return self.table.database.context.execute(sql)
 
-    def modify(self, current: Self):
+    def modify(self, current: Self, after: Optional[SQLColumn] = None):
         sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} MODIFY COLUMN {MariaDBColumnBuilder(current)}"
+        if after is not None:
+            if after.id == -1:
+                sql += " FIRST"
+            else:
+                sql += f" AFTER {after.sql_safe_name}"
+
         self.table.database.context.execute(sql)
 
     def change(self, current: Self):

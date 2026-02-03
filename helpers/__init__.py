@@ -1,8 +1,9 @@
 import enum
+
 from typing import Callable
+from gettext import pgettext
 
 import babel.numbers
-from gettext import pgettext
 
 import wx
 

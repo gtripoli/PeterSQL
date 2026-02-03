@@ -31,7 +31,7 @@ class AbstractBaseDataModel():
         self._data: List[Any] = []
         self._observable: Union[ObservableList, ObservableLazyList] = None
 
-        self.column_count = column_count
+        self._column_count = column_count
 
     def load(self, data: List[Any]):
         logger.debug(f"{self.__class__.__name__}.load: {data[:50]}")
@@ -284,6 +284,12 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
         AbstractBaseDataModel.clear(self)
         self.Reset(0)
         self.Cleared()
+
+    def GetColumnCount(self) -> int:
+        if hasattr(self, "MAP_COLUMN_FIELDS"):
+            return len(self.MAP_COLUMN_FIELDS.keys())
+
+        return self._column_count
 
     def GetValueByRow(self, row, col):
         if not self.data:

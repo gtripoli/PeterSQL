@@ -267,6 +267,8 @@ class SQLColumn(abc.ABC):
 
     server_default: Optional[str] = None
     is_auto_increment: bool = False
+    is_unsigned: bool = False
+    is_zerofill: bool = False
     length: Optional[int] = None
 
     check: Optional[str] = None
@@ -276,6 +278,7 @@ class SQLColumn(abc.ABC):
     datetime_precision: Optional[int] = None
     virtuality: Optional[Literal["VIRTUAL", "STORED"]] = None
     expression: Optional[str] = None
+    position: Optional[int] = None
 
     def __eq__(self, other):
         if not isinstance(other, SQLColumn):
@@ -409,9 +412,8 @@ class SQLIndex(abc.ABC):
     type: SQLIndexType
     columns: List[str]
     table: SQLTable = dataclasses.field(compare=False)
-    condition: str = dataclasses.field(default_factory=str)
-
-    # expression: List[str] = dataclasses.field(default_factory=list)
+    expression: List[str] = dataclasses.field(default_factory=list)
+    condition: Optional[str] = None
 
     def __eq__(self, other):
         if not isinstance(other, SQLIndex):

@@ -1,14 +1,14 @@
-import os
-import signal
-import subprocess
-import shutil
-import time
-import socket
 import atexit
+import os
+import shutil
+import signal
+import socket
+import subprocess
+import time
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
-from gettext import gettext as _
+import gettext as _
 
 from helpers.exceptions import SSHTunnelError
 from helpers.logger import logger
@@ -16,11 +16,11 @@ from helpers.logger import logger
 
 class SSHTunnel:
     def __init__(self, ssh_hostname: str, ssh_port: int = 22, /,
-                 ssh_username: str = None, ssh_password: str = None,
+                 ssh_username: Optional[str] = None, ssh_password: Optional[str] = None,
                  remote_port: int = 3306, local_bind_address: Tuple[str, int] = ('localhost', 0),
                  ssh_executable: str = 'ssh',
-                 identity_file: str = None,
-                 extra_args: List[str] = None):
+                 identity_file: Optional[str] = None,
+                 extra_args: Optional[List[str]] = None):
 
         self.ssh_hostname = ssh_hostname
         self.ssh_port = ssh_port
@@ -34,7 +34,7 @@ class SSHTunnel:
         self.ssh_executable = ssh_executable
         self.identity_file = identity_file
         self.extra_args = extra_args or []
-        self._process: subprocess.Popen | None = None
+        self._process: Optional[subprocess.Popen] = None
 
     def __enter__(self):
         self.start()

@@ -58,7 +58,7 @@ class ConnectionsRepository:
             return self._connection_from_dict(data)
 
     def _connection_from_dict(self, data: Dict[str, Any]) -> Connection:
-        engine = ConnectionEngine.from_name(data['engine']) if data.get('engine') else None
+        engine = ConnectionEngine.from_name(data.get('engine', ConnectionEngine.MYSQL.value.name))
 
         configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]] = None
 
@@ -117,7 +117,7 @@ class ConnectionsRepository:
                     return True
             return False
 
-        if _find_and_replace(self.connections(), connection.id):
+        if _find_and_replace(self.connections.get_value(), connection.id):
             self._write()
             self.connections.refresh()
 
@@ -158,7 +158,7 @@ class ConnectionsRepository:
                     return True
             return False
 
-        if _find_and_delete(self.connections(), connection.id):
+        if _find_and_delete(self.connections.get_value(), connection.id):
             self._write()
             self.connections.refresh()
 

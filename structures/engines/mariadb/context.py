@@ -1,8 +1,9 @@
 import re
-import pymysql
-from typing import Optional, List, Dict, Any
 
+from typing import Any, Dict, List, Optional
 from gettext import gettext as _
+
+import pymysql
 
 from helpers.logger import logger
 from structures.connection import Connection
@@ -10,7 +11,6 @@ from structures.connection import Connection
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
-
 from structures.engines.mariadb import MAP_COLUMN_FIELDS
 from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
 from structures.engines.mariadb.datatype import MariaDBDataType
