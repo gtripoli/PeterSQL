@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Optional, Union
 
 import yaml
 
@@ -32,7 +32,7 @@ class ConnectionsRepository:
         self._id_counter += 1
         return id
 
-    def _read(self) -> List[Dict[str, Any]]:
+    def _read(self) -> list[dict[str, Any]]:
         try:
             connections = yaml.full_load(open(self._config_file))
             return connections or []
@@ -45,10 +45,10 @@ class ConnectionsRepository:
         with open(self._config_file, 'w') as file_handler:
             yaml.dump(payload, file_handler, sort_keys=False)
 
-    def load(self) -> List[Union[ConnectionDirectory, Connection]]:
+    def load(self) -> list[Union[ConnectionDirectory, Connection]]:
         return [self._item_from_dict(data) for data in self._read()]
 
-    def _item_from_dict(self, data: Dict[str, Any], parent: Optional[ConnectionDirectory] = None) -> Union[ConnectionDirectory, Connection]:
+    def _item_from_dict(self, data: dict[str, Any], parent: Optional[ConnectionDirectory] = None) -> Union[ConnectionDirectory, Connection]:
         if data.get('type') == 'directory':
             directory = ConnectionDirectory(name=data['name'], children=[])
             children = [self._item_from_dict(child_data, directory) for child_data in data.get('children', [])]
@@ -57,7 +57,7 @@ class ConnectionsRepository:
         else:
             return self._connection_from_dict(data)
 
-    def _connection_from_dict(self, data: Dict[str, Any]) -> Connection:
+    def _connection_from_dict(self, data: dict[str, Any]) -> Connection:
         engine = ConnectionEngine.from_name(data.get('engine', ConnectionEngine.MYSQL.value.name))
 
         configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]] = None
@@ -162,7 +162,7 @@ class ConnectionsRepository:
             self._write()
             self.connections.refresh()
 
-    def _build_ssh_configuration(self, data: Dict[str, Any]) -> Optional[SSHTunnelConfiguration]:
+    def _build_ssh_configuration(self, data: dict[str, Any]) -> Optional[SSHTunnelConfiguration]:
         if not data:
             return None
 

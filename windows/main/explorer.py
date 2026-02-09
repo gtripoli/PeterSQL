@@ -10,10 +10,11 @@ from helpers import bytes_to_human
 from helpers.loader import Loader
 from helpers.observables import CallbackEvent
 
+from structures.session import Session
 from structures.connection import Connection
 from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_VIEW, CURRENT_TRIGGER, CONNECTIONS_LIST, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_VIEW, CURRENT_TRIGGER, SESSIONS_LIST, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
 from windows.main.table import NEW_TABLE
 
 
@@ -73,7 +74,7 @@ class TreeExplorerController:
         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
 
-        CONNECTIONS_LIST.subscribe(self.append_connection, CallbackEvent.ON_APPEND)
+        SESSIONS_LIST.subscribe(self.append_session, CallbackEvent.ON_APPEND)
 
         # CURRENT_DATABASE.get_value().tables.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
         # CURRENT_DATABASE.get_value().views.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
@@ -100,8 +101,8 @@ class TreeExplorerController:
                 event.Skip()
                 return
 
-            if isinstance(obj, Connection):
-                self.select_connection(obj, event)
+            if isinstance(obj, Session):
+                self.select_session(obj, event)
             elif isinstance(obj, SQLDatabase):
                 self.select_database(obj, item, event)
             elif isinstance(
@@ -116,20 +117,20 @@ class TreeExplorerController:
         self.tree_ctrl_explorer.DeleteAllItems()
         self.root_item = self.tree_ctrl_explorer.AddRoot("")
 
-        for connection in CONNECTIONS_LIST.get_value():
-            self.append_connection(connection)
+        for session in SESSIONS_LIST.get_value():
+            self.append_session(session)
 
-    def append_connection(self, connection: Connection):
+    def append_session(self, session: Session):
         self.root_item = self.tree_ctrl_explorer.GetRootItem()
 
-        connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, connection.engine.name, IconList.NOT_FOUND)), data=connection)
-        for database in connection.context.databases.get_value():
-            db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=wx.GetApp().icon_registry_16.get_index(IconList.DATABASE), data=database)
+        session_item = self.tree_ctrl_explorer.AppendItem(self.root_item, session.name, image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, session.engine.name, IconList.NOT_FOUND)), data=session)
+        for database in session.context.databases.get_value():
+            db_item = self.tree_ctrl_explorer.AppendItem(session_item, database.name, image=wx.GetApp().icon_registry_16.get_index(IconList.DATABASE), data=database)
             self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
             self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=wx.GetApp().icon_registry_16.get_index(IconList.CLOCK), data=None)
 
-        self.tree_ctrl_explorer.Expand(connection_item)
-        self.tree_ctrl_explorer.EnsureVisible(connection_item)
+        self.tree_ctrl_explorer.Expand(session_item)
+        self.tree_ctrl_explorer.EnsureVisible(session_item)
 
         self.tree_ctrl_explorer.Layout()
 
@@ -185,23 +186,24 @@ class TreeExplorerController:
         CURRENT_EVENT.set_value(None)
         CURRENT_FUNCTION.set_value(None)
 
-    def select_connection(self, connection: Connection, event):
-        if connection == CURRENT_CONNECTION.get_value() and CURRENT_DATABASE.get_value():
+    def select_session(self, session: Session, event):
+        if session == CURRENT_SESSION.get_value() and CURRENT_DATABASE.get_value():
             event.Skip()
             return
-        CURRENT_CONNECTION.set_value(connection)
+        CURRENT_SESSION.set_value(session)
+        CURRENT_CONNECTION.set_value(session.connection)
         CURRENT_DATABASE.set_value(None)
 
     def select_database(self, database: SQLDatabase, item, event):
         if database != CURRENT_DATABASE.get_value():
-            connection = database.context.connection
-            if connection != CURRENT_CONNECTION.get_value():
-                CURRENT_CONNECTION.set_value(connection)
+            session = CURRENT_SESSION.get_value()
+            if session and session.connection != CURRENT_CONNECTION.get_value():
+                CURRENT_CONNECTION.set_value(session.connection)
 
-            if not database.context.is_connected :
+            if session and not session.is_connected:
                 while wx.MessageDialog(None,
                                    message="not connected").ShowModal() == wx.ID_OK:
-                    database.context.connect()
+                    session.connect()
 
             CURRENT_DATABASE.set_value(database)
 
@@ -212,10 +214,10 @@ class TreeExplorerController:
 
     def select_sql_object(self, sql_obj):
         database = sql_obj.database
-        connection = database.context.connection
+        session = CURRENT_SESSION.get_value()
 
-        if connection != CURRENT_CONNECTION.get_value():
-            CURRENT_CONNECTION.set_value(connection)
+        if session and session.connection != CURRENT_CONNECTION.get_value():
+            CURRENT_CONNECTION.set_value(session.connection)
 
         if database != CURRENT_DATABASE.get_value():
             CURRENT_DATABASE.set_value(database)

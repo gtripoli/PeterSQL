@@ -1,10 +1,13 @@
 from helpers.observables import Observable, ObservableList
 
+from structures.session import Session
 from structures.connection import Connection
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLForeignKey, SQLIndex, SQLRecord, SQLTrigger, SQLView
 
-CONNECTIONS_LIST: ObservableList[Connection] = ObservableList()
+SESSIONS_LIST: ObservableList[Session] = ObservableList()
+# CONNECTIONS_LIST: ObservableList[Connection] = ObservableList()
 
+CURRENT_SESSION: Observable[Session] = Observable()
 CURRENT_CONNECTION: Observable[Connection] = Observable()
 CURRENT_DATABASE: Observable[SQLDatabase] = Observable()
 CURRENT_TABLE: Observable[SQLTable] = Observable()

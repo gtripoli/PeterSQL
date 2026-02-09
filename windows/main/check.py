@@ -1,4 +1,4 @@
-from typing import List
+from typing import Optional
 
 import wx
 import wx.dataview
@@ -75,10 +75,10 @@ class TableCheckController:
             event.Skip()
             return
 
-        current_checks: List[SQLCheck] = self.model.data
+        current_checks: list[SQLCheck] = self.model.data
 
         table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
-        original_checks: List[SQLCheck] = list(table.checks)
+        original_checks: list[SQLCheck] = list(table.checks)
 
         map_checks = merge_original_current(original_checks, current_checks)
 
@@ -89,11 +89,11 @@ class TableCheckController:
 
         event.Skip()
 
-    def on_constraint_delete(self, event: wx.Event | None = None) -> None:
+    def on_constraint_delete(self, event: Optional[wx.Event] = None) -> None:
         if self._do_constraint_delete() and event is not None:
             event.Skip()
 
-    def on_constraint_clear(self, event: wx.Event | None = None) -> None:
+    def on_constraint_clear(self, event: Optional[wx.Event] = None) -> None:
         if self._do_constraint_clear() and event is not None:
             event.Skip()
 
@@ -123,5 +123,5 @@ class TableCheckController:
         NEW_TABLE.set_value(table)
         return True
 
-    def _active_table(self) -> SQLTable | None:
+    def _active_table(self) -> Optional[SQLTable]:
         return NEW_TABLE.get_value() or CURRENT_TABLE.get_value()

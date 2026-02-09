@@ -10,7 +10,7 @@ from helpers.dataview import BaseDataViewListModel, ColumnField
 
 from structures.engines.database import SQLTable, SQLDatabase
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
 
 
 # SELECTED_TABLE: Observable[SQLTable] = Observable()
@@ -78,7 +78,8 @@ class ListDatabaseTable:
                     return
 
                 try:
-                    database.context.connect()
+                    if session := CURRENT_SESSION.get_value():
+                        session.connect()
                 except Exception as reconnect_ex:
                     wx.MessageBox(
                         _("Reconnection failed:") + "\n" + str(reconnect_ex),

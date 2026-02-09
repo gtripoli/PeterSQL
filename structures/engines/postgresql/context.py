@@ -1,7 +1,7 @@
 import psycopg2
 import psycopg2.extras
-from typing import Optional, List, Dict, Any
 
+from typing import Any, Optional
 from gettext import gettext as _
 
 from helpers.logger import logger
@@ -9,7 +9,6 @@ from structures.connection import Connection
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
-
 from structures.engines.datatype import SQLDataType, DataTypeCategory, DataTypeFormat
 
 from structures.engines.postgresql import MAP_COLUMN_FIELDS
@@ -32,45 +31,14 @@ class PostgreSQLContext(AbstractContext):
         self.host = connection.configuration.hostname
         self.user = connection.configuration.username
         self.password = connection.configuration.password
-        self.database = "postgres"
-        self.current_database = None
         self.port = getattr(connection.configuration, 'port', 5432)
+        self._current_database: Optional[str] = None
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
+
         self.execute("SELECT collname FROM pg_collation;")
         self.COLLATIONS = {row['collname']: row['collname'] for row in self.fetchall()}
-
-        # Fetch user-defined types (enums for now)
-        self.execute("""
-            SELECT t.typname, t.typtype
-            FROM pg_type t
-            JOIN pg_namespace n ON t.typnamespace = n.oid
-            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-            AND t.typtype = 'e'
-            ORDER BY t.typname
-        """)
-
-        for row in self.fetchall():
-            # Get enum labels
-            self.execute(f"""
-                SELECT enumlabel
-                FROM pg_enum e
-                JOIN pg_type t ON e.enumtypid = t.oid
-                WHERE t.typname = '{row['typname']}'
-                ORDER BY e.enumsortorder
-            """)
-            print(self.fetchall())
-            labels = [r['enumlabel'] for r in self.fetchall()]
-            datatype = SQLDataType(
-                name=row['typname'],
-                category=DataTypeCategory.CUSTOM,
-                has_set=True,
-                set=labels,
-                format=DataTypeFormat.STRING
-            )
-            print(datatype)
-            setattr(PostgreSQLDataType, row['typname'].upper(), datatype)
 
         self.execute("""
             SELECT word FROM pg_get_keywords()
@@ -86,31 +54,62 @@ class PostgreSQLContext(AbstractContext):
         """)
         self.FUNCTIONS = tuple(row["routine_name"] for row in self.fetchall())
 
+        self._load_custom_types()
+
+    def _load_custom_types(self) -> None:
+        """Load user-defined enum types from the database."""
+        self.execute("""
+            SELECT t.typname, t.typtype
+            FROM pg_type t
+            JOIN pg_namespace n ON t.typnamespace = n.oid
+            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+            AND t.typtype = 'e'
+            ORDER BY t.typname
+        """)
+
+        for row in self.fetchall():
+            self.execute(f"""
+                SELECT enumlabel
+                FROM pg_enum e
+                JOIN pg_type t ON e.enumtypid = t.oid
+                WHERE t.typname = '{row['typname']}'
+                ORDER BY e.enumsortorder
+            """)
+            labels = [r['enumlabel'] for r in self.fetchall()]
+            datatype = SQLDataType(
+                name=row['typname'],
+                category=DataTypeCategory.CUSTOM,
+                has_set=True,
+                set=labels,
+                format=DataTypeFormat.STRING
+            )
+            setattr(PostgreSQLDataType, row['typname'].upper(), datatype)
+
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
             try:
+                database = connect_kwargs.pop('database', 'postgres')
                 self._connection = psycopg2.connect(
                     host=self.host,
                     user=self.user,
                     password=self.password,
-                    database=self.database,
+                    database=database,
                     port=self.port,
-                    sslmode='require',
                     **connect_kwargs
                 )
                 self._cursor = self._connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-                self.current_database = self.database
-                self._on_connect()
+                self._current_database = database
             except Exception as e:
-                logger.error(f"Failed to connect to PostgreSQL: {e}")
+                logger.error(f"Failed to connect to PostgreSQL: {e}", exc_info=True)
                 raise
+            else:
+                self._on_connect()
 
-    def set_database(self, db_name: str):
-        if self.current_database != db_name:
+    def _set_database(self, db_name: str) -> None:
+        """Switch to a different database by reconnecting."""
+        if self._current_database != db_name:
             self.disconnect()
-            self.database = db_name
-            self.connect()
-            self.current_database = db_name
+            self.connect(database=db_name)
 
     def get_server_version(self) -> str:
         self.execute("SELECT version() as version")
@@ -122,7 +121,7 @@ class PostgreSQLContext(AbstractContext):
         result = self.fetchone()
         return int(result['uptime']) if result else None
 
-    def get_databases(self) -> List[SQLDatabase]:
+    def get_databases(self) -> list[SQLDatabase]:
         self.execute("""
             SELECT datname as database_name, pg_database_size(datname) as total_bytes
             FROM pg_database
@@ -142,8 +141,8 @@ class PostgreSQLContext(AbstractContext):
             ))
         return results
 
-    def get_views(self, database: SQLDatabase) -> List[PostgreSQLView]:
-        self.set_database(database.name)
+    def get_views(self, database: SQLDatabase) -> list[PostgreSQLView]:
+        self._set_database(database.name)
         results = []
         self.execute(f"SELECT schemaname, viewname, definition FROM pg_views WHERE schemaname NOT IN ('information_schema', 'pg_catalog') ORDER BY schemaname, viewname")
         for i, result in enumerate(self.fetchall()):
@@ -156,8 +155,8 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_triggers(self, database: SQLDatabase) -> List[PostgreSQLTrigger]:
-        self.set_database(database.name)
+    def get_triggers(self, database: SQLDatabase) -> list[PostgreSQLTrigger]:
+        self._set_database(database.name)
         results = []
         self.execute(f"SELECT n.nspname as schemaname, tgname, pg_get_triggerdef(t.oid) as sql FROM pg_trigger t JOIN pg_class c ON t.tgrelid = c.oid JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname NOT IN ('information_schema', 'pg_catalog') ORDER BY n.nspname, tgname")
         for i, result in enumerate(self.fetchall()):
@@ -170,8 +169,8 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
-        self.set_database(database.name)
+    def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
+        self._set_database(database.name)
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
@@ -201,7 +200,7 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+    def get_columns(self, table: SQLTable) -> list[SQLColumn]:
         results = []
         if table.id == -1:
             return results
@@ -236,14 +235,14 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+    def get_indexes(self, table: SQLTable) -> list[SQLIndex]:
         if table is None or table.is_new:
             return []
 
         QUERY_LOGS.append(f"/* get_indexes for table={table.name} */")
 
-        results: List[SQLIndex] = []
-        index_data: Dict[str, Dict[str, Any]] = {}
+        results: list[SQLIndex] = []
+        index_data: dict[str, dict[str, Any]] = {}
 
         # Get primary key
         self.execute(f"""
@@ -298,11 +297,11 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+    def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
 
-        self.set_database(table.database.name)
+        self._set_database(table.database.name)
 
         logger.debug(f"get_foreign_keys for table={table.name}")
 
@@ -361,7 +360,7 @@ class PostgreSQLContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[PostgreSQLRecord]:
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[PostgreSQLRecord]:
         logger.debug(f"get records for table={table.name}")
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
@@ -401,7 +400,8 @@ class PostgreSQLContext(AbstractContext):
             get_columns_handler=self.get_columns,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
-        )
+        ).copy()
+
     def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> PostgreSQLColumn:
         id = PostgreSQLContext.get_temporary_id(table.columns)
         return PostgreSQLColumn(
@@ -412,7 +412,7 @@ class PostgreSQLContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: PostgreSQLIndexType, table: PostgreSQLTable, columns: List[str]) -> PostgreSQLIndex:
+    def build_empty_index(self, name: str, type: PostgreSQLIndexType, table: PostgreSQLTable, columns: list[str]) -> PostgreSQLIndex:
         return PostgreSQLIndex(
             id=PostgreSQLContext.get_temporary_id(table.indexes),
             name=name,
@@ -421,7 +421,7 @@ class PostgreSQLContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: PostgreSQLTable, columns: List[str]) -> PostgreSQLForeignKey:
+    def build_empty_foreign_key(self, name: str, table: PostgreSQLTable, columns: list[str]) -> PostgreSQLForeignKey:
         return PostgreSQLForeignKey(
             id=PostgreSQLContext.get_temporary_id(table.foreign_keys),
             name=name,
@@ -429,9 +429,11 @@ class PostgreSQLContext(AbstractContext):
             columns=columns,
             reference_table="",
             reference_columns=[],
+            on_update="NO ACTION",
+            on_delete="NO ACTION",
         )
 
-    def build_empty_record(self, table: PostgreSQLTable, values: Dict[str, Any]) -> PostgreSQLRecord:
+    def build_empty_record(self, table: PostgreSQLTable, values: dict[str, Any]) -> PostgreSQLRecord:
         return PostgreSQLRecord(
             id=PostgreSQLContext.get_temporary_id(table.records),
             table=table,

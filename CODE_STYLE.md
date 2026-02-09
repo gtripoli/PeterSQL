@@ -1,4 +1,4 @@
-# Code Style Guidelines (v1.1-rev3)
+# Code Style Guidelines (v1.2)
 
 These rules define the expected coding style for this project.
 They apply to all contributors, including humans, AI-assisted tools, and automated systems.
@@ -84,8 +84,12 @@ self.par = par
 
 ## 3. Python Typing
 
-- Container type hints MUST use List, Dict, Set, Tuple from typing.
-- Built-in generics (list, dict, set) MUST NOT be used in type annotations.
+This project targets Python 3.14 and uses PEP 585 generics for standard collections.
+
+- Use built-in generic containers: `list[T]`, `dict[K, V]`, `set[T]`, `tuple[...]`.
+- Do NOT use deprecated `typing` aliases for standard collections (e.g. `typing.List`, `typing.Dict`, `typing.Set`,
+  `typing.Tuple`).
+- Keep `typing.Optional[T]` for optional types (do NOT use `T | None`).
 - Prefer explicit and accurate type hints.
 - With mypy, avoid using # type: ignore whenever possible.
 - Prefer type hints instead of comments.
@@ -93,46 +97,82 @@ self.par = par
 #### Good examples
 
 ```python
-from typing import Dict, List
+from typing import Optional
 
 
-def build_index(items: List[str]) -> Dict[str, int]:
-    ...
-
-```
-
-#### Bad examples
-
-```python
 def build_index(items: list[str]) -> dict[str, int]:
     ...
 
 
-value = external_call()  # type: ignore
-```
-
-### Optional Types
-
-- Optional types MUST be expressed using `typing.Optional[T]`.
-- The `T | None` syntax MUST NOT be used.
-
-#### Good examples
-
-```python
-from typing import Optional
-
-user_id: Optional[int] = None
-config: Optional[Config] = None
+def find_user(users: list["User"]) -> Optional["User"]:
+    ...
 ```
 
 #### Bad examples
 
 ```python
-user_id: int | None = None
-config: Config | None = None
+from typing import Dict, List, Optional
+
+
+def build_index(items: List[str]) -> Dict[str, int]:
+    ...
 ```
 
----
+```python
+def find_user(users: list["User"]) -> "User | None":
+    ...
+```
+
+```python
+value = external_call()  # type: ignore
+
+```
+
+### Forward References
+
+- Prefer string-based forward references for types when needed (e.g. `"MyType"`).
+- `from __future__ import annotations` MUST NOT be used.
+- `typing.TYPE_CHECKING` MUST NOT be used in normal code.
+- `TYPE_CHECKING` is allowed only as a last resort to break unavoidable circular imports, and MUST include a clear
+  inline reason comment.
+
+#### Good examples
+
+```python
+def set_user(user: "User") -> None:
+    ...
+```
+
+```python
+from typing import Optional
+
+
+class Node:
+    def __init__(self, parent: Optional["Node"] = None) -> None:
+        self.parent = parent
+```
+
+#### Bad examples
+
+```python
+from __future__ import annotations
+```
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pkg.heavy import HeavyType
+```
+
+#### Allowed (last resort)
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pkg.heavy import HeavyType  # TYPE_CHECKING: unavoidable circular import
+```
 
 ## 4. Import Rules
 

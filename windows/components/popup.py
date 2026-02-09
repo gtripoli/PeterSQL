@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Self, Any, Dict, Optional
+from typing import Self, Any, Optional
 
 import wx
 import wx.adv
@@ -7,12 +7,13 @@ import wx.adv
 from gettext import gettext as _
 
 from helpers.logger import logger
-from structures.connection import Connection
+
+from structures.session import Session
 
 from windows.components import BasePopup
 
 from structures.engines.datatype import SQLDataType, DataTypeCategory, StandardDataType
-from windows.main import CURRENT_CONNECTION
+from windows.main import CURRENT_SESSION
 
 
 class PopupColumnDefault(BasePopup):
@@ -112,8 +113,8 @@ class PopupColumnDefault(BasePopup):
 
 
 class PopupColumnDatatype(BasePopup):
-    connection: Connection
-    choices_groups: Dict[DataTypeCategory, List[str]] = {}
+    session: Session
+    choices_groups: dict[DataTypeCategory, list[str]] = {}
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -130,8 +131,8 @@ class PopupColumnDatatype(BasePopup):
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_active)
         self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_COLLAPSING, lambda e: e.Veto())
 
-        self.connection = CURRENT_CONNECTION()
-        self.set_choices(self.connection.context.DATATYPE.get_all())
+        self.session = CURRENT_SESSION()
+        self.set_choices(self.session.context.DATATYPE.get_all())
 
     def _on_active(self, event):
         item = event.GetItem()
@@ -144,10 +145,10 @@ class PopupColumnDatatype(BasePopup):
 
         event.Skip()
 
-    def set_choices(self, choices: List[SQLDataType]) -> Self:
+    def set_choices(self, choices: list[SQLDataType]) -> Self:
         dc = wx.ClientDC(self.tree_ctrl)
         popup_width: int = 0
-        groups: Dict[DataTypeCategory, List[str]] = {}
+        groups: dict[DataTypeCategory, list[str]] = {}
 
         for choice in choices:
             choice_width, choice_h = dc.GetTextExtent(choice.name)
@@ -162,7 +163,7 @@ class PopupColumnDatatype(BasePopup):
         return self
 
     def get_value(self):
-        return self.connection.context.DATATYPE.get_by_name(self._value)
+        return self.session.context.DATATYPE.get_by_name(self._value)
 
     def open(self, value: Any, position: wx.Point) -> Self:
 
@@ -237,7 +238,7 @@ class PopupCheckList(BasePopup):
 
         event.Skip()
 
-    def set_choices(self, choices: List[str]) -> Self:
+    def set_choices(self, choices: list[str]) -> Self:
         self.choices = choices
 
         dc = wx.ClientDC(self.check_list_box)
@@ -277,7 +278,7 @@ class PopupChoice(BasePopup):
 
         return self
 
-    def set_choices(self, choices: List[str]):
+    def set_choices(self, choices: list[str]):
         self.choices = choices
         # self.choice.SetItems(choices)
 
@@ -461,7 +462,7 @@ class PopupCalendarTime(BasePopup):
 #
 #         return self
 #
-#     def set_choices(self, choices: List[str]):
+#     def set_choices(self, choices: list[str]):
 #         self.choices = choices
 #
 #     def open(self, value: str, position: wx.Point) -> Self:

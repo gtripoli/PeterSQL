@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Self, Optional, Tuple, List
+from typing import Optional, Self
 
 from helpers.logger import logger
 
@@ -9,6 +9,7 @@ from structures.engines.database import (
     SQLColumn,
     SQLDatabase,
     SQLForeignKey,
+    SQLFunction,
     SQLIndex,
     SQLRecord,
     SQLTable,
@@ -191,9 +192,9 @@ class MySQLTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class MySQLColumn(SQLColumn):
-    set: List[str] | None = None
-    is_unsigned: bool | None = False
-    is_zerofill: bool | None = False
+    set: Optional[list[str]] = None
+    is_unsigned: Optional[bool] = False
+    is_zerofill: Optional[bool] = False
     comment: Optional[str] = None
     after: Optional[str] = None
 
@@ -368,3 +369,30 @@ class MySQLTrigger(SQLTrigger):
 
     def alter(self):
         pass
+
+
+@dataclasses.dataclass(eq=False)
+class MySQLFunction(SQLFunction):
+    parameters: str = ""
+    returns: str = ""
+    deterministic: bool = False
+    sql: str = ""
+
+    def create(self) -> bool:
+        deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
+        query = f"""
+            CREATE FUNCTION `{self.name}`({self.parameters})
+            RETURNS {self.returns}
+            {deterministic}
+            BEGIN
+                {self.sql};
+            END
+        """
+        return self.database.context.execute(query)
+
+    def drop(self) -> bool:
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
+
+    def alter(self):
+        self.drop()
+        self.create()

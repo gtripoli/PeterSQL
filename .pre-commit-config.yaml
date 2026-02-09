@@ -15,13 +15,19 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: uv run pytest
+        entry: /home/gtripoli/.local/bin/uv run pytest -n auto
         language: system
         pass_filenames: false
         always_run: true
       - id: update_coverage_badge
         name: update coverage badge
-        entry: bash -c "uv run pytest --cov=. --cov-report=term | grep TOTAL | awk '{print $4}' | sed 's/%//' | xargs -I {} sed -i 's/coverage-[0-9]*%/coverage-{}%/g' README.md && git add README.md"
+        entry: bash -c "uv run pytest -n auto --cov=. --cov-report=term | grep TOTAL | awk '{print $4}' | sed 's/%//' | xargs -I {} sed -i 's/coverage-[0-9]*%/coverage-{}%/g' README.md && git add README.md"
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: update_version_badges
+        name: update version badges
+        entry: bash -c "./scripts/update_badges.sh && git add README.md"
         language: system
         pass_filenames: false
         always_run: true

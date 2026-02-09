@@ -1,7 +1,7 @@
 import re
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, Optional
 
 import wx
 import wx.stc
@@ -13,14 +13,14 @@ from structures.engines.database import SQLDatabase, SQLTable
 class CompletionResult:
     prefix: str
     prefix_length: int
-    items: Tuple[str, ...]
+    items: tuple[str, ...]
 
 
 class SQLCompletionProvider:
     _word_at_caret_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
     _token_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|[.,()*=]")
 
-    _from_like_keywords: Set[str] = {"FROM", "JOIN", "UPDATE", "INTO"}
+    _from_like_keywords: set[str] = {"FROM", "JOIN", "UPDATE", "INTO"}
 
     def __init__(
         self,
@@ -112,23 +112,16 @@ class SQLCompletionProvider:
         from_index = left_upper.rfind("FROM")
         return from_index == -1 or from_index < select_index
 
-    def _keywords(self, *, database: SQLDatabase) -> List[str]:
-        keywords = database.context.KEYWORDS
-        return [str(keyword).upper() for keyword in keywords]
+    def _columns_for_owner(self, *, database: SQLDatabase, owner: str) -> list[str]:
+        if not owner:
+            return []
+        for table in database.tables:
+            if table.name.lower() == owner.lower():
+                return [column.name for column in table.columns if column.name]
+        return []
 
-    def _functions(self, *, database: SQLDatabase) -> List[str]:
-        functions = database.context.FUNCTIONS
-        return [str(function_name).upper() for function_name in functions]
-
-    def _tables(self, *, database: SQLDatabase) -> List[str]:
-        return [table.name for table in database.tables]
-
-    def _filter_items(self, *, database: SQLDatabase) -> List[str]:
-        # In filters, suggest columns/functions directly.
-        return self._columns_prioritized(database=database) + self._functions(database=database)
-
-    def _columns_prioritized(self, *, database: SQLDatabase) -> List[str]:
-        items: List[str] = []
+    def _columns_prioritized(self, *, database: SQLDatabase) -> list[str]:
+        items: list[str] = []
         current_table = self._get_current_table()
 
         if current_table is not None:
@@ -143,13 +136,19 @@ class SQLCompletionProvider:
 
         return items
 
-    def _columns_for_owner(self, *, database: SQLDatabase, owner: str) -> List[str]:
-        if not owner:
-            return []
-        for table in database.tables:
-            if table.name.lower() == owner.lower():
-                return [column.name for column in table.columns if column.name]
-        return []
+    def _filter_items(self, *, database: SQLDatabase) -> list[str]:
+        return self._columns_prioritized(database=database) + self._functions(database=database)
+
+    def _functions(self, *, database: SQLDatabase) -> list[str]:
+        functions = database.context.FUNCTIONS
+        return [str(function_name).upper() for function_name in functions]
+
+    def _keywords(self, *, database: SQLDatabase) -> list[str]:
+        keywords = database.context.KEYWORDS
+        return [str(keyword).upper() for keyword in keywords]
+
+    def _tables(self, *, database: SQLDatabase) -> list[str]:
+        return [table.name for table in database.tables]
 
 
 class SQLAutoCompleteController:
@@ -271,6 +270,6 @@ class SQLAutoCompleteController:
             self._editor.AutoCompCancel()
 
     @staticmethod
-    def _unique_sorted_items(*, items: Tuple[str, ...]) -> List[str]:
-        unique_items: Set[str] = set(items)
+    def _unique_sorted_items(*, items: tuple[str, ...]) -> list[str]:
+        unique_items: set[str] = set(items)
         return sorted(unique_items, key=str.upper)

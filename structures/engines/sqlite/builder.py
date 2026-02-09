@@ -1,11 +1,11 @@
-from typing import Optional, List
+from typing import Optional
 
 from structures.engines.builder import AbstractColumnBuilder
 
 class SQLiteColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(primary_key)s", "%(auto_increment)s", "%(nullable)s", "%(unique)s", "%(check)s", "%(default)s", "%(collate)s", "%(generated)s", "%(references)s"]
 
-    def __init__(self, column: 'SQLiteColumn', exclude: Optional[List[str]] = None):
+    def __init__(self, column: 'SQLiteColumn', exclude: Optional[list[str]] = None):
         super().__init__(column, exclude)
 
         self.parts.update({

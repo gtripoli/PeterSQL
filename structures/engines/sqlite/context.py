@@ -3,7 +3,7 @@ import sqlite3
 
 from collections import defaultdict
 from gettext import gettext as _
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from helpers.logger import logger
 
@@ -72,7 +72,7 @@ class SQLiteContext(AbstractContext):
     def get_server_uptime(self) -> Optional[int]:
         return None
 
-    def get_databases(self) -> List[SQLDatabase]:
+    def get_databases(self) -> list[SQLDatabase]:
         self.execute("SELECT * from sqlite_master ORDER BY name")
         for i, result in enumerate(self.fetchall()):
             self._map_sqlite_master[result['tbl_name']][result['type']][result['name']] = result['sql']
@@ -89,7 +89,7 @@ class SQLiteContext(AbstractContext):
             get_triggers_handler=self.get_triggers,
         )]
 
-    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+    def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         has_sqlite_sequence = False
@@ -141,7 +141,7 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_columns(self, table: SQLiteTable) -> List[SQLColumn]:
+    def get_columns(self, table: SQLiteTable) -> list[SQLColumn]:
         results = []
         if table is None or table.is_new:
             return results
@@ -212,7 +212,7 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_checks(self, table: SQLiteTable) -> List[SQLiteCheck]:
+    def get_checks(self, table: SQLiteTable) -> list[SQLiteCheck]:
         results = []
         if table is None or table.is_new:
             return results
@@ -236,7 +236,7 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_indexes(self, table: SQLiteTable) -> List[SQLIndex]:
+    def get_indexes(self, table: SQLiteTable) -> list[SQLIndex]:
         if table is None or table.is_new:
             return []
         logger.debug(f"get_indexes for table={table.name}")
@@ -310,7 +310,7 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_foreign_keys(self, table: SQLiteTable) -> List[SQLForeignKey]:
+    def get_foreign_keys(self, table: SQLiteTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
         logger.debug(f"get_foreign_keys for table={table.name}")
@@ -343,7 +343,7 @@ class SQLiteContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLiteTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[SQLiteRecord]:
+    def get_records(self, table: SQLiteTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[SQLiteRecord]:
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
@@ -360,7 +360,7 @@ class SQLiteContext(AbstractContext):
         return results
 
     def get_views(self, database: SQLDatabase):
-        results: List[SQLiteView] = []
+        results: list[SQLiteView] = []
         self.execute("SELECT * FROM sqlite_master WHERE type='view' AND name NOT LIKE 'sqlite_%' ORDER BY name")
         for i, result in enumerate(self.fetchall()):
             results.append(SQLiteView(
@@ -372,8 +372,8 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def get_triggers(self, database: SQLDatabase) -> List[SQLiteTrigger]:
-        results: List[SQLiteTrigger] = []
+    def get_triggers(self, database: SQLDatabase) -> list[SQLiteTrigger]:
+        results: list[SQLiteTrigger] = []
         self.execute("SELECT * FROM sqlite_master WHERE type='trigger' AND name NOT LIKE 'sqlite_%' ORDER BY name")
         for i, result in enumerate(self.fetchall()):
             results.append(SQLiteTrigger(
@@ -408,7 +408,7 @@ class SQLiteContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLiteTable, columns: List[str]) -> SQLiteIndex:
+    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLiteTable, columns: list[str]) -> SQLiteIndex:
         return SQLiteIndex(
             id=SQLiteContext.get_temporary_id(table.indexes),
             name=name,
@@ -417,7 +417,7 @@ class SQLiteContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: SQLiteTable, columns: List[str]) -> SQLiteForeignKey:
+    def build_empty_foreign_key(self, name: str, table: SQLiteTable, columns: list[str]) -> SQLiteForeignKey:
         return SQLiteForeignKey(
             id=SQLiteContext.get_temporary_id(table.foreign_keys),
             name=name,
@@ -429,7 +429,7 @@ class SQLiteContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: SQLiteTable, values: Dict[str, Any]) -> SQLiteRecord:
+    def build_empty_record(self, table: SQLiteTable, values: dict[str, Any]) -> SQLiteRecord:
         return SQLiteRecord(
             id=SQLiteContext.get_temporary_id(table.records),
             table=table,

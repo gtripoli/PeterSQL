@@ -1,10 +1,10 @@
-from typing import TypeAlias, List, Union
+from typing import TypeAlias, Union
 
 from structures.engines.database import SQLColumn, SQLIndex, SQLForeignKey
 
 SQLTypeAlias: TypeAlias = Union['SQLView', 'SQLTrigger', 'SQLTable', 'SQLColumn', 'SQLIndex', 'SQLForeignKey', 'SQLRecord', 'SQLCheck']
 
-MergeTypes: TypeAlias = List[Union['SQLColumn', 'SQLIndex', 'SQLForeignKey']]
+MergeTypes: TypeAlias = list[Union['SQLColumn', 'SQLIndex', 'SQLForeignKey']]
 
 
 def merge_original_current(original: MergeTypes, current_columns: MergeTypes):

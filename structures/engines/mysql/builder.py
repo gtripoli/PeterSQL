@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuilder
 from structures.engines.database import SQLColumn
@@ -12,7 +12,7 @@ class MySQLColumnBuilder(AbstractColumnBuilder):
                 # "%(format)s","%(storage)s",
                 "%(generated)s"]
 
-    def __init__(self, column: SQLColumn, exclude: List[str] | None = None):
+    def __init__(self, column: SQLColumn, exclude: Optional[list[str]] = None):
         super().__init__(column, exclude)
 
         self.parts.update({

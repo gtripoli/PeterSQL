@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, List, Any, Union, NamedTuple, Callable
+from typing import Optional, Any, Union, NamedTuple, Callable
 
 import wx
 import wx.dataview
@@ -28,18 +28,18 @@ class ColumnField(NamedTuple):
 
 class AbstractBaseDataModel():
     def __init__(self, column_count: Optional[int] = None):
-        self._data: List[Any] = []
+        self._data: list[Any] = []
         self._observable: Union[ObservableList, ObservableLazyList] = None
 
         self._column_count = column_count
 
-    def load(self, data: List[Any]):
+    def load(self, data: list[Any]):
         logger.debug(f"{self.__class__.__name__}.load: {data[:50]}")
 
         if data:
             self._data = data.copy()
 
-    def filter(self, data: List[Any]):
+    def filter(self, data: list[Any]):
         logger.debug(f"{self.__class__.__name__}.filter: {data[:50]}")
 
         if data:

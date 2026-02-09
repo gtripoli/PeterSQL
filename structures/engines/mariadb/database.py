@@ -1,11 +1,11 @@
 import dataclasses
-from typing import Self, List, Optional, Literal, Union
+from typing import Self, Optional, Literal, Union
 
 from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLFunction, SQLDatabase
 
 from structures.engines.mariadb.indextype import MariaDBIndexType
 from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBIndexBuilder
@@ -145,7 +145,7 @@ class MariaDBTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBColumn(SQLColumn):
-    set: Optional[List[str]] = None
+    set: Optional[list[str]] = None
     is_unsigned: Optional[bool] = False
     is_zerofill: Optional[bool] = False
     comment: Optional[str] = None
@@ -335,3 +335,30 @@ class MariaDBTrigger(SQLTrigger):
 
     def alter(self):
         pass
+
+
+@dataclasses.dataclass(eq=False)
+class MariaDBFunction(SQLFunction):
+    parameters: str = ""
+    returns: str = ""
+    deterministic: bool = False
+    sql: str = ""
+
+    def create(self) -> bool:
+        deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
+        query = f"""
+            CREATE FUNCTION `{self.name}`({self.parameters})
+            RETURNS {self.returns}
+            {deterministic}
+            BEGIN
+                {self.sql};
+            END
+        """
+        return self.database.context.execute(query)
+
+    def drop(self) -> bool:
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
+
+    def alter(self):
+        self.drop()
+        self.create()

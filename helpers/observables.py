@@ -3,7 +3,7 @@ import enum
 import inspect
 import weakref
 
-from typing import List, Callable, TypeVar, Generic, Any, SupportsIndex, Union, Tuple, Optional, Dict, cast, Self, NewType, Hashable
+from typing import Callable, TypeVar, Generic, Any, SupportsIndex, Union, Optional, cast, Self, Hashable
 
 import wx
 
@@ -40,7 +40,7 @@ class Observable(Generic[T]):
         if initial is not ...:
             self._value = initial
 
-        self.callbacks: Dict[CallbackEvent, Dict[Hashable, object]] = {event: {} for event in CallbackEvent}
+        self.callbacks: dict[CallbackEvent, dict[Hashable, object]] = {event: {} for event in CallbackEvent}
 
     @property
     def state(self) -> ValueState:
@@ -143,8 +143,8 @@ class Observable(Generic[T]):
         return self._get_value()
 
 
-class ObservableList(Observable[List[T]]):
-    def __init__(self, initial: Optional[List[Any]] = None):
+class ObservableList(Observable[list[T]]):
+    def __init__(self, initial: Optional[list[Any]] = None):
         super().__init__(initial if initial is not None else [])
 
     def __eq__(self, other: Self):
@@ -213,7 +213,7 @@ class ObservableList(Observable[List[T]]):
 
         return self
 
-    def extend(self, other: List[Any]) -> Self:
+    def extend(self, other: list[Any]) -> Self:
         values = self.get_value()
         values.extend(other)
 
@@ -280,7 +280,7 @@ class ObservableList(Observable[List[T]]):
         self.set_value([])
         return self
 
-    def filter(self, function: Callable[[Any], bool]) -> List[T]:
+    def filter(self, function: Callable[[Any], bool]) -> list[T]:
         filtered = [v for v in self.get_value() if function(v)]
 
         self.execute_callback_on_value(CallbackEvent.ON_FILTER, value=filtered)
@@ -320,7 +320,7 @@ class ObservableList(Observable[List[T]]):
 
 
 class ObservableLazyList(ObservableList[T]):
-    def __init__(self, loader: Callable[[], List[T]]) -> None:
+    def __init__(self, loader: Callable[[], list[T]]) -> None:
         super().__init__()
         self._loaded = False
         self._loader = loader
@@ -338,7 +338,7 @@ class ObservableLazyList(ObservableList[T]):
             return loaded
         return value
 
-    def get_value(self) -> List[T]:
+    def get_value(self) -> list[T]:
         return self._ensure()
 
     def subscribe(self, callback: Callable, callback_event: CallbackEvent = CallbackEvent.AFTER_CHANGE) -> Self:
@@ -378,7 +378,7 @@ class ObservableObject(Observable):
 
         return ref
 
-    def set_value(self, *attributes: str, value: Any) -> Self:  # type: ignore[override]
+    def set_value(self, *attributes: str, value: Any) -> Self:  # type: ignore[override]  # intentional signature change for nested attribute access
         ref = copy.deepcopy(super()._get_value())
         target = ref
 

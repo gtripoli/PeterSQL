@@ -1,11 +1,11 @@
-import contextlib
 import dataclasses
 import enum
-from functools import lru_cache
 
-from typing import Union, Optional, Any, NamedTuple, List
+from functools import lru_cache
+from typing import Union, Optional, Any, NamedTuple
 
 from icons import Icon, IconList
+
 from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
 
 
@@ -22,7 +22,7 @@ class ConnectionEngine(enum.Enum):
     POSTGRESQL = Engine("PostgreSQL", "postgres", IconList.POSTGRESQL)
 
     @classmethod
-    def get_all(cls) -> List["ConnectionEngine"]:
+    def get_all(cls) -> list["ConnectionEngine"]:
         return [e.value for e in list(cls)]
 
     @classmethod
@@ -49,39 +49,13 @@ class ConnectionDirectory:
 
 @dataclasses.dataclass(eq=False)
 class Connection:
+    """Persistent configuration only. No runtime state."""
     id: int
     name: str
     engine: ConnectionEngine
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
     comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None
-
-    context: Optional['AbstractContext'] = dataclasses.field(default=None, init=False, repr=False, compare=False)
-    _ssh_tunnel_process: Any = dataclasses.field(default=None, init=False, repr=False, compare=False)
-
-    def __post_init__(self):
-        if self.engine == ConnectionEngine.SQLITE:
-            from structures.engines.sqlite.context import SQLiteContext
-
-            self.context = SQLiteContext(self)
-
-        elif self.engine == ConnectionEngine.MARIADB:
-            from structures.engines.mariadb.context import MariaDBContext
-
-            self.context = MariaDBContext(self)
-
-        elif self.engine == ConnectionEngine.MYSQL:
-            from structures.engines.mysql.context import MySQLContext
-
-            self.context = MySQLContext(self)
-
-        elif self.engine == ConnectionEngine.POSTGRESQL:
-            from structures.engines.postgresql.context import PostgreSQLContext
-
-            self.context = PostgreSQLContext(self)
-
-        else:
-            raise ValueError(f"Unsupported engine {self.engine}")
 
     def __eq__(self, other: Any):
         if not isinstance(other, Connection):
@@ -120,14 +94,3 @@ class Connection:
 
     def has_enabled_tunnel(self) -> bool:
         return bool(self.ssh_tunnel and self.ssh_tunnel.is_enabled)
-
-    @property
-    def ssh_tunnel_process(self):
-        return getattr(self, "_ssh_tunnel_process", None)
-
-    def stop_tunnel(self):
-        if process := getattr(self, "_ssh_tunnel_process", None):
-            with contextlib.suppress(Exception):
-                process.terminate()
-                process.wait(timeout=1)
-            self._ssh_tunnel_process = None

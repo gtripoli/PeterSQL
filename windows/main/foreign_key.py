@@ -1,5 +1,3 @@
-from typing import List
-
 import wx
 import wx.dataview
 
@@ -13,7 +11,7 @@ from helpers.dataview import BaseDataViewListModel
 from structures.helpers import merge_original_current
 
 from windows import TableForeignKeysDataViewCtrl
-from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_CONNECTION
+from windows.main import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_SESSION
 from windows.main.table import NEW_TABLE
 
 from structures.engines.database import SQLForeignKey, SQLTable
@@ -122,10 +120,10 @@ class TableForeignKeyController:
             event.Skip()
             return
 
-        current_foreign_keys: List[SQLForeignKey] = self.model.data
+        current_foreign_keys: list[SQLForeignKey] = self.model.data
 
         table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
-        original_foreign_keys: List[SQLForeignKey] = list(table.foreign_keys)
+        original_foreign_keys: list[SQLForeignKey] = list(table.foreign_keys)
 
         map_foreign_keys = merge_original_current(original_foreign_keys, current_foreign_keys)
 
@@ -137,7 +135,7 @@ class TableForeignKeyController:
         event.Skip()
 
     def on_foreign_key_insert(self, event : wx.Event):
-        session = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         index = len(table.foreign_keys)

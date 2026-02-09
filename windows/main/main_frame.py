@@ -4,7 +4,7 @@ import time
 
 from collections import defaultdict
 from gettext import gettext as _
-from typing import Optional, List, Union
+from typing import Optional, Union
 
 import psutil
 import sqlglot
@@ -22,11 +22,11 @@ from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeig
 
 from windows import MainFrameView
 
-from windows.components.stc.auto_complete import SQLCompletionProvider, SQLAutoCompleteController
-from windows.components.stc.profiles import SQL
 from windows.components.stc.styles import apply_stc_theme
+from windows.components.stc.profiles import SQL
+from windows.components.stc.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
 
-from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
+from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
 from windows.main.table import EditTableModel, NEW_TABLE
 from windows.main.index import TableIndexController
 from windows.main.check import TableCheckController
@@ -110,7 +110,7 @@ class MainFrameController(MainFrameView):
 
         # SESSIONS.subscribe(self._load_connection, CallbackEvent.ON_APPEND)
 
-        CURRENT_CONNECTION.subscribe(self._on_current_connection)
+        CURRENT_SESSION.subscribe(self._on_current_session)
 
         CURRENT_DATABASE.subscribe(self._on_current_database)
 
@@ -246,21 +246,23 @@ class MainFrameController(MainFrameView):
 
                 self.controller_list_table_records.load_model()
 
-    def _on_current_connection(self, connection: Connection):
-        self.toggle_panel(connection)
+    def _on_current_session(self, session: Session):
+        from structures.session import Session
 
-        if connection:
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {connection.name}", 0)
+        self.toggle_panel(session.connection if session else None)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {connection.context.get_server_version()}", 1)
+        if session:
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {session.name}", 0)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(connection.context.get_server_uptime())}", 2)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
 
-            keywords = " ".join(k.lower() for k in connection.context.KEYWORDS)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+
+            keywords = " ".join(k.lower() for k in session.context.KEYWORDS)
 
             colors_datatypes = defaultdict(list)
 
-            for datatype in connection.context.DATATYPE.get_all():
+            for datatype in session.context.DATATYPE.get_all():
                 colors_datatypes[datatype.category.value.color].append(datatype.name.lower())
                 colors_datatypes[datatype.category.value.color].extend([d.lower() for d in datatype.alias])
 
@@ -286,7 +288,7 @@ class MainFrameController(MainFrameView):
             self.table_collation.Enable(len(database.context.COLLATIONS.keys()) > 1)
             self.table_collation.SetItems(list(database.context.COLLATIONS.keys()))
 
-        if CURRENT_CONNECTION.get_value().engine in [ConnectionEngine.SQLITE]:
+        if (session := CURRENT_SESSION.get_value()) and session.engine in [ConnectionEngine.SQLITE]:
             self.table_collation.Enable(False)
 
     # VIEW
@@ -346,14 +348,14 @@ class MainFrameController(MainFrameView):
     #     self.btn_delete_table.Enable(table is not None)
 
     def on_insert_table(self, event):
-        connection = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
 
         CURRENT_TABLE.set_value(None)
         # SELECTED_TABLE.set_value(None)
 
         NEW_TABLE.set_value(
-            connection.context.build_empty_table(database)
+            session.context.build_empty_table(database)
         )
 
         self._toggle_panel(2, True)
@@ -363,11 +365,11 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_columns.model.clear()
 
     def do_apply_table(self, event: wx.Event):
-        connection = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         table = NEW_TABLE.get_value()
 
-        if connection is None or database is None or table is None:
+        if session is None or database is None or table is None:
             return
 
         if not table.is_valid:
@@ -528,7 +530,7 @@ class MainFrameController(MainFrameView):
         self.panel_records.Layout()
         event.Skip()
 
-    def _on_current_records(self, records: List[SQLRecord]):
+    def _on_current_records(self, records: list[SQLRecord]):
         self.btn_duplicate_record.Enable(len(records) == 1)
         self.btn_delete_record.Enable(len(records) > 0)
 

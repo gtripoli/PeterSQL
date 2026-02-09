@@ -3,12 +3,12 @@ import datetime
 import functools
 import dataclasses
 
-from typing import List, Callable, NamedTuple, Tuple, Dict, Optional, Any
+from typing import Callable, NamedTuple, Optional, Any
 
 
 class Category(NamedTuple):
     name: str
-    color: Tuple[int, int, int]
+    color: tuple[int, int, int]
     description: Optional[str] = None
 
 

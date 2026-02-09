@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import wx
 import wx.dataview
@@ -8,17 +8,17 @@ from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
-from structures.connection import Connection
+from structures.session import Session
 from structures.engines.database import SQLColumn, SQLDatabase, SQLIndex, SQLTable
 from structures.engines.indextype import SQLIndexType
 
 from windows import TableColumnsDataViewCtrl
-from windows.main import CURRENT_COLUMN, CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE
+from windows.main import CURRENT_COLUMN, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE
 from windows.main.table import NEW_TABLE
 
 
 class ColumnModel(BaseDataViewListModel):
-    MAP_COLUMN_FIELDS: Dict[int, ColumnField]
+    MAP_COLUMN_FIELDS: dict[int, ColumnField]
 
     def GetColumnCount(self):
         return len(self.MAP_COLUMN_FIELDS)
@@ -144,7 +144,7 @@ class TableColumnsController:
         self.model = ColumnModel(None)
         self.list_ctrl_table_columns.AssociateModel(self.model)
 
-        CURRENT_CONNECTION.subscribe(self._load_session)
+        CURRENT_SESSION.subscribe(self._load_session)
         CURRENT_TABLE.subscribe(self._load_table)
         NEW_TABLE.subscribe(self._load_table)
 
@@ -152,7 +152,7 @@ class TableColumnsController:
         column = self.list_ctrl_table_columns.GetColumn(model_column)
         self.list_ctrl_table_columns.edit_item(item, column)
 
-    def _load_session(self, session):
+    def _load_session(self, session: Session):
         with Loader.cursor_wait():
             if session is not None:
                 self.model.MAP_COLUMN_FIELDS = session.context.MAP_COLUMN_FIELDS
@@ -183,7 +183,7 @@ class TableColumnsController:
             event.Skip()
             return
 
-        current_columns: List[SQLColumn] = self.model.data
+        current_columns: list[SQLColumn] = self.model.data
 
         table: SQLTable = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 
@@ -221,7 +221,7 @@ class TableColumnsController:
         event.Skip()
 
     def on_column_insert(self, event: wx.Event):
-        session = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         table = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_table_columns.GetSelection()
@@ -321,7 +321,7 @@ class TableColumnsController:
         if not selected.IsOk():
             return
 
-        session: Connection = CURRENT_CONNECTION.get_value()
+        session: Session = CURRENT_SESSION.get_value()
 
         table = (NEW_TABLE.get_value() or CURRENT_TABLE.get_value())
 

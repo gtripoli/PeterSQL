@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Self
+from typing import Any, Callable, Optional, Self
 
 import wx
 import wx.dataview
@@ -104,7 +104,7 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
 
 
 class BaseTextRenderer(BaseDataViewCustomRenderer):
-    def __init__(self, varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT, validators: Optional[List[Validator]] = None):
+    def __init__(self, varianttype="string", mode=wx.dataview.DATAVIEW_CELL_EDITABLE, align=wx.ALIGN_LEFT, validators: Optional[list[Validator]] = None):
         super().__init__(varianttype=varianttype, mode=mode, align=align)
 
         self.validators = validators if validators else []
@@ -213,6 +213,12 @@ class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
                 cw = self.GetCurrentColumn().GetWidth()
 
         return max(cw, w + 20)
+
+    def measure_text(self, text: str, padding: int = 24) -> int:
+        dc = wx.ClientDC(self)
+        dc.SetFont(self.GetFont())
+        width, _ = dc.GetTextExtent(str(text))
+        return width + padding
 
 
 class BasePopup(wx.PopupTransientWindow):

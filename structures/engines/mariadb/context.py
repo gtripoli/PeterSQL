@@ -1,6 +1,6 @@
 import re
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from gettext import gettext as _
 
 import pymysql
@@ -25,7 +25,7 @@ class MariaDBContext(AbstractContext):
 
     QUOTE_IDENTIFIER = "`"
 
-    def __init__(self, connection : Connection):
+    def __init__(self, connection: Connection):
         super().__init__(connection)
 
         self.host = connection.configuration.hostname
@@ -108,10 +108,11 @@ class MariaDBContext(AbstractContext):
                     **connect_kwargs
                 )
                 self._cursor = self._connection.cursor()
-                self._on_connect()
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
+            else:
+                self._on_connect()
 
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")
@@ -123,7 +124,7 @@ class MariaDBContext(AbstractContext):
         result = self.fetchone()
         return int(result['Value']) if result else None
 
-    def get_databases(self) -> List[SQLDatabase]:
+    def get_databases(self) -> list[SQLDatabase]:
         self.execute("""
                     SELECT
                         isS.SCHEMA_NAME as database_name,
@@ -149,7 +150,7 @@ class MariaDBContext(AbstractContext):
         return results
 
     def get_views(self, database: SQLDatabase):
-        results: List[MariaDBView] = []
+        results: list[MariaDBView] = []
         self.execute(f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME")
         for i, result in enumerate(self.fetchall()):
             results.append(MariaDBView(
@@ -161,8 +162,8 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_triggers(self, database: SQLDatabase) -> List[MariaDBTrigger]:
-        results: List[MariaDBTrigger] = []
+    def get_triggers(self, database: SQLDatabase) -> list[MariaDBTrigger]:
+        results: list[MariaDBTrigger] = []
         self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
         for i, result in enumerate(self.fetchall()):
             results.append(MariaDBTrigger(
@@ -174,7 +175,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+    def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
@@ -209,7 +210,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+    def get_columns(self, table: SQLTable) -> list[SQLColumn]:
         results = []
         if table.id == -1:
             return results
@@ -250,7 +251,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+    def get_indexes(self, table: SQLTable) -> list[SQLIndex]:
         if table is None or table.is_new:
             return []
 
@@ -307,7 +308,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+    def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
 
@@ -345,7 +346,7 @@ class MariaDBContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[MariaDBRecord]:
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MariaDBRecord]:
         results = []
         for i, record in enumerate(super().get_records(table, filters, limit, offset, orders), start=offset):
             results.append(
@@ -376,7 +377,7 @@ class MariaDBContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: MariaDBIndexType, table: MariaDBTable, columns: List[str]) -> MariaDBIndex:
+    def build_empty_index(self, name: str, type: MariaDBIndexType, table: MariaDBTable, columns: list[str]) -> MariaDBIndex:
         return MariaDBIndex(
             id=MariaDBContext.get_temporary_id(table.indexes),
             name=name,
@@ -385,7 +386,7 @@ class MariaDBContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: MariaDBTable, columns: List[str]) -> MariaDBForeignKey:
+    def build_empty_foreign_key(self, name: str, table: MariaDBTable, columns: list[str]) -> MariaDBForeignKey:
         return MariaDBForeignKey(
             id=MariaDBContext.get_temporary_id(table.foreign_keys),
             name=name,
@@ -397,7 +398,7 @@ class MariaDBContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: MariaDBTable, values: Dict[str, Any]) -> MariaDBRecord:
+    def build_empty_record(self, table: MariaDBTable, values: dict[str, Any]) -> MariaDBRecord:
         return MariaDBRecord(
             id=MariaDBContext.get_temporary_id(table.records),
             table=table,

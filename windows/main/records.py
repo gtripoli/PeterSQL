@@ -9,18 +9,17 @@ from helpers.dataview import BaseDataViewListModel
 from helpers.logger import logger
 from helpers.observables import ObservableList
 
-from structures.connection import Connection
+from structures.session import Session
 from structures.engines.database import SQLTable, SQLDatabase, SQLColumn, SQLRecord
 from structures.engines.datatype import DataTypeCategory
 
 from windows import TableRecordsDataViewCtrl, AdvancedCellEditorDialog
 
-from windows.components.stc.auto_complete import SQLCompletionProvider, SQLAutoCompleteController
-from windows.components.stc.profiles import detect_syntax_id
+from windows.components.stc.detectors import detect_syntax_id
+from windows.components.stc.profiles import SyntaxProfile
 from windows.components.stc.styles import apply_stc_theme
-from windows.components.stc.syntax import SyntaxProfile
 
-from windows.main import CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
+from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
@@ -117,11 +116,11 @@ class TableRecordsController:
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
         self.list_ctrl_records.Bind(wx.dataview.EVT_DATAVIEW_ITEM_VALUE_CHANGED, self._on_item_value_changed)
 
-        CURRENT_CONNECTION.subscribe(self._load_session)
+        CURRENT_SESSION.subscribe(self._load_session)
         CURRENT_DATABASE.subscribe(self._load_database)
         CURRENT_TABLE.subscribe(self._load_table)
 
-    def _load_session(self, session: Connection):
+    def _load_session(self, session: Session):
         self.session = session
 
     def _load_database(self, database: SQLDatabase):
@@ -191,7 +190,7 @@ class TableRecordsController:
 
     def _do_new_empty_record(self, index: int, copy_from_selected: bool = False, use_server_defaults: bool = True):
         """Helper method to create a new empty record at the specified index."""
-        session = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
 
         values = dict()
@@ -231,7 +230,7 @@ class TableRecordsController:
         self._do_edit(new_empty_item, 1)
 
     def do_insert_record(self):
-        session = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_records.GetSelection()
@@ -244,7 +243,7 @@ class TableRecordsController:
         self._do_new_empty_record(index, copy_from_selected=False, use_server_defaults=True)
 
     def do_duplicate_record(self):
-        session = CURRENT_CONNECTION.get_value()
+        session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
 
         selected = self.list_ctrl_records.GetSelection()

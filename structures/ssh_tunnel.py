@@ -6,7 +6,7 @@ import socket
 import subprocess
 import time
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import gettext as _
 
@@ -17,10 +17,10 @@ from helpers.logger import logger
 class SSHTunnel:
     def __init__(self, ssh_hostname: str, ssh_port: int = 22, /,
                  ssh_username: Optional[str] = None, ssh_password: Optional[str] = None,
-                 remote_port: int = 3306, local_bind_address: Tuple[str, int] = ('localhost', 0),
+                 remote_port: int = 3306, local_bind_address: tuple[str, int] = ('localhost', 0),
                  ssh_executable: str = 'ssh',
                  identity_file: Optional[str] = None,
-                 extra_args: Optional[List[str]] = None):
+                 extra_args: Optional[list[str]] = None):
 
         self.ssh_hostname = ssh_hostname
         self.ssh_port = ssh_port

@@ -1,7 +1,7 @@
 import enum
 
 from functools import lru_cache
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 import wx
 

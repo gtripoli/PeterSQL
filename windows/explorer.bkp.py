@@ -1,0 +1,473 @@
+import dataclasses
+from typing import Callable, List
+
+import wx
+import wx.dataview
+import wx.lib.agw.hypertreelist
+
+from helpers import bytes_to_human
+from helpers.dataview import BaseDataViewTreeModel
+from icons import IconList, ImageList, BitmapList
+from structures.connection import Connection
+
+from structures.engines.database import SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent
+
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_CONNECTION, CURRENT_VIEW, CURRENT_TRIGGER, CONNECTIONS_LIST, CURRENT_EVENT, CURRENT_FUNCTION, CURRENT_PROCEDURE
+from windows.main.table import NEW_TABLE
+
+
+@dataclasses.dataclass
+class TreeCategory:
+    name : str
+    icon : wx.BitmapBundle
+    database : SQLDatabase
+
+
+# class GaugeWithLabel(wx.Panel):
+#     def __init__(self, parent, max_range=100, size=(100, 20)):
+#         super().__init__(parent, size=size)
+#         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+#
+#         self.gauge = wx.Gauge(self, range=max_range, size=size)
+#         self.label = wx.StaticText(self, label="0%", style=wx.ALIGN_CENTER)
+#
+#         self.sizer = wx.BoxSizer(wx.VERTICAL)
+#         self.sizer.Add(self.gauge, 1, wx.EXPAND, 5)
+#         self.sizer.Add(self.label, 0, wx.ALIGN_CENTER | wx.TOP, -size[1])
+#
+#         self.SetSizer(self.sizer)
+#
+#         self.label.SetForegroundColour(wx.WHITE)
+#         font = self.label.GetFont()
+#         font.SetWeight(wx.FONTWEIGHT_BOLD)
+#         self.label.SetFont(font)
+#
+#     def SetValue(self, val):
+#         self.gauge.SetValue(val)
+#         self.label.SetLabel(f"{val}%")
+#         self.label.Refresh()
+#
+#
+# class TreeExplorerController:
+#     on_cancel_table: Callable
+#     do_cancel_table: Callable
+#
+#     def __init__(self, tree_ctrl_explorer: wx.lib.agw.hypertreelist.HyperTreeList):
+#         self.app = wx.GetApp()
+#
+#         self.tree_ctrl_explorer = tree_ctrl_explorer
+#
+#         self.tree_ctrl_explorer.AddColumn("Name", width=200)
+#         self.tree_ctrl_explorer.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
+#
+#         self.tree_ctrl_explorer.SetMainColumn(0)
+#         self.tree_ctrl_explorer.AssignImageList(ImageList)
+#         self.tree_ctrl_explorer._main_win.Bind(
+#             wx.EVT_MOUSE_EVENTS, lambda e: None if e.LeftDown() else e.Skip()
+#         )
+#
+#         self.populate_tree()
+#
+#         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_SEL_CHANGED, self._load_items)
+#         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_EXPANDING, self._load_items)
+#         self.tree_ctrl_explorer.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._load_items)
+#
+#         CONNECTIONS_LIST.subscribe(self.append_connection, CallbackEvent.ON_APPEND)
+#
+#         # CURRENT_DATABASE.get_value().tables.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#         # CURRENT_DATABASE.get_value().views.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#         # CURRENT_DATABASE.get_value().procedures.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#         # CURRENT_DATABASE.get_value().functions.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#         # CURRENT_DATABASE.get_value().triggers.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#         # CURRENT_DATABASE.get_value().events.subscribe(self.load_observables, CallbackEvent.ON_APPEND)
+#
+#     def _load_items(self, event: wx.lib.agw.hypertreelist.TreeEvent):
+#         with Loader.cursor_wait():
+#             item = event.GetItem()
+#             if not item.IsOk():
+#                 event.Skip()
+#                 return
+#
+#             if NEW_TABLE.get_value() and not self.on_cancel_table(event):
+#                 event.Skip()
+#                 return
+#
+#             self.reset_current_objects()
+#
+#             obj = self.tree_ctrl_explorer.GetItemPyData(item)
+#             if obj is None:
+#                 event.Skip()
+#                 return
+#
+#             if isinstance(obj, Connection):
+#                 self.select_connection(obj, event)
+#             elif isinstance(obj, SQLDatabase):
+#                 self.select_database(obj, item, event)
+#             elif isinstance(
+#                     obj,
+#                     (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent),
+#             ):
+#                 self.select_sql_object(obj)
+#
+#             event.Skip()
+#
+#     def populate_tree(self):
+#         self.tree_ctrl_explorer.DeleteAllItems()
+#         self.root_item = self.tree_ctrl_explorer.AddRoot("")
+#
+#         for connection in CONNECTIONS_LIST.get_value():
+#             self.append_connection(connection)
+#
+#     def append_connection(self, connection: Connection):
+#         self.root_item = self.tree_ctrl_explorer.GetRootItem()
+#
+#         connection_item = self.tree_ctrl_explorer.AppendItem(self.root_item, connection.name, image=getattr(IconList, f"ENGINE_{connection.engine.name}"), data=connection)
+#         for database in connection.context.databases.get_value():
+#             db_item = self.tree_ctrl_explorer.AppendItem(connection_item, database.name, image=IconList.SYSTEM_DATABASE, data=database)
+#             self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
+#             self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=IconList.CLOCK, data=None)
+#
+#         self.tree_ctrl_explorer.Expand(connection_item)
+#         self.tree_ctrl_explorer.EnsureVisible(connection_item)
+#
+#         self.tree_ctrl_explorer.Layout()
+#
+#     def load_observables(self, db_item, database: SQLDatabase):
+#         for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+#             observable = getattr(database, observable_name, None)
+#
+#             category_item = self.tree_ctrl_explorer.AppendItem(
+#                 db_item,
+#                 observable_name.capitalize(),
+#                 image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND),
+#                 data=None
+#             )
+#
+#             if observable is None:
+#                 continue
+#
+#             if database != CURRENT_DATABASE.get_value() and not observable.is_loaded:
+#                 continue
+#
+#             objs = observable.get_value()
+#             if not objs:
+#                 continue
+#
+#
+#             # wx.CallAfter(self.tree_ctrl_explorer.Expand, category_item)
+#
+#             for obj in objs:
+#                 obj_item = self.tree_ctrl_explorer.AppendItem(
+#                     category_item,
+#                     obj.name,
+#                     image=getattr(IconList, f"SYSTEM_{observable_name[:-1].upper()}", IconList.NOT_FOUND),
+#                     data=obj
+#                 )
+#
+#                 if isinstance(obj, SQLTable):
+#                     percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
+#
+#                     gauge_panel = GaugeWithLabel(self.tree_ctrl_explorer, max_range=100, size=(self.tree_ctrl_explorer.GetColumnWidth(1) - 20, self.tree_ctrl_explorer.CharHeight))
+#                     gauge_panel.SetValue(percentage)
+#                     self.tree_ctrl_explorer.SetItemWindow(obj_item, gauge_panel, column=1)
+#                 else:
+#                     self.tree_ctrl_explorer.SetItemText(obj_item, "", column=1)
+#
+#         loading_item, index_item = self.tree_ctrl_explorer.GetFirstChild(db_item)
+#         if loading_item and loading_item.GetData() is None:
+#             self.tree_ctrl_explorer.Delete(loading_item)
+#
+#     def reset_current_objects(self):
+#         CURRENT_TABLE.set_value(None)
+#         CURRENT_VIEW.set_value(None)
+#         CURRENT_TRIGGER.set_value(None)
+#         CURRENT_PROCEDURE.set_value(None)
+#         CURRENT_EVENT.set_value(None)
+#         CURRENT_FUNCTION.set_value(None)
+#
+#     def select_connection(self, connection: Connection, event):
+#         if connection == CURRENT_CONNECTION.get_value() and CURRENT_DATABASE.get_value():
+#             event.Skip()
+#             return
+#         CURRENT_CONNECTION.set_value(connection)
+#         CURRENT_DATABASE.set_value(None)
+#
+#     def select_database(self, database: SQLDatabase, item, event):
+#         if database != CURRENT_DATABASE.get_value():
+#             connection = database.context.connection
+#             if connection != CURRENT_CONNECTION.get_value():
+#                 CURRENT_CONNECTION.set_value(connection)
+#             CURRENT_DATABASE.set_value(database)
+#             self.load_observables(item, database)
+#
+#         if not self.tree_ctrl_explorer.IsExpanded(item):
+#             wx.CallAfter(self.tree_ctrl_explorer.Expand, item)
+#
+#     def select_sql_object(self, sql_obj):
+#         database = sql_obj.database
+#         connection = database.context.connection
+#
+#         if connection != CURRENT_CONNECTION.get_value():
+#             CURRENT_CONNECTION.set_value(connection)
+#
+#         if database != CURRENT_DATABASE.get_value():
+#             CURRENT_DATABASE.set_value(database)
+#
+#         if isinstance(sql_obj, SQLTable):
+#             if not CURRENT_TABLE.get_value() or sql_obj != CURRENT_TABLE.get_value():
+#                 CURRENT_TABLE.set_value(sql_obj.copy())
+#
+#         elif isinstance(sql_obj, SQLView):
+#             if not CURRENT_VIEW.get_value() or sql_obj != CURRENT_VIEW.get_value():
+#                 CURRENT_VIEW.set_value(sql_obj.copy())
+#
+#         elif isinstance(sql_obj, SQLTrigger):
+#             if not CURRENT_TRIGGER.get_value() or sql_obj != CURRENT_TRIGGER.get_value():
+#                 CURRENT_TRIGGER.set_value(sql_obj.copy())
+#
+#         elif isinstance(sql_obj, SQLProcedure):
+#             if not CURRENT_PROCEDURE.get_value() or sql_obj != CURRENT_PROCEDURE.get_value():
+#                 CURRENT_PROCEDURE.set_value(sql_obj.copy())
+#
+#         elif isinstance(sql_obj, SQLFunction):
+#             if not CURRENT_FUNCTION.get_value() or sql_obj != CURRENT_FUNCTION.get_value():
+#                 CURRENT_FUNCTION.set_value(sql_obj.copy())
+#
+#         elif isinstance(sql_obj, SQLEvent):
+#             if not CURRENT_EVENT.get_value() or sql_obj != CURRENT_EVENT.get_value():
+#                 CURRENT_EVENT.set_value(sql_obj.copy())
+
+
+class ExplorerTreeModel(BaseDataViewTreeModel):
+    def __init__(self):
+        super().__init__(column_count=2)
+        self._parent_map = {}
+
+    def GetColumnType(self, col):
+        if col == 0:
+            return wx.dataview.DataViewIconText
+
+        return "long"
+
+    def GetChildren(self, parent, children):
+        if not parent:
+            for connection in CONNECTIONS_LIST.get_value():
+                children.append(self.ObjectToItem(connection))
+        else:
+            obj = self.ItemToObject(parent)
+            if isinstance(obj, Connection):
+                for db in obj.context.databases.get_value():
+                    children.append(self.ObjectToItem(db))
+                    self._parent_map[self.ObjectToItem(db)] = parent
+            elif isinstance(obj, SQLDatabase):
+                categories = [
+                    ("Tables", BitmapList.DATABASE_TABLE, "tables"),
+                    ("Views", BitmapList.SYSTEM_VIEW, "views"),
+                    ("Procedures", BitmapList.SYSTEM_PROCEDURE, "procedures"),
+                    ("Functions", BitmapList.SYSTEM_FUNCTION, "functions"),
+                    ("Triggers", BitmapList.SYSTEM_TRIGGER, "triggers"),
+                    ("Events", BitmapList.SYSTEM_EVENT, "events"),
+                ]
+                for name, icon, attr in categories:
+                    cat = TreeCategory(name, icon, obj)
+                    children.append(self.ObjectToItem(cat))
+                    self._parent_map[self.ObjectToItem(cat)] = parent
+
+            elif isinstance(obj, TreeCategory):
+                observable = getattr(obj.database, obj.name.lower(), None)
+                if observable and observable.is_loaded:
+                    objs = observable.get_value()
+                    for o in objs:
+                        children.append(self.ObjectToItem(o))
+                        self._parent_map[self.ObjectToItem(o)] = parent
+
+        return len(children)
+
+    def IsContainer(self, item):
+        if not item:
+            return True
+
+        obj = self.ItemToObject(item)
+        return isinstance(obj, (Connection, SQLDatabase, TreeCategory))
+
+    def GetParent(self, item):
+        return self._parent_map.get(item, wx.dataview.NullDataViewItem)
+
+    def GetValue(self, item, col):
+        node = self.ItemToObject(item)
+
+        # if isinstance(node, Connection):
+        #     bitmap = node.engine.value.bitmap
+        #     mapper = {0: wx.dataview.DataViewIconText(node.name, bitmap), 1: ""}
+        # elif isinstance(node, SQLDatabase):
+        #     mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_DATABASE), 1: bytes_to_human(node.total_bytes)}
+        # elif isinstance(node, Category):
+        #     mapper = {0: wx.dataview.DataViewIconText(node.name, node.icon), 1: ""}
+        # elif isinstance(node, (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent)):
+        #     icon_name = f"SYSTEM_{type(node).__name__[3:].upper()}"
+        #     icon = getattr(BitmapList, icon_name, BitmapList.NOT_FOUND)
+        #     mapper = {0: wx.dataview.DataViewIconText(node.name, icon), 1: ""}
+        # else:
+        mapper = {}
+
+
+        if isinstance(node, Connection):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, node.engine.value.bitmap), 1: "", }
+        elif isinstance(node, SQLDatabase):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.DATABASE), 1: bytes_to_human(node.total_bytes)}
+        elif isinstance(node, TreeCategory):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, node.icon), 1: ""}
+        elif isinstance(node, SQLTable):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.DATABASE_TABLE), 1: int((node.total_bytes / node.database.total_bytes) * 100)}
+        elif isinstance(node, SQLView):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_VIEW), 1: 0}
+        elif isinstance(node, SQLProcedure):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_PROCEDURE), 1: 0}
+        elif isinstance(node, SQLFunction):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_FUNCTION), 1: 0}
+        elif isinstance(node, SQLTrigger):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_TRIGGER), 1: 0}
+        elif isinstance(node, SQLEvent):
+            mapper = {0: wx.dataview.DataViewIconText(node.name, BitmapList.SYSTEM_EVENT), 1: 0}
+
+        try :
+            return mapper[col]
+        except Exception as ex :
+            print("qsdq")
+
+class TreeExplorerController:
+    on_cancel_table: Callable
+    do_cancel_table: Callable
+
+    def __init__(self, tree_ctrl_explorer: wx.dataview.DataViewCtrl):
+        self.app = wx.GetApp()
+
+        self.tree_ctrl_explorer = tree_ctrl_explorer
+
+        self.model = ExplorerTreeModel()
+        self.tree_ctrl_explorer.AssociateModel(self.model)
+
+        # Set up columns
+        column0 = wx.dataview.DataViewColumn("Name", wx.dataview.DataViewIconTextRenderer(), 0, width=200, align=wx.ALIGN_LEFT)
+        column1 = wx.dataview.DataViewColumn("Usage", wx.dataview.DataViewProgressRenderer(), 1, width=100, align=wx.ALIGN_LEFT)
+        self.tree_ctrl_explorer.AppendColumn(column0)
+        self.tree_ctrl_explorer.AppendColumn(column1)
+
+        self.tree_ctrl_explorer.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
+        self.tree_ctrl_explorer.Bind(wx.dataview.EVT_DATAVIEW_ITEM_EXPANDING, self._on_item_expanding)
+        self.tree_ctrl_explorer.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+
+        CONNECTIONS_LIST.subscribe(self._on_connections_changed)
+
+    def _on_connections_changed(self, connections):
+        self.model.Cleared()
+
+    def _on_item_expanding(self, event):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        obj = self.model.ItemToObject(item)
+        if isinstance(obj, SQLDatabase):
+            for attr in ['tables', 'views', 'procedures', 'functions', 'triggers', 'events']:
+                observable = getattr(obj, attr, None)
+                if observable and not observable.is_loaded:
+                    observable.load()
+        elif isinstance(obj, TreeCategory):
+            observable = getattr(obj.database, obj.name.lower(), None)
+            if observable and not observable.is_loaded:
+                observable.load()
+        event.Skip()
+
+    def _on_selection_changed(self, event):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        if NEW_TABLE.get_value() and not self.on_cancel_table(event):
+            return
+
+        self.reset_current_objects()
+
+        obj = self.model.ItemToObject(item)
+
+        if isinstance(obj, Connection):
+            self.select_connection(obj)
+        elif isinstance(obj, SQLDatabase):
+            self.select_database(obj)
+        elif isinstance(obj, (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent)):
+            self.select_sql_object(obj)
+
+        event.Skip()
+
+    def _on_item_activated(self, event):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        obj = self.model.ItemToObject(item)
+
+        if isinstance(obj, (Connection, SQLDatabase, TreeCategory)):
+            if self.tree_ctrl_explorer.IsExpanded(item):
+                self.tree_ctrl_explorer.Collapse(item)
+            else:
+                self.tree_ctrl_explorer.Expand(item)
+        event.Skip()
+
+    def reset_current_objects(self):
+        CURRENT_TABLE.set_value(None)
+        CURRENT_VIEW.set_value(None)
+        CURRENT_TRIGGER.set_value(None)
+        CURRENT_PROCEDURE.set_value(None)
+        CURRENT_EVENT.set_value(None)
+        CURRENT_FUNCTION.set_value(None)
+
+    def select_connection(self, connection: Connection):
+        if connection == CURRENT_CONNECTION.get_value() and CURRENT_DATABASE.get_value():
+            return
+        CURRENT_CONNECTION.set_value(connection)
+        CURRENT_DATABASE.set_value(None)
+
+    def select_database(self, database: SQLDatabase):
+        if database != CURRENT_DATABASE.get_value():
+            connection = database.context.connection
+            if connection != CURRENT_CONNECTION.get_value():
+                CURRENT_CONNECTION.set_value(connection)
+            CURRENT_DATABASE.set_value(database)
+
+        if not self.tree_ctrl_explorer.IsExpanded(self.model.ObjectToItem(database)):
+            wx.CallAfter(self.tree_ctrl_explorer.Expand, self.model.ObjectToItem(database))
+
+    def select_sql_object(self, sql_obj):
+        database = sql_obj.database
+        connection = database.context.connection
+
+        if connection != CURRENT_CONNECTION.get_value():
+            CURRENT_CONNECTION.set_value(connection)
+
+        if database != CURRENT_DATABASE.get_value():
+            CURRENT_DATABASE.set_value(database)
+
+        if isinstance(sql_obj, SQLTable):
+            if not CURRENT_TABLE.get_value() or sql_obj != CURRENT_TABLE.get_value():
+                CURRENT_TABLE.set_value(sql_obj.copy())
+
+        elif isinstance(sql_obj, SQLView):
+            if not CURRENT_VIEW.get_value() or sql_obj != CURRENT_VIEW.get_value():
+                CURRENT_VIEW.set_value(sql_obj.copy())
+
+        elif isinstance(sql_obj, SQLTrigger):
+            if not CURRENT_TRIGGER.get_value() or sql_obj != CURRENT_TRIGGER.get_value():
+                CURRENT_TRIGGER.set_value(sql_obj.copy())
+
+        elif isinstance(sql_obj, SQLProcedure):
+            if not CURRENT_PROCEDURE.get_value() or sql_obj != CURRENT_PROCEDURE.get_value():
+                CURRENT_PROCEDURE.set_value(sql_obj.copy())
+
+        elif isinstance(sql_obj, SQLFunction):
+            if not CURRENT_FUNCTION.get_value() or sql_obj != CURRENT_FUNCTION.get_value():
+                CURRENT_FUNCTION.set_value(sql_obj.copy())
+
+        elif isinstance(sql_obj, SQLEvent):
+            if not CURRENT_EVENT.get_value() or sql_obj != CURRENT_EVENT.get_value():
+                CURRENT_EVENT.set_value(sql_obj.copy())

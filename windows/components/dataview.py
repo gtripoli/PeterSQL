@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import wx
 import wx.dataview
@@ -6,8 +6,9 @@ import wx.dataview
 from gettext import gettext as _
 
 from icons import IconList
-from structures.connection import Connection, ConnectionEngine
 
+from structures.session import Session
+from structures.connection import ConnectionEngine
 from structures.engines.database import SQLColumn, SQLTable, SQLIndex
 from structures.engines.datatype import DataTypeCategory
 from structures.engines.indextype import SQLIndexType, StandardIndexType
@@ -16,7 +17,7 @@ from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
 
-from windows.main import CURRENT_CONNECTION, CURRENT_DATABASE, CURRENT_TABLE
+from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE
 from windows.main.table import NEW_TABLE
 
 
@@ -39,7 +40,7 @@ class _SQLiteTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Expression"), 8, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
         column_collation_renderer = PopupRenderer(PopupChoice)
-        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION().context.COLLATIONS])
         column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 9, width=-1, align=wx.ALIGN_LEFT)
         dataview.AppendColumn(column)
 
@@ -63,7 +64,7 @@ class _MariaDBMySQLTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Expression"), 9, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
         column_collation_renderer = PopupRenderer(PopupChoice)
-        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION().context.COLLATIONS])
         column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 10, width=-1, align=wx.ALIGN_LEFT)
         dataview.AppendColumn(column)
 
@@ -85,7 +86,7 @@ class _PostgreSQLTableColumnsDataViewCtrl:
         dataview.AppendTextColumn(_(u"Expression"), 7, wx.dataview.DATAVIEW_CELL_EDITABLE, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE)
 
         column_collation_renderer = PopupRenderer(PopupChoice)
-        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_CONNECTION().context.COLLATIONS])
+        column_collation_renderer.on_open = lambda popup: popup.set_choices([""] + [c for c in CURRENT_SESSION().context.COLLATIONS])
         column = wx.dataview.DataViewColumn(_(u"Collation"), column_collation_renderer, 8, width=-1, align=wx.ALIGN_LEFT)
         dataview.AppendColumn(column)
 
@@ -130,19 +131,19 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
             _PostgreSQLTableColumnsDataViewCtrl
         ] = None
 
-        CURRENT_CONNECTION.subscribe(self._load_session)
+        CURRENT_SESSION.subscribe(self._load_session)
 
-    def _load_session(self, connection: Connection):
-        if not self._current_dataview:
-            if connection.engine == ConnectionEngine.SQLITE:
+    def _load_session(self, session: Session):
+        if not self._current_dataview and session:
+            if session.engine == ConnectionEngine.SQLITE:
                 self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
-            elif connection.engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
+            elif session.engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
                 self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
-            elif connection.engine == ConnectionEngine.POSTGRESQL:
+            elif session.engine == ConnectionEngine.POSTGRESQL:
                 self._current_dataview = _PostgreSQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
-        session = CURRENT_CONNECTION()
+        session = CURRENT_SESSION()
         table = CURRENT_TABLE() or NEW_TABLE()
 
         selected = self.GetSelection()
@@ -316,7 +317,7 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
 
         self.PopupMenu(menu)
 
-    def _load_table_columns(self, popup, column2_render: PopupRenderer) -> List[str]:
+    def _load_table_columns(self, popup, column2_render: PopupRenderer) -> list[str]:
         value = column2_render.GetValue()
         if value:
             table = next((t for t in list(CURRENT_DATABASE.get_value().tables) if t.name == value), None)
@@ -339,7 +340,7 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:
             if column.name in foreign_key.columns:
-                session = CURRENT_CONNECTION()
+                session = CURRENT_SESSION()
                 database = CURRENT_DATABASE()
 
                 records = []

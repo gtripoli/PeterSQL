@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 
 from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuilder
 
@@ -11,7 +11,7 @@ class MariaDBColumnBuilder(AbstractColumnBuilder):
                 # "%(format)s","%(storage)s",
                 "%(generated)s"]
 
-    def __init__(self, column: 'MariaDBColumn', exclude: Optional[List[str]] = None):
+    def __init__(self, column: 'MariaDBColumn', exclude: Optional[list[str]] = None):
         super().__init__(column, exclude)
 
         self.parts.update({
@@ -50,7 +50,7 @@ class MariaDBColumnBuilder(AbstractColumnBuilder):
 class MariaDBIndexBuilder(AbstractIndexBuilder):
     TEMPLATE = ["%(type)s", "%(name)s", "(%(columns)s)"]
 
-    def __init__(self, index: 'MariaDBIndex', exclude: Optional[List[str]] = None):
+    def __init__(self, index: 'MariaDBIndex', exclude: Optional[list[str]] = None):
         super().__init__(index, exclude)
 
     @property

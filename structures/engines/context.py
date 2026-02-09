@@ -2,7 +2,7 @@ import abc
 import contextlib
 import re
 
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Optional
 
 from helpers.logger import logger
 from helpers.observables import ObservableList, ObservableLazyList
@@ -24,12 +24,12 @@ class AbstractContext(abc.ABC):
     _cursor: Any = None
     _ssh_tunnel: Optional[SSHTunnel] = None
 
-    ENGINES: List[str] = []
-    KEYWORDS: Tuple[str] = ()
-    FUNCTIONS: Tuple[str] = ()
+    ENGINES: list[str] = []
+    KEYWORDS: tuple[str, ...] = ()
+    FUNCTIONS: tuple[str, ...] = ()
     DATATYPE: StandardDataType
     INDEXTYPE: StandardIndexType
-    COLLATIONS: Dict[str, str] = {}
+    COLLATIONS: dict[str, str] = {}
 
     QUOTE_IDENTIFIER: str = "'"
 
@@ -60,7 +60,7 @@ class AbstractContext(abc.ABC):
         return self._cursor
 
     @staticmethod
-    def get_temporary_id(container: List[SQLTypeAlias]) -> int:
+    def get_temporary_id(container: list[SQLTypeAlias]) -> int:
         return min([0] + [t.id for t in container]) - 1
 
     @abc.abstractmethod
@@ -77,31 +77,31 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_databases(self) -> List[SQLDatabase]:
+    def get_databases(self) -> list[SQLDatabase]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_views(self, database: SQLDatabase) -> List[SQLView]:
+    def get_views(self, database: SQLDatabase) -> list[SQLView]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_triggers(self, database: SQLDatabase) -> List[SQLTrigger]:
+    def get_triggers(self, database: SQLDatabase) -> list[SQLTrigger]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+    def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+    def get_columns(self, table: SQLTable) -> list[SQLColumn]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+    def get_indexes(self, table: SQLTable) -> list[SQLIndex]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+    def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -113,15 +113,15 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLTable, columns: List[str]) -> SQLIndex:
+    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLTable, columns: list[str]) -> SQLIndex:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_record(self, table: SQLTable, values: Dict[str, Any]) -> SQLRecord:
+    def build_empty_record(self, table: SQLTable, values: dict[str, Any]) -> SQLRecord:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: List[str]) -> SQLForeignKey:
+    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: list[str]) -> SQLForeignKey:
         raise NotImplementedError
 
     def build_sql_safe_name(self, name: Optional[str]) -> str:
@@ -135,7 +135,7 @@ class AbstractContext(abc.ABC):
         escaped_name = value.replace(self.QUOTE_IDENTIFIER, self.QUOTE_IDENTIFIER * 2)
         return f"{self.QUOTE_IDENTIFIER}{escaped_name}{self.QUOTE_IDENTIFIER}"
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[dict[str, Any]]:
         logger.debug(f"get records for table={table.name}")
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
@@ -192,7 +192,7 @@ class AbstractContext(abc.ABC):
             logger.error(ex, exc_info=True)
             raise
 
-    def fetchall(self) -> List[Any]:
+    def fetchall(self) -> list[Any]:
         try:
             return self.cursor.fetchall()
         except Exception as ex:

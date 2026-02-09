@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, List, Dict
+from typing import Optional
 
 from helpers.logger import logger
 
@@ -7,9 +7,9 @@ from helpers.logger import logger
 class AbstractColumnBuilder(abc.ABC):
     TEMPLATE: str
 
-    parts: Dict[str, str]
+    parts: dict[str, str]
 
-    def __init__(self, column: 'SQLColumn', exclude: Optional[List[str]] = None):
+    def __init__(self, column: 'SQLColumn', exclude: Optional[list[str]] = None):
         self.column = column
         self.exclude = exclude
 
@@ -90,11 +90,11 @@ class AbstractColumnBuilder(abc.ABC):
 
 
 class AbstractIndexBuilder(abc.ABC):
-    TEMPLATE: List[str]
+    TEMPLATE: list[str]
 
-    parts: Dict[str, str]
+    parts: dict[str, str]
 
-    def __init__(self, index: 'SQLIndex', exclude: Optional[List[str]] = None):
+    def __init__(self, index: 'SQLIndex', exclude: Optional[list[str]] = None):
         self.index = index
         self.exclude = exclude
 

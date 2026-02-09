@@ -6,10 +6,11 @@ import wx
 from helpers.logger import logger
 from helpers.loader import Loader
 
+from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 
 from windows import ConnectionsDialog
-from windows.main import CONNECTIONS_LIST
+from windows.main import SESSIONS_LIST, CURRENT_SESSION
 
 from windows.connections import CURRENT_CONNECTION, PENDING_CONNECTION, ConnectionDirectory, CURRENT_DIRECTORY
 from windows.connections.model import ConnectionModel
@@ -104,13 +105,14 @@ class ConnectionsManager(ConnectionsDialog):
         CURRENT_CONNECTION.subscribe(self._on_current_connection)
         PENDING_CONNECTION.subscribe(self._on_pending_connection)
 
-    def do_open_connection(self, event):
-        connection = CURRENT_CONNECTION()
+    def do_open_session(self, session : Session):
+        # CONNECTIONS_LIST.append(connection)
 
-        CONNECTIONS_LIST.append(connection)
+        SESSIONS_LIST.append(session)
+        CURRENT_SESSION(session)
 
         if not self.GetParent():
-            CURRENT_CONNECTION(connection)
+            # CURRENT_CONNECTION(connection)
             self._app.open_main_frame()
 
         self.Hide()
@@ -183,10 +185,10 @@ class ConnectionsManager(ConnectionsDialog):
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
             self.connections_tree_ctrl.Expand(parent_item)
 
-    def verify_connection(self, connection: Connection):
+    def verify_connection(self, session: Session):
         with Loader.cursor_wait():
             try:
-                connection.context.connect(connect_timeout=10)
+                session.connect(connect_timeout=10)
             except Exception as ex:
                 wx.MessageDialog(None,
                                  message=_(f'Connection error:\n{str(ex)}'),
@@ -199,15 +201,17 @@ class ConnectionsManager(ConnectionsDialog):
             return
 
         connection = CURRENT_CONNECTION()
-        if connection:
-            try:
-                self.verify_connection(connection)
-            except ConnectionError as ex:
-                logger.info(ex)
-            except Exception as ex:
-                logger.error(ex, exc_info=True)
-            else:
-                self.do_open_connection(connection)
+
+        session = Session.from_connection(connection)
+
+        try:
+            self.verify_connection(session)
+        except ConnectionError as ex:
+            logger.info(ex)
+        except Exception as ex:
+            logger.error(ex, exc_info=True)
+        else:
+            self.do_open_session(session)
 
     def on_delete_connection(self, connection: Connection):
         dialog = wx.MessageDialog(None,

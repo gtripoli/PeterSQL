@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import pymysql
 
@@ -138,7 +138,7 @@ class MySQLContext(AbstractContext):
         result = self.fetchone()
         return int(result["Value"]) if result else None
 
-    def get_databases(self) -> List[SQLDatabase]:
+    def get_databases(self) -> list[SQLDatabase]:
         self.execute("""
             SELECT
                 isS.SCHEMA_NAME as database_name,
@@ -173,7 +173,7 @@ class MySQLContext(AbstractContext):
         return results
 
     def get_views(self, database: SQLDatabase):
-        results: List[MySQLView] = []
+        results: list[MySQLView] = []
         self.execute(f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME")
         for i, result in enumerate(self.fetchall()):
             results.append(MySQLView(
@@ -185,8 +185,8 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_triggers(self, database: SQLDatabase) -> List[MySQLTrigger]:
-        results: List[MySQLTrigger] = []
+    def get_triggers(self, database: SQLDatabase) -> list[MySQLTrigger]:
+        results: list[MySQLTrigger] = []
         self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
         for i, result in enumerate(self.fetchall()):
             results.append(MySQLTrigger(
@@ -198,7 +198,7 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_tables(self, database: SQLDatabase) -> List[SQLTable]:
+    def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
         logger.debug(f"get_tables for database={database.name}")
 
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
@@ -233,7 +233,7 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_columns(self, table: SQLTable) -> List[SQLColumn]:
+    def get_columns(self, table: SQLTable) -> list[SQLColumn]:
         results = []
         if table.id == -1:
             return results
@@ -276,7 +276,7 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_indexes(self, table: SQLTable) -> List[SQLIndex]:
+    def get_indexes(self, table: SQLTable) -> list[SQLIndex]:
         if table is None or table.is_new:
             return []
 
@@ -333,7 +333,7 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_foreign_keys(self, table: SQLTable) -> List[SQLForeignKey]:
+    def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
 
@@ -369,7 +369,7 @@ class MySQLContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> List[MySQLRecord]:
+    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> list[MySQLRecord]:
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
@@ -407,7 +407,7 @@ class MySQLContext(AbstractContext):
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: MySQLIndexType, table: MySQLTable, columns: List[str]) -> MySQLIndex:
+    def build_empty_index(self, name: str, type: MySQLIndexType, table: MySQLTable, columns: list[str]) -> MySQLIndex:
         return MySQLIndex(
             id=MySQLContext.get_temporary_id(table.indexes),
             name=name,
@@ -416,7 +416,7 @@ class MySQLContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: MySQLTable, columns: List[str]) -> MySQLForeignKey:
+    def build_empty_foreign_key(self, name: str, table: MySQLTable, columns: list[str]) -> MySQLForeignKey:
         return MySQLForeignKey(
             id=MySQLContext.get_temporary_id(table.foreign_keys),
             name=name,
@@ -428,7 +428,7 @@ class MySQLContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: MySQLTable, values: Dict[str, Any]) -> MySQLRecord:
+    def build_empty_record(self, table: MySQLTable, values: dict[str, Any]) -> MySQLRecord:
         return MySQLRecord(
             id=MySQLContext.get_temporary_id(table.records),
             table=table,

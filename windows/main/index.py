@@ -1,5 +1,3 @@
-from typing import List
-
 import wx
 import wx.dataview
 
@@ -82,10 +80,10 @@ class TableIndexController:
             event.Skip()
             return
 
-        current_indexes: List[SQLIndex] = self.model.data
+        current_indexes: list[SQLIndex] = self.model.data
 
         table: SQLTable = NEW_TABLE.get_value() or CURRENT_TABLE.get_value()
-        original_indexes: List[SQLIndex] = list(table.indexes)
+        original_indexes: list[SQLIndex] = list(table.indexes)
 
         map_indexes = merge_original_current(original_indexes, current_indexes)
 

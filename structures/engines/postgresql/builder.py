@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 
 from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuilder
 
@@ -6,7 +6,7 @@ from structures.engines.builder import AbstractColumnBuilder, AbstractIndexBuild
 class PostgreSQLColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(collate)s", "%(nullable)s", "%(default)s", "%(check)s", "%(generated)s"]
 
-    def __init__(self, column: 'PostgreSQLColumn', exclude: Optional[List[str]] = None):
+    def __init__(self, column: 'PostgreSQLColumn', exclude: Optional[list[str]] = None):
         super().__init__(column, exclude)
 
         self.parts.update({
@@ -63,7 +63,7 @@ class PostgreSQLColumnBuilder(AbstractColumnBuilder):
 class PostgreSQLIndexBuilder(AbstractIndexBuilder):
     TEMPLATE = ["%(type)s", "%(name)s", "ON", "%(table)s", "(%(columns)s)"]
 
-    def __init__(self, index: 'PostgreSQLIndex', exclude: Optional[List[str]] = None):
+    def __init__(self, index: 'PostgreSQLIndex', exclude: Optional[list[str]] = None):
         super().__init__(index, exclude)
 
     @property

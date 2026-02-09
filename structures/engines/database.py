@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 import uuid
 
-from typing import Optional, Callable, Literal, List, Self, Dict
+from typing import Optional, Callable, Literal, Self
 
 import wx
 
@@ -23,12 +23,12 @@ class SQLDatabase(abc.ABC):
     context: 'AbstractContext'
     total_bytes: float = 0
 
-    get_tables_handler: Callable[[Self], List['SQLTable']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
-    get_views_handler: Optional[Callable[[Self], List['SQLView']]] = dataclasses.field(compare=False, default=None)
-    get_procedures_handler: Optional[Callable[[Self], List['SQLProcedure']]] = dataclasses.field(compare=False, default=None)
-    get_functions_handler: Optional[Callable[[Self], List['SQLFunction']]] = dataclasses.field(compare=False, default=None)
-    get_triggers_handler: Optional[Callable[[Self], List['SQLTrigger']]] = dataclasses.field(compare=False, default=None)
-    get_events_handler: Optional[Callable[[Self], List['SQLEvent']]] = dataclasses.field(compare=False, default=None)
+    get_tables_handler: Callable[[Self], list['SQLTable']] = dataclasses.field(compare=False, default_factory=lambda: lambda database: list([]))
+    get_views_handler: Optional[Callable[[Self], list['SQLView']]] = dataclasses.field(compare=False, default=None)
+    get_procedures_handler: Optional[Callable[[Self], list['SQLProcedure']]] = dataclasses.field(compare=False, default=None)
+    get_functions_handler: Optional[Callable[[Self], list['SQLFunction']]] = dataclasses.field(compare=False, default=None)
+    get_triggers_handler: Optional[Callable[[Self], list['SQLTrigger']]] = dataclasses.field(compare=False, default=None)
+    get_events_handler: Optional[Callable[[Self], list['SQLEvent']]] = dataclasses.field(compare=False, default=None)
 
     def __post_init__(self):
         self.tables = ObservableLazyList(lambda db=self: self.get_tables_handler(db))
@@ -94,11 +94,11 @@ class SQLTable(abc.ABC):
     comment: Optional[str] = None
     collation_name: Optional[str] = None
 
-    get_columns_handler: Callable[[Self], List['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
-    get_indexes_handler: Callable[[Self], List['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
-    get_checks_handler: Callable[[Self], List['SQLCheck']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
-    get_foreign_keys_handler: Callable[[Self], List['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
-    get_records_handler: Callable[[Self, Optional[str], int, int, Optional[str]], List['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, filters=None, limit=1000, offset=0, orders=None: list())
+    get_columns_handler: Callable[[Self], list['SQLColumn']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_indexes_handler: Callable[[Self], list['SQLIndex']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_checks_handler: Callable[[Self], list['SQLCheck']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_foreign_keys_handler: Callable[[Self], list['SQLForeignKey']] = dataclasses.field(compare=False, default_factory=lambda: lambda table: list())
+    get_records_handler: Callable[[Self, Optional[str], int, int, Optional[str]], list['SQLRecord']] = dataclasses.field(compare=False, default_factory=lambda: lambda table, filters=None, limit=1000, offset=0, orders=None: list())
 
     def __post_init__(self):
         self.indexes = ObservableLazyList(lambda: self.get_indexes_handler(self))
@@ -195,7 +195,7 @@ class SQLTable(abc.ABC):
     def raw_create(self) -> str:
         raise NotImplementedError
 
-    def get_identifier_indexes(self) -> List['SQLIndex']:
+    def get_identifier_indexes(self) -> list['SQLIndex']:
         identifier_indexes = []
         for index in list(self.indexes):
             if index.type.is_primary or index.type.is_unique:
@@ -410,9 +410,9 @@ class SQLIndex(abc.ABC):
     id: int
     name: str
     type: SQLIndexType
-    columns: List[str]
+    columns: list[str]
     table: SQLTable = dataclasses.field(compare=False)
-    expression: List[str] = dataclasses.field(default_factory=list)
+    expression: list[str] = dataclasses.field(default_factory=list)
     condition: Optional[str] = None
 
     def __eq__(self, other):
@@ -450,9 +450,9 @@ class SQLForeignKey(abc.ABC):
     id: int
     name: str
     table: SQLTable = dataclasses.field(compare=False)
-    columns: List[str]
+    columns: list[str]
     reference_table: str
-    reference_columns: List[str]
+    reference_columns: list[str]
 
     on_update: Optional[str] = None
     on_delete: Optional[str] = None
@@ -500,7 +500,7 @@ class SQLForeignKey(abc.ABC):
 class SQLRecord(abc.ABC):
     id: int
     table: 'SQLTable'
-    values: Dict[str, str] = dataclasses.field(default_factory=dict)
+    values: dict[str, str] = dataclasses.field(default_factory=dict)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SQLRecord):
@@ -536,7 +536,7 @@ class SQLRecord(abc.ABC):
 
         return True
 
-    def _get_identifier_columns(self) -> Dict[str, str]:
+    def _get_identifier_columns(self) -> dict[str, str]:
         identifier_indexes = self.table.get_identifier_indexes()
 
         if not identifier_indexes:
@@ -545,7 +545,7 @@ class SQLRecord(abc.ABC):
         original_table = next((t for t in self.table.database.tables if t.id == self.table.id), None)
         identifier_conditions = {}
         for identifier_index in identifier_indexes:
-            columns: List[SQLColumn] = [column for column in self.table.columns if column.name in identifier_index.columns]
+            columns: list[SQLColumn] = [column for column in self.table.columns if column.name in identifier_index.columns]
             original_record = next((r for r in list(original_table.records) if r.id == self.id), None)
 
             for column in columns:
@@ -573,7 +573,7 @@ class SQLRecord(abc.ABC):
         raise NotImplementedError
 
     @staticmethod
-    def delete_many(table: SQLTable, records: List[Self]) -> bool:
+    def delete_many(table: SQLTable, records: list[Self]) -> bool:
         results = []
         with table.database.context.transaction() as transaction:
             for record in records:
