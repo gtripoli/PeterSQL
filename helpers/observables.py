@@ -181,7 +181,7 @@ class ObservableList(Observable[list[T]]):
 
         return value
 
-    def get_value(self) -> List:
+    def get_value(self) -> list[T]:
         return self._ensure()
 
     def append(self, value: Any, replace_existing: bool = False) -> Self:
@@ -330,13 +330,13 @@ class ObservableLazyList(ObservableList[T]):
         return self._loaded
 
     def _ensure(self):
-        value = super()._ensure()
+        values = super()._ensure()
         if not self._loaded:
-            loaded = list(self._loader())
-            self._loaded = True
-            super()._set_value(loaded)
-            return loaded
-        return value
+            values = list(self._loader())
+            self.set_value(values)
+
+            return values
+        return values
 
     def get_value(self) -> list[T]:
         return self._ensure()
@@ -348,6 +348,10 @@ class ObservableLazyList(ObservableList[T]):
             self.get_value()
 
         return self
+
+    def set_value(self, value: list[T]) -> Self:
+        self._loaded = True
+        return super().set_value(value)
 
     def clear(self) -> Self:
         return super().clear()

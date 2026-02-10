@@ -71,9 +71,8 @@ class MariaDBTable(SQLTable):
         with self.database.context.transaction() as transaction:
             transaction.execute(self.raw_create())
 
-            for index in self.indexes:
-                index.create()
-
+            # Indexes are already included in raw_create() via MariaDBIndexBuilder
+            # Only create foreign keys separately
             for foreign_key in self.foreign_keys:
                 foreign_key.create()
 
@@ -150,6 +149,7 @@ class MariaDBColumn(SQLColumn):
     is_zerofill: Optional[bool] = False
     comment: Optional[str] = None
     po: Optional[SQLColumn] = None
+    after_index: Optional[int] = None
 
     def add(self) -> bool:
         sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD COLUMN {MariaDBColumnBuilder(self)}"
@@ -194,7 +194,7 @@ class MariaDBIndex(SQLIndex):
         if self.type == MariaDBIndexType.PRIMARY:
             return self.table.database.context.execute(f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} DROP PRIMARY KEY")
 
-        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON {self.table.database.sql_safe_name}.{self.table.sql_safe_name}")
+        return self.table.database.context.execute(f"DROP INDEX {self.sql_safe_name} ON {self.table.database.sql_safe_name}.{self.table.sql_safe_name}")
 
     def modify(self, new: Self):
         self.drop()
@@ -317,24 +317,25 @@ class MariaDBRecord(SQLRecord):
 
 class MariaDBView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS `{self.name}` AS {self.sql}")
+        return self.database.context.execute(f"CREATE VIEW `{self.name}` AS {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW `{self.name}` AS {self.sql}")
 
 
 class MariaDBTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS `{self.name}` {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER `{self.name}` {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
 
 
 @dataclasses.dataclass(eq=False)
@@ -359,6 +360,6 @@ class MariaDBFunction(SQLFunction):
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
 
-    def alter(self):
+    def alter(self) -> bool:
         self.drop()
-        self.create()
+        return self.create()

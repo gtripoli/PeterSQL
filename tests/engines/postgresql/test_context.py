@@ -36,9 +36,9 @@ class TestPostgreSQLContext:
         assert uptime >= 0
 
     def test_context_build_sql_safe_name(self, postgresql_session):
-        """Test building SQL safe names uses QUOTE_IDENTIFIER."""
+        """Test building SQL safe names uses IDENTIFIER_QUOTE."""
         ctx = postgresql_session.context
-        quote = ctx.QUOTE_IDENTIFIER
+        quote = ctx.IDENTIFIER_QUOTE
 
         assert quote == '"'
         assert ctx.build_sql_safe_name("normal") == "normal"

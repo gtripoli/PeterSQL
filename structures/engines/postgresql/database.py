@@ -38,7 +38,7 @@ class PostgreSQLTable(SQLTable):
 
         return True
 
-    def truncate(self):
+    def truncate(self) -> bool:
         try:
             with self.database.context.transaction() as context:
                 context.execute(f'TRUNCATE TABLE "{self.database.name}"."{self.name}";')
@@ -118,8 +118,8 @@ class PostgreSQLTable(SQLTable):
 
         return True
 
-    def drop(self):
-        pass
+    def drop(self) -> bool:
+        return self.database.context.execute(f'DROP TABLE "{self.schema}"."{self.name}"')
 
 
 @dataclasses.dataclass(eq=False)
@@ -129,77 +129,85 @@ class PostgreSQLColumn(SQLColumn):
 
 @dataclasses.dataclass
 class PostgreSQLIndex(SQLIndex):
-    def create(self):
+    def create(self) -> bool:
         sql = str(PostgreSQLIndexBuilder(self))
-        self.table.database.context.execute(sql)
+        return self.table.database.context.execute(sql)
 
-    def drop(self):
+    def drop(self) -> bool:
         if self.type.name == "PRIMARY":
             sql = f'ALTER TABLE "{self.table.database.name}"."{self.table.name}" DROP CONSTRAINT "{self.name}";'
         else:
             sql = f'DROP INDEX IF EXISTS "{self.table.database.name}"."{self.name}";'
-        self.table.database.context.execute(sql)
+        return self.table.database.context.execute(sql)
 
-    def alter(self, original_index: Self):
+    def alter(self, original_index: Self) -> bool:
         self.drop()
-        self.create()
+        return self.create()
 
 
 @dataclasses.dataclass
 class PostgreSQLForeignKey(SQLForeignKey):
-    def create(self):
+    def create(self) -> bool:
         columns = ", ".join(f'"{col}"' for col in self.columns)
         ref_columns = ", ".join(f'"{col}"' for col in self.reference_columns)
-        sql = f'ALTER TABLE "{self.table.database.name}"."{self.table.name}" ADD CONSTRAINT "{self.name}" FOREIGN KEY ({columns}) REFERENCES "{self.reference_table}" ({ref_columns});'
-        self.table.database.context.execute(sql)
+        sql = f'ALTER TABLE "{self.table.schema}"."{self.table.name}" ADD CONSTRAINT "{self.name}" FOREIGN KEY ({columns}) REFERENCES {self.reference_table} ({ref_columns})'
+        if self.on_update and self.on_update != "NO ACTION":
+            sql += f" ON UPDATE {self.on_update}"
+        if self.on_delete and self.on_delete != "NO ACTION":
+            sql += f" ON DELETE {self.on_delete}"
+        return self.table.database.context.execute(sql)
 
-    def drop(self):
-        sql = f'ALTER TABLE "{self.table.database.name}"."{self.table.name}" DROP CONSTRAINT "{self.name}";'
-        self.table.database.context.execute(sql)
+    def drop(self) -> bool:
+        sql = f'ALTER TABLE "{self.table.schema}"."{self.table.name}" DROP CONSTRAINT "{self.name}"'
+        return self.table.database.context.execute(sql)
+
+    def modify(self, new: "PostgreSQLForeignKey") -> None:
+        self.drop()
+        new.create()
 
 
 @dataclasses.dataclass
 class PostgreSQLRecord(SQLRecord):
-    def insert(self):
+    def insert(self) -> bool:
         columns = ", ".join(f'"{k}"' for k in self.values.keys())
         placeholders = ", ".join("%s" for _ in self.values)
         sql = f'INSERT INTO "{self.table.database.name}"."{self.table.name}" ({columns}) VALUES ({placeholders});'
-        self.table.database.context.execute(sql, tuple(self.values.values()))
+        return self.table.database.context.execute(sql, tuple(self.values.values()))
 
-    def update(self):
+    def update(self) -> bool:
         set_clause = ", ".join(f'"{k}" = %s' for k in self.values.keys())
         sql = f'UPDATE "{self.table.database.name}"."{self.table.name}" SET {set_clause} WHERE id = %s;'
-        self.table.database.context.execute(sql, tuple(self.values.values()) + (self.id,))
+        return self.table.database.context.execute(sql, tuple(self.values.values()) + (self.id,))
 
-    def delete(self):
+    def delete(self) -> bool:
         sql = f'DELETE FROM "{self.table.database.name}"."{self.table.name}" WHERE id = %s;'
-        self.table.database.context.execute(sql, (self.id,))
+        return self.table.database.context.execute(sql, (self.id,))
 
 
 @dataclasses.dataclass
 class PostgreSQLView(SQLView):
-    def create(self):
+    def create(self) -> bool:
         sql = f'CREATE VIEW "{self.database.name}"."{self.name}" AS {self.sql};'
-        self.database.context.execute(sql)
+        return self.database.context.execute(sql)
 
-    def alter(self):
+    def alter(self) -> bool:
         sql = f'CREATE OR REPLACE VIEW "{self.database.name}"."{self.name}" AS {self.sql};'
-        self.database.context.execute(sql)
+        return self.database.context.execute(sql)
 
-    def drop(self):
+    def drop(self) -> bool:
         sql = f'DROP VIEW IF EXISTS "{self.database.name}"."{self.name}";'
-        self.database.context.execute(sql)
+        return self.database.context.execute(sql)
 
 
 @dataclasses.dataclass
 class PostgreSQLTrigger(SQLTrigger):
-    def create(self):
-        self.database.context.execute(self.sql)
+    def create(self) -> bool:
+        return self.database.context.execute(self.sql)
 
-    def alter(self):
+    def alter(self) -> bool:
         self.drop()
-        self.create()
+        return self.create()
 
-    def drop(self):
+    def drop(self) -> bool:
         sql = f'DROP TRIGGER IF EXISTS "{self.name}" ON "{self.database.name}";'
-        self.database.context.execute(sql)
+        return self.database.context.execute(sql)

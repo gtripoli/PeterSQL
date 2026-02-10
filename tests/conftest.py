@@ -19,7 +19,7 @@ def sqlite_session():
     """Provide an in-memory SQLite session for tests"""
     config = SourceConfiguration(filename=':memory:')
     connection = Connection(id=1, name='test_session', engine=ConnectionEngine.SQLITE, configuration=config)
-    session = Session.from_connection(connection)
+    session = Session(connection)
     session.connect()
     yield session
     session.disconnect()

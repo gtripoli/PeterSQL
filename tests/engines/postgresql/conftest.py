@@ -16,10 +16,10 @@ POSTGRESQL_VERSIONS: list[str] = [
 
 def pytest_generate_tests(metafunc):
     if "postgresql_version" in metafunc.fixturenames:
-        metafunc.parametrize("postgresql_version", POSTGRESQL_VERSIONS)
+        metafunc.parametrize("postgresql_version", POSTGRESQL_VERSIONS, scope="module")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def postgresql_container(postgresql_version):
     with PostgresContainer(
         postgresql_version,
@@ -32,7 +32,7 @@ def postgresql_container(postgresql_version):
         yield container
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def postgresql_session(postgresql_container):
     """Fixture that provides a PostgreSQL session for tests."""
     config = CredentialsConfiguration(

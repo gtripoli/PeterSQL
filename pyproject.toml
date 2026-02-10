@@ -20,20 +20,13 @@ dev = [
     "mypy",
     "pre-commit",
     "pytest",
-    "pytest-cov",
     "pytest-mock",
+    "pytest-parallel",
     "types-pymysql",
     "types-pyyaml",
-    "types-wxpython"
+    "types-wxpython",
 ]
 
-
-[tool.pytest]
-minversion = "9.0"
-addopts = ["-ra", "-q", "--cov=.", "--cov-report=term", "--force-short-summary"]
-testpaths = [
-    "tests",
-]
 
 [tool.pyright]
 typeCheckingMode = "standard"

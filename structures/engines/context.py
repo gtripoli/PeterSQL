@@ -10,7 +10,7 @@ from helpers.observables import ObservableList, ObservableLazyList
 from structures.helpers import SQLTypeAlias
 from structures.ssh_tunnel import SSHTunnel
 from structures.connection import Connection
-from structures.engines.datatype import StandardDataType
+from structures.engines.datatype import StandardDataType, SQLDataType
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
@@ -31,7 +31,7 @@ class AbstractContext(abc.ABC):
     INDEXTYPE: StandardIndexType
     COLLATIONS: dict[str, str] = {}
 
-    QUOTE_IDENTIFIER: str = "'"
+    IDENTIFIER_QUOTE: str = '"'
 
     databases: ObservableLazyList[SQLDatabase]
 
@@ -105,23 +105,31 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_table(self, database: SQLDatabase) -> SQLTable:
+    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLTable:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_column(self, table: SQLTable, datatype, **default_values) -> SQLColumn:
+    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> SQLColumn:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLTable, columns: list[str]) -> SQLIndex:
+    def build_empty_index(self, table: SQLTable, indextype: SQLIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLIndex:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_record(self, table: SQLTable, values: dict[str, Any]) -> SQLRecord:
+    def build_empty_foreign_key(self, table: SQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLForeignKey:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def build_empty_foreign_key(self, name: str, table: SQLTable, columns: list[str]) -> SQLForeignKey:
+    def build_empty_record(self, table: SQLTable, /, *, values: dict[str, Any]) -> SQLRecord:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLView:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLTrigger:
         raise NotImplementedError
 
     def build_sql_safe_name(self, name: Optional[str]) -> str:
@@ -132,10 +140,10 @@ class AbstractContext(abc.ABC):
         if SQL_SAFE_NAME_REGEX.match(value):
             return value
 
-        escaped_name = value.replace(self.QUOTE_IDENTIFIER, self.QUOTE_IDENTIFIER * 2)
-        return f"{self.QUOTE_IDENTIFIER}{escaped_name}{self.QUOTE_IDENTIFIER}"
+        escaped_name = value.replace(self.IDENTIFIER_QUOTE, self.IDENTIFIER_QUOTE * 2)
+        return f"{self.IDENTIFIER_QUOTE}{escaped_name}{self.IDENTIFIER_QUOTE}"
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[dict[str, Any]]:
+    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[dict[str, Any]]:
         logger.debug(f"get records for table={table.name}")
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
@@ -170,10 +178,9 @@ class AbstractContext(abc.ABC):
 
     # EXECUTION
     def execute(self, query: str) -> bool:
-        query = re.sub(r'\s+', ' ', str(query)).strip()
-
-        logger.debug("execute query: %s", query)
-        QUERY_LOGS.append(query)
+        query_clean = re.sub(r'\s+', ' ', str(query)).strip()
+        logger.debug("execute query: %s", query_clean)
+        QUERY_LOGS.append(query_clean)
 
         try:
             self.cursor.execute(query)

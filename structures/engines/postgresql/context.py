@@ -23,7 +23,7 @@ class PostgreSQLContext(AbstractContext):
     DATATYPE = PostgreSQLDataType
     INDEXTYPE = PostgreSQLIndexType
 
-    QUOTE_IDENTIFIER = '"'
+    IDENTIFIER_QUOTE = '"'
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -360,7 +360,7 @@ class PostgreSQLContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[PostgreSQLRecord]:
+    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[PostgreSQLRecord]:
         logger.debug(f"get records for table={table.name}")
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
@@ -391,10 +391,15 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def build_empty_table(self, database: SQLDatabase) -> PostgreSQLTable:
+    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> PostgreSQLTable:
+        id = PostgreSQLContext.get_temporary_id(database.tables)
+
+        if name is None:
+            name = _(f"Table{str(id * -1):03}")
+
         return PostgreSQLTable(
-            id=PostgreSQLContext.get_temporary_id(database.tables),
-            name='',
+            id=id,
+            name=name,
             database=database,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
@@ -402,28 +407,42 @@ class PostgreSQLContext(AbstractContext):
             get_records_handler=self.get_records,
         ).copy()
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> PostgreSQLColumn:
+    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> PostgreSQLColumn:
         id = PostgreSQLContext.get_temporary_id(table.columns)
+
+        if name is None:
+            name = _(f"Column{str(id * -1):03}")
+
         return PostgreSQLColumn(
             id=id,
-            name=_(f"Column{str(id * -1):03}"),
+            name=name,
             table=table,
             datatype=datatype,
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: PostgreSQLIndexType, table: PostgreSQLTable, columns: list[str]) -> PostgreSQLIndex:
+    def build_empty_index(self, table: PostgreSQLTable, indextype: PostgreSQLIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> PostgreSQLIndex:
+        id = PostgreSQLContext.get_temporary_id(table.indexes)
+
+        if name is None:
+            name = _(f"Index{str(id * -1):03}")
+
         return PostgreSQLIndex(
-            id=PostgreSQLContext.get_temporary_id(table.indexes),
+            id=id,
             name=name,
-            type=type,
+            type=indextype,
             columns=columns,
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: PostgreSQLTable, columns: list[str]) -> PostgreSQLForeignKey:
+    def build_empty_foreign_key(self, table: PostgreSQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> PostgreSQLForeignKey:
+        id = PostgreSQLContext.get_temporary_id(table.foreign_keys)
+
+        if name is None:
+            name = _(f"ForeignKey{str(id * -1):03}")
+
         return PostgreSQLForeignKey(
-            id=PostgreSQLContext.get_temporary_id(table.foreign_keys),
+            id=id,
             name=name,
             table=table,
             columns=columns,
@@ -433,9 +452,35 @@ class PostgreSQLContext(AbstractContext):
             on_delete="NO ACTION",
         )
 
-    def build_empty_record(self, table: PostgreSQLTable, values: dict[str, Any]) -> PostgreSQLRecord:
+    def build_empty_record(self, table: PostgreSQLTable, /, *, values: dict[str, Any]) -> PostgreSQLRecord:
         return PostgreSQLRecord(
             id=PostgreSQLContext.get_temporary_id(table.records),
             table=table,
             values=values
+        )
+
+    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> PostgreSQLView:
+        id = PostgreSQLContext.get_temporary_id(database.views)
+
+        if name is None:
+            name = _(f"View{str(id * -1):03}")
+
+        return PostgreSQLView(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
+        )
+
+    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> PostgreSQLTrigger:
+        id = PostgreSQLContext.get_temporary_id(database.triggers)
+
+        if name is None:
+            name = _(f"Trigger{str(id * -1):03}")
+
+        return PostgreSQLTrigger(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
         )

@@ -7,8 +7,6 @@ from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
 
-from structures.engines.mariadb.database import MariaDBDatabase
-
 MARIADB_VERSIONS: list[str] = [
     "mariadb:latest",
     "mariadb:11.8",
@@ -19,10 +17,10 @@ MARIADB_VERSIONS: list[str] = [
 
 def pytest_generate_tests(metafunc):
     if "mariadb_version" in metafunc.fixturenames:
-        metafunc.parametrize("mariadb_version", MARIADB_VERSIONS)
+        metafunc.parametrize("mariadb_version", MARIADB_VERSIONS, scope="module")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def mariadb_container(mariadb_version):
     with MySqlContainer(mariadb_version, name=f"petersql_test_{mariadb_version.replace(":", "_")}",
                         mem_limit="768m",
@@ -33,7 +31,7 @@ def mariadb_container(mariadb_version):
         yield container
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def mariadb_session(mariadb_container):
     config = CredentialsConfiguration(
         hostname=mariadb_container.get_container_host_ip(),
@@ -55,6 +53,13 @@ def mariadb_session(mariadb_container):
 
 @pytest.fixture(scope="function")
 def mariadb_database(mariadb_session):
-    database = MariaDBDatabase(id=1, name="testdb", context=mariadb_session.context)
     mariadb_session.context.execute("CREATE DATABASE IF NOT EXISTS testdb")
+    mariadb_session.context.databases.refresh()
+    database = next(db for db in mariadb_session.context.databases.get_value() if db.name == "testdb")
     yield database
+    # Cleanup: drop all tables in testdb
+    mariadb_session.context.execute("USE testdb")
+    mariadb_session.context.execute("SET FOREIGN_KEY_CHECKS = 0")
+    for table in database.tables.get_value():
+        mariadb_session.context.execute(f"DROP TABLE IF EXISTS `testdb`.`{table.name}`")
+    mariadb_session.context.execute("SET FOREIGN_KEY_CHECKS = 1")

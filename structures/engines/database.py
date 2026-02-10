@@ -107,7 +107,7 @@ class SQLTable(abc.ABC):
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
 
     def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
-        self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters, limit, offset, orders))
+        self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters=filters, limit=limit, offset=offset, orders=orders))
 
     def __eq__(self, other: Self) -> bool:
         if not isinstance(other, SQLTable):
@@ -550,10 +550,10 @@ class SQLRecord(abc.ABC):
 
             for column in columns:
                 if original_record is not None:
-                    identifier_conditions[column.name] = original_record.values.get(column.name)
+                    identifier_conditions[column.name] = original_record.values.get(column.sql_safe_name)
 
                 if column.datatype.format is not None:
-                    identifier_conditions[column.name] = column.datatype.format(identifier_conditions[column.name])
+                    identifier_conditions[column.name] = column.datatype.format(identifier_conditions[column.sql_safe_name])
 
             if identifier_index.type.is_primary:
                 break

@@ -26,9 +26,11 @@ def mock_table(sqlite_session):
 @patch('wx.GetApp')
 @patch('windows.main.index.CURRENT_TABLE')
 @patch('windows.main.index.CURRENT_INDEX')
-def test_on_index_delete(mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
+@patch('windows.main.index.NEW_TABLE')
+def test_on_index_delete(mock_new_table, mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
     mock_get_app.return_value = Mock()
     mock_current_table.get_value.return_value = mock_table
+    mock_new_table.get_value.return_value = None
 
     list_ctrl = Mock()
     controller = TableIndexController(list_ctrl)
@@ -45,15 +47,17 @@ def test_on_index_delete(mock_current_index, mock_current_table, mock_get_app, s
     controller.on_index_delete()
 
     mock_table.indexes.remove.assert_called_once_with(index_to_delete)
-    mock_current_table.set_value.assert_called_once_with(mock_table)
+    mock_new_table.set_value.assert_called_once_with(mock_table)
 
 
 @patch('wx.GetApp')
 @patch('windows.main.index.CURRENT_TABLE')
 @patch('windows.main.index.CURRENT_INDEX')
-def test_on_index_clear(mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
+@patch('windows.main.index.NEW_TABLE')
+def test_on_index_clear(mock_new_table, mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
     mock_get_app.return_value = Mock()
     mock_current_table.get_value.return_value = mock_table
+    mock_new_table.get_value.return_value = None
 
     list_ctrl = Mock()
     controller = TableIndexController(list_ctrl)
@@ -63,4 +67,4 @@ def test_on_index_clear(mock_current_index, mock_current_table, mock_get_app, sq
 
     controller.model.clear.assert_called_once()
     mock_table.indexes.clear.assert_called_once()
-    mock_current_table.set_value.assert_called_once_with(mock_table)
+    mock_new_table.set_value.assert_called_once_with(mock_table)

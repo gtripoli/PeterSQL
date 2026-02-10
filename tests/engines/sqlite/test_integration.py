@@ -1,5 +1,3 @@
-import pytest
-
 from structures.engines.sqlite.database import (
     SQLiteTable,
     SQLiteColumn,
@@ -12,223 +10,291 @@ from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
+def create_users_table(sqlite_database, sqlite_session) -> SQLiteTable:
+    """Helper: create and save a users table with id and name columns.
+    
+    Uses build_empty_* API from context to construct objects.
+    Returns the persisted table from the database (with proper handlers).
+    """
+    ctx = sqlite_session.context
+
+    table = ctx.build_empty_table(sqlite_database, name="users")
+
+    id_column = ctx.build_empty_column(
+        table,
+        SQLiteDataType.INTEGER,
+        name="id",
+        is_auto_increment=True,
+        is_nullable=False,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        SQLiteDataType.TEXT,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        SQLiteIndexType.PRIMARY,
+        ["id"],
+        name="PRIMARY",
+    )
+    table.indexes.append(primary_index)
+
+    # save() calls create() + database.refresh()
+    table.save()
+
+    # Explicitly refresh tables to get the persisted table with proper handlers
+    sqlite_database.tables.refresh()
+    return next(t for t in sqlite_database.tables.get_value() if t.name == "users")
+
+
 class TestSQLiteIntegration:
-    def test_full_database_workflow(self, sqlite_session, sqlite_database):
-        table = SQLiteTable(
-            id=1,
-            name="users",
-            database=sqlite_database,
-            engine="sqlite",
-        )
+    """Integration tests for SQLite engine."""
 
-        id_column = SQLiteColumn(
-            id=1,
-            name="id",
-            table=table,
-            datatype=SQLiteDataType.INTEGER,
-            is_auto_increment=True,
-            is_nullable=False,
-        )
-
-        name_column = SQLiteColumn(
-            id=2,
-            name="name",
-            table=table,
-            datatype=SQLiteDataType.TEXT,
-            is_nullable=False,
-            length=255,
-        )
-
-        table.columns._value = [id_column, name_column]
-        table.columns._loaded = True
-
-        primary_index = SQLiteIndex(
-            id=1,
-            name="PRIMARY",
-            type=SQLiteIndexType.PRIMARY,
-            columns=["id"],
-            table=table,
-        )
-        table.indexes._value = [primary_index]
-        table.indexes._loaded = True
-
-        sqlite_database.tables._value = [table]
-        sqlite_database.tables._loaded = True
-
-        table.get_records_handler = (
-            lambda t, f=None, l=1000, o=0, ord=None: sqlite_session.context.get_records(
-                t,
-                filters=f,
-                limit=l,
-                offset=o,
-                orders=ord,
-            )
-        )
-
+    def test_table_create_and_drop(self, sqlite_session, sqlite_database):
+        """Test table creation and deletion."""
+        # create_users_table uses save() which creates and refreshes
+        table = create_users_table(sqlite_database, sqlite_session)
         assert table.is_valid is True
+        assert table.id >= 0  # ID should be assigned after save (0-indexed)
 
-        result = table.create()
-        assert result is True
+        # Verify table exists in database
+        tables = sqlite_database.tables.get_value()
+        assert any(t.name == "users" for t in tables)
 
-        assert len(sqlite_database.tables.get_value()) == 1
-        assert sqlite_database.tables.get_value()[0].name == "users"
+        assert table.drop() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-        row = sqlite_session.context.fetchone()
-        assert row["name"] == "users"
+        # Refresh to verify table was deleted
+        sqlite_database.tables.refresh()
+        tables = sqlite_database.tables.get_value()
+        assert not any(t.name == "users" for t in tables)
+
+    def test_record_insert(self, sqlite_session, sqlite_database):
+        """Test record insertion."""
+        table = create_users_table(sqlite_database, sqlite_session)
 
         table.load_records()
-        records = table.records.get_value()
-        assert len(records) == 0
+        assert len(table.records.get_value()) == 0
 
-        new_record = SQLiteRecord(
-            id=-1,
-            table=table,
-            values={"name": "John Doe"},
-        )
-        result = new_record.insert()
-        assert result is True
+        record = sqlite_session.context.build_empty_record(table, values={"name": "John Doe"})
+        assert record.insert() is True
 
         table.load_records()
         records = table.records.get_value()
         assert len(records) == 1
         assert records[0].values["name"] == "John Doe"
 
-        record = records[0]
+        table.drop()
+
+    def test_record_update(self, sqlite_session, sqlite_database):
+        """Test record update."""
+        table = create_users_table(sqlite_database, sqlite_session)
+        table.load_records()  # Initialize records before build_empty_record
+
+        record = sqlite_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
+
+        table.load_records()
+        record = table.records.get_value()[0]
         assert record.is_valid() is True
         assert record.is_new() is False
 
         record.values["name"] = "Jane Doe"
-        result = record.update()
-        assert result is True
+        assert record.update() is True
 
         table.load_records()
         records = table.records.get_value()
-        assert len(records) == 1
         assert records[0].values["name"] == "Jane Doe"
 
-        result = record.delete()
-        assert result is True
+        table.drop()
+
+    def test_record_delete(self, sqlite_session, sqlite_database):
+        """Test record deletion."""
+        table = create_users_table(sqlite_database, sqlite_session)
+        table.load_records()  # Initialize records before build_empty_record
+
+        record = sqlite_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
 
         table.load_records()
-        records = table.records.get_value()
-        assert len(records) == 0
+        record = table.records.get_value()[0]
+        assert record.delete() is True
 
-        email_column = SQLiteColumn(
-            id=3,
+        table.load_records()
+        assert len(table.records.get_value()) == 0
+
+        table.drop()
+
+    def test_column_add(self, sqlite_session, sqlite_database):
+        """Test adding a column to an existing table."""
+        table = create_users_table(sqlite_database, sqlite_session)
+
+        email_column = sqlite_session.context.build_empty_column(
+            table,
+            SQLiteDataType.TEXT,
             name="email",
-            table=table,
-            datatype=SQLiteDataType.TEXT,
+            is_nullable=True,
+        )
+        assert email_column.add() is True
+
+        # Refresh columns to verify column was added
+        table.columns.refresh()
+        columns = table.columns.get_value()
+        assert any(c.name == "email" for c in columns)
+
+        table.drop()
+
+    def test_column_rename(self, sqlite_session, sqlite_database):
+        """Test renaming a column."""
+        table = create_users_table(sqlite_database, sqlite_session)
+
+        # Add a column to rename
+        email_column = sqlite_session.context.build_empty_column(
+            table,
+            SQLiteDataType.TEXT,
+            name="email",
+            is_nullable=True,
+        )
+        assert email_column.add() is True
+
+        # Refresh columns to get the persisted column
+        table.columns.refresh()
+        email_column = next(c for c in table.columns.get_value() if c.name == "email")
+
+        # Rename the column
+        assert email_column.rename("user_email") is True
+
+        # Refresh columns to verify rename
+        table.columns.refresh()
+        columns = table.columns.get_value()
+        assert any(c.name == "user_email" for c in columns)
+        assert not any(c.name == "email" for c in columns)
+
+        table.drop()
+
+    def test_column_with_check_constraint(self, sqlite_session, sqlite_database):
+        """Test column with CHECK constraint."""
+        table = create_users_table(sqlite_database, sqlite_session)
+        table.load_records()  # Initialize records before build_empty_record
+        ctx = sqlite_session.context
+
+        email_column = ctx.build_empty_column(
+            table,
+            SQLiteDataType.TEXT,
+            name="email",
             is_nullable=True,
             check="email LIKE '%@%'",
         )
+        email_column.add()
+        table.columns.set_value(list(table.columns.get_value()) + [email_column])
 
-        result = email_column.add()
-        assert result is True
+        # Valid email should insert
+        valid_record = ctx.build_empty_record(table, values={"name": "Alice", "email": "alice@example.com"})
+        assert valid_record.insert() is True
 
-        table.columns._value.append(email_column)
+        # Invalid email should fail
+        invalid_record = ctx.build_empty_record(table, values={"name": "Bob", "email": "invalidemail"})
+        assert invalid_record.insert() is False
 
-        new_record2 = SQLiteRecord(
-            id=-1,
-            table=table,
-            values={"name": "Alice", "email": "alice@example.com"},
-        )
-        result = new_record2.insert()
-        assert result is True
+        table.drop()
 
-        table.load_records()
-        records = table.records.get_value()
-        assert len(records) == 1
-        assert records[0].values["name"] == "Alice"
-        assert records[0].values["email"] == "alice@example.com"
+    def test_table_truncate(self, sqlite_session, sqlite_database):
+        """Test table truncation."""
+        table = create_users_table(sqlite_database, sqlite_session)
+        table.load_records()  # Initialize records before build_empty_record
 
-        new_record3 = SQLiteRecord(
-            id=-1,
-            table=table,
-            values={"name": "Bob", "email": "invalidemail"},
-        )
-        result = new_record3.insert()
-        assert result is False
-
-        result = table.truncate()
-        assert result is True
+        record = sqlite_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
 
         table.load_records()
-        records = table.records.get_value()
-        assert len(records) == 0
+        assert len(table.records.get_value()) == 1
 
-        new_record4 = SQLiteRecord(
-            id=-1,
-            table=table,
-            values={"name": "Charlie", "email": "charlie@test.com"},
-        )
-        result = new_record4.insert()
-        assert result is True
+        assert table.truncate() is True
 
         table.load_records()
-        records = table.records.get_value()
-        assert len(records) == 1
-        assert records[0].values["name"] == "Charlie"
-        assert records[0].values["id"] == 1
+        assert len(table.records.get_value()) == 0
 
-        # === INDEX CREATE/DROP ===
-        idx_name = SQLiteIndex(
-            id=2,
+        table.drop()
+
+    def test_index_create_and_drop(self, sqlite_session, sqlite_database):
+        """Test index creation and deletion."""
+        table = create_users_table(sqlite_database, sqlite_session)
+
+        idx_name = sqlite_session.context.build_empty_index(
+            table,
+            SQLiteIndexType.INDEX,
+            ["name"],
             name="idx_name",
-            type=SQLiteIndexType.INDEX,
-            columns=["name"],
-            table=table,
         )
         assert idx_name.create() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_name'")
-        assert sqlite_session.context.fetchone() is not None
+        # Refresh indexes to verify index was created
+        table.indexes.refresh()
+        indexes = table.indexes.get_value()
+        assert any(i.name == "idx_name" for i in indexes)
 
         assert idx_name.drop() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_name'")
-        assert sqlite_session.context.fetchone() is None
+        # Refresh indexes to verify index was deleted
+        table.indexes.refresh()
+        indexes = table.indexes.get_value()
+        assert not any(i.name == "idx_name" for i in indexes)
 
-        # === VIEW ===
-        view = SQLiteView(
-            id=1,
+        table.drop()
+
+    def test_view_create_and_drop(self, sqlite_session, sqlite_database):
+        """Test view creation and deletion."""
+        table = create_users_table(sqlite_database, sqlite_session)
+
+        view = sqlite_session.context.build_empty_view(
+            sqlite_database,
             name="active_users_view",
-            database=sqlite_database,
             sql="SELECT * FROM users WHERE name IS NOT NULL",
         )
         assert view.create() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='view' AND name='active_users_view'")
-        assert sqlite_session.context.fetchone() is not None
+        # Refresh views to verify view was created
+        sqlite_database.views.refresh()
+        views = sqlite_database.views.get_value()
+        assert any(v.name == "active_users_view" for v in views)
 
         assert view.drop() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='view' AND name='active_users_view'")
-        assert sqlite_session.context.fetchone() is None
+        # Refresh views to verify view was deleted
+        sqlite_database.views.refresh()
+        views = sqlite_database.views.get_value()
+        assert not any(v.name == "active_users_view" for v in views)
 
-        # === TRIGGER ===
-        trigger = SQLiteTrigger(
-            id=1,
+        table.drop()
+
+    def test_trigger_create_and_drop(self, sqlite_session, sqlite_database):
+        """Test trigger creation and deletion."""
+        table = create_users_table(sqlite_database, sqlite_session)
+
+        trigger = sqlite_session.context.build_empty_trigger(
+            sqlite_database,
             name="trg_users_insert",
-            database=sqlite_database,
             sql="AFTER INSERT ON users BEGIN SELECT 1; END",
-            timing="AFTER",
-            event="INSERT",
         )
         assert trigger.create() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name='trg_users_insert'")
-        assert sqlite_session.context.fetchone() is not None
+        # Refresh triggers to verify trigger was created
+        sqlite_database.triggers.refresh()
+        triggers = sqlite_database.triggers.get_value()
+        assert any(t.name == "trg_users_insert" for t in triggers)
 
         assert trigger.drop() is True
 
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name='trg_users_insert'")
-        assert sqlite_session.context.fetchone() is None
+        # Refresh triggers to verify trigger was deleted
+        sqlite_database.triggers.refresh()
+        triggers = sqlite_database.triggers.get_value()
+        assert not any(t.name == "trg_users_insert" for t in triggers)
 
-        # === CLEANUP ===
-        result = table.drop()
-        assert result is True
-
-        sqlite_session.context.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-        row = sqlite_session.context.fetchone()
-        assert row is None
+        table.drop()

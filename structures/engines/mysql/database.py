@@ -77,54 +77,16 @@ class MySQLTable(SQLTable):
 
         return True
 
-    def create(self, map_columns: List[Tuple[Optional["MySQLColumn"], Optional["MySQLColumn"]]]) -> bool:
-        constraints = []
-        primary_keys = []
-        columns_definitions: Dict[str, str] = {}
+    def create(self) -> bool:
+        with self.database.context.transaction() as transaction:
+            transaction.execute(self.raw_create())
 
-        for original, current in map_columns:
-            if current:
-                if current.is_primary_key or current.is_auto_increment:
-                    primary_keys.append(current)
+            # Indexes are already included in raw_create() via MySQLIndexBuilder
+            # Only create foreign keys separately
+            for foreign_key in self.foreign_keys:
+                foreign_key.create()
 
-                exclude = ["unique"]
-
-                if len(primary_keys) > 1:
-                    exclude += ["primary_key", "auto_increment"]
-
-                columns_definitions[current.name] = str(MySQLColumnBuilder(current, exclude=exclude))
-
-        # Handle primary keys
-        if len(primary_keys) > 1:
-            # Check if any autoincrement
-            auto_increment = next((pk for pk in primary_keys if pk.is_auto_increment), None)
-            if auto_increment:
-                # If autoincrement and multiple primary keys, use UNIQUE
-                cols = ", ".join([f"`{pk.name}`" for pk in primary_keys])
-                constraints.append(f"UNIQUE ({cols})")
-            else:
-                columns_definitions = {col_name: col_def.replace(" PRIMARY KEY", "") for col_name, col_def in columns_definitions.items()}
-                # Use PRIMARY KEY table constraint
-                cols = ", ".join([f"`{pk.name}`" for pk in primary_keys])
-                constraints.append(f"PRIMARY KEY ({cols})")
-
-        # Handle foreign keys
-        foreign_key_is_already_present = any("FOREIGN KEY" in column_definition for column_definition in columns_definitions)
-
-        if not foreign_key_is_already_present:
-            for fk in self.foreign_keys:
-                cols = ", ".join([f"`{c}`" for c in fk.columns])
-                ref_cols = ", ".join([f"`{c}`" for c in fk.reference_columns])
-                constraint = f"FOREIGN KEY ({cols}) REFERENCES {fk.reference_table} ({ref_cols})"
-                if fk.on_update:
-                    constraint += f" ON UPDATE {fk.on_update}"
-                if fk.on_delete:
-                    constraint += f" ON DELETE {fk.on_delete}"
-                constraints.append(constraint)
-
-        sql = f"CREATE TABLE `{self.name}` ({', '.join(list(columns_definitions.values()) + constraints)})"
-
-        return self.database.context.execute(sql)
+        return True
 
     def alter(self) -> bool:
         original_table = next((t for t in self.database.tables if t.id == self.id), None)
@@ -181,7 +143,7 @@ class MySQLTable(SQLTable):
 
         except Exception as ex:
             QUERY_LOGS.append(f"/* alter_table exception: {ex} */")
-            logger.error(ex)
+            logger.error(ex, exc_info=True)
             raise
 
         return True
@@ -228,7 +190,7 @@ class MySQLIndex(SQLIndex):
         if self.type == MySQLIndexType.PRIMARY:
             return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` DROP PRIMARY KEY")
 
-        return self.table.database.context.execute(f"DROP INDEX IF EXISTS {self.name} ON `{self.table.database.name}`.`{self.table.name}`")
+        return self.table.database.context.execute(f"DROP INDEX `{self.sql_safe_name}` ON `{self.table.database.sql_safe_name}`.`{self.table.sql_safe_name}`")
 
     def modify(self, new: Self):
         self.drop()
@@ -240,7 +202,7 @@ class MySQLIndex(SQLIndex):
 class MySQLForeignKey(SQLForeignKey):
     def create(self) -> bool:
         query = [
-            f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD CONSTRAINT `{self.name}`",
+            f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD CONSTRAINT {self.sql_safe_name}",
             f"FOREIGN KEY({', '.join(self.columns)})",
             f"REFERENCES `{self.reference_table}`({', '.join(self.reference_columns)})",
         ]
@@ -255,8 +217,8 @@ class MySQLForeignKey(SQLForeignKey):
 
     def drop(self) -> bool:
         return self.table.database.context.execute(f"""
-            ALTER TABLE `{self.table.database.name}`.`{self.table.name}`
-            DROP FOREIGN KEY `{self.name}`
+            ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name}
+            DROP FOREIGN KEY {self.sql_safe_name}
         """)
 
     def modify(self, new: Self):
@@ -285,14 +247,14 @@ class MySQLRecord(SQLRecord):
         if not columns_values:
             raise AssertionError("No columns values")
 
-        return f"""INSERT INTO `{self.table.database.name}`.`{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
+        return f"""INSERT INTO {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
     def raw_update_record(self) -> Optional[str]:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        sql_select = f"SELECT * FROM `{self.table.database.name}`.`{self.table.name}` WHERE {identifier_conditions}"
+        sql_select = f"SELECT * FROM {self.table.database.sql_safe_name}.{self.table.sql_safe_name} WHERE {identifier_conditions}"
         self.table.database.context.execute(sql_select)
 
         if not (existing_record := self.table.database.context.fetchone()):
@@ -351,24 +313,25 @@ class MySQLRecord(SQLRecord):
 
 class MySQLView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS `{self.name}` AS {self.sql}")
+        return self.database.context.execute(f"CREATE VIEW `{self.name}` AS {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW `{self.name}` AS {self.sql}")
 
 
 class MySQLTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS `{self.name}` {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER `{self.name}` {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
 
 
 @dataclasses.dataclass(eq=False)
@@ -393,6 +356,6 @@ class MySQLFunction(SQLFunction):
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
 
-    def alter(self):
+    def alter(self) -> bool:
         self.drop()
-        self.create()
+        return self.create()

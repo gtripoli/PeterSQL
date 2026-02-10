@@ -26,7 +26,7 @@ class MySQLContext(AbstractContext):
     DATATYPE = MySQLDataType
     INDEXTYPE = MySQLIndexType
 
-    QUOTE_IDENTIFIER = "`"
+    IDENTIFIER_QUOTE = "`"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -50,18 +50,24 @@ class MySQLContext(AbstractContext):
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        self.execute("""
-            SELECT WORD FROM information_schema.KEYWORDS
-            WHERE RESERVED = 1
-            ORDER BY WORD;
-        """)
-        self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+        try:
+            self.execute("""
+                SELECT WORD FROM information_schema.KEYWORDS
+                WHERE RESERVED = 1
+                ORDER BY WORD;
+            """)
+            self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+        except Exception:
+            self.KEYWORDS = ()
 
-        self.execute("""
-            SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
-            ORDER BY FUNCTION;
-        """)
-        builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+        try:
+            self.execute("""
+                SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
+                ORDER BY FUNCTION;
+            """)
+            builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+        except Exception:
+            builtin_functions = ()
 
         self.execute("""
             SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
@@ -101,20 +107,28 @@ class MySQLContext(AbstractContext):
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
-            base_kwargs = dict(user=self.user, password=self.password, cursorclass=pymysql.cursors.DictCursor)
+            base_kwargs = dict(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                port=self.port,
+                cursorclass=pymysql.cursors.DictCursor
+            )
 
             try:
-                if self.session.has_enabled_tunnel():
+                # SSH tunnel support via connection configuration
+                if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
+                    ssh_config = self.connection.ssh_tunnel
                     self._ssh_tunnel = SSHTunnel(
-                        self.session.ssh_tunnel.hostname, int(self.session.ssh_tunnel.port),
-                        ssh_username=self.session.ssh_tunnel.username,
-                        ssh_password=self.session.ssh_tunnel.password,
-                        remote_port=int(self.session.configuration.port),
-                        local_bind_address=(self.session.configuration.hostname, int(self.session.ssh_tunnel.local_port))
+                        ssh_config.hostname, int(ssh_config.port),
+                        ssh_username=ssh_config.username,
+                        ssh_password=ssh_config.password,
+                        remote_port=self.port,
+                        local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0)))
                     )
                     self._ssh_tunnel.start()
                     base_kwargs.update(
-                        host=self.session.configuration.hostname,
+                        host=self.host,
                         port=self._ssh_tunnel.local_port,
                     )
 
@@ -369,12 +383,17 @@ class MySQLContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, limit: int = 1000, offset: int = 0) -> list[MySQLRecord]:
+    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MySQLRecord]:
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
 
-        query = f"SELECT * FROM `{table.database.name}`.`{table.name}` LIMIT {limit} OFFSET {offset}"
+        query = f"SELECT * FROM `{table.database.name}`.`{table.name}`"
+        if filters:
+            query += f" WHERE {filters}"
+        if orders:
+            query += f" ORDER BY {orders}"
+        query += f" LIMIT {limit} OFFSET {offset}"
         self.execute(query)
 
         results = []
@@ -385,40 +404,62 @@ class MySQLContext(AbstractContext):
         logger.debug(f"get records for table={table.name}")
         return results
 
-    def build_empty_table(self, database: SQLDatabase) -> MySQLTable:
+    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTable:
+        id = MySQLContext.get_temporary_id(database.tables)
+
+        if name is None:
+            name = _(f"Table{str(id * -1):03}")
+
+        default_values.setdefault("engine", "InnoDB")
+        default_values.setdefault("collation_name", "utf8mb4_general_ci")
+
         return MySQLTable(
-            id=MySQLContext.get_temporary_id(database.tables),
-            name="",
+            id=id,
+            name=name,
             database=database,
-            engine="mysql",
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
+            **default_values,
         ).copy()
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> MySQLColumn:
+    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> MySQLColumn:
         id = MySQLContext.get_temporary_id(table.columns)
+
+        if name is None:
+            name = _(f"Column{str(id * -1):03}")
+
         return MySQLColumn(
             id=id,
-            name=_(f"Column{str(id * -1):03}"),
+            name=name,
             table=table,
             datatype=datatype,
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: MySQLIndexType, table: MySQLTable, columns: list[str]) -> MySQLIndex:
+    def build_empty_index(self, table: MySQLTable, indextype: MySQLIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> MySQLIndex:
+        id = MySQLContext.get_temporary_id(table.indexes)
+
+        if name is None:
+            name = _(f"Index{str(id * -1):03}")
+
         return MySQLIndex(
-            id=MySQLContext.get_temporary_id(table.indexes),
+            id=id,
             name=name,
-            type=type,
+            type=indextype,
             columns=columns,
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: MySQLTable, columns: list[str]) -> MySQLForeignKey:
+    def build_empty_foreign_key(self, table: MySQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> MySQLForeignKey:
+        id = MySQLContext.get_temporary_id(table.foreign_keys)
+
+        if name is None:
+            name = _(f"ForeignKey{str(id * -1):03}")
+
         return MySQLForeignKey(
-            id=MySQLContext.get_temporary_id(table.foreign_keys),
+            id=id,
             name=name,
             table=table,
             columns=columns,
@@ -428,9 +469,35 @@ class MySQLContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: MySQLTable, values: dict[str, Any]) -> MySQLRecord:
+    def build_empty_record(self, table: MySQLTable, /, *, values: dict[str, Any]) -> MySQLRecord:
         return MySQLRecord(
             id=MySQLContext.get_temporary_id(table.records),
             table=table,
             values=values
+        )
+
+    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLView:
+        id = MySQLContext.get_temporary_id(database.views)
+
+        if name is None:
+            name = _(f"View{str(id * -1):03}")
+
+        return MySQLView(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
+        )
+
+    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTrigger:
+        id = MySQLContext.get_temporary_id(database.triggers)
+
+        if name is None:
+            name = _(f"Trigger{str(id * -1):03}")
+
+        return MySQLTrigger(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
         )

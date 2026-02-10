@@ -30,13 +30,13 @@ class TestMariaDBContext:
         assert len(version) > 0
 
     def test_context_build_sql_safe_name(self, mariadb_session):
-        """Test building SQL safe names uses QUOTE_IDENTIFIER."""
+        """Test building SQL safe names uses IDENTIFIER_QUOTE."""
         ctx = mariadb_session.context
-        quote = ctx.QUOTE_IDENTIFIER
+        quote = ctx.IDENTIFIER_QUOTE
 
         # Simple names don't need quoting
         assert ctx.build_sql_safe_name("normal") == "normal"
-        # Names with spaces are quoted using QUOTE_IDENTIFIER
+        # Names with spaces are quoted using IDENTIFIER_QUOTE
         assert ctx.build_sql_safe_name("with space") == f'{quote}with space{quote}'
 
     def test_context_transaction(self, mariadb_session, mariadb_database):

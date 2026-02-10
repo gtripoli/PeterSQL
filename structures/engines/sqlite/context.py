@@ -31,7 +31,7 @@ class SQLiteContext(AbstractContext):
     DATATYPE = SQLiteDataType()
     INDEXTYPE = SQLiteIndexType()
 
-    QUOTE_IDENTIFIER = '"'
+    IDENTIFIER_QUOTE = '"'
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 
@@ -57,12 +57,14 @@ class SQLiteContext(AbstractContext):
         if self._connection is None:
             try:
                 self._connection = sqlite3.connect(self.filename)
-                self._connection.row_factory = sqlite3.Row
-                self._cursor = self._connection.cursor()
-                self._on_connect()
+
             except Exception as e:
                 logger.error(f"Failed to connect to SQLite: {e}")
                 raise
+            else:
+                self._connection.row_factory = sqlite3.Row
+                self._cursor = self._connection.cursor()
+                self._on_connect()
 
     def get_server_version(self) -> str:
         self.execute("SELECT sqlite_version()")
@@ -91,6 +93,12 @@ class SQLiteContext(AbstractContext):
 
     def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
+
+        # Refresh sqlite_master map
+        self._map_sqlite_master.clear()
+        self.execute("SELECT * from sqlite_master ORDER BY name")
+        for result in self.fetchall():
+            self._map_sqlite_master[result['tbl_name']][result['type']][result['name']] = result['sql']
 
         has_sqlite_sequence = False
 
@@ -145,6 +153,12 @@ class SQLiteContext(AbstractContext):
         results = []
         if table is None or table.is_new:
             return results
+
+        # Refresh sqlite_master map to get latest schema
+        self._map_sqlite_master.clear()
+        self.execute("SELECT * from sqlite_master ORDER BY name")
+        for result in self.fetchall():
+            self._map_sqlite_master[result['tbl_name']][result['type']][result['name']] = result['sql']
 
         if not (table_match := re.search(r"""CREATE\s+TABLE\s+(?:[`'"]?\w+[`'"]?\s+)?\((?P<columns>.*)\)""", self._map_sqlite_master[table.name]["table"][table.name], re.IGNORECASE | re.DOTALL)):
             return results
@@ -217,13 +231,13 @@ class SQLiteContext(AbstractContext):
         if table is None or table.is_new:
             return results
 
-        for type, constraints in self._map_sqlite_master[table.name]["constraints"].items():
+        for check_type, constraints in self._map_sqlite_master[table.name]["constraints"].items():
 
             for i, constraint in enumerate(constraints):
-                if not TABLE_CONSTRAINTS_PATTERN.get(type):
+                if not TABLE_CONSTRAINTS_PATTERN.get(check_type):
                     continue
 
-                if constraint_column := re.search(TABLE_CONSTRAINTS_PATTERN[type].pattern, constraint, re.IGNORECASE | re.DOTALL):
+                if constraint_column := re.search(TABLE_CONSTRAINTS_PATTERN[check_type].pattern, constraint, re.IGNORECASE | re.DOTALL):
                     constraint_column_dict = constraint_column.groupdict()
                     results.append(
                         SQLiteCheck(
@@ -242,6 +256,12 @@ class SQLiteContext(AbstractContext):
         logger.debug(f"get_indexes for table={table.name}")
 
         QUERY_LOGS.append(f"/* get_indexes for table={table.name} */")
+
+        # Refresh sqlite_master map to get latest schema
+        self._map_sqlite_master.clear()
+        self.execute("SELECT * from sqlite_master ORDER BY name")
+        for result in self.fetchall():
+            self._map_sqlite_master[result['tbl_name']][result['type']][result['name']] = result['sql']
 
         results = []
 
@@ -343,20 +363,12 @@ class SQLiteContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLiteTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[SQLiteRecord]:
-        QUERY_LOGS.append(f"/* get_records for table={table.name} */")
-        if table is None or table.is_new:
-            return []
-
-        query = f"SELECT * FROM `{table.name}` LIMIT {limit} OFFSET {offset}"
-        self.execute(query)
-
+    def get_records(self, table: SQLiteTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[SQLiteRecord]:
         results = []
-        for i, record in enumerate(self.cursor.fetchall(), start=offset):
+        for i, record in enumerate(super().get_records(table, filters=filters, limit=limit, offset=offset, orders=orders)):
             results.append(
                 SQLiteRecord(id=i, table=table, values=dict(record))
             )
-        logger.debug(f"get records for table={table.name}")
         return results
 
     def get_views(self, database: SQLDatabase):
@@ -385,10 +397,15 @@ class SQLiteContext(AbstractContext):
 
         return results
 
-    def build_empty_table(self, database: SQLDatabase) -> SQLiteTable:
+    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLiteTable:
+        id = SQLiteContext.get_temporary_id(database.tables)
+
+        if name is None:
+            name = _(f"Table{str(id * -1):03}")
+
         return SQLiteTable(
-            id=SQLiteContext.get_temporary_id(database.tables),
-            name='',
+            id=id,
+            name=name,
             database=database,
             engine='sqlite',
             get_indexes_handler=self.get_indexes,
@@ -397,29 +414,42 @@ class SQLiteContext(AbstractContext):
             get_records_handler=self.get_records,
         )
 
-    def build_empty_column(self, table: SQLiteTable, datatype: SQLDataType, **default_values) -> SQLiteColumn:
+    def build_empty_column(self, table: SQLiteTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> SQLiteColumn:
         id = SQLiteContext.get_temporary_id(table.columns)
+
+        if name is None:
+            name = _(f"Column{str(id * -1):03}")
 
         return SQLiteColumn(
             id=id,
-            name=_(f"Column{str(id * -1):03}"),
+            name=name,
             table=table,
             datatype=datatype,
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: SQLIndexType, table: SQLiteTable, columns: list[str]) -> SQLiteIndex:
+    def build_empty_index(self, table: SQLiteTable, indextype: SQLIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLiteIndex:
+        id = SQLiteContext.get_temporary_id(table.indexes)
+
+        if name is None:
+            name = _(f"Index{str(id * -1):03}")
+
         return SQLiteIndex(
-            id=SQLiteContext.get_temporary_id(table.indexes),
+            id=id,
             name=name,
-            type=type,
+            type=indextype,
             columns=columns,
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: SQLiteTable, columns: list[str]) -> SQLiteForeignKey:
+    def build_empty_foreign_key(self, table: SQLiteTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLiteForeignKey:
+        id = SQLiteContext.get_temporary_id(table.foreign_keys)
+
+        if name is None:
+            name = _(f"ForeignKey{str(id * -1):03}")
+
         return SQLiteForeignKey(
-            id=SQLiteContext.get_temporary_id(table.foreign_keys),
+            id=id,
             name=name,
             table=table,
             columns=columns,
@@ -429,9 +459,35 @@ class SQLiteContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: SQLiteTable, values: dict[str, Any]) -> SQLiteRecord:
+    def build_empty_record(self, table: SQLiteTable, /, *, values: dict[str, Any]) -> SQLiteRecord:
         return SQLiteRecord(
             id=SQLiteContext.get_temporary_id(table.records),
             table=table,
             values=values
+        )
+
+    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLiteView:
+        id = SQLiteContext.get_temporary_id(database.views)
+
+        if name is None:
+            name = _(f"View{str(id * -1):03}")
+
+        return SQLiteView(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
+        )
+
+    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLiteTrigger:
+        id = SQLiteContext.get_temporary_id(database.triggers)
+
+        if name is None:
+            name = _(f"Trigger{str(id * -1):03}")
+
+        return SQLiteTrigger(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
         )

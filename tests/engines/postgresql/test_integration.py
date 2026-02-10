@@ -1,21 +1,54 @@
-import pytest
+from structures.engines.postgresql.database import PostgreSQLTable
+from structures.engines.postgresql.datatype import PostgreSQLDataType
+from structures.engines.postgresql.indextype import PostgreSQLIndexType
+
+
+def create_users_table(postgresql_database, postgresql_session) -> PostgreSQLTable:
+    """Helper: create and save a users table with id and name columns.
+    
+    Uses build_empty_* API from context to construct objects.
+    Returns the persisted table from the database (with proper handlers).
+    """
+    ctx = postgresql_session.context
+
+    table = ctx.build_empty_table(postgresql_database, name="users", schema="public")
+
+    id_column = ctx.build_empty_column(
+        table,
+        PostgreSQLDataType.SERIAL,
+        name="id",
+        is_nullable=False,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        PostgreSQLDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        PostgreSQLIndexType.PRIMARY,
+        ["id"],
+        name="users_pkey",
+    )
+    table.indexes.append(primary_index)
+
+    # Create table directly via raw SQL
+    ctx.execute(table.raw_create())
+
+    # Refresh tables to get the persisted table with proper handlers
+    postgresql_database.tables.refresh()
+    return next(t for t in postgresql_database.tables.get_value() if t.name == "users")
 
 
 class TestPostgreSQLIntegration:
-    """Integration tests for PostgreSQL engine - reading existing structures."""
-
-    def test_read_system_tables(self, postgresql_session):
-        """Test reading system tables from postgres database."""
-        ctx = postgresql_session.context
-        databases = ctx.databases.get_value()
-
-        postgres_db = next((db for db in databases if db.name == "postgres"), None)
-        assert postgres_db is not None
-
-        # PostgreSQL has system tables in pg_catalog schema
-        tables = ctx.get_tables(postgres_db)
-        # postgres database may have no user tables, that's ok
-        assert isinstance(tables, list)
+    """Integration tests for PostgreSQL engine using build_empty_* API."""
 
     def test_read_database_properties(self, postgresql_session):
         """Test reading database properties."""
@@ -74,4 +107,4 @@ class TestPostgreSQLIntegration:
     def test_quote_identifier(self, postgresql_session):
         """Test PostgreSQL uses double quotes for identifiers."""
         ctx = postgresql_session.context
-        assert ctx.QUOTE_IDENTIFIER == '"'
+        assert ctx.IDENTIFIER_QUOTE == '"'

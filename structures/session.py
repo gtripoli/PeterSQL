@@ -117,8 +117,3 @@ class Session:
                 process.terminate()
                 process.wait(timeout=1)
             self._ssh_tunnel_process = None
-
-    @classmethod
-    def from_connection(cls, connection: Connection) -> 'Session':
-        """Factory method to create a Session from a Connection."""
-        return cls(connection=connection)

@@ -202,7 +202,7 @@ class ConnectionsManager(ConnectionsDialog):
 
         connection = CURRENT_CONNECTION()
 
-        session = Session.from_connection(connection)
+        session = Session(connection)
 
         try:
             self.verify_connection(session)

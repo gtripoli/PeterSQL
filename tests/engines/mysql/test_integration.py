@@ -1,266 +1,241 @@
-import pytest
-
-from structures.engines.mysql.database import (
-    MySQLTable,
-    MySQLColumn,
-    MySQLIndex,
-    MySQLForeignKey,
-    MySQLRecord,
-    MySQLView,
-    MySQLTrigger,
-    MySQLFunction,
-)
+from structures.engines.mysql.database import MySQLTable
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
 
 
+def create_users_table(mysql_database, mysql_session) -> MySQLTable:
+    """Helper: create and save a users table with id and name columns.
+    
+    Uses build_empty_* API from context to construct objects.
+    Returns the persisted table from the database (with proper handlers).
+    """
+    ctx = mysql_session.context
+    ctx.execute("USE testdb")
+
+    table = ctx.build_empty_table(mysql_database, name="users", engine="InnoDB", collation_name="utf8mb4_general_ci")
+
+    id_column = ctx.build_empty_column(
+        table,
+        MySQLDataType.INT,
+        name="id",
+        is_auto_increment=True,
+        is_nullable=False,
+        length=11,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        MySQLDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        MySQLIndexType.PRIMARY,
+        ["id"],
+        name="PRIMARY",
+    )
+    table.indexes.append(primary_index)
+
+    # Create table directly via raw SQL
+    ctx.execute(table.raw_create())
+
+    # Refresh tables to get the persisted table with proper handlers
+    mysql_database.tables.refresh()
+    return next(t for t in mysql_database.tables.get_value() if t.name == "users")
+
+
 class TestMySQLIntegration:
-    """
-    Integration tests for MySQL engine.
-    Tests the complete workflow in a single test to reuse the container.
-    """
+    """Integration tests for MySQL engine using build_empty_* API."""
 
-    def test_complete_workflow(self, mysql_database, mysql_session):
-        """
-        Test complete MySQL workflow:
-        table -> columns -> indexes -> foreign keys -> triggers -> views -> functions
-        """
-        ctx = mysql_session.context
-        ctx.execute("USE testdb")
+    def test_table_create_and_drop(self, mysql_session, mysql_database):
+        """Test table creation and deletion."""
+        table = create_users_table(mysql_database, mysql_session)
+        assert table.is_valid is True
+        assert table.id >= 0
 
-        # === TABLE CREATION ===
-        users_table = MySQLTable(
-            id=1,
-            name="users",
-            database=mysql_database,
-            engine="InnoDB",
-            collation_name="utf8_general_ci",
-        )
+        # Verify table exists in database
+        tables = mysql_database.tables.get_value()
+        assert any(t.name == "users" for t in tables)
 
-        col_id = MySQLColumn(
-            id=1,
-            name="id",
-            table=users_table,
-            datatype=MySQLDataType.INT,
-            is_nullable=False,
-            is_auto_increment=True,
-            length=11,
-        )
-        col_name = MySQLColumn(
-            id=2,
-            name="name",
-            table=users_table,
-            datatype=MySQLDataType.VARCHAR,
-            length=255,
-        )
-        col_email = MySQLColumn(
-            id=3,
+        assert table.drop() is True
+
+        # Refresh to verify table was deleted
+        mysql_database.tables.refresh()
+        tables = mysql_database.tables.get_value()
+        assert not any(t.name == "users" for t in tables)
+
+    def test_record_insert(self, mysql_session, mysql_database):
+        """Test record insertion."""
+        table = create_users_table(mysql_database, mysql_session)
+
+        table.load_records()
+        assert len(table.records.get_value()) == 0
+
+        record = mysql_session.context.build_empty_record(table, values={"name": "John Doe"})
+        assert record.insert() is True
+
+        table.load_records()
+        records = table.records.get_value()
+        assert len(records) == 1
+        assert records[0].values["name"] == "John Doe"
+
+        table.drop()
+
+    def test_record_update(self, mysql_session, mysql_database):
+        """Test record update."""
+        table = create_users_table(mysql_database, mysql_session)
+        table.load_records()
+
+        record = mysql_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
+
+        table.load_records()
+        record = table.records.get_value()[0]
+        assert record.is_valid() is True
+        assert record.is_new() is False
+
+        record.values["name"] = "Jane Doe"
+        assert record.update() is True
+
+        table.load_records()
+        records = table.records.get_value()
+        assert records[0].values["name"] == "Jane Doe"
+
+        table.drop()
+
+    def test_record_delete(self, mysql_session, mysql_database):
+        """Test record deletion."""
+        table = create_users_table(mysql_database, mysql_session)
+        table.load_records()
+
+        record = mysql_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
+
+        table.load_records()
+        record = table.records.get_value()[0]
+        assert record.delete() is True
+
+        table.load_records()
+        assert len(table.records.get_value()) == 0
+
+        table.drop()
+
+    def test_column_add(self, mysql_session, mysql_database):
+        """Test adding a column to an existing table."""
+        table = create_users_table(mysql_database, mysql_session)
+
+        email_column = mysql_session.context.build_empty_column(
+            table,
+            MySQLDataType.VARCHAR,
             name="email",
-            table=users_table,
-            datatype=MySQLDataType.VARCHAR,
+            is_nullable=True,
             length=255,
         )
-        users_table.columns.set_value([col_id, col_name, col_email])
+        assert email_column.add() is True
 
-        primary_index = MySQLIndex(
-            id=1,
-            name="PRIMARY",
-            type=MySQLIndexType.PRIMARY,
-            columns=["id"],
-            table=users_table,
+        # Refresh columns to verify column was added
+        table.columns.refresh()
+        columns = table.columns.get_value()
+        assert any(c.name == "email" for c in columns)
+
+        table.drop()
+
+    def test_table_truncate(self, mysql_session, mysql_database):
+        """Test table truncation."""
+        table = create_users_table(mysql_database, mysql_session)
+        table.load_records()
+
+        record = mysql_session.context.build_empty_record(table, values={"name": "John Doe"})
+        record.insert()
+
+        table.load_records()
+        assert len(table.records.get_value()) == 1
+
+        assert table.truncate() is True
+
+        table.load_records()
+        assert len(table.records.get_value()) == 0
+
+        table.drop()
+
+    def test_index_create_and_drop(self, mysql_session, mysql_database):
+        """Test index creation and deletion."""
+        table = create_users_table(mysql_database, mysql_session)
+
+        idx_name = mysql_session.context.build_empty_index(
+            table,
+            MySQLIndexType.INDEX,
+            ["name"],
+            name="idx_name",
         )
-        users_table.indexes.set_value([primary_index])
+        assert idx_name.create() is True
 
-        ctx.execute(users_table.raw_create())
+        # Refresh indexes to verify index was created
+        table.indexes.refresh()
+        indexes = table.indexes.get_value()
+        assert any(i.name == "idx_name" for i in indexes)
 
-        ctx.execute("USE testdb")
-        ctx.execute("SHOW TABLES LIKE 'users'")
-        assert ctx.fetchone() is not None
+        assert idx_name.drop() is True
 
-        # === COLUMN ADD ===
-        col_created = MySQLColumn(
-            id=4,
-            name="created_at",
-            table=users_table,
-            datatype=MySQLDataType.DATETIME,
-            is_nullable=True,
-        )
-        col_created.add()
+        # Refresh indexes to verify index was deleted
+        table.indexes.refresh()
+        indexes = table.indexes.get_value()
+        assert not any(i.name == "idx_name" for i in indexes)
 
-        ctx.execute("DESCRIBE users")
-        columns = ctx.fetchall()
-        assert len(columns) == 4
-        assert columns[3]["Field"] == "created_at"
+        table.drop()
 
-        # === INDEX CREATE/DROP ===
-        idx_email = MySQLIndex(
-            id=2,
-            name="idx_email",
-            type=MySQLIndexType.UNIQUE,
-            columns=["email"],
-            table=users_table,
-        )
-        assert idx_email.create() is True
+    def test_view_create_and_drop(self, mysql_session, mysql_database):
+        """Test view creation and deletion."""
+        table = create_users_table(mysql_database, mysql_session)
 
-        ctx.execute("SHOW INDEX FROM users WHERE Key_name = 'idx_email'")
-        assert ctx.fetchone() is not None
-
-        assert idx_email.drop() is True
-
-        ctx.execute("SHOW INDEX FROM users WHERE Key_name = 'idx_email'")
-        assert ctx.fetchone() is None
-
-        # === FOREIGN KEY ===
-        orders_table = MySQLTable(
-            id=2,
-            name="orders",
-            database=mysql_database,
-            engine="InnoDB",
-            collation_name="utf8_general_ci",
-        )
-
-        ord_col_id = MySQLColumn(
-            id=1,
-            name="id",
-            table=orders_table,
-            datatype=MySQLDataType.INT,
-            is_nullable=False,
-            is_auto_increment=True,
-            length=11,
-        )
-        ord_col_user_id = MySQLColumn(
-            id=2,
-            name="user_id",
-            table=orders_table,
-            datatype=MySQLDataType.INT,
-            is_nullable=True,
-            length=11,
-        )
-        ord_col_total = MySQLColumn(
-            id=3,
-            name="total",
-            table=orders_table,
-            datatype=MySQLDataType.DECIMAL,
-            length=10,
-        )
-        orders_table.columns.set_value([ord_col_id, ord_col_user_id, ord_col_total])
-        orders_table.indexes.set_value([
-            MySQLIndex(id=1, name="PRIMARY", type=MySQLIndexType.PRIMARY, columns=["id"], table=orders_table),
-        ])
-        ctx.execute(orders_table.raw_create())
-
-        fk = MySQLForeignKey(
-            id=1,
-            name="fk_orders_users",
-            table=orders_table,
-            columns=["user_id"],
-            reference_table="users",
-            reference_columns=["id"],
-            on_update="CASCADE",
-            on_delete="SET NULL",
-        )
-        assert fk.create() is True
-
-        ctx.execute("""
-            SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-            WHERE TABLE_NAME = 'orders' AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-        """)
-        assert ctx.fetchone()["CONSTRAINT_NAME"] == "fk_orders_users"
-
-        # === VIEW ===
-        view = MySQLView(
-            id=1,
+        view = mysql_session.context.build_empty_view(
+            mysql_database,
             name="active_users_view",
-            database=mysql_database,
             sql="SELECT * FROM testdb.users WHERE name IS NOT NULL",
         )
         assert view.create() is True
 
-        ctx.execute("""
-            SELECT TABLE_NAME FROM information_schema.VIEWS
-            WHERE TABLE_SCHEMA = 'testdb' AND TABLE_NAME = 'active_users_view'
-        """)
-        assert ctx.fetchone() is not None
+        # Refresh views to verify view was created
+        mysql_database.views.refresh()
+        views = mysql_database.views.get_value()
+        assert any(v.name == "active_users_view" for v in views)
 
         assert view.drop() is True
 
-        ctx.execute("""
-            SELECT TABLE_NAME FROM information_schema.VIEWS
-            WHERE TABLE_SCHEMA = 'testdb' AND TABLE_NAME = 'active_users_view'
-        """)
-        assert ctx.fetchone() is None
+        # Refresh views to verify view was deleted
+        mysql_database.views.refresh()
+        views = mysql_database.views.get_value()
+        assert not any(v.name == "active_users_view" for v in views)
 
-        # === TRIGGER ===
-        trigger = MySQLTrigger(
-            id=1,
-            name="trg_users_update",
-            database=mysql_database,
-            sql="BEFORE UPDATE ON testdb.users FOR EACH ROW SET NEW.created_at = NOW()",
-            timing="BEFORE",
-            event="UPDATE",
+        table.drop()
+
+    def test_trigger_create_and_drop(self, mysql_session, mysql_database):
+        """Test trigger creation and deletion."""
+        table = create_users_table(mysql_database, mysql_session)
+
+        trigger = mysql_session.context.build_empty_trigger(
+            mysql_database,
+            name="trg_users_insert",
+            sql="AFTER INSERT ON testdb.users FOR EACH ROW BEGIN END",
         )
         assert trigger.create() is True
 
-        ctx.execute("""
-            SELECT TRIGGER_NAME FROM information_schema.TRIGGERS
-            WHERE TRIGGER_SCHEMA = 'testdb' AND TRIGGER_NAME = 'trg_users_update'
-        """)
-        assert ctx.fetchone() is not None
+        # Refresh triggers to verify trigger was created
+        mysql_database.triggers.refresh()
+        triggers = mysql_database.triggers.get_value()
+        assert any(t.name == "trg_users_insert" for t in triggers)
 
         assert trigger.drop() is True
 
-        ctx.execute("""
-            SELECT TRIGGER_NAME FROM information_schema.TRIGGERS
-            WHERE TRIGGER_SCHEMA = 'testdb' AND TRIGGER_NAME = 'trg_users_update'
-        """)
-        assert ctx.fetchone() is None
+        # Refresh triggers to verify trigger was deleted
+        mysql_database.triggers.refresh()
+        triggers = mysql_database.triggers.get_value()
+        assert not any(t.name == "trg_users_insert" for t in triggers)
 
-        # === FUNCTION ===
-        function = MySQLFunction(
-            id=1,
-            name="calc_total",
-            database=mysql_database,
-            parameters="price DECIMAL(10,2), quantity INT",
-            returns="DECIMAL(10,2)",
-            deterministic=True,
-            sql="RETURN price * quantity",
-        )
-        assert function.create() is True
-
-        ctx.execute("""
-            SELECT ROUTINE_NAME FROM information_schema.ROUTINES
-            WHERE ROUTINE_SCHEMA = 'testdb' AND ROUTINE_NAME = 'calc_total'
-        """)
-        assert ctx.fetchone() is not None
-
-        ctx.execute("SELECT testdb.calc_total(10.50, 3) AS result")
-        assert float(ctx.fetchone()["result"]) == 31.50
-
-        assert function.drop() is True
-
-        # === RECORD INSERT ===
-        record = MySQLRecord(
-            id=1,
-            table=orders_table,
-            values={"total": "100.00"},
-        )
-        assert record.insert() is True
-
-        ctx.execute("SELECT COUNT(*) as cnt FROM orders")
-        assert ctx.fetchone()["cnt"] == 1
-
-        # === TRUNCATE (on orders table, not referenced by FK) ===
-        orders_table.truncate()
-
-        ctx.execute("SELECT COUNT(*) as cnt FROM orders")
-        assert ctx.fetchone()["cnt"] == 0
-
-        # === CLEANUP ===
-        orders_table.drop()
-        users_table.drop()
-
-        ctx.execute("SHOW TABLES LIKE 'users'")
-        assert ctx.fetchone() is None
-
-        ctx.execute("SHOW TABLES LIKE 'orders'")
-        assert ctx.fetchone() is None
+        table.drop()

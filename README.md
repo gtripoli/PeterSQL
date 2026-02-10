@@ -1,5 +1,10 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-39%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-42%25-brightgreen)
+
+![SQLite](https://img.shields.io/badge/SQLite-tested-lightgrey)
+![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-lightgrey)
+![MariaDB](https://img.shields.io/badge/MariaDB-5.5%20%7C%2010.11%20%7C%2011.8%20%7C%20latest-lightgrey)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%20latest-lightgrey)
 
 # PeterSQL
 
@@ -49,8 +54,8 @@ that feels native to the Python ecosystem.
 
 ## 🔧 Technologies used
 
-- [Python 3.11+](https://www.python.org/)
-- [wxPython 4.2.4](https://wxpython.org/) - native cross-platform interface
+- [Python 3.14+](https://www.python.org/)
+- [wxPython 4.2.5](https://wxpython.org/) - native cross-platform interface
 - [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
 
 ---
@@ -93,6 +98,19 @@ To run tests:
 ```bash
 uv run pytest
 ```
+
+### Troubleshooting installation
+
+#### wxPython
+
+If `uv sync` fails because no compatible wxPython wheel is available for your platform/Python version, reinstall it from source with:
+This forces a source build and usually unblocks the setup.
+
+```bash
+uv pip install -U --reinstall wxPython==4.2.4 --no-binary wxPython
+```
+
+###### Once the build finishes, rerun `uv sync` so the refreshed environment picks up the manually installed wxPython.
 
 ## 📸 Screenshot
 

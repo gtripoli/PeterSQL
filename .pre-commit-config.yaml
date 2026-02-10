@@ -3,31 +3,17 @@ repos:
     rev: v2.10.0
     hooks:
       - id: pip-audit
-        args: [ "--descendents" ]
 
   - repo: https://github.com/RobertCraigie/pyright-python
     rev: v1.1.408
     hooks:
       - id: pyright
 
-
   - repo: local
     hooks:
-      - id: pytest
-        name: pytest
-        entry: /home/gtripoli/.local/bin/uv run pytest -n auto
-        language: system
-        pass_filenames: false
-        always_run: true
-      - id: update_coverage_badge
-        name: update coverage badge
-        entry: bash -c "uv run pytest -n auto --cov=. --cov-report=term | grep TOTAL | awk '{print $4}' | sed 's/%//' | xargs -I {} sed -i 's/coverage-[0-9]*%/coverage-{}%/g' README.md && git add README.md"
-        language: system
-        pass_filenames: false
-        always_run: true
-      - id: update_version_badges
-        name: update version badges
-        entry: bash -c "./scripts/update_badges.sh && git add README.md"
+      - id: runtest
+        name: run tests and update badges
+        entry: bash ./scripts/runtest.sh
         language: system
         pass_filenames: false
         always_run: true

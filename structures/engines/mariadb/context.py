@@ -23,7 +23,7 @@ class MariaDBContext(AbstractContext):
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
-    QUOTE_IDENTIFIER = "`"
+    IDENTIFIER_QUOTE = "`"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -47,17 +47,23 @@ class MariaDBContext(AbstractContext):
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        self.execute("""
-            SELECT WORD FROM information_schema.KEYWORDS
-            ORDER BY WORD;
-        """)
-        self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+        try:
+            self.execute("""
+                SELECT WORD FROM information_schema.KEYWORDS
+                ORDER BY WORD;
+            """)
+            self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
+        except Exception:
+            self.KEYWORDS = ()
 
-        self.execute("""
-            SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
-            ORDER BY FUNCTION;
-        """)
-        builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+        try:
+            self.execute("""
+                SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
+                ORDER BY FUNCTION;
+            """)
+            builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
+        except Exception:
+            builtin_functions = ()
 
         self.execute("""
             SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
@@ -346,49 +352,71 @@ class MariaDBContext(AbstractContext):
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MariaDBRecord]:
+    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MariaDBRecord]:
         results = []
-        for i, record in enumerate(super().get_records(table, filters, limit, offset, orders), start=offset):
+        for i, record in enumerate(super().get_records(table, filters=filters, limit=limit, offset=offset, orders=orders), start=offset):
             results.append(
                 MariaDBRecord(id=i, table=table, values=dict(record))
             )
 
         return results
 
-    def build_empty_table(self, database: SQLDatabase) -> MariaDBTable:
+    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTable:
+        id = MariaDBContext.get_temporary_id(database.tables)
+
+        if name is None:
+            name = _(f"Table{str(id * -1):03}")
+
+        default_values.setdefault("engine", "InnoDB")
+        default_values.setdefault("collation_name", "utf8mb4_general_ci")
+
         return MariaDBTable(
-            id=MariaDBContext.get_temporary_id(database.tables),
-            name='',
+            id=id,
+            name=name,
             database=database,
-            engine='mariadb',
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
+            **default_values,
         ).copy()
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, **default_values) -> MariaDBColumn:
+    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> MariaDBColumn:
         id = MariaDBContext.get_temporary_id(table.columns)
+
+        if name is None:
+            name = _(f"Column{str(id * -1):03}")
+
         return MariaDBColumn(
             id=id,
-            name=_(f"Column{str(id * -1):0>3}"),
+            name=name,
             table=table,
             datatype=datatype,
             **default_values
         )
 
-    def build_empty_index(self, name: str, type: MariaDBIndexType, table: MariaDBTable, columns: list[str]) -> MariaDBIndex:
+    def build_empty_index(self, table: MariaDBTable, indextype: MariaDBIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBIndex:
+        id = MariaDBContext.get_temporary_id(table.indexes)
+
+        if name is None:
+            name = _(f"Index{str(id * -1):03}")
+
         return MariaDBIndex(
-            id=MariaDBContext.get_temporary_id(table.indexes),
+            id=id,
             name=name,
-            type=type,
+            type=indextype,
             columns=columns,
             table=table,
         )
 
-    def build_empty_foreign_key(self, name: str, table: MariaDBTable, columns: list[str]) -> MariaDBForeignKey:
+    def build_empty_foreign_key(self, table: MariaDBTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBForeignKey:
+        id = MariaDBContext.get_temporary_id(table.foreign_keys)
+
+        if name is None:
+            name = _(f"ForeignKey{str(id * -1):03}")
+
         return MariaDBForeignKey(
-            id=MariaDBContext.get_temporary_id(table.foreign_keys),
+            id=id,
             name=name,
             table=table,
             columns=columns,
@@ -398,9 +426,35 @@ class MariaDBContext(AbstractContext):
             on_delete=""
         )
 
-    def build_empty_record(self, table: MariaDBTable, values: dict[str, Any]) -> MariaDBRecord:
+    def build_empty_record(self, table: MariaDBTable, /, *, values: dict[str, Any]) -> MariaDBRecord:
         return MariaDBRecord(
             id=MariaDBContext.get_temporary_id(table.records),
             table=table,
             values=values
+        )
+
+    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBView:
+        id = MariaDBContext.get_temporary_id(database.views)
+
+        if name is None:
+            name = _(f"View{str(id * -1):03}")
+
+        return MariaDBView(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
+        )
+
+    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTrigger:
+        id = MariaDBContext.get_temporary_id(database.triggers)
+
+        if name is None:
+            name = _(f"Trigger{str(id * -1):03}")
+
+        return MariaDBTrigger(
+            id=id,
+            name=name,
+            database=database,
+            sql=default_values.get("sql", ""),
         )

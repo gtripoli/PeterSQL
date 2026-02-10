@@ -276,12 +276,15 @@ class SQLiteCheck(SQLCheck):
 @dataclasses.dataclass(eq=False)
 class SQLiteColumn(SQLColumn):
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.name}` ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
+        sql = f"ALTER TABLE {self.table.sql_safe_name} ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
 
         return self.table.database.context.execute(sql)
 
+    def rename(self, new_name: str) -> bool:
+        return self.table.database.context.execute(f"ALTER TABLE {self.table.sql_safe_name} RENAME COLUMN {self.sql_safe_name} TO `{new_name}`")
+
     def modify(self):
-        new_name = f"_{self.table.name}_{self.generate_uuid()}"
+        sql_safe_new_name = self.table.database.context.build_sql_safe_name(f"_{self.table.name}_{self.generate_uuid()}")
 
         for i, c in enumerate(self.table.columns):
             if c.name == self.name:
@@ -289,19 +292,16 @@ class SQLiteColumn(SQLColumn):
                 break
 
         with self.table.database.context.transaction() as transaction:
-            self.table.rename(self.table, new_name)
+            self.table.rename(self.table, sql_safe_new_name)
 
             self.table.create()
 
-            transaction.execute(f"INSERT INTO `{self.table.name}` SELECT * FROM {new_name};")
+            transaction.execute(f"INSERT INTO {self.table.sql_safe_name} SELECT * FROM {sql_safe_new_name};")
 
-            transaction.execute(f"DROP TABLE {new_name};")
-
-    def rename(self, new_name: str) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE `{self.table.name}` RENAME COLUMN `{self.name}` TO `{new_name}`")
+            transaction.execute(f"DROP TABLE {sql_safe_new_name};")
 
     def drop(self, table: SQLTable, column: SQLColumn) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE `{table.name}` DROP COLUMN `{self.name}`")
+        return self.table.database.context.execute(f"ALTER TABLE {table.sql_safe_name} DROP COLUMN {self.sql_safe_name}")
 
 
 @dataclasses.dataclass(eq=False)
@@ -444,19 +444,21 @@ class SQLiteView(SQLView):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.name} AS {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP VIEW IF EXISTS {self.name}")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
 
 
 class SQLiteTrigger(SQLTrigger):
     def create(self) -> bool:
         return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.name} {self.sql}")
 
-    def drop(self):
+    def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.name}")
 
-    def alter(self):
-        pass
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()

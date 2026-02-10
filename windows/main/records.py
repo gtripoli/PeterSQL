@@ -216,7 +216,7 @@ class TableRecordsController:
                 values[column.name] = current_record.values.get(column.name)
 
         new_empty_record = session.context.build_empty_record(
-            table=table,
+            table,
             values=values
         )
 
