@@ -8,6 +8,7 @@ repos:
     rev: v1.1.408
     hooks:
       - id: pyright
+        args: ["--all-files"]
 
   - repo: local
     hooks:

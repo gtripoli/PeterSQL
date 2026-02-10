@@ -20,11 +20,12 @@ dev = [
     "mypy",
     "pre-commit",
     "pytest",
+    "pytest-cov",
     "pytest-mock",
-    "pytest-parallel",
     "types-pymysql",
     "types-pyyaml",
     "types-wxpython",
+    "testcontainers"
 ]
 
 

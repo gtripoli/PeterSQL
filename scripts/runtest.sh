@@ -11,7 +11,7 @@ COVERAGE_FILE="/tmp/pytest_coverage.txt"
 echo "Running all tests with coverage..."
 
 # Run all tests once with coverage, save results
-uv run pytest tests/ -n auto --cov=. --cov-report=term --tb=no -v 2>&1 | tee "$RESULTS_FILE"
+uv run pytest tests/ --cov=. --cov-report=term --tb=no -v 2>&1 | tee "$RESULTS_FILE"
 PYTEST_EXIT_CODE=${PIPESTATUS[0]}
 
 # Extract coverage percentage
@@ -51,7 +51,8 @@ extract_versions_badge() {
     local file=$1
     local var_name=$2
     grep -A 10 "${var_name}.*=" "$file" 2>/dev/null | \
-        grep -oP '"[^"]+:[^"]+"' | \
+        grep -E 'mariadb:[^"]+|mysql:[^"]+|postgres:[^"]+' | \
+        grep -oP '"[^"]+"' | \
         tr -d '"' | \
         sed 's/.*://' | \
         grep -v '^$' | \
@@ -87,11 +88,12 @@ if [ -f "$README" ]; then
         sed -i "s/coverage-[0-9]*%/coverage-${COVERAGE}%/g" "$README"
         echo "  Coverage badge updated: ${COVERAGE}%"
     fi
-    
+
     # Update engine badges
     perl -i -pe "s|!\[SQLite\]\(https://img.shields.io/badge/SQLite-[^)]*\)|![SQLite](https://img.shields.io/badge/SQLite-tested-${SQLITE_COLOR})|g" "$README"
     perl -i -pe "s|!\[MySQL\]\(https://img.shields.io/badge/MySQL-[^)]*\)|![MySQL](https://img.shields.io/badge/MySQL-${MYSQL_BADGE}-${MYSQL_COLOR})|g" "$README"
     perl -i -pe "s|!\[MariaDB\]\(https://img.shields.io/badge/MariaDB-[^)]*\)|![MariaDB](https://img.shields.io/badge/MariaDB-${MARIADB_BADGE}-${MARIADB_COLOR})|g" "$README"
+
     perl -i -pe "s|!\[PostgreSQL\]\(https://img.shields.io/badge/PostgreSQL-[^)]*\)|![PostgreSQL](https://img.shields.io/badge/PostgreSQL-${POSTGRESQL_BADGE}-${POSTGRESQL_COLOR})|g" "$README"
     
     # Stage README for commit
