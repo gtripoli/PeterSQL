@@ -10,10 +10,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     container: ubuntu:22.04
-
+    
     steps:
     - uses: actions/checkout@v4
-
+    
     - name: Install system dependencies
       run: |
         apt-get update
