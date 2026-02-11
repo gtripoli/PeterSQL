@@ -1,10 +1,10 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
 ![Coverage](https://img.shields.io/badge/coverage-50%25-brightgreen)
 
-![SQLite](https://img.shields.io/badge/SQLite-tested-green)
-![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-green)
-![MariaDB](https://img.shields.io/badge/MariaDB-5.5%20%7C%2010.11%20%7C%2011.8%20%7C%20latest-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%20latest-green)
+![SQLite](https://img.shields.io/badge/SQLite-tested-lightgrey)
+![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-lightgrey)
+![MariaDB](https://img.shields.io/badge/MariaDB-5.5%20%7C%2010.11%20%7C%2011.8%20%7C%20latest-lightgrey)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%20latest-lightgrey)
 
 # PeterSQL
 
