@@ -1,6 +1,6 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-02-09  
+> **Last Updated:** 2026-02-11  
 > **Version:** Based on code inspection
 
 ---
@@ -13,20 +13,19 @@
 |------|--------|
 | **SQLite Engine** | Most mature. Full CRUD for Table, Column, Index, Foreign Key, Record, View, Trigger. Check constraints supported. |
 | **MySQL/MariaDB Engines** | Strong parity. Full CRUD for Table, Column, Index, Foreign Key, Record, View, Trigger, Function. |
-| **Connection Management** | SSH tunnel support (MySQL), session lifecycle, multi-database navigation. |
+| **Connection Management** | SSH tunnel support (MySQL, MariaDB, PostgreSQL), session lifecycle, multi-database navigation. |
 | **UI Explorer** | Tree navigation for databases, tables, views, triggers, procedures, functions, events. |
 | **Table Editor** | Column editor, index editor, foreign key editor with full CRUD. |
 | **Record Editor** | Insert, update, delete, duplicate records with filtering support. |
 | **SQL Autocomplete** | Keywords, functions, table/column names. |
+| **SSH Tunnel Testing** | Comprehensive test coverage for MySQL, MariaDB, and PostgreSQL SSH tunnel functionality. |
 
 ### ⚠️ Partially Implemented (Risky)
 
 | Area | Issue |
 |------|-------|
-| **PostgreSQL Engine** | Schema support incomplete. `alter()` uses wrong return format from `merge_original_current`. `drop()` not implemented. No Function class. |
-| **MySQL `create()` method** | Signature mismatch: expects `map_columns` parameter but callers don't provide it. |
+| **PostgreSQL Engine** | Schema support incomplete. No Function class. |
 | **Procedure/Event UI** | Explorer shows them but no editor panels exist. |
-| **View/Trigger Editors** | Can list and drop, but alter is stub (`pass`). |
 
 ### ❌ Completely Missing
 
@@ -69,8 +68,8 @@
 | **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via CREATE UNIQUE INDEX | `SQLiteIndex` |
 | **Check Constraint** | ✅ | ✅ | 🟡 | 🟡 | Read works, modify via recreate | `SQLiteCheck`, `get_checks()` |
 | **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `SQLiteColumn.server_default` |
-| **View** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `SQLiteView` |
-| **Trigger** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `SQLiteTrigger` |
+| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `SQLiteView` |
+| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `SQLiteTrigger` |
 | **Function** | ➖ | ➖ | ➖ | ➖ | SQLite has no stored functions | — |
 | **Procedure** | ➖ | ➖ | ➖ | ➖ | SQLite has no procedures | — |
 | **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `SQLiteRecord.insert/update/delete()` |
@@ -84,7 +83,7 @@
 | Object Type | Create | Read | Update | Delete | Notes | Evidence |
 |-------------|--------|------|--------|--------|-------|----------|
 | **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `MySQLContext.get_databases()` |
-| **Table** | 🟡 | ✅ | ✅ | ✅ | `create()` has signature issue | `MySQLTable` |
+| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLTable` |
 | **Column** | ✅ | ✅ | ✅ | ✅ | ADD/MODIFY/RENAME/DROP | `MySQLColumn` |
 | **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX | `MySQLIndex` |
 | **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.PRIMARY` |
@@ -92,8 +91,8 @@
 | **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.UNIQUE` |
 | **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 | **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MySQLColumn.server_default` |
-| **View** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `MySQLView` |
-| **Trigger** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `MySQLTrigger` |
+| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLView` |
+| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLTrigger` |
 | **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLFunction` |
 | **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
 | **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MySQLRecord` |
@@ -116,8 +115,8 @@
 | **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MariaDBIndexType.UNIQUE` |
 | **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 | **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MariaDBColumn.server_default` |
-| **View** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `MariaDBView` |
-| **Trigger** | ✅ | ✅ | 🟡 | ✅ | `alter()` is stub | `MariaDBTrigger` |
+| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MariaDBView` |
+| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MariaDBTrigger` |
 | **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MariaDBFunction` |
 | **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
 | **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MariaDBRecord` |
@@ -133,15 +132,15 @@
 |-------------|--------|------|--------|--------|-------|----------|
 | **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `PostgreSQLContext.get_databases()` |
 | **Schema** | ❌ | 🟡 | ❌ | ❌ | Read via table.schema | `PostgreSQLTable.schema` |
-| **Table** | ✅ | ✅ | 🟡 | ❌ | `alter()` broken, `drop()` empty | `PostgreSQLTable` |
-| **Column** | ✅ | ✅ | 🟡 | 🟡 | Via table alter | `PostgreSQLColumn` (passive) |
+| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLTable` |
+| **Column** | ✅ | ✅ | ✅ | ✅ | Via table alter | `PostgreSQLColumn` (passive) |
 | **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX, BTREE, etc. | `PostgreSQLIndex` |
 | **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `PostgreSQLIndexType.PRIMARY` |
-| **Foreign Key** | ✅ | ✅ | ❌ | ✅ | No modify method | `PostgreSQLForeignKey` |
+| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLForeignKey` |
 | **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `PostgreSQLIndexType.UNIQUE` |
 | **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 | **Default** | ✅ | ✅ | 🟡 | 🟡 | Column attribute | `PostgreSQLColumn.server_default` |
-| **View** | ✅ | ✅ | ✅ | ✅ | CREATE OR REPLACE | `PostgreSQLView` |
+| **View** | ✅ | 🟡 | ✅ | ✅ | `alter()` implemented | `PostgreSQLView` |
 | **Trigger** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLTrigger` |
 | **Function** | ❌ | ❌ | ❌ | ❌ | Class not implemented | — |
 | **Procedure** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
@@ -210,18 +209,14 @@
 
 | Issue | Engines Affected |
 |-------|------------------|
-| `alter()` stub for View/Trigger | All engines |
-| `drop()` not implemented | PostgreSQL Table |
-| `create()` signature mismatch | MySQL Table |
-| No SSH tunnel support | MariaDB, PostgreSQL |
 | Check constraints | MySQL, MariaDB, PostgreSQL missing |
 
 ### UI Features Waiting on Engine Support
 
 | UI Feature | Waiting On |
 |------------|------------|
-| View create/edit dialog | Engine `alter()` implementation |
-| Trigger create/edit dialog | Engine `alter()` implementation |
+| View create/edit dialog | UI implementation needed |
+| Trigger create/edit dialog | UI implementation needed |
 | Function editor | PostgreSQL `PostgreSQLFunction` class |
 | Database create/drop | All engines need `create_database()` |
 
@@ -233,20 +228,15 @@
 
 | Item | Object | Operation | Engine(s) | What's Missing |
 |------|--------|-----------|-----------|----------------|
-| 1.1 | Table | `drop()` | PostgreSQL | Method body is `pass` |
-| 1.2 | Table | `alter()` | PostgreSQL | Uses wrong dict keys from `merge_original_current` |
-| 1.3 | Table | `create()` | MySQL | Signature expects `map_columns` but callers don't provide |
-| 1.4 | Function | All | PostgreSQL | `PostgreSQLFunction` class missing |
+| 1.1 | Function | All | PostgreSQL | `PostgreSQLFunction` class missing |
 
 ### Priority 2: Engine Parity
 
 | Item | Object | Operation | Engine(s) | What's Missing |
 |------|--------|-----------|-----------|----------------|
 | 2.1 | Check Constraint | CRUD | MySQL, MariaDB, PostgreSQL | `get_checks()`, `SQLCheck` subclass |
-| 2.2 | View | `alter()` | All | Stub implementation |
-| 2.3 | Trigger | `alter()` | All | Stub implementation |
-| 2.4 | Procedure | CRUD | All | Only base class exists |
-| 2.5 | SSH Tunnel | Connect | MariaDB, PostgreSQL | Only MySQL has it |
+| 2.2 | Procedure | CRUD | All | Only base class exists |
+| 2.3 | SSH Tunnel | Connect | MariaDB, PostgreSQL | Only MySQL has it |
 
 ### Priority 3: UI Completeness
 

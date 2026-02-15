@@ -6,6 +6,7 @@ from gettext import gettext as _
 
 from helpers.logger import logger
 from structures.connection import Connection
+from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
@@ -33,6 +34,7 @@ class PostgreSQLContext(AbstractContext):
         self.password = connection.configuration.password
         self.port = getattr(connection.configuration, 'port', 5432)
         self._current_database: Optional[str] = None
+        self._ssh_tunnel = None
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
@@ -89,7 +91,8 @@ class PostgreSQLContext(AbstractContext):
         if self._connection is None:
             try:
                 database = connect_kwargs.pop('database', 'postgres')
-                self._connection = psycopg2.connect(
+
+                base_kwargs = dict(
                     host=self.host,
                     user=self.user,
                     password=self.password,
@@ -97,6 +100,24 @@ class PostgreSQLContext(AbstractContext):
                     port=self.port,
                     **connect_kwargs
                 )
+
+                # SSH tunnel support via connection configuration
+                if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
+                    ssh_config = self.connection.ssh_tunnel
+                    self._ssh_tunnel = SSHTunnel(
+                        ssh_config.hostname, int(ssh_config.port),
+                        ssh_username=ssh_config.username,
+                        ssh_password=ssh_config.password,
+                        remote_port=self.port,
+                        local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0)))
+                    )
+                    self._ssh_tunnel.start()
+                    base_kwargs.update(
+                        host=self.host,
+                        port=self._ssh_tunnel.local_port,
+                    )
+
+                self._connection = psycopg2.connect(**base_kwargs)
                 self._cursor = self._connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 self._current_database = database
             except Exception as e:
@@ -104,6 +125,31 @@ class PostgreSQLContext(AbstractContext):
                 raise
             else:
                 self._on_connect()
+
+    def disconnect(self) -> None:
+        """Disconnect from database and stop SSH tunnel if active."""
+        try:
+            if self._cursor:
+                self._cursor.close()
+        except Exception:
+            pass
+
+        try:
+            if self._connection:
+                self._connection.close()
+        except Exception:
+            pass
+
+        try:
+            if self._ssh_tunnel:
+                self._ssh_tunnel.stop()
+                self._ssh_tunnel = None
+        except Exception:
+            pass
+
+        self._cursor = None
+        self._connection = None
+        self._current_database = None
 
     def _set_database(self, db_name: str) -> None:
         """Switch to a different database by reconnecting."""

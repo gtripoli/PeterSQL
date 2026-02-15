@@ -7,11 +7,12 @@ import pymysql
 
 from helpers.logger import logger
 from structures.connection import Connection
+from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
+from structures.engines.mariadb import MAP_COLUMN_FIELDS
 from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
 from structures.engines.datatype import SQLDataType
-from structures.engines.mariadb import MAP_COLUMN_FIELDS
 from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
@@ -33,6 +34,7 @@ class MariaDBContext(AbstractContext):
         self.password = connection.configuration.password
         # self.database = session.configuration.database
         self.port = getattr(connection.configuration, 'port', 3306)
+        self._ssh_tunnel = None
 
     def _on_connect(self, *args, **kwargs):
         super()._on_connect(*args, **kwargs)
@@ -104,21 +106,62 @@ class MariaDBContext(AbstractContext):
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
             try:
-                self._connection = pymysql.connect(
+                base_kwargs = dict(
                     host=self.host,
                     user=self.user,
                     password=self.password,
-                    # database=self.database,
                     cursorclass=pymysql.cursors.DictCursor,
                     port=self.port,
                     **connect_kwargs
                 )
+
+                # SSH tunnel support via connection configuration
+                if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
+                    ssh_config = self.connection.ssh_tunnel
+                    self._ssh_tunnel = SSHTunnel(
+                        ssh_config.hostname, int(ssh_config.port),
+                        ssh_username=ssh_config.username,
+                        ssh_password=ssh_config.password,
+                        remote_port=self.port,
+                        local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0)))
+                    )
+                    self._ssh_tunnel.start()
+                    base_kwargs.update(
+                        host=self.host,
+                        port=self._ssh_tunnel.local_port,
+                    )
+
+                self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
             else:
                 self._on_connect()
+
+    def disconnect(self) -> None:
+        """Disconnect from database and stop SSH tunnel if active."""
+        try:
+            if self._cursor:
+                self._cursor.close()
+        except Exception:
+            pass
+
+        try:
+            if self._connection:
+                self._connection.close()
+        except Exception:
+            pass
+
+        try:
+            if self._ssh_tunnel:
+                self._ssh_tunnel.stop()
+                self._ssh_tunnel = None
+        except Exception:
+            pass
+
+        self._cursor = None
+        self._connection = None
 
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")

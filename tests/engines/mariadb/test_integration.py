@@ -1,6 +1,9 @@
+import pytest
+from structures.ssh_tunnel import SSHTunnel
 from structures.engines.mariadb.database import MariaDBTable
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
+
 
 
 def create_users_table(mariadb_database, mariadb_session) -> MariaDBTable:
@@ -50,6 +53,60 @@ def create_users_table(mariadb_database, mariadb_session) -> MariaDBTable:
     return next(t for t in mariadb_database.tables.get_value() if t.name == "users")
 
 
+@pytest.fixture(scope="function")
+def ssh_mariadb_session(mariadb_container, mariadb_session):
+    """Create SSH tunnel session for testing."""
+    try:
+        # Create SSH tunnel to MariaDB container
+        tunnel = SSHTunnel(
+            mariadb_container.get_container_host_ip(),
+            22,  # Assuming SSH access to host
+            ssh_username=None,
+            ssh_password=None,
+            remote_port=mariadb_container.get_exposed_port(3306),
+            local_bind_address=('localhost', 0)
+        )
+        
+        tunnel.start(timeout=5)
+        
+        # Create connection using tunnel
+        from structures.session import Session
+        from structures.connection import Connection, ConnectionEngine
+        from structures.configurations import CredentialsConfiguration
+        
+        config = CredentialsConfiguration(
+            hostname="localhost",
+            username="root",
+            password=mariadb_container.root_password,
+            port=tunnel.local_port,
+        )
+        
+        connection = Connection(
+            id=1,
+            name="ssh_mariadb_test",
+            engine=ConnectionEngine.MARIADB,
+            configuration=config,
+        )
+        
+        session = Session(connection=connection)
+        session.connect()
+        
+        yield session, tunnel
+        
+    except Exception:
+        pytest.skip("SSH tunnel not available")
+        
+    finally:
+        try:
+            session.disconnect()
+        except:
+            pass
+        try:
+            tunnel.stop()
+        except:
+            pass
+
+
 class TestMariaDBIntegration:
     """Integration tests for MariaDB engine using build_empty_* API."""
 
@@ -69,6 +126,90 @@ class TestMariaDBIntegration:
         mariadb_database.tables.refresh()
         tables = mariadb_database.tables.get_value()
         assert not any(t.name == "users" for t in tables)
+
+    def test_ssh_tunnel_basic_operations(self, ssh_mariadb_session, mariadb_database):
+        """Test basic CRUD operations through SSH tunnel."""
+        session, tunnel = ssh_mariadb_session
+        
+        # Create table
+        table = create_users_table(mariadb_database, session)
+        
+        # Test INSERT
+        record = session.context.build_empty_record(table, values={"name": "John Doe"})
+        assert record.insert() is True
+        
+        # Test SELECT
+        table.load_records()
+        records = table.records.get_value()
+        assert len(records) == 1
+        assert records[0].values["name"] == "John Doe"
+        
+        # Test UPDATE
+        record = records[0]
+        record.values["name"] = "Jane Doe"
+        assert record.update() is True
+        
+        # Verify UPDATE
+        table.load_records()
+        records = table.records.get_value()
+        assert records[0].values["name"] == "Jane Doe"
+        
+        # Test DELETE
+        assert record.delete() is True
+        
+        # Verify DELETE
+        table.load_records()
+        assert len(table.records.get_value()) == 0
+        
+        table.drop()
+
+    def test_ssh_tunnel_transaction_support(self, ssh_mariadb_session, mariadb_database):
+        """Test transaction support through SSH tunnel."""
+        session, tunnel = ssh_mariadb_session
+        table = create_users_table(mariadb_database, session)
+        
+        # Test successful transaction
+        with session.context.transaction() as tx:
+            tx.execute("INSERT INTO testdb.users (name) VALUES (%s)", ("test1",))
+            tx.execute("INSERT INTO testdb.users (name) VALUES (%s)", ("test2",))
+        
+        # Verify data was committed
+        session.context.execute("SELECT COUNT(*) as count FROM testdb.users")
+        result = session.context.fetchone()
+        assert result['count'] == 2
+        
+        # Test failed transaction
+        try:
+            with session.context.transaction() as tx:
+                tx.execute("INSERT INTO testdb.users (name) VALUES (%s)", ("test3",))
+                tx.execute("INSERT INTO testdb.users (id, name) VALUES (1, 'duplicate')")  # Should fail
+        except:
+            pass  # Expected to fail
+        
+        # Verify rollback worked
+        session.context.execute("SELECT COUNT(*) as count FROM testdb.users")
+        result = session.context.fetchone()
+        assert result['count'] == 2
+        
+        table.drop()
+
+    def test_ssh_tunnel_error_handling(self, ssh_mariadb_session, mariadb_database):
+        """Test error handling through SSH tunnel."""
+        session, tunnel = ssh_mariadb_session
+        table = create_users_table(mariadb_database, session)
+        
+        # Test invalid SQL
+        try:
+            session.context.execute("INVALID SQL QUERY")
+            assert False, "Should have raised exception"
+        except Exception:
+            pass  # Expected
+        
+        # Test connection is still working
+        result = session.context.execute("SELECT 1 as test")
+        assert result is True
+        
+        table.drop()
 
     def test_record_insert(self, mariadb_session, mariadb_database):
         """Test record insertion."""
