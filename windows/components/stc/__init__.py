@@ -1,5 +1,5 @@
-from windows.components.stc.auto_complete import CompletionResult
-from windows.components.stc.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
+from windows.components.stc.autocomplete.completion_types import CompletionResult
+from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
 from windows.components.stc.detectors import detect_syntax_id
 from windows.components.stc.profiles import BASE64, CSV, HTML, JSON, MARKDOWN, REGEX, SQL, TEXT, XML, YAML
 from windows.components.stc.profiles import Detector, Formatter, SyntaxProfile

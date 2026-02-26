@@ -1,3 +1,4 @@
+import pytest
 from structures.engines.sqlite.database import (
     SQLiteTable,
     SQLiteColumn,
@@ -55,6 +56,7 @@ def create_users_table(sqlite_database, sqlite_session) -> SQLiteTable:
     return next(t for t in sqlite_database.tables.get_value() if t.name == "users")
 
 
+@pytest.mark.integration
 class TestSQLiteIntegration:
     """Integration tests for SQLite engine."""
 

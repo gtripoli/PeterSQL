@@ -13,7 +13,8 @@ from structures.session import Session
 from windows.components import BasePopup
 
 from structures.engines.datatype import SQLDataType, DataTypeCategory, StandardDataType
-from windows.main import CURRENT_SESSION
+
+from windows.state import CURRENT_SESSION
 
 
 class PopupColumnDefault(BasePopup):

@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.integration
 class TestMySQLContext:
     """Tests for MySQL context methods."""
 

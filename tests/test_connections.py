@@ -5,7 +5,7 @@ import yaml
 
 from structures.connection import Connection, ConnectionEngine, ConnectionDirectory
 from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
-from windows.connections.repository import ConnectionsRepository
+from windows.dialogs.connections.repository import ConnectionsRepository
 
 
 class TestConnectionsRepository:

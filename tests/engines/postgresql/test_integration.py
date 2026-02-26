@@ -52,57 +52,71 @@ def create_users_table(postgresql_database, postgresql_session) -> PostgreSQLTab
 @pytest.fixture(scope="function")
 def ssh_postgresql_session(postgresql_container, postgresql_session):
     """Create SSH tunnel session for testing."""
+    # Verify SSH is accessible on the container
+    import socket
+    ssh_host = postgresql_container.get_container_host_ip()
+    ssh_port = postgresql_container.get_exposed_port(22)
+    
     try:
-        # Create SSH tunnel to PostgreSQL container
-        tunnel = SSHTunnel(
-            postgresql_container.get_container_host_ip(),
-            22,  # Assuming SSH access to host
-            ssh_username=None,
-            ssh_password=None,
-            remote_port=postgresql_container.get_exposed_port(5432),
-            local_bind_address=('localhost', 0)
-        )
-        
-        tunnel.start(timeout=5)
-        
-        # Create connection using tunnel
-        from structures.session import Session
-        from structures.connection import Connection, ConnectionEngine
-        from structures.configurations import CredentialsConfiguration
-        
-        config = CredentialsConfiguration(
-            hostname="localhost",
-            username=postgresql_container.username,
-            password=postgresql_container.password,
-            port=tunnel.local_port,
-        )
-        
-        connection = Connection(
-            id=1,
-            name="ssh_postgresql_test",
-            engine=ConnectionEngine.POSTGRESQL,
-            configuration=config,
-        )
-        
-        session = Session(connection=connection)
-        session.connect()
-        
-        yield session, tunnel
-        
-    except Exception:
-        pytest.skip("SSH tunnel not available")
-        
-    finally:
-        try:
-            session.disconnect()
-        except:
-            pass
-        try:
-            tunnel.stop()
-        except:
-            pass
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex((ssh_host, ssh_port))
+        sock.close()
+        if result != 0:
+            pytest.skip(f"SSH port {ssh_port} not accessible on container")
+    except Exception as e:
+        pytest.skip(f"Cannot verify SSH accessibility: {e}")
+    
+    # Create SSH tunnel to PostgreSQL container
+    tunnel = SSHTunnel(
+        ssh_host,
+        ssh_port,
+        ssh_username="root",
+        ssh_password="testpassword",
+        remote_port=5432,  # PostgreSQL inside container
+        local_bind_address=('localhost', 0)
+    )
+    
+    try:
+        tunnel.start(timeout=10)
+    except Exception as e:
+        pytest.skip(f"SSH tunnel failed to start: {e}")
+    
+    # Create connection using tunnel
+    from structures.session import Session
+    from structures.connection import Connection, ConnectionEngine
+    from structures.configurations import CredentialsConfiguration
+    
+    config = CredentialsConfiguration(
+        hostname="localhost",
+        username=postgresql_container.username,
+        password=postgresql_container.password,
+        port=tunnel.local_port,
+    )
+    
+    connection = Connection(
+        id=1,
+        name="ssh_postgresql_test",
+        engine=ConnectionEngine.POSTGRESQL,
+        configuration=config,
+    )
+    
+    session = Session(connection=connection)
+    session.connect()
+    
+    yield session, tunnel
+    
+    try:
+        session.disconnect()
+    except:
+        pass
+    try:
+        tunnel.stop()
+    except:
+        pass
 
 
+@pytest.mark.integration
 class TestPostgreSQLIntegration:
     """Integration tests for PostgreSQL engine using build_empty_* API."""
 

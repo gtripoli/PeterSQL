@@ -1,0 +1,35 @@
+{
+  "group": "LIMIT",
+  "cases": [
+    {
+      "case_id": "LIMIT_001",
+      "title": "LIMIT offers no suggestions",
+      "sql": "SELECT * FROM users LIMIT |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "NO_SUGGESTIONS",
+        "context": "LIMIT_OFFSET_CLAUSE",
+        "prefix": null,
+        "suggestions": [],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "LIMIT_002",
+      "title": "OFFSET offers no suggestions",
+      "sql": "SELECT * FROM users LIMIT 10 OFFSET |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "NO_SUGGESTIONS",
+        "context": "LIMIT_OFFSET_CLAUSE",
+        "prefix": null,
+        "suggestions": [],
+        "xfail": true
+      }
+    }
+  ]
+}

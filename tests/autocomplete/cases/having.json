@@ -1,0 +1,117 @@
+{
+  "group": "HAVING",
+  "cases": [
+    {
+      "case_id": "HAVING_001",
+      "title": "HAVING without prefix: aggregates first then columns then other functions",
+      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "HAVING_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "AVG",
+          "COUNT",
+          "GROUP_CONCAT",
+          "MAX",
+          "MIN",
+          "SUM",
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "COALESCE",
+          "CONCAT",
+          "DATE",
+          "LENGTH",
+          "LOWER",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_002",
+      "title": "HAVING with prefix prioritizes aggregate functions matching prefix",
+      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "c",
+        "suggestions": [
+          "COUNT",
+          "users.created_at",
+          "COALESCE",
+          "CONCAT"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_003",
+      "title": "HAVING after operator: NULL/TRUE/FALSE + aggregates + columns",
+      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_OPERATOR",
+        "context": "HAVING_AFTER_OPERATOR",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "AVG",
+          "COUNT",
+          "GROUP_CONCAT",
+          "MAX",
+          "MIN",
+          "SUM",
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "HAVING_004",
+      "title": "HAVING after expression suggests logical + clauses",
+      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > 10 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_EXPRESSION",
+        "context": "HAVING_AFTER_EXPRESSION",
+        "prefix": null,
+        "suggestions": [
+          "AND",
+          "EXISTS",
+          "LIMIT",
+          "NOT",
+          "OR",
+          "ORDER BY"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

@@ -21,14 +21,43 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="module")
 def postgresql_container(postgresql_version):
-    with PostgresContainer(
+    container = PostgresContainer(
         postgresql_version,
         name=f"petersql_test_{postgresql_version.replace(':', '_')}",
         mem_limit="512m",
         memswap_limit="768m",
         nano_cpus=1_000_000_000,
         shm_size="128m",
-    ) as container:
+    )
+    # Expose SSH port
+    container.with_exposed_ports(22)
+    
+    with container:
+        # Install and configure SSH in the container
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        install_ssh_commands = [
+            ["sh", "-c", "apt-get update"],
+            ["sh", "-c", "DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server"],
+            ["sh", "-c", "mkdir -p /var/run/sshd"],
+            ["sh", "-c", "echo 'root:testpassword' | chpasswd"],
+            ["sh", "-c", "sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config"],
+            ["sh", "-c", "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config"],
+            ["sh", "-c", "nohup /usr/sbin/sshd -D > /dev/null 2>&1 &"],
+        ]
+        
+        for cmd in install_ssh_commands:
+            logger.info(f"Executing: {cmd}")
+            exit_code, output = container.exec(cmd)
+            logger.info(f"Exit code: {exit_code}, Output: {output}")
+            if exit_code != 0 and "sshd" not in cmd:
+                raise RuntimeError(f"Failed to execute: {cmd}\nExit code: {exit_code}\nOutput: {output}")
+        
+        # Verify SSH is running
+        exit_code, output = container.exec("ps aux | grep sshd")
+        logger.info(f"SSH processes: {output}")
+        
         yield container
 
 

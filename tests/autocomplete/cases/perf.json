@@ -1,0 +1,59 @@
+{
+  "group": "PERF",
+  "cases": [
+    {
+      "case_id": "PERF_001",
+      "title": "Guardrail: no prefix, huge schema => skip non-scope database columns",
+      "sql": "SELECT * FROM users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "big",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "guardrail_expected": true,
+        "suggestions": [
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "PERF_002",
+      "title": "Guardrail: with prefix includes filtered db-wide columns even in big schema",
+      "sql": "SELECT * FROM users WHERE col_0|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "big",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "col_0",
+        "suggestions_contains": [
+          "t01_big.col_001"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

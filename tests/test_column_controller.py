@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch, call
 
 from structures.engines.sqlite.context import SQLiteContext
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable, SQLiteIndex, SQLiteColumn
-from windows.main.column import TableColumnsController
+from windows.main.tabs.column import TableColumnsController
 
 
 @pytest.fixture
@@ -37,9 +37,9 @@ def mock_table(mock_session):
 
 
 @patch('wx.GetApp')
-@patch('windows.main.column.CURRENT_SESSION')
-@patch('windows.main.column.CURRENT_TABLE')
-@patch('windows.main.column.NEW_TABLE')
+@patch('windows.main.tabs.column.CURRENT_SESSION')
+@patch('windows.main.tabs.column.CURRENT_TABLE')
+@patch('windows.main.tabs.column.NEW_TABLE')
 def test_append_column_index(mock_new_table, mock_current_table, mock_current_session, mock_get_app, mock_session, mock_table):
     # Setup mocks
     mock_get_app.return_value = Mock()
@@ -72,9 +72,9 @@ def test_append_column_index(mock_new_table, mock_current_table, mock_current_se
 
 
 @patch('wx.GetApp')
-@patch('windows.main.column.CURRENT_SESSION')
-@patch('windows.main.column.CURRENT_TABLE')
-@patch('windows.main.column.NEW_TABLE')
+@patch('windows.main.tabs.column.CURRENT_SESSION')
+@patch('windows.main.tabs.column.CURRENT_TABLE')
+@patch('windows.main.tabs.column.NEW_TABLE')
 def test_on_column_insert(mock_new_table, mock_current_table, mock_current_session, mock_get_app, mock_session, mock_table):
     # Setup mocks
     mock_get_app.return_value = Mock()
@@ -115,9 +115,9 @@ def test_on_column_insert(mock_new_table, mock_current_table, mock_current_sessi
 
 
 @patch('wx.GetApp')
-@patch('windows.main.column.CURRENT_SESSION')
-@patch('windows.main.column.CURRENT_TABLE')
-@patch('windows.main.column.NEW_TABLE')
+@patch('windows.main.tabs.column.CURRENT_SESSION')
+@patch('windows.main.tabs.column.CURRENT_TABLE')
+@patch('windows.main.tabs.column.NEW_TABLE')
 def test_on_column_delete(mock_new_table, mock_current_table, mock_current_session, mock_get_app, mock_session, mock_table):
     # Setup mocks
     mock_get_app.return_value = Mock()
@@ -163,10 +163,10 @@ def test_on_column_delete(mock_new_table, mock_current_table, mock_current_sessi
 
 
 @patch('wx.GetApp')
-@patch('windows.main.column.CURRENT_SESSION')
-@patch('windows.main.column.CURRENT_TABLE')
-@patch('windows.main.column.CURRENT_COLUMN')
-@patch('windows.main.column.NEW_TABLE')
+@patch('windows.main.tabs.column.CURRENT_SESSION')
+@patch('windows.main.tabs.column.CURRENT_TABLE')
+@patch('windows.main.tabs.column.CURRENT_COLUMN')
+@patch('windows.main.tabs.column.NEW_TABLE')
 def test_on_column_move_up(mock_new_table, mock_current_column, mock_current_table, mock_current_session, mock_get_app, mock_session, mock_table):
     # Setup mocks
     mock_get_app.return_value = Mock()
@@ -205,9 +205,9 @@ def test_on_column_move_up(mock_new_table, mock_current_column, mock_current_tab
 
 
 @patch('wx.GetApp')
-@patch('windows.main.column.CURRENT_SESSION')
-@patch('windows.main.column.CURRENT_TABLE')
-@patch('windows.main.column.NEW_TABLE')
+@patch('windows.main.tabs.column.CURRENT_SESSION')
+@patch('windows.main.tabs.column.CURRENT_TABLE')
+@patch('windows.main.tabs.column.NEW_TABLE')
 def test_insert_column_index(mock_new_table, mock_current_table, mock_current_session, mock_get_app, mock_session, mock_table):
     # Setup mocks
     mock_get_app.return_value = Mock()

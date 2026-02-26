@@ -1,0 +1,87 @@
+{
+  "group": "LEX",
+  "cases": [
+    {
+      "case_id": "LEX_001",
+      "title": "Semicolon in string should not split statement",
+      "sql": "SELECT * FROM users WHERE name = 'a;b' AND |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "LEX_002",
+      "title": "Dot-like sequence inside string should not trigger dot-completion",
+      "sql": "SELECT * FROM users WHERE name = 'u.x' AND |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    }
+  ]
+}

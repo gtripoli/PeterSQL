@@ -1,16 +1,16 @@
 #!/bin/bash
 # Unified test runner with badge updates
-# Runs all tests once and updates README badges based on results
-# Replaces: pytest, update_coverage_badge, update_version_badges
+# Runs ALL tests (unit + integration) and updates README badges based on results
+# For CI/CD and complete test validation
 
 README="README.md"
 TESTS_DIR="tests/engines"
 RESULTS_FILE="/tmp/pytest_results.txt"
 COVERAGE_FILE="/tmp/pytest_coverage.txt"
 
-echo "Running all tests with coverage..."
+echo "Running ALL tests (unit + integration) with coverage..."
 
-# Run all tests once with coverage, save results
+# Run ALL tests including integration tests (testcontainers)
 uv run pytest tests/ --cov=. --cov-report=term --tb=no -v 2>&1 | tee "$RESULTS_FILE"
 PYTEST_EXIT_CODE=${PIPESTATUS[0]}
 

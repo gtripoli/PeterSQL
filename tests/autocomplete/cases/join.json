@@ -1,0 +1,81 @@
+{
+  "group": "JOIN",
+  "cases": [
+    {
+      "case_id": "JOIN_001",
+      "title": "JOIN without prefix suggests tables",
+      "sql": "SELECT * FROM users JOIN |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_002",
+      "title": "JOIN with prefix filters tables",
+      "sql": "SELECT * FROM users JOIN o|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_CLAUSE",
+        "prefix": "o",
+        "suggestions": [
+          "orders"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_003",
+      "title": "JOIN after table + space suggests AS/ON/USING",
+      "sql": "SELECT * FROM users JOIN orders |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "AS",
+          "ON",
+          "USING"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "JOIN_004",
+      "title": "JOIN includes CTE names",
+      "sql": "WITH au AS (SELECT id FROM users) SELECT * FROM users u JOIN |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "au",
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

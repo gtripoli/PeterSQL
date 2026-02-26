@@ -1,0 +1,85 @@
+{
+  "group": "FROM_CLAUSE_PRIORITIZATION",
+  "cases": [
+    {
+      "case_id": "FROM_PRIO_001",
+      "title": "FROM clause without prefix: prioritize tables referenced in SELECT",
+      "sql": "SELECT users.id FROM ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "users is referenced in SELECT (qualified column), should be prioritized first even without prefix",
+        "suggestions": [
+          "users",
+          "customers",
+          "orders",
+          "payments",
+          "products"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_PRIO_002",
+      "title": "FROM clause with prefix: prioritize referenced table",
+      "sql": "SELECT users.name FROM u",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "u",
+        "comment": "users matches prefix 'u' and is referenced in SELECT",
+        "suggestions": [
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_PRIO_003",
+      "title": "FROM clause: multiple tables referenced in SELECT",
+      "sql": "SELECT users.id, orders.total FROM ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "Both orders and users are referenced in SELECT, so they appear first (in order of reference), followed by other tables alphabetically",
+        "suggestions": [
+          "orders",
+          "users",
+          "customers",
+          "payments",
+          "products"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_PRIO_004",
+      "title": "FROM clause: no qualified columns in SELECT",
+      "sql": "SELECT * FROM ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "No tables referenced in SELECT, so all tables in alphabetical order",
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ]
+      }
+    }
+  ]
+}

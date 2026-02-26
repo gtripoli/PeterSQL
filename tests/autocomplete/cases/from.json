@@ -1,0 +1,180 @@
+{
+  "group": "FROM",
+  "cases": [
+    {
+      "case_id": "FROM_001",
+      "title": "FROM without prefix suggests tables",
+      "sql": "SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_002",
+      "title": "FROM with prefix filters tables",
+      "sql": "SELECT * FROM u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "u",
+        "suggestions": [
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_003",
+      "title": "FROM after comma suggests more tables",
+      "sql": "SELECT * FROM users, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_004",
+      "title": "FROM after table + space suggests JOIN/AS/WHERE etc",
+      "sql": "SELECT * FROM users |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "AS",
+          "WHERE",
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_005",
+      "title": "FROM includes CTE names defined in same statement",
+      "sql": "WITH active_users AS (SELECT id, name FROM users) SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_006",
+      "title": "CTE not visible across statements",
+      "sql": "WITH a AS (SELECT 1) SELECT * FROM a; SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_007",
+      "title": "After AS with space, no suggestions (user typing alias)",
+      "sql": "SELECT * FROM users AS |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "After AS keyword, user is typing an alias name, so no suggestions should be shown",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "FROM_008",
+      "title": "After AS with partial alias, no suggestions",
+      "sql": "SELECT * FROM users AS u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "u",
+        "comment": "User is typing alias name after AS, so no suggestions should interfere",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "FROM_009",
+      "title": "After complete alias with space, suggest clause keywords (no AS since alias exists)",
+      "sql": "SELECT * FROM users AS u |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "After complete alias definition, suggest next clause keywords. AS is excluded since alias already exists.",
+        "suggestions": [
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "WHERE",
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
+        ]
+      }
+    }
+  ]
+}

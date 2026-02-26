@@ -5,8 +5,8 @@ import pytest
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration, SourceConfiguration
 
-from windows.connections import ConnectionDirectory
-from windows.connections.repository import ConnectionsRepository
+from windows.dialogs.connections import ConnectionDirectory
+from windows.dialogs.connections.repository import ConnectionsRepository
 
 
 class TestConnectionsRepository:

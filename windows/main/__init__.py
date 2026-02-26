@@ -1,24 +1,35 @@
-from helpers.observables import Observable, ObservableList
+from windows.state import (
+    AUTO_APPLY,
+    CURRENT_COLUMN,
+    CURRENT_CONNECTION,
+    CURRENT_DATABASE,
+    CURRENT_EVENT,
+    CURRENT_FOREIGN_KEY,
+    CURRENT_FUNCTION,
+    CURRENT_INDEX,
+    CURRENT_PROCEDURE,
+    CURRENT_RECORDS,
+    CURRENT_SESSION,
+    CURRENT_TABLE,
+    CURRENT_TRIGGER,
+    CURRENT_VIEW,
+    SESSIONS_LIST,
+)
 
-from structures.session import Session
-from structures.connection import Connection
-from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLForeignKey, SQLIndex, SQLRecord, SQLTrigger, SQLView
-
-SESSIONS_LIST: ObservableList[Session] = ObservableList()
-# CONNECTIONS_LIST: ObservableList[Connection] = ObservableList()
-
-CURRENT_SESSION: Observable[Session] = Observable()
-CURRENT_CONNECTION: Observable[Connection] = Observable()
-CURRENT_DATABASE: Observable[SQLDatabase] = Observable()
-CURRENT_TABLE: Observable[SQLTable] = Observable()
-CURRENT_VIEW: Observable[SQLView] = Observable()
-CURRENT_TRIGGER: Observable[SQLTrigger] = Observable()
-CURRENT_FUNCTION: Observable[SQLTrigger] = Observable()
-CURRENT_PROCEDURE: Observable[SQLTrigger] = Observable()
-CURRENT_EVENT: Observable[SQLTrigger] = Observable()
-CURRENT_COLUMN: Observable[SQLColumn] = Observable()
-CURRENT_INDEX: Observable[SQLIndex] = Observable()
-CURRENT_FOREIGN_KEY: Observable[SQLForeignKey] = Observable()
-CURRENT_RECORDS: ObservableList[SQLRecord] = ObservableList()
-
-AUTO_APPLY: Observable[bool] = Observable(True)
+__all__ = [
+    "AUTO_APPLY",
+    "CURRENT_COLUMN",
+    "CURRENT_CONNECTION",
+    "CURRENT_DATABASE",
+    "CURRENT_EVENT",
+    "CURRENT_FOREIGN_KEY",
+    "CURRENT_FUNCTION",
+    "CURRENT_INDEX",
+    "CURRENT_PROCEDURE",
+    "CURRENT_RECORDS",
+    "CURRENT_SESSION",
+    "CURRENT_TABLE",
+    "CURRENT_TRIGGER",
+    "CURRENT_VIEW",
+    "SESSIONS_LIST",
+]

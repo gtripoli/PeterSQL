@@ -1,0 +1,81 @@
+{
+  "vocab": {
+    "primary_keywords": [
+      "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER",
+      "TRUNCATE", "SHOW", "DESCRIBE", "EXPLAIN", "WITH", "REPLACE", "MERGE"
+    ],
+    "keywords_all": [
+      "ALTER", "AND", "AS", "ASC", "BETWEEN", "CREATE", "CROSS JOIN",
+      "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "DELETE", "DESC",
+      "DESCRIBE", "DROP", "EXISTS", "EXPLAIN", "FALSE", "FROM", "FULL JOIN",
+      "GROUP BY", "HAVING", "IN", "INNER JOIN", "INSERT", "IS NOT NULL",
+      "IS NULL", "JOIN", "LEFT JOIN", "LIKE", "LIMIT", "MERGE", "NOT", "NULL",
+      "NULLS FIRST", "NULLS LAST", "OFFSET", "ON", "OR", "ORDER BY", "REPLACE",
+      "RIGHT JOIN", "SELECT", "SHOW", "TRUE", "TRUNCATE", "UPDATE", "USING",
+      "WHERE", "WITH"
+    ],
+    "functions_all": [
+      "AVG", "COALESCE", "CONCAT", "COUNT", "DATE", "GROUP_CONCAT", "LENGTH",
+      "LOWER", "MAX", "MIN", "MONTH", "NOW", "NULLIF", "ROW_NUMBER", "SUBSTR",
+      "SUM", "TRIM", "UNIX_TIMESTAMP", "UPPER", "UUID", "YEAR"
+    ],
+    "aggregate_functions": [
+      "AVG", "COUNT", "GROUP_CONCAT", "MAX", "MIN", "SUM"
+    ]
+  },
+  "schema_small": {
+    "tables": [
+      {
+        "name": "users",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "email", "type": "VARCHAR"},
+          {"name": "status", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "orders",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "user_id", "type": "INTEGER"},
+          {"name": "total", "type": "DECIMAL"},
+          {"name": "status", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "products",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "price", "type": "DECIMAL"},
+          {"name": "unit_price", "type": "DECIMAL"},
+          {"name": "stock", "type": "INTEGER"}
+        ]
+      },
+      {
+        "name": "customers",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "email", "type": "VARCHAR"}
+        ]
+      },
+      {
+        "name": "payments",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "order_id", "type": "INTEGER"},
+          {"name": "amount", "type": "DECIMAL"},
+          {"name": "method", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ]
+      }
+    ]
+  },
+  "schema_big": {
+    "tables": []
+  }
+}

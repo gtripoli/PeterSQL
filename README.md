@@ -12,11 +12,15 @@
   <img src="petersql_large.png" alt="PeterSQL"/>
 </p>
 
-> Heidi's (silly?) friend — a wxPython-based reinterpretation of HeidiSQL
+> Inspired by HeidiSQL — reimagined in pure Python.
 
 **PeterSQL** is a graphical client for database management, inspired by the
 excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python**
-using **wxPython**, with a focus on portability and native look & feel.
+using **wxPython**, with a focus on portability, extensibility, and native look & feel.
+
+PeterSQL is **not a clone and not a port** of HeidiSQL.
+It shares the same spirit — clarity, speed, practicality — but follows its own
+path as a Python-native project.
 
 ---
 
@@ -31,24 +35,42 @@ Use at your own risk and **do not rely on this project in production environment
 
 ## 🧭 Why PeterSQL?
 
-Over the years, I have used **HeidiSQL** as my primary tool for working with
+For years, I have used **HeidiSQL** as my primary tool for working with
 MySQL, MariaDB, SQLite, and other databases.
-It is a tool I deeply appreciate: **streamlined**, **intuitive**, and
-**powerful**.
+It is streamlined, intuitive, and powerful.
 
-Rather than trying to compete with HeidiSQL, PeterSQL started as a personal
-challenge: to recreate the same *spirit* in a **pure Python** application.
+PeterSQL started as a personal challenge:
+to recreate that same *spirit* in a **pure Python** application.
 
-PeterSQL is not a 1:1 port.
-It is a Python-first reinterpretation, built with different goals in mind.
+But PeterSQL is not meant to be a 1:1 replacement.
+
+Where HeidiSQL is Delphi-based and Windows-centric,
+PeterSQL is:
 
 - 🐍 **Written entirely in Python**
-- 🧩 **Built entirely in Python to enable easy modification and extension**
-- 🎯 **Focused on simplicity and clarity**, inspired by HeidiSQL
+- 🧩 **Easily modifiable and extensible**
+- 🌍 **Cross-platform**
+- 🎯 **Focused on clarity and simplicity**
 - 🆓 **Free and open source**
 
-PeterSQL exists for developers who love HeidiSQL’s approach, but want a tool
-that feels native to the Python ecosystem.
+PeterSQL aims to feel natural for developers who live in the Python ecosystem
+and appreciate lightweight, practical tools.
+
+---
+
+## 🔭 Vision
+
+PeterSQL is evolving beyond a simple SQL client.
+
+Planned directions include:
+
+- 🧠 Smarter, scope-aware SQL autocomplete
+- 📊 Visual schema / diagram viewer (inspired by tools like MySQL Workbench)
+- 🔌 Extensible architecture for future tooling
+- 🐍 Better integration with Python-based workflows
+
+The goal is not to replicate existing tools,
+but to build a Python-native SQL workbench with its own identity.
 
 ---
 
@@ -56,7 +78,21 @@ that feels native to the Python ecosystem.
 
 - [Python 3.14+](https://www.python.org/)
 - [wxPython 4.2.5](https://wxpython.org/) - native cross-platform interface
-- [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
+- [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - UI construction
+
+---
+
+## 🌍 Available Languages
+
+PeterSQL supports the following languages:
+
+- 🇺🇸 **English** (en_US)
+- 🇮🇹 **Italiano** (it_IT)
+- 🇫🇷 **Français** (fr_FR)
+- 🇪🇸 **Español** (es_ES)
+- 🇩🇪 **Deutsch** (de_DE)
+
+You can change the language in the application settings (Settings → General → Language).
 
 ---
 
@@ -75,51 +111,3 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
    ```bash
    git clone https://github.com/gtripoli/petersql.git
    cd petersql
-   ```
-
-2. Install dependencies (including dev tools for testing):
-   ```bash
-   uv sync
-   ```
-
-3. Run the application:
-   ```bash
-   uv run main.py
-   ```
-
-### Development
-
-```bash
-uv sync --extra dev
-```
-
-To run tests:
-
-```bash
-uv run pytest
-```
-
-### Troubleshooting installation
-
-#### wxPython
-
-If `uv sync` fails because no compatible wxPython wheel is available for your platform/Python version, reinstall it from source with:
-This forces a source build and usually unblocks the setup.
-
-```bash
-uv pip install -U --reinstall wxPython==4.2.4 --no-binary wxPython
-```
-
-###### Once the build finishes, rerun `uv sync` so the refreshed environment picks up the manually installed wxPython.
-
-## 📸 Screenshot
-
-<p align="center">
-  <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
-  <img src="screenshot/main_frame_columns.png" alt="Main Frame - Columns" height="200"/>
-  <img src="screenshot/main_frame_datatypes.png" alt="Main Frame - Datatypes" height="200"/>
-  <img src="screenshot/main_frame_default.png" alt="Main Frame - Default" height="200"/>
-  <img src="screenshot/main_frame_indexes.png" alt="Main Frame - Indexes" height="200"/>
-  <img src="screenshot/main_frame_foreign_keys.png" alt="Main Frame - Foreign Keys" height="200"/>
-  <img src="screenshot/main_frame_foreign_keys_columns.png" alt="Main Frame - Foreign Keys Columns" height="200"/>
-</p>

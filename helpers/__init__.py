@@ -1,11 +1,13 @@
 import enum
+import os
+import sys
 
 from typing import Callable
+from pathlib import Path
 from gettext import pgettext
 
-import babel.numbers
-
 import wx
+import babel.numbers
 
 from helpers.observables import Observable
 
@@ -18,7 +20,11 @@ class SizeUnit(enum.Enum):
     TERABYTE = pgettext("unit", "TB")
 
 
-def wx_colour_to_hex(colour: wx.Colour):
+def wx_colour_to_hex(colour):
+    if isinstance(colour, str):
+        if colour.startswith('#'):
+            return colour
+        return f"#{colour}"
     return f"#{colour.Red():02x}{colour.Green():02x}{colour.Blue():02x}"
 
 
@@ -57,3 +63,32 @@ def wx_call_after_debounce(*observables: Observable, callback: Callable, wait_ti
     for obs in observables:
         setattr(obs, '_debounce_callback', _debounced)
         obs.subscribe(_debounced)
+
+
+def get_base_path(base_path: Path) -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+
+    return base_path
+
+
+def get_resource_path(base_path: Path, *paths: str) -> Path:
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS).joinpath(*paths)
+
+    return get_base_path(base_path).joinpath(*paths)
+
+
+def get_config_dir() -> Path:
+    base: str = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+    return Path(base) / "petersql"
+
+
+def get_data_dir() -> Path:
+    base: str = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+    return Path(base) / "petersql"
+
+
+def get_cache_dir() -> Path:
+    base: str = os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))
+    return Path(base) / "petersql"

@@ -20,6 +20,7 @@ class ConnectionEngine(enum.Enum):
     MARIADB = Engine("MariaDB", "mysql", IconList.MARIADB)
     MYSQL = Engine("MySQL", "mysql", IconList.MYSQL)
     POSTGRESQL = Engine("PostgreSQL", "postgres", IconList.POSTGRESQL)
+    ORACLE = Engine("Oracle", "oracle", IconList.ORACLE)
 
     @classmethod
     def get_all(cls) -> list["ConnectionEngine"]:

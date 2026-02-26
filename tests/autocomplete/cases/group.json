@@ -1,0 +1,105 @@
+{
+  "group": "GROUP",
+  "cases": [
+    {
+      "case_id": "GROUP_001",
+      "title": "GROUP BY without prefix suggests columns + functions",
+      "sql": "SELECT COUNT(*) FROM users GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_002",
+      "title": "GROUP BY with prefix filters columns/functions",
+      "sql": "SELECT COUNT(*) FROM users GROUP BY s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "suggestions": [
+          "users.status",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_003",
+      "title": "GROUP BY after comma suggests more group keys",
+      "sql": "SELECT COUNT(*) FROM users GROUP BY status, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    }
+  ]
+}

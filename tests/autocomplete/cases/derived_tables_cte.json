@@ -1,0 +1,211 @@
+{
+  "group": "DERIVED_TABLES_CTE",
+  "cases": [
+    {
+      "case_id": "DERIVED_001",
+      "title": "Derived table columns resolved from subquery alias",
+      "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "Scope=[derived table 'o' with columns id, total]. Only derived columns available.",
+        "suggestions": [
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "DERIVED_002",
+      "title": "Derived table with JOIN - both scopes available",
+      "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o JOIN users u ON o.id = u.id WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "Scope=[derived 'o', users 'u']. Both scopes available.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "CTE_001",
+      "title": "CTE columns available and qualified by CTE name",
+      "sql": "WITH active_users AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM active_users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "Scope=[CTE 'active_users' with columns id, name]. Only CTE columns available.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "CTE_002",
+      "title": "CTE not visible in next statement",
+      "sql": "WITH active_users AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM active_users; SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "Second statement. CTE from first statement not visible. Only physical tables.",
+        "suggestions": [
+          "customers",
+          "orders",
+          "payments",
+          "products",
+          "users"
+        ]
+      }
+    },
+    {
+      "case_id": "CTE_003",
+      "title": "CTE with physical table JOIN",
+      "sql": "WITH au AS (SELECT id, name FROM users) SELECT * FROM au JOIN orders o ON au.id = o.user_id WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "Scope=[CTE 'au', physical table 'orders' as 'o']. Both scopes available.",
+        "suggestions": [
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "CTE_004",
+      "title": "CTE suggested in FROM_CLAUSE",
+      "sql": "WITH active_users AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "CTE 'active_users' available as table candidate.",
+        "suggestions": [
+          "active_users",
+          "customers",
+          "orders",
+          "products",
+          "users"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

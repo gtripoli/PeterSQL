@@ -1,0 +1,23 @@
+{
+  "group": "FUT",
+  "cases": [
+    {
+      "case_id": "FUT_001",
+      "title": "Window function OVER context (future enhancement marker)",
+      "sql": "SELECT *, ROW_NUMBER() OVER | FROM users",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WINDOW_OVER",
+        "prefix": null,
+        "suggestions": [
+          "ORDER BY",
+          "PARTITION BY"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "group": "ALIAS",
+  "cases": [
+    {
+      "case_id": "ALIAS_001",
+      "title": "Alias disambiguation does NOT trigger when prefix startswith alias but not equal",
+      "sql": "SELECT * FROM users u WHERE us|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "us",
+        "alias_exact_match": null,
+        "comment": "Table-name expansion: users.* in schema order. WHERE is scope-restricted, so only users table columns.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_002",
+      "title": "Prefix 'user' should not trigger alias 'u'",
+      "sql": "SELECT * FROM users u WHERE user|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "user",
+        "alias_exact_match": null,
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at"
+        ]
+      }
+    }
+  ]
+}

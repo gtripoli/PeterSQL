@@ -25,6 +25,7 @@ class PostgreSQLContext(AbstractContext):
     INDEXTYPE = PostgreSQLIndexType
 
     IDENTIFIER_QUOTE = '"'
+    DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -151,11 +152,11 @@ class PostgreSQLContext(AbstractContext):
         self._connection = None
         self._current_database = None
 
-    def _set_database(self, db_name: str) -> None:
+    def set_database(self, database: SQLDatabase) -> None:
         """Switch to a different database by reconnecting."""
-        if self._current_database != db_name:
+        if self._current_database != database.name:
             self.disconnect()
-            self.connect(database=db_name)
+            self.connect(database=database.name)
 
     def get_server_version(self) -> str:
         self.execute("SELECT version() as version")
@@ -188,7 +189,7 @@ class PostgreSQLContext(AbstractContext):
         return results
 
     def get_views(self, database: SQLDatabase) -> list[PostgreSQLView]:
-        self._set_database(database.name)
+        self.set_database(database)
         results = []
         self.execute(f"SELECT schemaname, viewname, definition FROM pg_views WHERE schemaname NOT IN ('information_schema', 'pg_catalog') ORDER BY schemaname, viewname")
         for i, result in enumerate(self.fetchall()):
@@ -202,7 +203,7 @@ class PostgreSQLContext(AbstractContext):
         return results
 
     def get_triggers(self, database: SQLDatabase) -> list[PostgreSQLTrigger]:
-        self._set_database(database.name)
+        self.set_database(database)
         results = []
         self.execute(f"SELECT n.nspname as schemaname, tgname, pg_get_triggerdef(t.oid) as sql FROM pg_trigger t JOIN pg_class c ON t.tgrelid = c.oid JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname NOT IN ('information_schema', 'pg_catalog') ORDER BY n.nspname, tgname")
         for i, result in enumerate(self.fetchall()):
@@ -216,7 +217,7 @@ class PostgreSQLContext(AbstractContext):
         return results
 
     def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
-        self._set_database(database.name)
+        self.set_database(database)
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
@@ -347,7 +348,7 @@ class PostgreSQLContext(AbstractContext):
         if table is None or table.is_new:
             return []
 
-        self._set_database(table.database.name)
+        self.set_database(table.database)
 
         logger.debug(f"get_foreign_keys for table={table.name}")
 

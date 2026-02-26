@@ -1,0 +1,199 @@
+{
+  "group": "ALIAS_PREFIX_DISAMBIGUATION",
+  "cases": [
+    {
+      "case_id": "ALIAS_DISAMBIG_001",
+      "title": "Exact alias match activates alias-prefix mode",
+      "sql": "SELECT * FROM users u WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "Prefix 'u' exactly matches alias 'u'. Alias-prefix mode activated in schema order.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_002",
+      "title": "Startswith does NOT activate alias-prefix mode",
+      "sql": "SELECT * FROM users u WHERE us|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "us",
+        "comment": "Prefix 'us' starts with alias 'u' but not exact match. Generic prefix matching. Scope-restricted: only users table in schema order.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_003",
+      "title": "Alias-prefix mode with CURRENT_TABLE - alias takes precedence",
+      "sql": "SELECT * FROM users u WHERE u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "Alias-exact-match overrides CURRENT_TABLE priority. Alias 'u' columns shown in schema order.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_004",
+      "title": "Deduplication - no users.id when u.id shown",
+      "sql": "SELECT * FROM users u WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "Alias-prefix mode. Only u.* columns in schema order, no users.* duplicates.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_005",
+      "title": "Alias-prefix mode in SELECT_LIST",
+      "sql": "SELECT u| FROM users u",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "SELECT_LIST with alias-exact-match. Only alias columns + functions in schema order.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_006",
+      "title": "Alias-prefix mode in JOIN_ON",
+      "sql": "SELECT * FROM users u JOIN orders o ON u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "JOIN_ON with alias-exact-match. Only alias 'u' columns in schema order.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_007",
+      "title": "KILLER: Alias exact-match with multi-scope - only alias columns, zero duplicates",
+      "sql": "SELECT * FROM users u JOIN orders o ON u.id = o.user_id WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "KILLER: Multi-scope [users as u, orders as o]. Alias-exact-match for 'u'. Only u.* columns in schema order, NO users.* duplicates.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_008",
+      "title": "KILLER: Startswith does NOT activate alias-mode - generic prefix matching",
+      "sql": "SELECT * FROM users u WHERE us|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "us",
+        "comment": "KILLER: Prefix 'us' does NOT match alias 'u' exactly. Generic prefix mode. Scope-restricted: only users table in schema order.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at"
+        ]
+      }
+    }
+  ]
+}

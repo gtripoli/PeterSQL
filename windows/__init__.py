@@ -665,7 +665,7 @@ class AdvancedCellEditorDialog ( wx.Dialog ):
 class MainFrameView ( wx.Frame ):
 
     def __init__( self, parent ):
-        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"PeterSQL"), pos = wx.DefaultPosition, size = wx.Size( 1024,762 ), style = wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE_BOX|wx.TAB_TRAVERSAL )
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"PeterSQL"), pos = wx.DefaultPosition, size = wx.Size( 1280,1024 ), style = wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE_BOX|wx.TAB_TRAVERSAL )
 
         self.SetSizeHints( wx.Size( 800,600 ), wx.DefaultSize )
 
@@ -1258,41 +1258,128 @@ class MainFrameView ( wx.Frame ):
         self.m_panel34 = wx.Panel( self.m_notebook7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer85 = wx.BoxSizer( wx.VERTICAL )
 
-        bSizer86 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer89 = wx.BoxSizer( wx.HORIZONTAL )
-
         bSizer87 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText40 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText40.Wrap( -1 )
 
+        self.m_staticText40.SetMinSize( wx.Size( 150,-1 ) )
+
         bSizer87.Add( self.m_staticText40, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.m_textCtrl22 = wx.TextCtrl( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer87.Add( self.m_textCtrl22, 1, wx.ALL|wx.EXPAND, 5 )
+        self.txt_view_name = wx.TextCtrl( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer87.Add( self.txt_view_name, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-        bSizer89.Add( bSizer87, 1, wx.EXPAND, 5 )
+        bSizer85.Add( bSizer87, 0, wx.ALL|wx.EXPAND, 5 )
 
-        bSizer871 = wx.BoxSizer( wx.HORIZONTAL )
+        bSizer89 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText401 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Temporary"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText401.Wrap( -1 )
+        bSizer116 = wx.BoxSizer( wx.VERTICAL )
 
-        bSizer871.Add( self.m_staticText401, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        bSizer87211 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_checkBox5 = wx.CheckBox( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer871.Add( self.m_checkBox5, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        self.m_staticText40211 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Schema"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText40211.Wrap( -1 )
+
+        self.m_staticText40211.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer87211.Add( self.m_staticText40211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cho_view_schemaChoices = []
+        self.cho_view_schema = wx.Choice( self.m_panel34, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_schemaChoices, 0 )
+        self.cho_view_schema.SetSelection( 0 )
+        bSizer87211.Add( self.cho_view_schema, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-        bSizer89.Add( bSizer871, 1, wx.EXPAND, 5 )
+        bSizer116.Add( bSizer87211, 0, wx.ALL|wx.EXPAND, 5 )
+
+        bSizer872 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText402 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText402.Wrap( -1 )
+
+        self.m_staticText402.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer872.Add( self.m_staticText402, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cmb_view_definerChoices = []
+        self.cmb_view_definer = wx.ComboBox( self.m_panel34, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, cmb_view_definerChoices, 0 )
+        bSizer872.Add( self.cmb_view_definer, 1, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND, 5 )
 
 
-        bSizer86.Add( bSizer89, 0, wx.EXPAND, 5 )
+        bSizer116.Add( bSizer872, 0, wx.ALL|wx.EXPAND, 5 )
 
 
-        bSizer85.Add( bSizer86, 1, wx.EXPAND, 5 )
+        bSizer89.Add( bSizer116, 1, wx.EXPAND, 5 )
+
+        bSizer8711 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer8721 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText4021 = wx.StaticText( self.m_panel34, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText4021.Wrap( -1 )
+
+        self.m_staticText4021.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer8721.Add( self.m_staticText4021, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cho_view_sql_securityChoices = [ _(u"DEFINER"), _(u"INVOKER") ]
+        self.cho_view_sql_security = wx.Choice( self.m_panel34, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_sql_securityChoices, 0 )
+        self.cho_view_sql_security.SetSelection( 0 )
+        bSizer8721.Add( self.cho_view_sql_security, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer8711.Add( bSizer8721, 0, wx.ALL|wx.EXPAND, 5 )
+
+        sbSizer1 = wx.StaticBoxSizer( wx.VERTICAL, self.m_panel34, _(u"Algorithm") )
+
+        self.rad_view_algorithm_undefined = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        sbSizer1.Add( self.rad_view_algorithm_undefined, 0, wx.ALL, 5 )
+
+        self.rad_view_algorithm_merge = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer1.Add( self.rad_view_algorithm_merge, 0, wx.ALL, 5 )
+
+        self.rad_view_algorithm_temptable = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer1.Add( self.rad_view_algorithm_temptable, 0, wx.ALL, 5 )
+
+        self.m_radioBtn10 = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"RadioBtn"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer1.Add( self.m_radioBtn10, 0, wx.ALL, 5 )
+
+
+        bSizer8711.Add( sbSizer1, 0, wx.EXPAND, 5 )
+
+        sbSizer11 = wx.StaticBoxSizer( wx.VERTICAL, self.m_panel34, _(u"View constraint") )
+
+        self.rad_view_constraint_none = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"None"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        sbSizer11.Add( self.rad_view_constraint_none, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_local = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"LOCAL"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer11.Add( self.rad_view_constraint_local, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_cascaded = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"CASCADE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer11.Add( self.rad_view_constraint_cascaded, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_check_only = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"CHECK ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer11.Add( self.rad_view_constraint_check_only, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_read_only = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"READ ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        sbSizer11.Add( self.rad_view_constraint_read_only, 0, wx.ALL, 5 )
+
+
+        bSizer8711.Add( sbSizer11, 0, wx.EXPAND, 5 )
+
+        self.chk_view_security_barrier = wx.CheckBox( self.m_panel34, wx.ID_ANY, _(u"Security barrier"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer8711.Add( self.chk_view_security_barrier, 0, wx.ALL, 5 )
+
+        self.chk_view_force = wx.CheckBox( self.m_panel34, wx.ID_ANY, _(u"Force"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer8711.Add( self.chk_view_force, 0, wx.ALL, 5 )
+
+
+        bSizer89.Add( bSizer8711, 1, wx.EXPAND, 5 )
+
+
+        bSizer85.Add( bSizer89, 0, wx.EXPAND, 5 )
 
 
         self.m_panel34.SetSizer( bSizer85 )
@@ -1302,38 +1389,38 @@ class MainFrameView ( wx.Frame ):
 
         bSizer84.Add( self.m_notebook7, 1, wx.EXPAND | wx.ALL, 5 )
 
-        self.sql_view = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
-        self.sql_view.SetUseTabs ( True )
-        self.sql_view.SetTabWidth ( 4 )
-        self.sql_view.SetIndent ( 4 )
-        self.sql_view.SetTabIndents( True )
-        self.sql_view.SetBackSpaceUnIndents( True )
-        self.sql_view.SetViewEOL( False )
-        self.sql_view.SetViewWhiteSpace( False )
-        self.sql_view.SetMarginWidth( 2, 0 )
-        self.sql_view.SetIndentationGuides( True )
-        self.sql_view.SetReadOnly( False )
-        self.sql_view.SetMarginWidth( 1, 0 )
-        self.sql_view.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-        self.sql_view.SetMarginWidth( 0, self.sql_view.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
-        self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
-        self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
-        self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
-        self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
-        self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
-        self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
-        self.sql_view.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
-        self.sql_view.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
-        self.sql_view.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
-        self.sql_view.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
-        self.sql_view.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-        bSizer84.Add( self.sql_view, 1, wx.EXPAND | wx.ALL, 5 )
+        self.stc_view_select = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+        self.stc_view_select.SetUseTabs ( True )
+        self.stc_view_select.SetTabWidth ( 4 )
+        self.stc_view_select.SetIndent ( 4 )
+        self.stc_view_select.SetTabIndents( True )
+        self.stc_view_select.SetBackSpaceUnIndents( True )
+        self.stc_view_select.SetViewEOL( False )
+        self.stc_view_select.SetViewWhiteSpace( False )
+        self.stc_view_select.SetMarginWidth( 2, 0 )
+        self.stc_view_select.SetIndentationGuides( True )
+        self.stc_view_select.SetReadOnly( False )
+        self.stc_view_select.SetMarginWidth( 1, 0 )
+        self.stc_view_select.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.stc_view_select.SetMarginWidth( 0, self.stc_view_select.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.stc_view_select.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.stc_view_select.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.stc_view_select.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.stc_view_select.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.stc_view_select.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.stc_view_select.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.stc_view_select.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.stc_view_select.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.stc_view_select.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.stc_view_select.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        bSizer84.Add( self.stc_view_select, 1, wx.EXPAND | wx.ALL, 5 )
 
         bSizer91 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -1516,49 +1603,22 @@ class MainFrameView ( wx.Frame ):
             self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
             MainFrameNotebookIndex += 1
 
-        self.panel_query = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.panel_query.Enable( False )
+        self.QueryPanel = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.QueryPanel.Enable( False )
 
         bSizer26 = wx.BoxSizer( wx.VERTICAL )
 
-        self.sql_query = wx.stc.StyledTextCtrl( self.panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        self.sql_query.SetUseTabs ( True )
-        self.sql_query.SetTabWidth ( 4 )
-        self.sql_query.SetIndent ( 4 )
-        self.sql_query.SetTabIndents( True )
-        self.sql_query.SetBackSpaceUnIndents( True )
-        self.sql_query.SetViewEOL( False )
-        self.sql_query.SetViewWhiteSpace( False )
-        self.sql_query.SetMarginWidth( 2, 0 )
-        self.sql_query.SetIndentationGuides( True )
-        self.sql_query.SetReadOnly( False )
-        self.sql_query.SetMarginWidth( 1, 0 )
-        self.sql_query.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-        self.sql_query.SetMarginWidth( 0, self.sql_query.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
-        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
-        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
-        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
-        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
-        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
-        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
-        self.sql_query.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
-        self.sql_query.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
-        self.sql_query.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
-        self.sql_query.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
-        self.sql_query.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-        bSizer26.Add( self.sql_query, 1, wx.EXPAND | wx.ALL, 5 )
+        self.m_textCtrl10 = wx.TextCtrl( self.QueryPanel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
+        bSizer26.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_button12 = wx.Button( self.QueryPanel, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer26.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
 
-        self.panel_query.SetSizer( bSizer26 )
-        self.panel_query.Layout()
-        bSizer26.Fit( self.panel_query )
-        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), False )
+        self.QueryPanel.SetSizer( bSizer26 )
+        self.QueryPanel.Layout()
+        bSizer26.Fit( self.QueryPanel )
+        self.MainFrameNotebook.AddPage( self.QueryPanel, _(u"Query"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1652,7 +1712,7 @@ class MainFrameView ( wx.Frame ):
         self.LogSQLPanel.SetSizer( sizer_log_sql )
         self.LogSQLPanel.Layout()
         sizer_log_sql.Fit( self.LogSQLPanel )
-        self.m_splitter51.SplitHorizontally( self.m_panel22, self.LogSQLPanel, -150 )
+        self.m_splitter51.SplitHorizontally( self.m_panel22, self.LogSQLPanel, 432 )
         bSizer21.Add( self.m_splitter51, 1, wx.EXPAND, 5 )
 
 
@@ -1788,7 +1848,7 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def m_splitter51OnIdle( self, event ):
-        self.m_splitter51.SetSashPosition( -150 )
+        self.m_splitter51.SetSashPosition( 432 )
         self.m_splitter51.Unbind( wx.EVT_IDLE )
 
     def m_splitter4OnIdle( self, event ):
@@ -1835,6 +1895,53 @@ class Trash ( wx.Panel ):
         self.tree_ctrl_explorer____.AppendColumn( _(u"Column5"), wx.COL_WIDTH_DEFAULT, wx.ALIGN_LEFT, wx.COL_RESIZABLE )
 
         bSizer93.Add( self.tree_ctrl_explorer____, 1, wx.EXPAND | wx.ALL, 5 )
+
+        bSizer129 = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_radioBtn11 = wx.RadioButton( self, wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        bSizer129.Add( self.m_radioBtn11, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_radioBtn21 = wx.RadioButton( self, wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer129.Add( self.m_radioBtn21, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_radioBtn31 = wx.RadioButton( self, wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer129.Add( self.m_radioBtn31, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_staticText4011 = wx.StaticText( self, wx.ID_ANY, _(u"Algorithm"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText4011.Wrap( -1 )
+
+        bSizer129.Add( self.m_staticText4011, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        fgSizer1 = wx.FlexGridSizer( 3, 2, 0, 0 )
+        fgSizer1.SetFlexibleDirection( wx.BOTH )
+        fgSizer1.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_NONE )
+
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+
+        bSizer129.Add( fgSizer1, 1, wx.ALL|wx.EXPAND, 5 )
+
+        bSizer86 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer129.Add( bSizer86, 0, wx.EXPAND, 5 )
+
+        self.m_checkBox7 = wx.CheckBox( self, wx.ID_ANY, _(u"Read only"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer129.Add( self.m_checkBox7, 0, wx.ALL, 5 )
+
+        rad_view_algorithmChoices = [ _(u"UNDEFINED"), _(u"MERGE"), _(u"TEMPTABLE") ]
+        self.rad_view_algorithm = wx.RadioBox( self, wx.ID_ANY, _(u"Algorithm"), wx.DefaultPosition, wx.DefaultSize, rad_view_algorithmChoices, 1, wx.RA_SPECIFY_COLS )
+        self.rad_view_algorithm.SetSelection( 0 )
+        bSizer129.Add( self.rad_view_algorithm, 0, wx.ALL|wx.EXPAND, 5 )
+
+        rad_view_constraintChoices = [ _(u"None"), _(u"LOCAL"), _(u"CASCADED"), _(u"CHECK OPTION"), _(u"READ ONLY") ]
+        self.rad_view_constraint = wx.RadioBox( self, wx.ID_ANY, _(u"View constraint"), wx.DefaultPosition, wx.DefaultSize, rad_view_constraintChoices, 1, wx.RA_SPECIFY_COLS )
+        self.rad_view_constraint.SetSelection( 0 )
+        bSizer129.Add( self.rad_view_constraint, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        bSizer93.Add( bSizer129, 1, wx.EXPAND, 5 )
 
 
         bSizer90.Add( bSizer93, 1, wx.EXPAND, 5 )
@@ -1911,6 +2018,11 @@ class Trash ( wx.Panel ):
         bSizer52.Fit( self.panel_source )
         bSizer51.Add( self.panel_source, 0, wx.EXPAND | wx.ALL, 0 )
 
+        self.m_staticText2211 = wx.StaticText( self, wx.ID_ANY, _(u"Port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText2211.Wrap( -1 )
+
+        bSizer51.Add( self.m_staticText2211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
 
         bSizer90.Add( bSizer51, 0, wx.EXPAND, 0 )
 
@@ -1928,16 +2040,6 @@ class Trash ( wx.Panel ):
 
         self.ssh_tunnel_local_port = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer90.Add( self.ssh_tunnel_local_port, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        bSizer12211 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText2211 = wx.StaticText( self, wx.ID_ANY, _(u"Port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText2211.Wrap( -1 )
-
-        bSizer12211.Add( self.m_staticText2211, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-
-        bSizer90.Add( bSizer12211, 0, wx.EXPAND, 5 )
 
         self.tree_ctrl_sessions2 = wx.TreeCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TR_DEFAULT_STYLE )
         self.tree_ctrl_sessions2.Hide()
@@ -2013,11 +2115,77 @@ class Trash ( wx.Panel ):
         self.m_listBox1 = wx.ListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox1Choices, 0 )
         bSizer90.Add( self.m_listBox1, 0, wx.ALL, 5 )
 
-        self.m_textCtrl10 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
-        bSizer90.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+        bSizer871 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_button12 = wx.Button( self, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer90.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+        self.m_staticText401 = wx.StaticText( self, wx.ID_ANY, _(u"Temporary"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText401.Wrap( -1 )
+
+        bSizer871.Add( self.m_staticText401, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.m_checkBox5 = wx.CheckBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer871.Add( self.m_checkBox5, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer90.Add( bSizer871, 1, wx.EXPAND, 5 )
+
+        self.m_collapsiblePane3 = wx.CollapsiblePane( self, wx.ID_ANY, _(u"Engine options"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE )
+        self.m_collapsiblePane3.Collapse( False )
+
+        bSizer115 = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_panel41 = wx.Panel( self.m_collapsiblePane3.GetPane(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer115.Add( self.m_panel41, 1, wx.EXPAND | wx.ALL, 5 )
+
+        self.m_panel42 = wx.Panel( self.m_collapsiblePane3.GetPane(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer115.Add( self.m_panel42, 1, wx.EXPAND | wx.ALL, 5 )
+
+        self.m_panel43 = wx.Panel( self.m_collapsiblePane3.GetPane(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer115.Add( self.m_panel43, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_collapsiblePane3.GetPane().SetSizer( bSizer115 )
+        self.m_collapsiblePane3.GetPane().Layout()
+        bSizer115.Fit( self.m_collapsiblePane3.GetPane() )
+        bSizer90.Add( self.m_collapsiblePane3, 1, wx.EXPAND | wx.ALL, 5 )
+
+        self.m_textCtrl2211 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer90.Add( self.m_textCtrl2211, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_textCtrl2212 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer90.Add( self.m_textCtrl2212, 1, wx.ALL|wx.EXPAND, 5 )
+
+        m_comboBox11Choices = []
+        self.m_comboBox11 = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, m_comboBox11Choices, 0 )
+        bSizer90.Add( self.m_comboBox11, 1, wx.ALL|wx.EXPAND, 5 )
+
+        gSizer3 = wx.GridSizer( 0, 2, 0, 0 )
+
+        bSizer8712 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText4012 = wx.StaticText( self, wx.ID_ANY, _(u"Algorithm"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText4012.Wrap( -1 )
+
+        bSizer8712.Add( self.m_staticText4012, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.m_radioBtn1 = wx.RadioButton( self, wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        bSizer8712.Add( self.m_radioBtn1, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_radioBtn2 = wx.RadioButton( self, wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer8712.Add( self.m_radioBtn2, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_radioBtn3 = wx.RadioButton( self, wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer8712.Add( self.m_radioBtn3, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+        gSizer3.Add( bSizer8712, 1, wx.EXPAND, 5 )
+
+        bSizer12211 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        gSizer3.Add( bSizer12211, 0, wx.EXPAND, 5 )
+
+
+        bSizer90.Add( gSizer3, 1, wx.EXPAND, 5 )
 
 
         self.SetSizer( bSizer90 )

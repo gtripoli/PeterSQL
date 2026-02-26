@@ -22,12 +22,32 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="module")
 def mysql_container(mysql_version):
-    with MySqlContainer(mysql_version, name=f"petersql_test_{mysql_version.replace(':', '_')}",
+    container = MySqlContainer(mysql_version, name=f"petersql_test_{mysql_version.replace(':', '_')}",
                         mem_limit="768m",
                         memswap_limit="1g",
                         nano_cpus=1_000_000_000,
                         shm_size="256m",
-                        ) as container:
+                        )
+    # Expose SSH port
+    container.with_exposed_ports(22)
+    
+    with container:
+        # Install and configure SSH in the container
+        install_ssh_commands = [
+            "apt-get update",
+            "apt-get install -y openssh-server",
+            "mkdir -p /var/run/sshd",
+            "echo 'root:testpassword' | chpasswd",
+            "sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config",
+            "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+            "/usr/sbin/sshd",
+        ]
+        
+        for cmd in install_ssh_commands:
+            exit_code, output = container.exec(cmd)
+            if exit_code != 0 and "sshd" not in cmd:
+                raise RuntimeError(f"Failed to execute: {cmd}\nOutput: {output}")
+        
         yield container
 
 

@@ -3,8 +3,8 @@ import pytest
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration, SourceConfiguration
 
-from windows.connections.model import ConnectionModel
-from windows.connections import CURRENT_CONNECTION, PENDING_CONNECTION
+from windows.dialogs.connections.model import ConnectionModel
+from windows.dialogs.connections import CURRENT_CONNECTION, PENDING_CONNECTION
 
 
 class TestConnectionModel:

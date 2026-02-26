@@ -32,6 +32,7 @@ class AbstractContext(abc.ABC):
     COLLATIONS: dict[str, str] = {}
 
     IDENTIFIER_QUOTE: str = '"'
+    DEFAULT_STATEMENT_SEPARATOR: str = ";"
 
     databases: ObservableLazyList[SQLDatabase]
 
@@ -66,6 +67,10 @@ class AbstractContext(abc.ABC):
     @abc.abstractmethod
     def connect(self, **connect_kwargs) -> None:
         """Establish connection to the database using native driver"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_database(self, database: SQLDatabase) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod

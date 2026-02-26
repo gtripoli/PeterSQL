@@ -1,0 +1,59 @@
+{
+  "group": "CURR",
+  "cases": [
+    {
+      "case_id": "CURR_001",
+      "title": "CURRENT_TABLE columns prioritized over scope and database",
+      "sql": "SELECT u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "CURR_002",
+      "title": "CURRENT_TABLE uses alias when query defines alias",
+      "sql": "SELECT * FROM users u WHERE id = 1; SELECT u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "group": "DOT",
+  "cases": [
+    {
+      "case_id": "DOT_001",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT users.|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_002",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT users.i|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "i",
+        "suggestions": [
+          "id"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "DOT_003",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT * FROM users u WHERE u.|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_004",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT * FROM users u WHERE u.i|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "i",
+        "suggestions": [
+          "id"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "DOT_005",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT * FROM orders o ON o.|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "DOT_006",
+      "title": "Dot-completion returns unqualified column names and ignores broader context",
+      "sql": "SELECT * FROM users u ORDER BY u.c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "c",
+        "suggestions": [
+          "created_at"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

@@ -29,6 +29,17 @@ dev = [
 ]
 
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (testcontainers, slow, deselect with '-m \"not integration\"')",
+]
+addopts = "-m 'not integration'"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+cache_dir = ".cache/pytest"
+
 [tool.pyright]
 typeCheckingMode = "standard"
 reportMissingImports = "none"

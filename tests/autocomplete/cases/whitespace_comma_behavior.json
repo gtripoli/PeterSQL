@@ -1,0 +1,209 @@
+{
+  "group": "WHITESPACE_COMMA_BEHAVIOR",
+  "cases": [
+    {
+      "case_id": "WS_COMMA_001",
+      "title": "After column + space suggests clause keywords only",
+      "sql": "SELECT id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_COLUMN",
+        "context": "SELECT_LIST_AFTER_COLUMN",
+        "prefix": null,
+        "comment": "Whitespace after column = selection complete. Only clause keywords.",
+        "suggestions": [
+          "AS",
+          "FROM",
+          "GROUP BY",
+          "HAVING",
+          "LIMIT",
+          "ORDER BY",
+          "WHERE"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "WS_COMMA_002",
+      "title": "After column + comma suggests next-item (columns + functions)",
+      "sql": "SELECT id, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Comma = next-item rules. No scope, so functions + clause keywords.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.id",
+          "orders.user_id",
+          "orders.total",
+          "orders.status",
+          "orders.created_at",
+          "products.id",
+          "products.name",
+          "products.price",
+          "products.unit_price",
+          "products.stock",
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "payments.id",
+          "payments.order_id",
+          "payments.amount",
+          "payments.method",
+          "payments.created_at",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR",
+          "FROM",
+          "WHERE",
+          "LIMIT",
+          "ORDER BY",
+          "GROUP BY"
+        ]
+      }
+    },
+    {
+      "case_id": "WS_COMMA_003",
+      "title": "ORDER BY after column + space suggests ASC/DESC only",
+      "sql": "SELECT * FROM users ORDER BY created_at |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_COLUMN",
+        "context": "ORDER_BY_AFTER_COLUMN",
+        "prefix": null,
+        "comment": "Whitespace after column in ORDER BY = selection complete. Only sorting keywords.",
+        "suggestions": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "WS_COMMA_004",
+      "title": "ORDER BY after comma suggests columns again",
+      "sql": "SELECT * FROM users ORDER BY created_at, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY",
+        "prefix": null,
+        "comment": "Comma = next-item rules. Scope columns + functions.",
+        "suggestions": [
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "users.created_at",
+          "users.email",
+          "users.id",
+          "users.name",
+          "users.status",
+          "UUID",
+          "YEAR"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "WS_COMMA_005",
+      "title": "Comma never appears as suggestion",
+      "sql": "SELECT id|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "id",
+        "comment": "Comma never suggested. Only matching items.",
+        "suggestions_contains": [
+          "FROM"
+        ],
+        "suggestions_not_contains": [
+          ","
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "WS_COMMA_006",
+      "title": "WHERE after expression + space suggests logical keywords",
+      "sql": "SELECT * FROM users WHERE id = 1 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_EXPRESSION",
+        "context": "WHERE_AFTER_EXPRESSION",
+        "prefix": null,
+        "comment": "Whitespace after expression = selection complete. Logical operators + clause keywords.",
+        "suggestions": [
+          "AND",
+          "BETWEEN",
+          "EXISTS",
+          "GROUP BY",
+          "HAVING",
+          "IN",
+          "IS NOT NULL",
+          "IS NULL",
+          "LIKE",
+          "LIMIT",
+          "NOT",
+          "OR",
+          "ORDER BY"
+        ],
+        "xfail": true
+      }
+    }
+  ]
+}

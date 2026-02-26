@@ -32,6 +32,7 @@ class SQLiteContext(AbstractContext):
     INDEXTYPE = SQLiteIndexType()
 
     IDENTIFIER_QUOTE = '"'
+    DEFAULT_STATEMENT_SEPARATOR = ";"
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
 
@@ -65,6 +66,9 @@ class SQLiteContext(AbstractContext):
                 self._connection.row_factory = sqlite3.Row
                 self._cursor = self._connection.cursor()
                 self._on_connect()
+
+    def set_database(self, database: SQLDatabase) -> None:
+        pass
 
     def get_server_version(self) -> str:
         self.execute("SELECT sqlite_version()")

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, call
 
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable, SQLiteIndex
-from windows.main.index import TableIndexController
+from windows.main.tabs.index import TableIndexController
 
 
 @pytest.fixture
@@ -24,9 +24,9 @@ def mock_table(sqlite_session):
 
 
 @patch('wx.GetApp')
-@patch('windows.main.index.CURRENT_TABLE')
-@patch('windows.main.index.CURRENT_INDEX')
-@patch('windows.main.index.NEW_TABLE')
+@patch('windows.main.tabs.index.CURRENT_TABLE')
+@patch('windows.main.tabs.index.CURRENT_INDEX')
+@patch('windows.main.tabs.index.NEW_TABLE')
 def test_on_index_delete(mock_new_table, mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
     mock_get_app.return_value = Mock()
     mock_current_table.get_value.return_value = mock_table
@@ -51,9 +51,9 @@ def test_on_index_delete(mock_new_table, mock_current_index, mock_current_table,
 
 
 @patch('wx.GetApp')
-@patch('windows.main.index.CURRENT_TABLE')
-@patch('windows.main.index.CURRENT_INDEX')
-@patch('windows.main.index.NEW_TABLE')
+@patch('windows.main.tabs.index.CURRENT_TABLE')
+@patch('windows.main.tabs.index.CURRENT_INDEX')
+@patch('windows.main.tabs.index.NEW_TABLE')
 def test_on_index_clear(mock_new_table, mock_current_index, mock_current_table, mock_get_app, sqlite_session, mock_table):
     mock_get_app.return_value = Mock()
     mock_current_table.get_value.return_value = mock_table

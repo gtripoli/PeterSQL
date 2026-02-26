@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.integration
 class TestPostgreSQLContext:
     """Tests for PostgreSQL context - focus on reading database structures."""
 

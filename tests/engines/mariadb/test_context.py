@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.integration
 class TestMariaDBContext:
     """Tests for MariaDB context methods."""
 

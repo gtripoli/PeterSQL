@@ -25,6 +25,7 @@ class MariaDBContext(AbstractContext):
     INDEXTYPE = MariaDBIndexType
 
     IDENTIFIER_QUOTE = "`"
+    DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -162,6 +163,9 @@ class MariaDBContext(AbstractContext):
 
         self._cursor = None
         self._connection = None
+
+    def set_database(self, database: SQLDatabase) -> None:
+        self.execute(f"USE {database.sql_safe_name}")
 
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")

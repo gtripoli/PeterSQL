@@ -1,0 +1,165 @@
+{
+  "group": "OUT_OF_SCOPE_HINTS",
+  "cases": [
+    {
+      "case_id": "HINT_001",
+      "title": "Out-of-scope table hint when prefix matches only DB-wide tables",
+      "sql": "SELECT c| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "c",
+        "comment": "Scope=[orders]. Prefix 'c' matches scope column orders.created_at and DB-wide table customers. Functions before table hints.",
+        "suggestions": [
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "orders.created_at",
+          "users.created_at",
+          "payments.created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CREATE",
+          "CROSS JOIN",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_002",
+      "title": "KILLER: Out-of-scope hint when prefix matches NO scope columns, only DB table",
+      "sql": "SELECT u| FROM products",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Scope=[products]. Prefix 'u' matches NO scope columns (products has: id,name,price,unit_price,stock). Matches DB table 'users'. HINT MODE: functions first, then table hint, NO DB-wide columns.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "products.unit_price",
+          "orders.user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_003",
+      "title": "No out-of-scope hint when prefix matches scope columns",
+      "sql": "SELECT t| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "t",
+        "comment": "Scope=[orders]. Prefix 't' matches scope column orders.total. No DB-wide table starts with 't'. No hint.",
+        "suggestions": [
+          "orders.total",
+          "TRIM",
+          "TRUE",
+          "TRUNCATE"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_004",
+      "title": "No out-of-scope hint in WHERE context",
+      "sql": "SELECT * FROM orders WHERE c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "c",
+        "comment": "WHERE is scope-restricted. No out-of-scope hints. Only scope columns + functions.",
+        "suggestions": [
+          "orders.created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ],
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "HINT_005",
+      "title": "Case A: SELECT_LIST with scope - prefix matches scope column - DB-wide allowed",
+      "sql": "SELECT u| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Case A: Prefix 'u' matches scope column orders.user_id. DB-wide columns allowed (table-name expansion + column-name matching). Table hint also shown.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_006",
+      "title": "Case B: SELECT_LIST with scope - prefix matches NO scope, only DB table - hint mode",
+      "sql": "SELECT c| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "c",
+        "comment": "Case B: Prefix 'c' matches scope column orders.created_at AND DB table customers. Functions first, then table hint. DB-wide columns for table-name expansion allowed.",
+        "suggestions": [
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "orders.created_at",
+          "users.created_at",
+          "payments.created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CREATE",
+          "CROSS JOIN",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ]
+      }
+    }
+  ]
+}

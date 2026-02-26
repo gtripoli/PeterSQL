@@ -56,57 +56,71 @@ def create_users_table(mariadb_database, mariadb_session) -> MariaDBTable:
 @pytest.fixture(scope="function")
 def ssh_mariadb_session(mariadb_container, mariadb_session):
     """Create SSH tunnel session for testing."""
+    # Verify SSH is accessible on the container
+    import socket
+    ssh_host = mariadb_container.get_container_host_ip()
+    ssh_port = mariadb_container.get_exposed_port(22)
+    
     try:
-        # Create SSH tunnel to MariaDB container
-        tunnel = SSHTunnel(
-            mariadb_container.get_container_host_ip(),
-            22,  # Assuming SSH access to host
-            ssh_username=None,
-            ssh_password=None,
-            remote_port=mariadb_container.get_exposed_port(3306),
-            local_bind_address=('localhost', 0)
-        )
-        
-        tunnel.start(timeout=5)
-        
-        # Create connection using tunnel
-        from structures.session import Session
-        from structures.connection import Connection, ConnectionEngine
-        from structures.configurations import CredentialsConfiguration
-        
-        config = CredentialsConfiguration(
-            hostname="localhost",
-            username="root",
-            password=mariadb_container.root_password,
-            port=tunnel.local_port,
-        )
-        
-        connection = Connection(
-            id=1,
-            name="ssh_mariadb_test",
-            engine=ConnectionEngine.MARIADB,
-            configuration=config,
-        )
-        
-        session = Session(connection=connection)
-        session.connect()
-        
-        yield session, tunnel
-        
-    except Exception:
-        pytest.skip("SSH tunnel not available")
-        
-    finally:
-        try:
-            session.disconnect()
-        except:
-            pass
-        try:
-            tunnel.stop()
-        except:
-            pass
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex((ssh_host, ssh_port))
+        sock.close()
+        if result != 0:
+            pytest.skip(f"SSH port {ssh_port} not accessible on container")
+    except Exception as e:
+        pytest.skip(f"Cannot verify SSH accessibility: {e}")
+    
+    # Create SSH tunnel to MariaDB container
+    tunnel = SSHTunnel(
+        ssh_host,
+        ssh_port,
+        ssh_username="root",
+        ssh_password="testpassword",
+        remote_port=3306,  # MariaDB inside container
+        local_bind_address=('localhost', 0)
+    )
+    
+    try:
+        tunnel.start(timeout=10)
+    except Exception as e:
+        pytest.skip(f"SSH tunnel failed to start: {e}")
+    
+    # Create connection using tunnel
+    from structures.session import Session
+    from structures.connection import Connection, ConnectionEngine
+    from structures.configurations import CredentialsConfiguration
+    
+    config = CredentialsConfiguration(
+        hostname="localhost",
+        username="root",
+        password=mariadb_container.root_password,
+        port=tunnel.local_port,
+    )
+    
+    connection = Connection(
+        id=1,
+        name="ssh_mariadb_test",
+        engine=ConnectionEngine.MARIADB,
+        configuration=config,
+    )
+    
+    session = Session(connection=connection)
+    session.connect()
+    
+    yield session, tunnel
+    
+    try:
+        session.disconnect()
+    except:
+        pass
+    try:
+        tunnel.stop()
+    except:
+        pass
 
 
+@pytest.mark.integration
 class TestMariaDBIntegration:
     """Integration tests for MariaDB engine using build_empty_* API."""
 

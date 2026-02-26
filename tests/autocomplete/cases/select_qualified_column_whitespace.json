@@ -1,0 +1,96 @@
+{
+  "group": "SELECT_QUALIFIED_COLUMN_WHITESPACE",
+  "cases": [
+    {
+      "case_id": "QUAL_WS_001",
+      "title": "After qualified column + space: suggest ONLY keywords, NOT functions",
+      "sql": "SELECT users.id ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Whitespace after qualified column = selection complete. Show clause keywords ONLY, NOT functions.",
+        "suggestions": [
+          "FROM",
+          "WHERE",
+          "LIMIT",
+          "ORDER BY",
+          "GROUP BY"
+        ]
+      }
+    },
+    {
+      "case_id": "QUAL_WS_002",
+      "title": "After qualified column + space: no COUNT, SUM, UPPER, etc.",
+      "sql": "SELECT orders.total ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Functions should NOT be suggested after qualified column + space",
+        "suggestions": [
+          "FROM",
+          "WHERE",
+          "LIMIT",
+          "ORDER BY",
+          "GROUP BY"
+        ]
+      }
+    },
+    {
+      "case_id": "QUAL_WS_003",
+      "title": "After qualified column + comma: suggest columns and functions",
+      "sql": "SELECT users.id, ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Comma = next item. Show columns and functions (not keywords).",
+        "xfail": true
+      }
+    },
+    {
+      "case_id": "QUAL_WS_004",
+      "title": "After qualified column + space + prefix: suggest ONLY matching keywords",
+      "sql": "SELECT users.id F",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "F",
+        "comment": "Whitespace after qualified column = selection complete. Even with prefix, show ONLY keywords (not functions/columns).",
+        "suggestions": [
+          "FROM"
+        ]
+      }
+    },
+    {
+      "case_id": "QUAL_WS_005",
+      "title": "After qualified column + space + prefix W: suggest WHERE",
+      "sql": "SELECT orders.total W",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "W",
+        "comment": "Only keywords matching 'W'",
+        "suggestions": [
+          "WHERE"
+        ]
+      }
+    }
+  ]
+}

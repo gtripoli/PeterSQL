@@ -4,9 +4,20 @@ import wx.stc
 from helpers import wx_colour_to_hex
 
 from windows.components.stc.profiles import SyntaxProfile
+from windows.components.stc.theme_loader import ThemeLoader
+
+_theme_loader: ThemeLoader = None
+
+
+def set_theme_loader(theme_loader: ThemeLoader) -> None:
+    global _theme_loader
+    _theme_loader = theme_loader
 
 
 def get_palette() -> dict[str, str]:
+    if _theme_loader:
+        return _theme_loader.get_palette()
+    
     background = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
     foreground = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT)
     line_number_background = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
@@ -14,10 +25,10 @@ def get_palette() -> dict[str, str]:
     is_dark = wx.SystemSettings.GetAppearance().IsDark()
 
     base = {
-        "background": background,
-        "foreground": foreground,
-        "line_number_background": line_number_background,
-        "line_number_foreground": line_number_foreground,
+        "background": wx_colour_to_hex(background),
+        "foreground": wx_colour_to_hex(foreground),
+        "line_number_background": wx_colour_to_hex(line_number_background),
+        "line_number_foreground": wx_colour_to_hex(line_number_foreground),
     }
 
     if is_dark:

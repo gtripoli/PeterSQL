@@ -1,0 +1,150 @@
+{
+  "group": "ALX",
+  "cases": [
+    {
+      "case_id": "ALX_001",
+      "title": "Exact alias 'u' triggers alias-prefix mode in WHERE_CLAUSE",
+      "sql": "SELECT * FROM users u WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALX_002",
+      "title": "Exact alias 'o' triggers alias-prefix mode in JOIN_ON",
+      "sql": "SELECT * FROM users u JOIN orders o ON o|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON",
+        "prefix": "o",
+        "alias_exact_match": "o",
+        "suggestions": [
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALX_003",
+      "title": "Exact alias 'u' triggers alias-prefix mode in ORDER_BY_CLAUSE",
+      "sql": "SELECT * FROM users u ORDER BY u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALX_004",
+      "title": "Exact alias 'u' triggers alias-prefix mode in GROUP_BY_CLAUSE",
+      "sql": "SELECT * FROM users u GROUP BY u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALX_005",
+      "title": "Exact alias 'u' triggers alias-prefix mode in HAVING_CLAUSE",
+      "sql": "SELECT status, COUNT(*) FROM users u GROUP BY status HAVING u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "ALX_006",
+      "title": "Multi-query: second SELECT doesn't see alias from first",
+      "sql": "SELECT * FROM users u WHERE id = 1; SELECT u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Multi-query: second query has no scope, no alias 'u'. Table-name expansion: users.*",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    }
+  ]
+}

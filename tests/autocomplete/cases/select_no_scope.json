@@ -1,0 +1,87 @@
+{
+  "group": "SELECT_NO_SCOPE",
+  "cases": [
+    {
+      "case_id": "SEL_NO_SCOPE_001",
+      "title": "SELECT without scope and CURRENT_TABLE set - CURRENT_TABLE columns first",
+      "sql": "SELECT u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "No scope. CURRENT_TABLE=users. Table-name expansion + column-name matching + functions in schema order.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "SEL_NO_SCOPE_002",
+      "title": "SELECT without scope and no CURRENT_TABLE - DB-wide columns allowed",
+      "sql": "SELECT p|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "p",
+        "comment": "No scope. Table-name expansion: products.* and payments.* in schema order (both match prefix 'p').",
+        "suggestions": [
+          "products.id",
+          "products.name",
+          "products.price",
+          "products.unit_price",
+          "products.stock",
+          "payments.id",
+          "payments.order_id",
+          "payments.amount",
+          "payments.method",
+          "payments.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "SEL_NO_SCOPE_003",
+      "title": "SELECT without scope - deduplication between table expansion and column match",
+      "sql": "SELECT u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Table-name expansion: users.* in schema order. Column-name matching: orders.user_id, products.unit_price.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "UPDATE",
+          "USING"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "group": "CURSOR",
+  "cases": [
+    {
+      "case_id": "CURSOR_001",
+      "title": "Cursor in middle of identifier uses left part as prefix",
+      "sql": "SELECT na|me FROM users",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "na",
+        "suggestions": [
+          "users.name",
+          "products.name",
+          "customers.name"
+        ]
+      }
+    }
+  ]
+}
