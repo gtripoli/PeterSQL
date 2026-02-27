@@ -1277,100 +1277,138 @@ class MainFrameView ( wx.Frame ):
 
         bSizer116 = wx.BoxSizer( wx.VERTICAL )
 
-        bSizer87211 = wx.BoxSizer( wx.HORIZONTAL )
+        self.pnl_row_definer = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_definer = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.lbl_view_schema = wx.StaticText( self.pnl_view_editor_root, wx.ID_ANY, _(u"Schema"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lbl_view_schema.Wrap( -1 )
-
-        self.lbl_view_schema.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer87211.Add( self.lbl_view_schema, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        cho_view_schemaChoices = []
-        self.cho_view_schema = wx.Choice( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_schemaChoices, 0 )
-        self.cho_view_schema.SetSelection( 0 )
-        bSizer87211.Add( self.cho_view_schema, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-
-        bSizer116.Add( bSizer87211, 0, wx.ALL|wx.EXPAND, 5 )
-
-        bSizer872 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.lbl_view_definer = wx.StaticText( self.pnl_view_editor_root, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_definer = wx.StaticText( self.pnl_row_definer, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_view_definer.Wrap( -1 )
 
         self.lbl_view_definer.SetMinSize( wx.Size( 150,-1 ) )
 
-        bSizer872.Add( self.lbl_view_definer, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        szr_view_definer.Add( self.lbl_view_definer, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
         cmb_view_definerChoices = []
-        self.cmb_view_definer = wx.ComboBox( self.pnl_view_editor_root, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, cmb_view_definerChoices, 0 )
-        bSizer872.Add( self.cmb_view_definer, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+        self.cmb_view_definer = wx.ComboBox( self.pnl_row_definer, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, cmb_view_definerChoices, 0 )
+        szr_view_definer.Add( self.cmb_view_definer, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-        bSizer116.Add( bSizer872, 0, wx.ALL|wx.EXPAND, 5 )
+        self.pnl_row_definer.SetSizer( szr_view_definer )
+        self.pnl_row_definer.Layout()
+        szr_view_definer.Fit( self.pnl_row_definer )
+        bSizer116.Add( self.pnl_row_definer, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.pnl_row_schema = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_schema = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_schema = wx.StaticText( self.pnl_row_schema, wx.ID_ANY, _(u"Schema"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_schema.Wrap( -1 )
+
+        self.lbl_view_schema.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_schema.Add( self.lbl_view_schema, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cho_view_schemaChoices = []
+        self.cho_view_schema = wx.Choice( self.pnl_row_schema, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_schemaChoices, 0 )
+        self.cho_view_schema.SetSelection( 0 )
+        szr_view_schema.Add( self.cho_view_schema, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.pnl_row_schema.SetSizer( szr_view_schema )
+        self.pnl_row_schema.Layout()
+        szr_view_schema.Fit( self.pnl_row_schema )
+        bSizer116.Add( self.pnl_row_schema, 0, wx.EXPAND | wx.ALL, 5 )
 
 
         bSizer89.Add( bSizer116, 1, wx.EXPAND, 5 )
 
         bSizer8711 = wx.BoxSizer( wx.VERTICAL )
 
-        bSizer8721 = wx.BoxSizer( wx.HORIZONTAL )
+        self.pnl_row_sql_security = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_sql_security = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.lbl_view_sql_security = wx.StaticText( self.pnl_view_editor_root, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_sql_security = wx.StaticText( self.pnl_row_sql_security, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_view_sql_security.Wrap( -1 )
 
         self.lbl_view_sql_security.SetMinSize( wx.Size( 150,-1 ) )
 
-        bSizer8721.Add( self.lbl_view_sql_security, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        szr_view_sql_security.Add( self.lbl_view_sql_security, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
         cho_view_sql_securityChoices = [ _(u"DEFINER"), _(u"INVOKER") ]
-        self.cho_view_sql_security = wx.Choice( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_sql_securityChoices, 0 )
+        self.cho_view_sql_security = wx.Choice( self.pnl_row_sql_security, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_sql_securityChoices, 0 )
         self.cho_view_sql_security.SetSelection( 0 )
-        bSizer8721.Add( self.cho_view_sql_security, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+        szr_view_sql_security.Add( self.cho_view_sql_security, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-        bSizer8711.Add( bSizer8721, 0, wx.ALL|wx.EXPAND, 5 )
+        self.pnl_row_sql_security.SetSizer( szr_view_sql_security )
+        self.pnl_row_sql_security.Layout()
+        szr_view_sql_security.Fit( self.pnl_row_sql_security )
+        bSizer8711.Add( self.pnl_row_sql_security, 0, wx.EXPAND | wx.ALL, 5 )
 
-        sbSizer1 = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_view_editor_root, _(u"Algorithm") )
+        self.pnl_row_algorithm = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_algorithm = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_row_algorithm, _(u"Algorithm") )
 
-        self.rad_view_algorithm_undefined = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
-        sbSizer1.Add( self.rad_view_algorithm_undefined, 0, wx.ALL, 5 )
+        self.rad_view_algorithm_undefined = wx.RadioButton( szr_view_algorithm.GetStaticBox(), wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        szr_view_algorithm.Add( self.rad_view_algorithm_undefined, 0, wx.ALL, 5 )
 
-        self.rad_view_algorithm_merge = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer1.Add( self.rad_view_algorithm_merge, 0, wx.ALL, 5 )
+        self.rad_view_algorithm_merge = wx.RadioButton( szr_view_algorithm.GetStaticBox(), wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_algorithm.Add( self.rad_view_algorithm_merge, 0, wx.ALL, 5 )
 
-        self.rad_view_algorithm_temptable = wx.RadioButton( sbSizer1.GetStaticBox(), wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer1.Add( self.rad_view_algorithm_temptable, 0, wx.ALL, 5 )
-
-
-        bSizer8711.Add( sbSizer1, 0, wx.EXPAND, 5 )
-
-        sbSizer11 = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_view_editor_root, _(u"View constraint") )
-
-        self.rad_view_constraint_none = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"None"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
-        sbSizer11.Add( self.rad_view_constraint_none, 0, wx.ALL, 5 )
-
-        self.rad_view_constraint_local = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"LOCAL"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer11.Add( self.rad_view_constraint_local, 0, wx.ALL, 5 )
-
-        self.rad_view_constraint_cascaded = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"CASCADE"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer11.Add( self.rad_view_constraint_cascaded, 0, wx.ALL, 5 )
-
-        self.rad_view_constraint_check_only = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"CHECK ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer11.Add( self.rad_view_constraint_check_only, 0, wx.ALL, 5 )
-
-        self.rad_view_constraint_read_only = wx.RadioButton( sbSizer11.GetStaticBox(), wx.ID_ANY, _(u"READ ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        sbSizer11.Add( self.rad_view_constraint_read_only, 0, wx.ALL, 5 )
+        self.rad_view_algorithm_temptable = wx.RadioButton( szr_view_algorithm.GetStaticBox(), wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_algorithm.Add( self.rad_view_algorithm_temptable, 0, wx.ALL, 5 )
 
 
-        bSizer8711.Add( sbSizer11, 0, wx.EXPAND, 5 )
+        self.pnl_row_algorithm.SetSizer( szr_view_algorithm )
+        self.pnl_row_algorithm.Layout()
+        szr_view_algorithm.Fit( self.pnl_row_algorithm )
+        bSizer8711.Add( self.pnl_row_algorithm, 0, wx.ALL|wx.EXPAND, 5 )
 
-        self.chk_view_security_barrier = wx.CheckBox( self.pnl_view_editor_root, wx.ID_ANY, _(u"Security barrier"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer8711.Add( self.chk_view_security_barrier, 0, wx.ALL, 5 )
+        self.pnl_row_constraint = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_constraint = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_row_constraint, _(u"View constraint") )
 
-        self.chk_view_force = wx.CheckBox( self.pnl_view_editor_root, wx.ID_ANY, _(u"Force"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer8711.Add( self.chk_view_force, 0, wx.ALL, 5 )
+        self.rad_view_constraint_none = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"None"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
+        szr_view_constraint.Add( self.rad_view_constraint_none, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_local = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"LOCAL"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_constraint.Add( self.rad_view_constraint_local, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_cascaded = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"CASCADE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_constraint.Add( self.rad_view_constraint_cascaded, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_check_only = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"CHECK ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_constraint.Add( self.rad_view_constraint_check_only, 0, wx.ALL, 5 )
+
+        self.rad_view_constraint_read_only = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"READ ONLY"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        szr_view_constraint.Add( self.rad_view_constraint_read_only, 0, wx.ALL, 5 )
+
+
+        self.pnl_row_constraint.SetSizer( szr_view_constraint )
+        self.pnl_row_constraint.Layout()
+        szr_view_constraint.Fit( self.pnl_row_constraint )
+        bSizer8711.Add( self.pnl_row_constraint, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.pnl_row_security_barrier = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer126 = wx.BoxSizer( wx.VERTICAL )
+
+        self.chk_view_force = wx.CheckBox( self.pnl_row_security_barrier, wx.ID_ANY, _(u"Force"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer126.Add( self.chk_view_force, 0, wx.ALL, 5 )
+
+
+        self.pnl_row_security_barrier.SetSizer( bSizer126 )
+        self.pnl_row_security_barrier.Layout()
+        bSizer126.Fit( self.pnl_row_security_barrier )
+        bSizer8711.Add( self.pnl_row_security_barrier, 0, wx.EXPAND, 5 )
+
+        self.pnl_row_force = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer127 = wx.BoxSizer( wx.VERTICAL )
+
+        self.chk_view_security_barrier = wx.CheckBox( self.pnl_row_force, wx.ID_ANY, _(u"Security barrier"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer127.Add( self.chk_view_security_barrier, 0, wx.ALL, 5 )
+
+
+        self.pnl_row_force.SetSizer( bSizer127 )
+        self.pnl_row_force.Layout()
+        bSizer127.Fit( self.pnl_row_force )
+        bSizer8711.Add( self.pnl_row_force, 0, wx.EXPAND, 5 )
 
 
         bSizer89.Add( bSizer8711, 1, wx.EXPAND, 5 )
@@ -1384,9 +1422,9 @@ class MainFrameView ( wx.Frame ):
         bSizer85.Fit( self.pnl_view_editor_root )
         self.m_notebook7.AddPage( self.pnl_view_editor_root, _(u"Options"), False )
 
-        bSizer84.Add( self.m_notebook7, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer84.Add( self.m_notebook7, 0, wx.EXPAND | wx.ALL, 5 )
 
-        self.stc_view_select = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+        self.stc_view_select = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
         self.stc_view_select.SetUseTabs ( True )
         self.stc_view_select.SetTabWidth ( 4 )
         self.stc_view_select.SetIndent ( 4 )
@@ -1417,6 +1455,8 @@ class MainFrameView ( wx.Frame ):
         self.stc_view_select.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
         self.stc_view_select.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
         self.stc_view_select.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        self.stc_view_select.SetMinSize( wx.Size( -1,200 ) )
+
         bSizer84.Add( self.stc_view_select, 1, wx.EXPAND | wx.ALL, 5 )
 
         bSizer91 = wx.BoxSizer( wx.HORIZONTAL )
@@ -1711,10 +1751,10 @@ class MainFrameView ( wx.Frame ):
         self.m_panel22.SetSizer( bSizer72 )
         self.m_panel22.Layout()
         bSizer72.Fit( self.m_panel22 )
-        self.LogSQLPanel = wx.Panel( self.m_splitter51, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
+        self.panel_sql_log = wx.Panel( self.m_splitter51, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TAB_TRAVERSAL )
         sizer_log_sql = wx.BoxSizer( wx.VERTICAL )
 
-        self.sql_query_logs = wx.stc.StyledTextCtrl( self.LogSQLPanel, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
+        self.sql_query_logs = wx.stc.StyledTextCtrl( self.panel_sql_log, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,200 ), 0)
         self.sql_query_logs.SetUseTabs ( True )
         self.sql_query_logs.SetTabWidth ( 4 )
         self.sql_query_logs.SetIndent ( 4 )
@@ -1748,10 +1788,10 @@ class MainFrameView ( wx.Frame ):
         sizer_log_sql.Add( self.sql_query_logs, 1, wx.EXPAND | wx.ALL, 5 )
 
 
-        self.LogSQLPanel.SetSizer( sizer_log_sql )
-        self.LogSQLPanel.Layout()
-        sizer_log_sql.Fit( self.LogSQLPanel )
-        self.m_splitter51.SplitHorizontally( self.m_panel22, self.LogSQLPanel, 432 )
+        self.panel_sql_log.SetSizer( sizer_log_sql )
+        self.panel_sql_log.Layout()
+        sizer_log_sql.Fit( self.panel_sql_log )
+        self.m_splitter51.SplitHorizontally( self.m_panel22, self.panel_sql_log, -150 )
         bSizer21.Add( self.m_splitter51, 1, wx.EXPAND, 5 )
 
 
@@ -1887,7 +1927,7 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def m_splitter51OnIdle( self, event ):
-        self.m_splitter51.SetSashPosition( 432 )
+        self.m_splitter51.SetSashPosition( -150 )
         self.m_splitter51.Unbind( wx.EVT_IDLE )
 
     def m_splitter4OnIdle( self, event ):
@@ -1960,11 +2000,6 @@ class Trash ( wx.Panel ):
 
 
         bSizer129.Add( fgSizer1, 1, wx.ALL|wx.EXPAND, 5 )
-
-        bSizer86 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        bSizer129.Add( bSizer86, 0, wx.EXPAND, 5 )
 
         self.m_checkBox7 = wx.CheckBox( self, wx.ID_ANY, _(u"Read only"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer129.Add( self.m_checkBox7, 0, wx.ALL, 5 )
@@ -2228,6 +2263,14 @@ class Trash ( wx.Panel ):
 
         self.m_radioBtn10 = wx.RadioButton( self, wx.ID_ANY, _(u"RadioBtn"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer90.Add( self.m_radioBtn10, 0, wx.ALL, 5 )
+
+        bSizer86 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_panel44 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer86.Add( self.m_panel44, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        bSizer90.Add( bSizer86, 0, wx.EXPAND, 5 )
 
 
         self.SetSizer( bSizer90 )

@@ -3,9 +3,11 @@ from typing import Optional
 import wx
 import wx.stc
 
+from helpers.sql import format_sql
 from helpers.bindings import AbstractModel
 from helpers.observables import Observable, debounce
 
+from structures.connection import ConnectionEngine
 from structures.engines.database import SQLView
 
 from windows.main import CURRENT_SESSION, CURRENT_VIEW
@@ -37,19 +39,24 @@ class EditViewModel(AbstractModel):
             return
 
         self.name.set_initial(view.name)
-        self.select_statement.set_initial(view.sql)
+        
+        if session := CURRENT_SESSION.get_value() :
+            dialect = session.engine.value.dialect
+            formatted_sql = format_sql(view.sql, dialect)
+            self.select_statement.set_initial(formatted_sql)
+        else:
+            self.select_statement.set_initial(view.sql)
 
-        session = CURRENT_SESSION.get_value()
         if not session:
             return
 
-        engine = session.engine.value.name.lower()
+        engine = session.engine
 
-        if engine in ["mysql", "mariadb"]:
+        if engine in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB):
             self._load_mysql_fields(view)
-        elif engine == "postgresql":
+        elif engine == ConnectionEngine.POSTGRESQL:
             self._load_postgresql_fields(view)
-        elif engine == "oracle":
+        elif engine == ConnectionEngine.ORACLE:
             self._load_oracle_fields(view)
 
     def update_view(self, *args):
@@ -67,13 +74,13 @@ class EditViewModel(AbstractModel):
         if not session:
             return
 
-        engine = session.engine.value.name.lower()
+        engine = session.engine
 
-        if engine in ["mysql", "mariadb"]:
+        if engine in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB):
             self._update_mysql_fields(view)
-        elif engine == "postgresql":
+        elif engine == ConnectionEngine.POSTGRESQL:
             self._update_postgresql_fields(view)
-        elif engine == "oracle":
+        elif engine == ConnectionEngine.ORACLE:
             self._update_oracle_fields(view)
 
     def _load_mysql_fields(self, view: SQLView):
@@ -170,120 +177,127 @@ class ViewEditorController:
         
         session = CURRENT_SESSION.get_value()
         if session:
-            engine = session.engine.value.name.lower()
+            engine = session.engine
             self.apply_engine_visibility(engine)
+            self._populate_definers(engine, session)
 
-    def apply_engine_visibility(self, engine: str):
-        if engine in ["mysql", "mariadb"]:
+    def _populate_definers(self, engine: ConnectionEngine, session):
+        if engine not in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB):
+            return
+        
+        try:
+            definers = session.context.get_definers()
+            self.parent.cmb_view_definer.Clear()
+            for definer in definers:
+                self.parent.cmb_view_definer.Append(definer)
+        except Exception:
+            pass
+
+    def apply_engine_visibility(self, engine: ConnectionEngine):
+        if engine in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB):
             self._apply_mysql_visibility()
-        elif engine == "postgresql":
+        elif engine == ConnectionEngine.POSTGRESQL:
             self._apply_postgresql_visibility()
-        elif engine == "oracle":
+        elif engine == ConnectionEngine.ORACLE:
             self._apply_oracle_visibility()
-        elif engine == "sqlite":
+        elif engine == ConnectionEngine.SQLITE:
             self._apply_sqlite_visibility()
         
-        self.parent.pnl_view_editor_root.Layout()
+        self.parent.pnl_view_editor_root.GetSizer().Layout()
+        self.parent.m_notebook7.SetMinSize(wx.Size(-1, -1))
+        self.parent.m_notebook7.Fit()
+        self.parent.panel_views.Layout()
 
     def _apply_mysql_visibility(self):
-        widgets_to_show = [
-            self.parent.cmb_view_definer,
-            self.parent.lbl_view_definer,
-            self.parent.cho_view_sql_security,
-            self.parent.lbl_view_sql_security,
-            self.parent.rad_view_algorithm_undefined,
-            self.parent.rad_view_algorithm_merge,
-            self.parent.rad_view_algorithm_temptable,
-            self.parent.rad_view_constraint_none,
-            self.parent.rad_view_constraint_local,
-            self.parent.rad_view_constraint_cascaded,
+        panels_to_show = [
+            self.parent.pnl_row_definer,
+            self.parent.pnl_row_sql_security,
+            self.parent.pnl_row_algorithm,
+            self.parent.pnl_row_constraint,
         ]
-        widgets_to_hide = [
-            self.parent.cho_view_schema,
-            self.parent.lbl_view_schema,
-            self.parent.rad_view_constraint_check_only,
-            self.parent.rad_view_constraint_read_only,
-            self.parent.chk_view_security_barrier,
-            self.parent.chk_view_force,
+        panels_to_hide = [
+            self.parent.pnl_row_schema,
+            self.parent.pnl_row_security_barrier,
+            self.parent.pnl_row_force,
         ]
-        self._batch_show_hide(widgets_to_show, widgets_to_hide)
+        self._batch_show_hide(panels_to_show, panels_to_hide)
+        
+        self.parent.rad_view_constraint_none.Show(True)
+        self.parent.rad_view_constraint_local.Show(True)
+        self.parent.rad_view_constraint_cascaded.Show(True)
+        self.parent.rad_view_constraint_check_only.Show(False)
+        self.parent.rad_view_constraint_read_only.Show(False)
+        
         self._normalize_radio_selection_algorithm()
         self._normalize_radio_selection_constraint()
 
     def _apply_postgresql_visibility(self):
-        widgets_to_show = [
-            self.parent.cho_view_schema,
-            self.parent.lbl_view_schema,
-            self.parent.rad_view_constraint_none,
-            self.parent.rad_view_constraint_local,
-            self.parent.rad_view_constraint_cascaded,
-            self.parent.chk_view_security_barrier,
+        panels_to_show = [
+            self.parent.pnl_row_schema,
+            self.parent.pnl_row_constraint,
+            self.parent.pnl_row_force,
         ]
-        widgets_to_hide = [
-            self.parent.cmb_view_definer,
-            self.parent.lbl_view_definer,
-            self.parent.cho_view_sql_security,
-            self.parent.lbl_view_sql_security,
-            self.parent.rad_view_algorithm_undefined,
-            self.parent.rad_view_algorithm_merge,
-            self.parent.rad_view_algorithm_temptable,
-            self.parent.rad_view_constraint_check_only,
-            self.parent.rad_view_constraint_read_only,
-            self.parent.chk_view_force,
+        panels_to_hide = [
+            self.parent.pnl_row_definer,
+            self.parent.pnl_row_sql_security,
+            self.parent.pnl_row_algorithm,
+            self.parent.pnl_row_security_barrier,
         ]
-        self._batch_show_hide(widgets_to_show, widgets_to_hide)
+        self._batch_show_hide(panels_to_show, panels_to_hide)
+        
+        self.parent.rad_view_constraint_none.Show(True)
+        self.parent.rad_view_constraint_local.Show(True)
+        self.parent.rad_view_constraint_cascaded.Show(True)
+        self.parent.rad_view_constraint_check_only.Show(False)
+        self.parent.rad_view_constraint_read_only.Show(False)
+        
         self._normalize_radio_selection_constraint()
 
     def _apply_oracle_visibility(self):
-        widgets_to_show = [
-            self.parent.cho_view_schema,
-            self.parent.lbl_view_schema,
-            self.parent.rad_view_constraint_none,
-            self.parent.rad_view_constraint_check_only,
-            self.parent.rad_view_constraint_read_only,
-            self.parent.chk_view_force,
+        panels_to_show = [
+            self.parent.pnl_row_schema,
+            self.parent.pnl_row_constraint,
+            self.parent.pnl_row_security_barrier,
         ]
-        widgets_to_hide = [
-            self.parent.cmb_view_definer,
-            self.parent.lbl_view_definer,
-            self.parent.cho_view_sql_security,
-            self.parent.lbl_view_sql_security,
-            self.parent.rad_view_algorithm_undefined,
-            self.parent.rad_view_algorithm_merge,
-            self.parent.rad_view_algorithm_temptable,
-            self.parent.rad_view_constraint_local,
-            self.parent.rad_view_constraint_cascaded,
-            self.parent.chk_view_security_barrier,
+        panels_to_hide = [
+            self.parent.pnl_row_definer,
+            self.parent.pnl_row_sql_security,
+            self.parent.pnl_row_algorithm,
+            self.parent.pnl_row_force,
         ]
-        self._batch_show_hide(widgets_to_show, widgets_to_hide)
+        self._batch_show_hide(panels_to_show, panels_to_hide)
+        
+        self.parent.rad_view_constraint_none.Show(True)
+        self.parent.rad_view_constraint_local.Show(False)
+        self.parent.rad_view_constraint_cascaded.Show(False)
+        self.parent.rad_view_constraint_check_only.Show(True)
+        self.parent.rad_view_constraint_read_only.Show(True)
+        
         self._normalize_radio_selection_constraint()
 
     def _apply_sqlite_visibility(self):
-        widgets_to_hide = [
-            self.parent.cho_view_schema,
-            self.parent.lbl_view_schema,
-            self.parent.cmb_view_definer,
-            self.parent.lbl_view_definer,
-            self.parent.cho_view_sql_security,
-            self.parent.lbl_view_sql_security,
-            self.parent.rad_view_algorithm_undefined,
-            self.parent.rad_view_algorithm_merge,
-            self.parent.rad_view_algorithm_temptable,
-            self.parent.rad_view_constraint_none,
-            self.parent.rad_view_constraint_local,
-            self.parent.rad_view_constraint_cascaded,
-            self.parent.rad_view_constraint_check_only,
-            self.parent.rad_view_constraint_read_only,
-            self.parent.chk_view_security_barrier,
-            self.parent.chk_view_force,
+        panels_to_hide = [
+            self.parent.pnl_row_schema,
+            self.parent.pnl_row_definer,
+            self.parent.pnl_row_sql_security,
+            self.parent.pnl_row_algorithm,
+            self.parent.pnl_row_constraint,
+            self.parent.pnl_row_security_barrier,
+            self.parent.pnl_row_force,
         ]
-        self._batch_show_hide([], widgets_to_hide)
+        self._batch_show_hide([], panels_to_hide)
 
     def _batch_show_hide(self, show: list[wx.Window], hide: list[wx.Window]):
         for widget in show:
             widget.Show(True)
+            sizer = widget.GetContainingSizer()
+            if sizer:
+                sizer.Show(widget, True)
         for widget in hide:
             widget.Show(False)
+            sizer = widget.GetContainingSizer()
+            if sizer:
+                sizer.Show(widget, False)
 
     def _normalize_radio_selection_algorithm(self):
         radios = [

@@ -215,6 +215,14 @@ class MariaDBContext(AbstractContext):
 
         return results
 
+    def get_definers(self) -> list[str]:
+        self.execute("""
+            SELECT DISTINCT CONCAT(User, '@', Host) as definer
+            FROM mysql.user
+            ORDER BY definer
+        """)
+        return [row["definer"] for row in self.fetchall()]
+
     def get_triggers(self, database: SQLDatabase) -> list[MariaDBTrigger]:
         results: list[MariaDBTrigger] = []
         self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
