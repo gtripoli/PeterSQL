@@ -1,11 +1,16 @@
 #!/bin/bash
 # Unified test runner
 # By default: runs unit tests only (excludes integration tests)
-# With --all: runs ALL tests (unit + integration) and updates README badges
+# With --all: runs ALL tests (unit + integration)
+# With --update: runs ALL tests (unit + integration) and updates README badges
 
 # Parse arguments
+UPDATE_BADGES=false
 ALL_TESTS=false
-if [ "$1" = "--all" ]; then
+
+if [ "$1" = "--update" ]; then
+    UPDATE_BADGES=true
+elif [ "$1" = "--all" ]; then
     ALL_TESTS=true
 fi
 
@@ -14,13 +19,47 @@ TESTS_DIR="tests/engines"
 RESULTS_FILE="/tmp/pytest_results.txt"
 COVERAGE_FILE="/tmp/pytest_coverage.txt"
 
-if [ "$ALL_TESTS" = true ]; then
-    echo "Running ALL tests (unit + integration) with coverage..."
+# Function to determine color from test results
+get_engine_color() {
+    local engine=$1
+    local pattern="tests/engines/${engine}/"
 
-    # Run ALL tests including integration tests (testcontainers)
-    uv run pytest tests/ --tb=no 2>&1 | tee "$RESULTS_FILE"
-    PYTEST_EXIT_CODE=${PIPESTATUS[0]}
+    # Count passed and failed for this engine
+    local passed=$(grep -c "PASSED" "$RESULTS_FILE" | grep -c "$pattern" 2>/dev/null || echo 0)
+    local failed=$(grep -c "FAILED" "$RESULTS_FILE" | grep -c "$pattern" 2>/dev/null || echo 0)
 
+    # Check if any tests for this engine exist in results
+    if grep -q "$pattern.*PASSED" "$RESULTS_FILE" 2>/dev/null; then
+        if grep -q "$pattern.*FAILED" "$RESULTS_FILE" 2>/dev/null; then
+            echo "orange"
+        else
+            echo "green"
+        fi
+    elif grep -q "$pattern.*FAILED" "$RESULTS_FILE" 2>/dev/null; then
+        echo "red"
+    else
+        # No tests found for this engine
+        echo "lightgrey"
+    fi
+}
+
+# Extract versions from conftest files for badge URL
+extract_versions_badge() {
+    local file=$1
+    local var_name=$2
+    grep -A 10 "${var_name}.*=" "$file" 2>/dev/null | \
+        grep -E 'mariadb:[^"]+|mysql:[^"]+|postgres:[^"]+' | \
+        grep -oP '"[^"]+"' | \
+        tr -d '"' | \
+        sed 's/.*://' | \
+        grep -v '^$' | \
+        sort -V | \
+        paste -sd'|' | \
+        sed 's/|/%20%7C%20/g'
+}
+
+# Function to update badges
+update_badges() {
     # Extract coverage percentage
     COVERAGE=$(grep "TOTAL" "$RESULTS_FILE" | awk '{print $4}' | sed 's/%//' | head -1)
     echo ""
@@ -28,45 +67,6 @@ if [ "$ALL_TESTS" = true ]; then
 
     echo ""
     echo "Analyzing results for badge updates..."
-
-    # Function to determine color from test results
-    get_engine_color() {
-        local engine=$1
-        local pattern="tests/engines/${engine}/"
-
-        # Count passed and failed for this engine
-        local passed=$(grep -c "PASSED" "$RESULTS_FILE" | grep -c "$pattern" 2>/dev/null || echo 0)
-        local failed=$(grep -c "FAILED" "$RESULTS_FILE" | grep -c "$pattern" 2>/dev/null || echo 0)
-
-        # Check if any tests for this engine exist in results
-        if grep -q "$pattern.*PASSED" "$RESULTS_FILE" 2>/dev/null; then
-            if grep -q "$pattern.*FAILED" "$RESULTS_FILE" 2>/dev/null; then
-                echo "orange"
-            else
-                echo "green"
-            fi
-        elif grep -q "$pattern.*FAILED" "$RESULTS_FILE" 2>/dev/null; then
-            echo "red"
-        else
-            # No tests found for this engine
-            echo "lightgrey"
-        fi
-    }
-
-    # Extract versions from conftest files for badge URL
-    extract_versions_badge() {
-        local file=$1
-        local var_name=$2
-        grep -A 10 "${var_name}.*=" "$file" 2>/dev/null | \
-            grep -E 'mariadb:[^"]+|mysql:[^"]+|postgres:[^"]+' | \
-            grep -oP '"[^"]+"' | \
-            tr -d '"' | \
-            sed 's/.*://' | \
-            grep -v '^$' | \
-            sort -V | \
-            paste -sd'|' | \
-            sed 's/|/%20%7C%20/g'
-    }
 
     # Determine colors from single test run
     echo -n "  SQLite: "
@@ -112,6 +112,23 @@ if [ "$ALL_TESTS" = true ]; then
 
     # Cleanup
     rm -f "$RESULTS_FILE"
+}
+
+if [ "$ALL_TESTS" = true ]; then
+    echo "Running ALL tests (unit + integration)..."
+
+    # Run ALL tests including integration tests (testcontainers)
+    uv run pytest tests/ --tb=no
+    PYTEST_EXIT_CODE=$?
+
+elif [ "$UPDATE_BADGES" = true ]; then
+    echo "Running ALL tests (unit + integration) and updating badges..."
+
+    # Run ALL tests including integration tests (testcontainers)
+    uv run pytest tests/ --tb=no 2>&1 | tee "$RESULTS_FILE"
+    PYTEST_EXIT_CODE=${PIPESTATUS[0]}
+
+    update_badges
 
 else
     echo "Running local tests (excluding integration tests)..."
@@ -125,7 +142,7 @@ else
     echo ""
     echo "Local tests completed. Exit code: $PYTEST_EXIT_CODE"
     echo ""
-    echo "Note: Integration tests excluded. Run '$0 --all' for full test suite with badge updates."
+    echo "Note: Integration tests excluded. Run '$0 --update' for unit tests with badge updates, or '$0 --all' for full test suite."
 fi
 
 echo ""

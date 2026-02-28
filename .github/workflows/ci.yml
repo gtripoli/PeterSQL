@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main, master ]
@@ -8,7 +11,10 @@ on:
 
 env:
   PYTHON_VERSION: "3.14"
-  WXPYTHON_VERSION: "4.2.5"
+  PIP_CACHE_DIR: /home/runner/.cache/pip
+  UV_CACHE_DIR: /home/runner/.cache/uv
+  WHEEL_CACHE_DIR: /home/runner/.cache/wheels
+  PIP_FIND_LINKS: /home/runner/.cache/wheels
 
 jobs:
   test:
@@ -46,14 +52,66 @@ jobs:
             sudo apt-get install -y libwebkit2gtk-4.1-dev
           fi
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Cache wheelhouse
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WHEEL_CACHE_DIR }}
+          key: wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
       - name: Initialize venv UV
         run: uv venv
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
 
+      - name: Export requirements from uv.lock (include dev extra)
+        run: uv export --format requirements-txt --locked --no-hashes --extra dev -o requirements.lock.txt
+
+      - name: Populate wheelhouse from lock (build/download wheels)
+        run: |
+          mkdir -p "${WHEEL_CACHE_DIR}"
+          uv pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run all tests (unit + integration)
-        run:  xvfb-run -a ./scripts/runtest.sh --all
+      - name: Run tests
+        if: github.ref != 'refs/heads/main'
+        run: xvfb-run -a ./scripts/runtest.sh --all
+
+      - name: Run tests (main)
+        if: github.ref == 'refs/heads/main'
+        run: xvfb-run -a ./scripts/runtest.sh --update
+
+      - name: Commit and push updated README
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          git add README.md
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update badges [skip ci]"
+            git push
+          fi
