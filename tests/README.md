@@ -35,9 +35,9 @@ Comprehensive integration tests across all supported database engines.
 | | Alter | ✅ | ✅ | ✅ | ✅ |
 | | Drop | ✅ | ✅ | ✅ | ✅ |
 | | Get Definers | ✅ | ✅ | ❌ | ❌ |
-| **Function** | Create | ✅ | ✅ | ❌ | ⚠️ |
-| | Drop | ✅ | ✅ | ❌ | ⚠️ |
-| | Alter | ✅ | ✅ | ❌ | ⚠️ |
+| **Function** | Create | ✅ | ✅ | ❌ | ✅ |
+| | Drop | ✅ | ✅ | ❌ | ✅ |
+| | Alter | ✅ | ✅ | ❌ | ✅ |
 | **Procedure** | Create | ⚠️ | ⚠️ | ❌ | ⚠️ |
 | | Drop | ⚠️ | ⚠️ | ❌ | ⚠️ |
 | | Alter | ⚠️ | ⚠️ | ❌ | ⚠️ |
@@ -270,10 +270,10 @@ This matrix shows which engines correctly implement the required abstract method
 - ✅ **Quoting refactored** - All engines now use `quote_identifier()` and `qualify()` instead of manual quoting
 - ✅ **`fully_qualified_name` property** - Centralized qualified name generation, PostgreSQL overrides for schema support
 - ✅ **Check constraints CRUD** - Full create/drop/alter support (MariaDB/MySQL/PostgreSQL/SQLite)
-- ⚠️ **Functions** - Only MariaDB/MySQL implemented (PostgreSQL/SQLite missing implementation)
+- ✅ **Functions** - MariaDB/MySQL/PostgreSQL implemented
   - MariaDB: ✅ `MariaDBFunction` with create/drop/alter
   - MySQL: ✅ `MySQLFunction` with create/drop/alter
-  - PostgreSQL: ⚠️ NOT IMPLEMENTED (PostgreSQL supports functions natively, class missing)
+  - PostgreSQL: ✅ **IMPLEMENTED** `PostgreSQLFunction` with create/drop/alter (plpgsql, volatility support)
   - SQLite: ❌ N/A (SQLite doesn't support stored functions)
 - ⚠️ **Procedures** - NOT IMPLEMENTED on any engine
   - Abstract `SQLProcedure` class exists but no engine implementation
@@ -298,7 +298,7 @@ This matrix shows which engines correctly implement the required abstract method
 ## 🚧 Missing Implementations
 
 ### **PostgreSQL**
-- ⚠️ `PostgreSQLFunction` - PostgreSQL supports functions, class needs implementation
+- ✅ **DONE** `PostgreSQLFunction` - Implemented with create/drop/alter, plpgsql support
 - ⚠️ `PostgreSQLProcedure` - PostgreSQL supports procedures (v11+), class needs implementation
 
 ### **MariaDB/MySQL**
@@ -315,7 +315,7 @@ This matrix shows which engines correctly implement the required abstract method
 
 | Object | MariaDB | MySQL | PostgreSQL | SQLite | Priority |
 |---------|---------|-------|------------|--------|----------|
-| **Function** | ✅ Implemented | ✅ Implemented | ⚠️ Missing | ❌ N/A | 🔴 **HIGH** |
+| **Function** | ✅ Implemented | ✅ Implemented | ✅ **IMPLEMENTED** | ❌ N/A | ✅ **DONE** |
 | **Procedure** | ⚠️ Missing | ⚠️ Missing | ⚠️ Missing | ❌ N/A | 🟡 Medium |
 | **Event** | ⚠️ Missing | ⚠️ Missing | ❌ N/A | ❌ N/A | 🟢 Low |
 
