@@ -555,6 +555,24 @@ class MariaDBContext(AbstractContext):
             statement=default_values.get("statement", ""),
         )
 
+    def build_empty_function(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> "MariaDBFunction":
+        from structures.engines.mariadb.database import MariaDBFunction
+        
+        id = MariaDBContext.get_temporary_id(database.functions)
+        
+        if name is None:
+            name = f"function_{id}"
+        
+        return MariaDBFunction(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            returns=default_values.get("returns", "INT"),
+            deterministic=default_values.get("deterministic", False),
+            statement=default_values.get("statement", ""),
+        )
+
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTrigger:
         id = MariaDBContext.get_temporary_id(database.triggers)
 

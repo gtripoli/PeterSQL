@@ -18,6 +18,7 @@ from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
+from tests.engines.base_function_tests import BaseFunctionTests
 from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests
 
 
@@ -87,6 +88,19 @@ class TestPostgreSQLViewSave(BaseViewSaveTests):
 
     def get_updated_view_statement(self) -> str:
         return "SELECT 1 as id, 'updated' as name"
+
+
+@pytest.mark.integration
+class TestPostgreSQLFunction(BaseFunctionTests):
+    
+    def get_function_statement(self) -> str:
+        return "RETURN x + 1;"
+    
+    def get_function_parameters(self) -> str:
+        return "x integer"
+    
+    def get_function_returns(self) -> str:
+        return "integer"
 
 
 @pytest.mark.integration

@@ -369,6 +369,10 @@ class PostgreSQLFunction(SQLFunction):
     volatility: str = "VOLATILE"
     statement: str = ""
     
+    @property
+    def fully_qualified_name(self):
+        return self.database.context.qualify('public', self.name)
+    
     def create(self) -> bool:
         create_statement = f"""
             CREATE OR REPLACE FUNCTION {self.fully_qualified_name}({self.parameters})

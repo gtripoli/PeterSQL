@@ -499,11 +499,14 @@ class SQLiteContext(AbstractContext):
             statement=default_values.get("statement", ""),
         )
 
+    def build_empty_function(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values):
+        raise NotImplementedError("SQLite does not support stored functions")
+
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLiteTrigger:
         id = SQLiteContext.get_temporary_id(database.triggers)
 
         if name is None:
-            name = _(f"Trigger{str(id * -1):03}")
+            name = f"trigger_{id}"
 
         return SQLiteTrigger(
             id=id,
