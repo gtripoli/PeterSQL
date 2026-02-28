@@ -19,6 +19,7 @@ from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_function_tests import BaseFunctionTests
+from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests
 
 
@@ -101,6 +102,16 @@ class TestPostgreSQLFunction(BaseFunctionTests):
     
     def get_function_returns(self) -> str:
         return "integer"
+
+
+@pytest.mark.integration
+class TestPostgreSQLProcedure(BaseProcedureTests):
+    
+    def get_procedure_statement(self) -> str:
+        return "RAISE NOTICE 'Hello from procedure';"
+    
+    def get_procedure_parameters(self) -> str:
+        return ""
 
 
 @pytest.mark.integration

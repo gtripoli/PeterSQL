@@ -573,6 +573,9 @@ class MariaDBContext(AbstractContext):
             statement=default_values.get("statement", ""),
         )
 
+    def build_empty_procedure(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values):
+        raise NotImplementedError("MariaDB Procedure not implemented yet")
+    
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTrigger:
         id = MariaDBContext.get_temporary_id(database.triggers)
 

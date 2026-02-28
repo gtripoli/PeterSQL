@@ -5,7 +5,7 @@ from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLFunction, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLCheck
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLFunction, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLCheck, SQLProcedure
 
 from structures.engines.postgresql.indextype import PostgreSQLIndexType
 from structures.engines.postgresql.builder import PostgreSQLColumnBuilder, PostgreSQLIndexBuilder
@@ -389,6 +389,37 @@ class PostgreSQLFunction(SQLFunction):
     
     def drop(self) -> bool:
         statement = f'DROP FUNCTION IF EXISTS {self.fully_qualified_name}({self.parameters});'
+        return self.database.context.execute(statement)
+    
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
+
+
+@dataclasses.dataclass
+class PostgreSQLProcedure(SQLProcedure):
+    parameters: str = ""
+    language: str = "plpgsql"
+    statement: str = ""
+    
+    @property
+    def fully_qualified_name(self):
+        return self.database.context.qualify('public', self.name)
+    
+    def create(self) -> bool:
+        create_statement = f"""
+            CREATE OR REPLACE PROCEDURE {self.fully_qualified_name}({self.parameters})
+            LANGUAGE {self.language}
+            AS $$
+            BEGIN
+                {self.statement}
+            END;
+            $$;
+        """
+        return self.database.context.execute(create_statement)
+    
+    def drop(self) -> bool:
+        statement = f'DROP PROCEDURE IF EXISTS {self.fully_qualified_name}({self.parameters});'
         return self.database.context.execute(statement)
     
     def alter(self) -> bool:

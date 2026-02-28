@@ -142,6 +142,10 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
     
     @abc.abstractmethod
+    def build_empty_procedure(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> "SQLProcedure":
+        raise NotImplementedError
+    
+    @abc.abstractmethod
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLTrigger:
         raise NotImplementedError
 

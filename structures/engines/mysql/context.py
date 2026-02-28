@@ -573,6 +573,9 @@ class MySQLContext(AbstractContext):
             sql=default_values.get("sql", ""),
         )
     
+    def build_empty_procedure(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values):
+        raise NotImplementedError("MySQL Procedure not implemented yet")
+    
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTrigger:
         id = MySQLContext.get_temporary_id(database.triggers)
 

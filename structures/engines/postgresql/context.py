@@ -185,6 +185,7 @@ class PostgreSQLContext(AbstractContext):
                 get_tables_handler=self.get_tables,
                 get_views_handler=self.get_views,
                 get_functions_handler=self.get_functions,
+                get_procedures_handler=self.get_procedures,
                 get_triggers_handler=self.get_triggers,
             ))
         return results
@@ -231,6 +232,34 @@ class PostgreSQLContext(AbstractContext):
                 statement=result['routine_definition'] or '',
                 parameters='',
                 volatility='VOLATILE'
+            ))
+        
+        return results
+    
+    def get_procedures(self, database: SQLDatabase) -> list["PostgreSQLProcedure"]:
+        from structures.engines.postgresql.database import PostgreSQLProcedure
+        
+        self.set_database(database)
+        results = []
+        query = """
+            SELECT 
+                routine_name,
+                routine_definition,
+                external_language as language
+            FROM information_schema.routines
+            WHERE routine_schema NOT IN ('information_schema', 'pg_catalog')
+            AND routine_type = 'PROCEDURE'
+            ORDER BY routine_name
+        """
+        self.execute(query)
+        for i, result in enumerate(self.fetchall()):
+            results.append(PostgreSQLProcedure(
+                id=i,
+                name=result['routine_name'],
+                database=database,
+                language=result['language'] or 'plpgsql',
+                statement=result['routine_definition'] or '',
+                parameters=''
             ))
         
         return results
@@ -635,6 +664,23 @@ class PostgreSQLContext(AbstractContext):
             statement=default_values.get("statement", ""),
         )
 
+    def build_empty_procedure(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> "PostgreSQLProcedure":
+        from structures.engines.postgresql.database import PostgreSQLProcedure
+        
+        id = PostgreSQLContext.get_temporary_id(database.procedures)
+        
+        if name is None:
+            name = f"procedure_{id}"
+        
+        return PostgreSQLProcedure(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            language=default_values.get("language", "plpgsql"),
+            statement=default_values.get("statement", ""),
+        )
+    
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> PostgreSQLTrigger:
         id = PostgreSQLContext.get_temporary_id(database.triggers)
 
