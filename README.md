@@ -123,3 +123,50 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
    ```bash
    git clone https://github.com/gtripoli/petersql.git
    cd petersql
+
+2. Install dependencies (including dev tools for testing):
+   ```bash
+   uv sync
+   ```
+
+3. Run the application:
+   ```bash
+   uv run main.py
+   ```
+
+### Development
+
+```bash
+uv sync --extra dev
+```
+
+To run tests:
+
+```bash
+uv run pytest
+```
+
+### Troubleshooting installation
+
+#### wxPython
+
+If `uv sync` fails because no compatible wxPython wheel is available for your platform/Python version, reinstall it from source with:
+This forces a source build and usually unblocks the setup.
+
+```bash
+uv pip install -U --reinstall wxPython==4.2.5 --no-binary wxPython
+```
+
+###### Once the build finishes, rerun `uv sync` so the refreshed environment picks up the manually installed wxPython.
+
+## 📸 Screenshot
+
+<p align="center">
+  <img src="screenshot/session_manager.png" alt="Session Manager" height="200"/>
+  <img src="screenshot/main_frame_columns.png" alt="Main Frame - Columns" height="200"/>
+  <img src="screenshot/main_frame_datatypes.png" alt="Main Frame - Datatypes" height="200"/>
+  <img src="screenshot/main_frame_default.png" alt="Main Frame - Default" height="200"/>
+  <img src="screenshot/main_frame_indexes.png" alt="Main Frame - Indexes" height="200"/>
+  <img src="screenshot/main_frame_foreign_keys.png" alt="Main Frame - Foreign Keys" height="200"/>
+  <img src="screenshot/main_frame_foreign_keys_columns.png" alt="Main Frame - Foreign Keys Columns" height="200"/>
+</p>
