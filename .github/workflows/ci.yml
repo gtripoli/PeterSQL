@@ -15,7 +15,6 @@ env:
   UV_CACHE_DIR: /home/runner/.cache/uv
   WHEEL_CACHE_DIR: /home/runner/.cache/wheels
   PIP_FIND_LINKS: /home/runner/.cache/wheels
-  UV_FIND_LINKS: /home/runner/.cache/wheels
 
 jobs:
   test:
@@ -84,7 +83,7 @@ jobs:
         run: uv pip install -U pip setuptools wheel
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
 
       - name: Run tests
         run: |
