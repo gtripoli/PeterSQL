@@ -24,6 +24,9 @@ jobs:
       with:
         python-version: "3.14"
 
+    - name: Initialize venv UV
+      run: uv venv
+
     - name: Install wxPython
       run: uv pip install -U --reinstall wxPython==4.2.5 --no-binary wxPython
 
