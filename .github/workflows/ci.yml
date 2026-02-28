@@ -40,7 +40,7 @@ jobs:
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libglu1-mesa-dev freeglut3-dev \
             libx11-dev libxext-dev libxinerama-dev libxi-dev libxrandr-dev \
-            libxss-dev libxtst-dev
+            libxss-dev libxtst-dev xvfb
 
           if ! sudo apt-get install -y libwebkit2gtk-4.0-dev; then
             sudo apt-get install -y libwebkit2gtk-4.1-dev
@@ -56,4 +56,4 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run all tests (unit + integration)
-        run: ./scripts/runtest.sh --all
+        run:  xvfb-run -a ./scripts/runtest.sh --all
