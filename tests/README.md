@@ -308,3 +308,42 @@ This matrix shows which engines correctly implement the required abstract method
 ### **All Engines**
 - ⚠️ No test coverage for Function/Procedure/Event (base test classes don't exist)
 - ⚠️ Abstract `SQLProcedure` and `SQLEvent` exist but unused
+
+## 🎯 Implementation Priorities
+
+### **Current Status:**
+
+| Object | MariaDB | MySQL | PostgreSQL | SQLite | Priority |
+|---------|---------|-------|------------|--------|----------|
+| **Function** | ✅ Implemented | ✅ Implemented | ⚠️ Missing | ❌ N/A | 🔴 **HIGH** |
+| **Procedure** | ⚠️ Missing | ⚠️ Missing | ⚠️ Missing | ❌ N/A | 🟡 Medium |
+| **Event** | ⚠️ Missing | ⚠️ Missing | ❌ N/A | ❌ N/A | 🟢 Low |
+
+### **🔴 HIGH Priority: PostgreSQLFunction**
+
+**Why start here:**
+1. **Complete PostgreSQL** - We just achieved 100% test coverage for Table/Record/Column/Index/ForeignKey/Check/Trigger/View. Only Function/Procedure missing for full PostgreSQL coverage.
+2. **Immediate impact** - MariaDB/MySQL already have Function implemented. PostgreSQL is the only "almost complete" engine missing it.
+3. **Native support** - PostgreSQL supports functions natively (widely used in production).
+4. **Manageable complexity** - We have existing patterns from MariaDB/MySQL to follow.
+5. **Unlocks Procedure** - Once Function is done, Procedure follows the same pattern.
+
+### **📋 Recommended Implementation Order:**
+
+**Phase 1: PostgreSQLFunction** (HIGH priority)
+- Implement `PostgreSQLFunction` with create/drop/alter methods
+- Add test coverage
+- Complete PostgreSQL 100% for all database objects
+
+**Phase 2: PostgreSQLProcedure** (MEDIUM priority)
+- Implement `PostgreSQLProcedure` with create/drop/alter methods
+- Very similar to Function, fast implementation
+- PostgreSQL supports procedures since v11+
+
+**Phase 3: MariaDB/MySQL Procedure** (MEDIUM priority)
+- Complete `MariaDBProcedure` and `MySQLProcedure`
+- Align all engines for procedure support
+
+**Phase 4: MariaDB/MySQL Event** (LOW priority)
+- Implement `MariaDBEvent` and `MySQLEvent`
+- Less commonly used, lower priority
