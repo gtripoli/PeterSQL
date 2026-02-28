@@ -15,6 +15,7 @@ env:
   UV_CACHE_DIR: /home/runner/.cache/uv
   WHEEL_CACHE_DIR: /home/runner/.cache/wheels
   PIP_FIND_LINKS: /home/runner/.cache/wheels
+  UV_FIND_LINKS: /home/runner/.cache/wheels
 
 jobs:
   test:
@@ -94,12 +95,14 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run tests
-        if: github.ref != 'refs/heads/main'
-        run: xvfb-run -a ./scripts/runtest.sh --all
-
-      - name: Run tests (main)
-        if: github.ref == 'refs/heads/main'
-        run: xvfb-run -a ./scripts/runtest.sh --update
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Running branch tests (--all)"
+            xvfb-run -a ./scripts/runtest.sh --all
+          else
+            echo "Running main tests (--update)"
+            xvfb-run -a ./scripts/runtest.sh --update
+          fi
 
       - name: Commit and push updated README
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
