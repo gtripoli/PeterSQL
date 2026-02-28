@@ -33,7 +33,7 @@ dev = [
 markers = [
     "integration: marks tests as integration tests (testcontainers, slow, deselect with '-m \"not integration\"')",
 ]
-addopts = "-m 'not integration'"
+addopts = "--cov=. --cov-report=term -v"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

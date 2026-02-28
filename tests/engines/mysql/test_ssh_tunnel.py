@@ -70,6 +70,6 @@ def ssh_session(mysql_ssh_container):
     session.disconnect()
 
 
-@pytest.mark.ssh
+@pytest.mark.integration
 class TestMySQLSSHTunnel(BaseSSHTunnelTests):
     pass

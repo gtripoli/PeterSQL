@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  PYTHON_VERSION: "3.14"
+  WXPYTHON_VERSION: "4.2.5"
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Install wx build deps
         run: |
@@ -48,11 +52,8 @@ jobs:
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
 
-      - name: Install wxPython (source build)
-        run: uv pip install -U --reinstall wxPython==4.2.5 --no-binary wxPython
-
       - name: Install dependencies
         run: uv sync --extra dev
 
       - name: Run all tests (unit + integration)
-        run: uv run pytest tests/ -v --tb=short --cov=. --cov-report=term
+        run: ./scripts/runtest.sh --all
