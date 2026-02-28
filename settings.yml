@@ -19,7 +19,7 @@ settings:
     add_space_after_completion: true
     popup_width: 300
     popup_max_height: 10
-language: it_IT
+language: en_US
 query_editor:
   statement_separator: ;
   trim_whitespace: false
