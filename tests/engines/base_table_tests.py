@@ -33,3 +33,19 @@ class BaseTableTests:
         assert len(table.records.get_value()) == 0
 
         table.drop()
+
+    def test_table_rename(self, session, database, create_users_table):
+        table = create_users_table(database, session)
+        original_name = table.name
+
+        new_name = "users_renamed"
+        table.rename(table, new_name)
+        table.name = new_name
+
+        database.tables.refresh()
+        tables = database.tables.get_value()
+        assert any(t.name == new_name for t in tables)
+        assert not any(t.name == original_name for t in tables)
+
+        renamed_table = next(t for t in tables if t.name == new_name)
+        renamed_table.drop()

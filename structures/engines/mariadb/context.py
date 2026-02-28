@@ -24,7 +24,7 @@ class MariaDBContext(AbstractContext):
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
-    IDENTIFIER_QUOTE = "`"
+    IDENTIFIER_QUOTE_CHAR = "`"
     DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
@@ -165,7 +165,7 @@ class MariaDBContext(AbstractContext):
         self._connection = None
 
     def set_database(self, database: SQLDatabase) -> None:
-        self.execute(f"USE {database.sql_safe_name}")
+        self.execute(f"USE {database.quoted_name}")
 
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")
@@ -264,6 +264,7 @@ class MariaDBContext(AbstractContext):
                     updated_at=row['UPDATE_TIME'],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
+                    get_checks_handler=self.get_checks,
                     get_foreign_keys_handler=self.get_foreign_keys,
                     get_records_handler=self.get_records,
                 )
@@ -369,6 +370,42 @@ class MariaDBContext(AbstractContext):
 
         return results
 
+    def get_checks(self, table: MariaDBTable) -> list[MariaDBCheck]:
+        from structures.engines.mariadb.database import MariaDBCheck
+        
+        if table is None or table.is_new:
+            return []
+        
+        query = f"""
+            SELECT 
+                cc.CONSTRAINT_NAME,
+                cc.CHECK_CLAUSE
+            FROM information_schema.CHECK_CONSTRAINTS cc
+            JOIN information_schema.TABLE_CONSTRAINTS tc 
+                ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA 
+                AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+            WHERE tc.TABLE_SCHEMA = '{table.database.name}'
+            AND tc.TABLE_NAME = '{table.name}'
+            AND tc.CONSTRAINT_TYPE = 'CHECK'
+            ORDER BY cc.CONSTRAINT_NAME
+        """
+        
+        self.execute(query)
+        rows = self.fetchall()
+        
+        results = []
+        for i, row in enumerate(rows):
+            results.append(
+                MariaDBCheck(
+                    id=i,
+                    name=row['CONSTRAINT_NAME'],
+                    table=table,
+                    expression=row['CHECK_CLAUSE']
+                )
+            )
+        
+        return results
+
     def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
@@ -431,6 +468,7 @@ class MariaDBContext(AbstractContext):
             database=database,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
+            get_checks_handler=self.get_checks,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
             **default_values,
@@ -464,7 +502,23 @@ class MariaDBContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, table: MariaDBTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBForeignKey:
+    def build_empty_check(self, table: MariaDBTable, /, name: Optional[str] = None, expression: Optional[str] = None, **default_values) -> MariaDBCheck:
+        from structures.engines.mariadb.database import MariaDBCheck
+        
+        id = MariaDBContext.get_temporary_id(table.checks)
+        
+        if name is None:
+            name = f"check_{abs(id)}"
+        
+        return MariaDBCheck(
+            id=id,
+            name=name,
+            table=table,
+            expression=expression or "",
+            **default_values
+        )
+
+    def build_empty_foreign_key(self, table: MariaDBTable, columns: list[str], reference_table: str, reference_columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBForeignKey:
         id = MariaDBContext.get_temporary_id(table.foreign_keys)
 
         if name is None:

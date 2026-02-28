@@ -96,6 +96,18 @@ You can change the language in the application settings (Settings → General �
 
 ---
 
+## 🧪 Test Coverage
+
+PeterSQL has **comprehensive integration tests** across all supported database engines covering Tables, Records, Columns, Indexes, Foreign Keys, Triggers, Views, and SSH tunnels.
+
+- 🏗️ **Granular base class architecture** - zero code duplication
+- 🐛 **Bug detection** - tests have found multiple API inconsistencies
+- ✅ **Full CRUD coverage** for core database objects
+
+For detailed test coverage matrix, statistics, architecture, and running instructions, see **[tests/README.md](tests/README.md)**.
+
+---
+
 ## 🚀 Installation
 
 PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable dependency management.

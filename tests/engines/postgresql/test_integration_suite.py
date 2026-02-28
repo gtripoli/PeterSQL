@@ -16,36 +16,32 @@ from tests.engines.base_record_tests import BaseRecordTests
 from tests.engines.base_column_tests import BaseColumnTests
 from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
+from tests.engines.base_check_tests import BaseCheckTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL builder has bugs in raw_create() and index creation - needs separate fix")
 class TestPostgreSQLTable(BaseTableTests):
     pass
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL builder has bugs - needs separate fix")
 class TestPostgreSQLRecord(BaseRecordTests):
     pass
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL builder has bugs - needs separate fix")
 class TestPostgreSQLColumn(BaseColumnTests):
     pass
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL builder has bugs - needs separate fix")
 class TestPostgreSQLIndex(BaseIndexTests):
     pass
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL builder has bugs - needs separate fix")
 class TestPostgreSQLForeignKey(BaseForeignKeyTests):
     
     def get_datatype_class(self):
@@ -59,15 +55,28 @@ class TestPostgreSQLForeignKey(BaseForeignKeyTests):
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL triggers require function creation - complex setup")
-class TestPostgreSQLTrigger(BaseTriggerTests):
-    
-    def get_trigger_statement(self, db_name: str, table_name: str) -> str:
-        return f"AFTER INSERT ON {db_name}.{table_name} FOR EACH ROW EXECUTE FUNCTION trigger_function()"
+class TestPostgreSQLCheck(BaseCheckTests):
+    pass
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL view tests need test_db setup")
+class TestPostgreSQLTrigger(BaseTriggerTests):
+    
+    def get_trigger_statement(self, db_name: str, table_name: str) -> str:
+        return f"""
+            CREATE OR REPLACE FUNCTION trg_users_insert_func() RETURNS TRIGGER AS $$
+            BEGIN
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            
+            CREATE TRIGGER trg_users_insert
+            AFTER INSERT ON public.{table_name}
+            FOR EACH ROW EXECUTE FUNCTION trg_users_insert_func();
+        """
+
+
+@pytest.mark.integration
 class TestPostgreSQLViewSave(BaseViewSaveTests):
     
     def get_view_statement(self) -> str:
@@ -81,7 +90,6 @@ class TestPostgreSQLViewSave(BaseViewSaveTests):
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="PostgreSQL view tests need test_db setup")
 class TestPostgreSQLViewIsNew(BaseViewIsNewTests):
     
     def get_simple_view_statement(self) -> str:

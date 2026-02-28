@@ -96,12 +96,12 @@ class TestSQLiteContext:
         assert version is not None
         assert len(version) > 0
 
-    def test_context_build_sql_safe_name(self, sqlite_session):
-        """Test building SQL safe names uses IDENTIFIER_QUOTE."""
+    def test_context_quote_identifier(self, sqlite_session):
+        """Test building SQL safe names uses IDENTIFIER_QUOTE_CHAR."""
         ctx = sqlite_session.context
-        quote = ctx.IDENTIFIER_QUOTE
+        quote = ctx.IDENTIFIER_QUOTE_CHAR
 
         # Simple names don't need quoting
-        assert ctx.build_sql_safe_name("normal") == "normal"
-        # Names with spaces are quoted using IDENTIFIER_QUOTE
-        assert ctx.build_sql_safe_name("with space") == f'{quote}with space{quote}'
+        assert ctx.quote_identifier("normal") == "normal"
+        # Names with spaces are quoted using IDENTIFIER_QUOTE_CHAR
+        assert ctx.quote_identifier("with space") == f'{quote}with space{quote}'

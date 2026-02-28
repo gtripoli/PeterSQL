@@ -205,13 +205,13 @@ class TestSQLiteDatabase:
         database = SQLiteDatabase(id=1, name="main", context=sqlite_session.context)
         assert database.name == "main"
 
-    def test_database_sql_safe_name(self, sqlite_session):
-        """Test sql_safe_name property."""
+    def test_database_quoted_name(self, sqlite_session):
+        """Test quoted_name property."""
         database = SQLiteDatabase(id=1, name="main", context=sqlite_session.context)
-        assert database.sql_safe_name == "main"
+        assert database.quoted_name == "main"
 
     def test_database_with_special_name(self, sqlite_session):
         """Test database with special name."""
         database = SQLiteDatabase(id=1, name="my database", context=sqlite_session.context)
-        quote = sqlite_session.context.IDENTIFIER_QUOTE
-        assert database.sql_safe_name == f'{quote}my database{quote}'
+        quote = sqlite_session.context.IDENTIFIER_QUOTE_CHAR
+        assert database.quoted_name == f'{quote}my database{quote}'

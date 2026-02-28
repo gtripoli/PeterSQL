@@ -1,6 +1,6 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-02-11  
+> **Last Updated:** 2026-02-27  
 > **Version:** Based on code inspection
 
 ---
@@ -140,7 +140,7 @@
 | **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `PostgreSQLIndexType.UNIQUE` |
 | **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 | **Default** | ✅ | ✅ | 🟡 | 🟡 | Column attribute | `PostgreSQLColumn.server_default` |
-| **View** | ✅ | 🟡 | ✅ | ✅ | `alter()` implemented | `PostgreSQLView` |
+| **View** | ✅ | ✅ | ✅ | ✅ | Full CRUD + UI editor | `PostgreSQLView` |
 | **Trigger** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLTrigger` |
 | **Function** | ❌ | ❌ | ❌ | ❌ | Class not implemented | — |
 | **Procedure** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
@@ -164,7 +164,7 @@
 | **Index** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableIndexController` |
 | **Foreign Key** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableForeignKeyController` |
 | **Check Constraint** | ✅ | 🟡 | ✅ | 🟡 | 🟡 | `TableCheckController` (SQLite only) |
-| **View** | ✅ | ❌ | ✅ | ❌ | ✅ | List + delete only |
+| **View** | ✅ | ✅ | ✅ | ✅ | ✅ | Full editor with engine-specific options |
 | **Trigger** | ✅ | ❌ | ✅ | ❌ | ❌ | List only |
 | **Function** | ✅ | ❌ | ❌ | ❌ | ❌ | Explorer shows, no editor |
 | **Procedure** | ✅ | ❌ | ❌ | ❌ | ❌ | Explorer shows, no editor |
@@ -187,7 +187,7 @@
 | **Query Log** | ✅ DONE | `sql_query_logs` StyledTextCtrl |
 | **DDL Preview** | ✅ DONE | `sql_create_table` with sqlglot |
 | **Theme Support** | ✅ DONE | `ThemeManager`, system color change |
-| **View Editor** | ❌ NOT IMPL | Panel exists but no create/edit |
+| **View Editor** | ✅ DONE | `ViewEditorController`, `EditViewModel` with 2-way binding |
 | **Trigger Editor** | ❌ NOT IMPL | Panel exists but no create/edit |
 | **Function Editor** | ❌ NOT IMPL | No panel |
 | **Procedure Editor** | ❌ NOT IMPL | No panel |
@@ -242,11 +242,10 @@
 
 | Item | Object | Operation | What's Missing |
 |------|--------|-----------|----------------|
-| 3.1 | View | Create/Edit | Dialog and controller |
-| 3.2 | Trigger | Create/Edit | Dialog and controller |
-| 3.3 | Function | All | Panel, dialog, controller |
-| 3.4 | Procedure | All | Panel, dialog, controller |
-| 3.5 | Database | Create/Drop | Dialog and engine methods |
+| 3.1 | Trigger | Create/Edit | Dialog and controller |
+| 3.2 | Function | All | Panel, dialog, controller |
+| 3.3 | Procedure | All | Panel, dialog, controller |
+| 3.4 | Database | Create/Drop | Dialog and engine methods |
 
 ### Priority 4: New Features
 

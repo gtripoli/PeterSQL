@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PeterSQL
+Exec=$HOME/.petersql/petersql
+Icon=$HOME/.petersql/icons/petersql.ico
+Terminal=false
+StartupNotify=true
+StartupWMClass=PeterSQL
+Categories=Development;Database;

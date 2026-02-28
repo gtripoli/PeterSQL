@@ -11,7 +11,7 @@ from structures.helpers import SQLTypeAlias
 from structures.ssh_tunnel import SSHTunnel
 from structures.connection import Connection
 from structures.engines.datatype import StandardDataType, SQLDataType
-from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
+from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLCheck, SQLForeignKey, SQLRecord, SQLView, SQLTrigger
 from structures.engines.indextype import SQLIndexType, StandardIndexType
 
 QUERY_LOGS: ObservableList[str] = ObservableList()
@@ -31,7 +31,7 @@ class AbstractContext(abc.ABC):
     INDEXTYPE: StandardIndexType
     COLLATIONS: dict[str, str] = {}
 
-    IDENTIFIER_QUOTE: str = '"'
+    IDENTIFIER_QUOTE_CHAR: str = '"'
     DEFAULT_STATEMENT_SEPARATOR: str = ";"
 
     databases: ObservableLazyList[SQLDatabase]
@@ -122,6 +122,10 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def build_empty_check(self, table: SQLTable, /, name: Optional[str] = None, expression: Optional[str] = None, **default_values) -> SQLCheck:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def build_empty_foreign_key(self, table: SQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLForeignKey:
         raise NotImplementedError
 
@@ -137,16 +141,19 @@ class AbstractContext(abc.ABC):
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLTrigger:
         raise NotImplementedError
 
-    def build_sql_safe_name(self, name: Optional[str]) -> str:
-        value = (name or "").strip()
+    def quote_identifier(self, name: str) -> str:
+        value = name.strip()
         if not value:
-            return value
+            assert False, "Invalid identifier name: %s" % name
 
         if SQL_SAFE_NAME_REGEX.match(value):
             return value
 
-        escaped_name = value.replace(self.IDENTIFIER_QUOTE, self.IDENTIFIER_QUOTE * 2)
-        return f"{self.IDENTIFIER_QUOTE}{escaped_name}{self.IDENTIFIER_QUOTE}"
+        escaped_name = value.replace(self.IDENTIFIER_QUOTE_CHAR, self.IDENTIFIER_QUOTE_CHAR * 2)
+        return f"{self.IDENTIFIER_QUOTE_CHAR}{escaped_name}{self.IDENTIFIER_QUOTE_CHAR}"
+
+    def qualify(self, *parts):
+        return ".".join(self.quote_identifier(part) for part in parts)
 
     def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[dict[str, Any]]:
         logger.debug(f"get records for table={table.name}")
@@ -162,8 +169,8 @@ class AbstractContext(abc.ABC):
         if orders:
             order = f"ORDER BY {orders}"
 
-        database_identifier = table.database.sql_safe_name if table.database else ""
-        table_identifier = table.sql_safe_name
+        database_identifier = table.database.quoted_name if table.database else ""
+        table_identifier = table.quoted_name
 
         if database_identifier:
             from_clause = f"{database_identifier}.{table_identifier}"

@@ -25,7 +25,7 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def name(self):
-        return self.column.sql_safe_name
+        return self.column.quoted_name
 
     @property
     def datatype(self):
@@ -111,13 +111,13 @@ class AbstractIndexBuilder(abc.ABC):
     @property
     def name(self):
         if self.index.name and self.index.name != "PRIMARY KEY":
-            return self.index.sql_safe_name
+            return self.index.quoted_name
         return ""
 
     @property
     def columns(self):
-        build_sql_safe_name = self.index.table.database.context.build_sql_safe_name
-        return ", ".join([build_sql_safe_name(col) for col in self.index.columns])
+        quote_identifier = self.index.table.database.context.quote_identifier
+        return ", ".join([quote_identifier(col) for col in self.index.columns])
 
     def __str__(self) -> str:
         formatted_parts = []

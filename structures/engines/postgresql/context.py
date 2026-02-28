@@ -24,7 +24,7 @@ class PostgreSQLContext(AbstractContext):
     DATATYPE = PostgreSQLDataType
     INDEXTYPE = PostgreSQLIndexType
 
-    IDENTIFIER_QUOTE = '"'
+    IDENTIFIER_QUOTE_CHAR = '"'
     DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
@@ -195,9 +195,9 @@ class PostgreSQLContext(AbstractContext):
         for i, result in enumerate(self.fetchall()):
             results.append(PostgreSQLView(
                 id=i,
-                name=f"{result['schemaname']}.{result['viewname']}",
+                name=result['viewname'],
                 database=database,
-                sql=result['definition']
+                statement=result['definition']
             ))
 
         return results
@@ -209,7 +209,7 @@ class PostgreSQLContext(AbstractContext):
         for i, result in enumerate(self.fetchall()):
             results.append(PostgreSQLTrigger(
                 id=i,
-                name=f"{result['schemaname']}.{result['tgname']}",
+                name=result['tgname'],
                 database=database,
                 statement=result['sql']
             ))
@@ -240,6 +240,7 @@ class PostgreSQLContext(AbstractContext):
                     total_rows=row['total_rows'],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
+                    get_checks_handler=self.get_checks,
                     get_foreign_keys_handler=self.get_foreign_keys,
                     get_records_handler=self.get_records,
                 )
@@ -291,14 +292,20 @@ class PostgreSQLContext(AbstractContext):
         results: list[SQLIndex] = []
         index_data: dict[str, dict[str, Any]] = {}
 
-        # Get primary key
+        # Get primary key using pg_constraint
+        schema_or_db = table.schema if table.schema else table.database.name
         self.execute(f"""
-            SELECT COLUMN_NAME
-            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-            WHERE TABLE_SCHEMA = '{table.schema}' AND TABLE_NAME = '{table.name}' AND CONSTRAINT_NAME = 'PRIMARY'
-            ORDER BY ORDINAL_POSITION
+            SELECT a.attname AS column_name
+            FROM pg_index i
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+            JOIN pg_class c ON c.oid = i.indrelid
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = '{schema_or_db}' 
+              AND c.relname = '{table.name}'
+              AND i.indisprimary
+            ORDER BY a.attnum
         """)
-        pk_columns = [row['COLUMN_NAME'] for row in self.fetchall()]
+        pk_columns = [row['column_name'] for row in self.fetchall()]
         if pk_columns:
             results.append(
                 PostgreSQLIndex(
@@ -344,11 +351,50 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
+    def get_checks(self, table: PostgreSQLTable) -> list[PostgreSQLCheck]:
+        from structures.engines.postgresql.database import PostgreSQLCheck
+        
+        if table is None or table.is_new:
+            return []
+        
+        schema_or_db = table.schema if table.schema else table.database.name
+        
+        query = f"""
+            SELECT 
+                con.conname AS constraint_name,
+                pg_get_constraintdef(con.oid) AS check_clause
+            FROM pg_constraint con
+            JOIN pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+            WHERE con.contype = 'c'
+            AND nsp.nspname = '{schema_or_db}'
+            AND rel.relname = '{table.name}'
+            ORDER BY con.conname
+        """
+        
+        self.execute(query)
+        rows = self.fetchall()
+        
+        results = []
+        for i, row in enumerate(rows):
+            # Extract expression from "CHECK (expression)" format
+            check_def = row['check_clause']
+            expression = check_def.replace('CHECK (', '').rstrip(')')
+            
+            results.append(
+                PostgreSQLCheck(
+                    id=i,
+                    name=row['constraint_name'],
+                    table=table,
+                    expression=expression
+                )
+            )
+        
+        return results
+
     def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
-
-        self.set_database(table.database)
 
         logger.debug(f"get_foreign_keys for table={table.name}")
 
@@ -447,9 +493,11 @@ class PostgreSQLContext(AbstractContext):
         return PostgreSQLTable(
             id=id,
             name=name,
+            schema=default_values.get('schema', 'public'),
             database=database,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
+            get_checks_handler=self.get_checks,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
         ).copy()
@@ -482,6 +530,22 @@ class PostgreSQLContext(AbstractContext):
             table=table,
         )
 
+    def build_empty_check(self, table: PostgreSQLTable, /, name: Optional[str] = None, expression: Optional[str] = None, **default_values) -> PostgreSQLCheck:
+        from structures.engines.postgresql.database import PostgreSQLCheck
+        
+        id = PostgreSQLContext.get_temporary_id(table.checks)
+        
+        if name is None:
+            name = f"check_{abs(id)}"
+        
+        return PostgreSQLCheck(
+            id=id,
+            name=name,
+            table=table,
+            expression=expression or "",
+            **default_values
+        )
+
     def build_empty_foreign_key(self, table: PostgreSQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> PostgreSQLForeignKey:
         id = PostgreSQLContext.get_temporary_id(table.foreign_keys)
 
@@ -493,10 +557,10 @@ class PostgreSQLContext(AbstractContext):
             name=name,
             table=table,
             columns=columns,
-            reference_table="",
-            reference_columns=[],
-            on_update="NO ACTION",
-            on_delete="NO ACTION",
+            reference_table=default_values.get("reference_table", ""),
+            reference_columns=default_values.get("reference_columns", []),
+            on_update=default_values.get("on_update", "NO ACTION"),
+            on_delete=default_values.get("on_delete", "NO ACTION"),
         )
 
     def build_empty_record(self, table: PostgreSQLTable, /, *, values: dict[str, Any]) -> PostgreSQLRecord:

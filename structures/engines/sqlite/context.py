@@ -31,7 +31,7 @@ class SQLiteContext(AbstractContext):
     DATATYPE = SQLiteDataType()
     INDEXTYPE = SQLiteIndexType()
 
-    IDENTIFIER_QUOTE = '"'
+    IDENTIFIER_QUOTE_CHAR = '"'
     DEFAULT_STATEMENT_SEPARATOR = ";"
 
     _map_sqlite_master = defaultdict(lambda: defaultdict(dict))
@@ -446,7 +446,23 @@ class SQLiteContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, table: SQLiteTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLiteForeignKey:
+    def build_empty_check(self, table: SQLiteTable, /, name: Optional[str] = None, expression: Optional[str] = None, **default_values) -> SQLiteCheck:
+        from structures.engines.sqlite.database import SQLiteCheck
+        
+        id = SQLiteContext.get_temporary_id(table.checks)
+        
+        if name is None:
+            name = f"check_{abs(id)}"
+        
+        return SQLiteCheck(
+            id=id,
+            name=name,
+            table=table,
+            expression=expression or "",
+            **default_values
+        )
+
+    def build_empty_foreign_key(self, table: SQLiteTable, columns: list[str], reference_table: str, reference_columns: list[str], /, name: Optional[str] = None, **default_values) -> SQLiteForeignKey:
         id = SQLiteContext.get_temporary_id(table.foreign_keys)
 
         if name is None:

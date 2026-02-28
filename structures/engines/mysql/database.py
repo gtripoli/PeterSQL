@@ -6,6 +6,7 @@ from helpers.logger import logger
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
 from structures.engines.database import (
+    SQLCheck,
     SQLColumn,
     SQLDatabase,
     SQLForeignKey,
@@ -36,7 +37,7 @@ class MySQLTable(SQLTable):
         columns_and_indexes = columns + indexes
 
         return f"""
-            CREATE TABLE {self.database.sql_safe_name}.{self.sql_safe_name} (
+            CREATE TABLE {self.fully_qualified_name} (
                 {', '.join(columns_and_indexes)}
             )
             COLLATE='{self.collation_name}'
@@ -62,8 +63,8 @@ class MySQLTable(SQLTable):
         return True
 
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f"ALTER TABLE `{self.database.name}`.`{table.name}` RENAME TO `{new_name}`;"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE `{self.database.name}`.`{table.name}` RENAME TO `{new_name}`;"
+        self.database.context.execute(statement)
 
         return True
 
@@ -153,6 +154,21 @@ class MySQLTable(SQLTable):
 
 
 @dataclasses.dataclass(eq=False)
+class MySQLCheck(SQLCheck):
+    def create(self) -> bool:
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} ADD CONSTRAINT {self.quoted_name} CHECK ({self.expression})"
+        return self.table.database.context.execute(statement)
+
+    def drop(self) -> bool:
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} DROP CONSTRAINT {self.quoted_name}"
+        return self.table.database.context.execute(statement)
+
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
+
+
+@dataclasses.dataclass(eq=False)
 class MySQLColumn(SQLColumn):
     set: Optional[list[str]] = None
     is_unsigned: Optional[bool] = False
@@ -161,15 +177,15 @@ class MySQLColumn(SQLColumn):
     after: Optional[str] = None
 
     def add(self) -> bool:
-        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MySQLColumnBuilder(self)}"
+        statement = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD COLUMN {MySQLColumnBuilder(self)}"
         if hasattr(self, "after") and self.after:
-            sql += f" AFTER `{self.after}`"
+            statement += f" AFTER `{self.after}`"
 
-        return self.table.database.context.execute(sql)
+        return self.table.database.context.execute(statement)
 
     def modify(self, current: Self):
-        sql = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MySQLColumnBuilder(current)}"
-        self.table.database.context.execute(sql)
+        statement = f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` MODIFY COLUMN {MySQLColumnBuilder(current)}"
+        self.table.database.context.execute(statement)
 
     def rename(self, new_name: str) -> bool:
         return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` RENAME COLUMN `{self.name}` TO `{new_name}`")
@@ -190,7 +206,7 @@ class MySQLIndex(SQLIndex):
         if self.type == MySQLIndexType.PRIMARY:
             return self.table.database.context.execute(f"ALTER TABLE `{self.table.database.name}`.`{self.table.name}` DROP PRIMARY KEY")
 
-        return self.table.database.context.execute(f"DROP INDEX `{self.sql_safe_name}` ON `{self.table.database.sql_safe_name}`.`{self.table.sql_safe_name}`")
+        return self.table.database.context.execute(f"DROP INDEX {self.quoted_name} ON {self.table.fully_qualified_name}")
 
     def modify(self, new: Self):
         self.drop()
@@ -202,7 +218,7 @@ class MySQLIndex(SQLIndex):
 class MySQLForeignKey(SQLForeignKey):
     def create(self) -> bool:
         query = [
-            f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD CONSTRAINT {self.sql_safe_name}",
+            f"ALTER TABLE {self.table.fully_qualified_name} ADD CONSTRAINT {self.quoted_name}",
             f"FOREIGN KEY({', '.join(self.columns)})",
             f"REFERENCES `{self.reference_table}`({', '.join(self.reference_columns)})",
         ]
@@ -217,8 +233,8 @@ class MySQLForeignKey(SQLForeignKey):
 
     def drop(self) -> bool:
         return self.table.database.context.execute(f"""
-            ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name}
-            DROP FOREIGN KEY {self.sql_safe_name}
+            ALTER TABLE {self.table.fully_qualified_name}
+            DROP FOREIGN KEY {self.quoted_name}
         """)
 
     def modify(self, new: Self):
@@ -247,14 +263,14 @@ class MySQLRecord(SQLRecord):
         if not columns_values:
             raise AssertionError("No columns values")
 
-        return f"""INSERT INTO {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
+        return f"""INSERT INTO {self.table.fully_qualified_name} ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
     def raw_update_record(self) -> Optional[str]:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        sql_select = f"SELECT * FROM {self.table.database.sql_safe_name}.{self.table.sql_safe_name} WHERE {identifier_conditions}"
+        sql_select = f"SELECT * FROM {self.table.fully_qualified_name} WHERE {identifier_conditions}"
         self.table.database.context.execute(sql_select)
 
         if not (existing_record := self.table.database.context.fetchone()):
@@ -314,23 +330,23 @@ class MySQLRecord(SQLRecord):
 class MySQLView(SQLView):
     def create(self) -> bool:
         self.database.context.set_database(self.database)
-        return self.database.context.execute(f"CREATE VIEW {self.sql_safe_name} AS {self.statement}")
+        return self.database.context.execute(f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}")
 
     def drop(self) -> bool:
         self.database.context.set_database(self.database)
-        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.sql_safe_name}")
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.database.context.set_database(self.database)
-        return self.database.context.execute(f"CREATE OR REPLACE VIEW {self.sql_safe_name} AS {self.statement}")
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW {self.fully_qualified_name} AS {self.statement}")
 
 
 class MySQLTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER {self.sql_safe_name} {self.statement}")
+        return self.database.context.execute(f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.sql_safe_name}")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.drop()
@@ -347,7 +363,7 @@ class MySQLFunction(SQLFunction):
     def create(self) -> bool:
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
         query = f"""
-            CREATE FUNCTION {self.sql_safe_name}({self.parameters})
+            CREATE FUNCTION {self.fully_qualified_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
             BEGIN
@@ -357,7 +373,7 @@ class MySQLFunction(SQLFunction):
         return self.database.context.execute(query)
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.sql_safe_name}")
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.drop()

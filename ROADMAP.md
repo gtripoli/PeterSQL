@@ -1,6 +1,6 @@
 # PeterSQL — Development Roadmap
 
-> **Last Updated:** 2026-02-11  
+> **Last Updated:** 2026-02-27  
 > **Based on:** PROJECT_STATUS.md analysis
 
 ---
@@ -105,15 +105,18 @@ This roadmap organizes remaining development tasks by priority, difficulty, and 
 ### UI Layer - Core Editors
 
 #### View Editor
-- [ ] **View Create/Edit Dialog**
+- [x] **View Create/Edit Dialog** ✅ COMPLETED
   - **UI Component:** View Editor
   - **Difficulty:** 🟢 Medium
-  - **Files:** `windows/main/view.py` (new), `windows/main/explorer.py`
+  - **Files:** `windows/main/tabs/view.py`, `helpers/sql.py`
+  - **Status:** ✅ Complete (2026-02-27)
   - **Notes:**
-    - Create dialog similar to table editor
-    - SQL editor with syntax highlighting
-    - Preview functionality
-    - Validation for view SQL
+    - ✅ EditViewModel with AbstractModel + Observable pattern
+    - ✅ 2-way binding for all view properties
+    - ✅ Engine-specific visibility (MySQL/MariaDB/PostgreSQL/Oracle/SQLite)
+    - ✅ SQL formatting with sqlglot
+    - ✅ Definer population for MySQL/MariaDB
+    - ✅ Constraint radio visibility per engine
 
 #### Trigger Editor
 - [ ] **Trigger Create/Edit Dialog**
@@ -358,10 +361,19 @@ For each task, ensure:
 
 - **P0 Tasks:** 1/1 completed (100%)
 - **P1 Tasks:** 0/5 completed (0%)
-- **P2 Tasks:** 0/6 completed (0%)
+- **P2 Tasks:** 1/6 completed (16.7%)
 - **P3 Tasks:** 3/8 completed (37.5%)
 
 ### Recent Progress
+
+- ✅ **View Editor Implementation** (2026-02-27)
+  - Complete refactor with AbstractModel + Observable pattern
+  - 2-way data binding between UI and SQLView
+  - Engine-specific visibility and options
+  - SQL formatting with sqlglot integration
+  - Definer population for MySQL/MariaDB
+  - Constraint radio visibility per database engine
+  - Layout management with proper panel sizing
 
 - ✅ **MySQL SSH Tunnel Tests** (2026-02-11)
   - Basic CRUD operations through SSH tunnel

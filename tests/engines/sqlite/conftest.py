@@ -9,6 +9,12 @@ from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if "skip_sqlite" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="SQLite has incompatible API for this operation"))
+
+
 def create_users_table_sqlite(sqlite_database, sqlite_session) -> SQLiteTable:
     ctx = sqlite_session.context
 
@@ -80,10 +86,23 @@ def database(sqlite_database):
     return sqlite_database
 
 
-@pytest.fixture
-def create_users_table():
-    """Provide the create_users_table helper function."""
-    return create_users_table_sqlite
+@pytest.fixture(scope="function")
+def create_users_table(sqlite_database):
+    """Provide the create_users_table helper function with cleanup."""
+    created_tables = []
+    
+    def _create_and_track(database, session):
+        table = create_users_table_sqlite(database, session)
+        created_tables.append(table)
+        return table
+    
+    yield _create_and_track
+    
+    for table in created_tables:
+        try:
+            table.drop()
+        except:
+            pass
 
 
 @pytest.fixture
