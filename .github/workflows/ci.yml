@@ -61,14 +61,6 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.UV_CACHE_DIR }}
-          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-
       - name: Cache wheelhouse
         uses: actions/cache@v4
         with:
