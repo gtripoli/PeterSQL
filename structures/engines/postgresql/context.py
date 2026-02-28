@@ -184,6 +184,7 @@ class PostgreSQLContext(AbstractContext):
                 total_bytes=float(row["total_bytes"]),
                 get_tables_handler=self.get_tables,
                 get_views_handler=self.get_views,
+                get_functions_handler=self.get_functions,
                 get_triggers_handler=self.get_triggers,
             ))
         return results
@@ -202,6 +203,38 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
+    def get_functions(self, database: SQLDatabase) -> list["PostgreSQLFunction"]:
+        from structures.engines.postgresql.database import PostgreSQLFunction
+        
+        self.set_database(database)
+        results = []
+        query = """
+            SELECT 
+                routine_name,
+                routine_definition,
+                data_type as returns,
+                external_language as language,
+                is_deterministic
+            FROM information_schema.routines
+            WHERE routine_schema NOT IN ('information_schema', 'pg_catalog')
+            AND routine_type = 'FUNCTION'
+            ORDER BY routine_name
+        """
+        self.execute(query)
+        for i, result in enumerate(self.fetchall()):
+            results.append(PostgreSQLFunction(
+                id=i,
+                name=result['routine_name'],
+                database=database,
+                returns=result['returns'] or 'void',
+                language=result['language'] or 'plpgsql',
+                statement=result['routine_definition'] or '',
+                parameters='',
+                volatility='VOLATILE'
+            ))
+        
+        return results
+    
     def get_triggers(self, database: SQLDatabase) -> list[PostgreSQLTrigger]:
         self.set_database(database)
         results = []

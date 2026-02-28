@@ -5,7 +5,7 @@ from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLCheck
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLFunction, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLCheck
 
 from structures.engines.postgresql.indextype import PostgreSQLIndexType
 from structures.engines.postgresql.builder import PostgreSQLColumnBuilder, PostgreSQLIndexBuilder
@@ -359,6 +359,37 @@ class PostgreSQLView(SQLView):
     def alter(self) -> bool:
         statement = f'CREATE OR REPLACE VIEW {self.fully_qualified_name} AS {self.statement};'
         return self.database.context.execute(statement)
+
+
+@dataclasses.dataclass
+class PostgreSQLFunction(SQLFunction):
+    parameters: str = ""
+    returns: str = ""
+    language: str = "plpgsql"
+    volatility: str = "VOLATILE"
+    statement: str = ""
+    
+    def create(self) -> bool:
+        create_statement = f"""
+            CREATE OR REPLACE FUNCTION {self.fully_qualified_name}({self.parameters})
+            RETURNS {self.returns}
+            LANGUAGE {self.language}
+            {self.volatility}
+            AS $$
+            BEGIN
+                {self.statement}
+            END;
+            $$;
+        """
+        return self.database.context.execute(create_statement)
+    
+    def drop(self) -> bool:
+        statement = f'DROP FUNCTION IF EXISTS {self.fully_qualified_name}({self.parameters});'
+        return self.database.context.execute(statement)
+    
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
 
 
 @dataclasses.dataclass
