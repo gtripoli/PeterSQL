@@ -38,9 +38,9 @@ Comprehensive integration tests across all supported database engines.
 | **Function** | Create | ✅ | ✅ | ❌ | ✅ |
 | | Drop | ✅ | ✅ | ❌ | ✅ |
 | | Alter | ✅ | ✅ | ❌ | ✅ |
-| **Procedure** | Create | ⚠️ | ⚠️ | ❌ | ⚠️ |
-| | Drop | ⚠️ | ⚠️ | ❌ | ⚠️ |
-| | Alter | ⚠️ | ⚠️ | ❌ | ⚠️ |
+| **Procedure** | Create | ⚠️ | ⚠️ | ❌ | ✅ |
+| | Drop | ⚠️ | ⚠️ | ❌ | ✅ |
+| | Alter | ⚠️ | ⚠️ | ❌ | ✅ |
 | **Event** | Create | ⚠️ | ⚠️ | ❌ | ❌ |
 | | Drop | ⚠️ | ⚠️ | ❌ | ❌ |
 | | Alter | ⚠️ | ⚠️ | ❌ | ❌ |
@@ -54,8 +54,8 @@ Comprehensive integration tests across all supported database engines.
 
 ## 📊 Test Statistics
 
-- **Total tests:** 179 integration tests collected (263 with all engines)
-- **Passing:** 179 tests (+54 PostgreSQL) ✅ **100% PASS RATE**
+- **Total tests:** 182 integration tests collected (266 with all engines)
+- **Passing:** 182 tests (+57 PostgreSQL) ✅ **100% PASS RATE**
 - **Skipped:** 0 tests ✅ **ALL TESTS ENABLED**
   - SQLite: 6 tests (column/check modify/drop - incompatible API)
   - MariaDB 5.5: 1 test (CHECK constraints not supported)
@@ -255,7 +255,7 @@ This matrix shows which engines correctly implement the required abstract method
 - ❌ **Error** - Implementation exists but has bugs
 
 **Key Findings:**
-- ✅ **PostgreSQL 100% COMPLETE** - All 60 tests passing (was 0/60), full CRUD for all objects including Functions
+- ✅ **PostgreSQL 100% COMPLETE** - All 63 tests passing (was 0/63), full CRUD for all objects including Functions and Procedures
 - ✅ **Code style refactoring** - All `sql` variable names changed to `statement` across all engines
 - ✅ **PostgreSQL View implemented** - Uses `public` schema, proper `fully_qualified_name` override
 - ✅ **PostgreSQL Trigger implemented** - Uses regex to extract table name from CREATE TRIGGER statement for proper DROP
@@ -275,9 +275,9 @@ This matrix shows which engines correctly implement the required abstract method
   - MySQL: ✅ `MySQLFunction` with create/drop/alter
   - PostgreSQL: ✅ **IMPLEMENTED** `PostgreSQLFunction` with create/drop/alter (plpgsql, volatility support)
   - SQLite: ❌ N/A (SQLite doesn't support stored functions)
-- ⚠️ **Procedures** - NOT IMPLEMENTED on any engine
-  - Abstract `SQLProcedure` class exists but no engine implementation
-  - MariaDB/MySQL/PostgreSQL support procedures natively but classes missing
+- ⚠️ **Procedures** - PostgreSQL implemented, MariaDB/MySQL pending
+  - PostgreSQL: ✅ **IMPLEMENTED** `PostgreSQLProcedure` with create/drop/alter (plpgsql support)
+  - MariaDB/MySQL: ⚠️ NOT IMPLEMENTED (native support exists, classes missing)
   - SQLite: ❌ N/A (SQLite doesn't support stored procedures)
 - ⚠️ **Events** - NOT IMPLEMENTED on any engine
   - Abstract `SQLEvent` class exists but no engine implementation
@@ -299,7 +299,7 @@ This matrix shows which engines correctly implement the required abstract method
 
 ### **PostgreSQL**
 - ✅ **DONE** `PostgreSQLFunction` - Implemented with create/drop/alter, plpgsql support
-- ⚠️ `PostgreSQLProcedure` - PostgreSQL supports procedures (v11+), class needs implementation
+- ✅ **DONE** `PostgreSQLProcedure` - Implemented with create/drop/alter, plpgsql support
 
 ### **MariaDB/MySQL**
 - ⚠️ `MariaDBProcedure` / `MySQLProcedure` - Both support procedures, classes need implementation
@@ -316,7 +316,7 @@ This matrix shows which engines correctly implement the required abstract method
 | Object | MariaDB | MySQL | PostgreSQL | SQLite | Priority |
 |---------|---------|-------|------------|--------|----------|
 | **Function** | ✅ Implemented | ✅ Implemented | ✅ **IMPLEMENTED** | ❌ N/A | ✅ **DONE** |
-| **Procedure** | ⚠️ Missing | ⚠️ Missing | ⚠️ Missing | ❌ N/A | 🟡 Medium |
+| **Procedure** | ⚠️ Missing | ⚠️ Missing | ✅ **IMPLEMENTED** | ❌ N/A | 🟡 Medium |
 | **Event** | ⚠️ Missing | ⚠️ Missing | ❌ N/A | ❌ N/A | 🟢 Low |
 
 ### **✅ COMPLETED: PostgreSQLFunction**
@@ -327,12 +327,20 @@ This matrix shows which engines correctly implement the required abstract method
 3. ✅ **Schema handling** - Uses public schema via fully_qualified_name override
 4. ✅ **All engines** - build_empty_function added to all contexts
 
-### **🟡 NEXT Priority: PostgreSQLProcedure**
+### **✅ COMPLETED: PostgreSQLProcedure**
+
+**Implementation complete:**
+1. ✅ **PostgreSQL Procedure** - Implemented with create/drop/alter, plpgsql support
+2. ✅ **Test coverage** - 3 tests passing across postgres:latest, 16, 15
+3. ✅ **Schema handling** - Uses public schema via fully_qualified_name override
+4. ✅ **All engines** - build_empty_procedure added to all contexts
+
+### **🟡 NEXT Priority: MariaDB/MySQL Procedure**
 
 **Why this is next:**
-1. **Similar to Function** - Same pattern, fast implementation
-2. **Complete PostgreSQL** - Only Procedure missing for full object coverage
-3. **Native support** - PostgreSQL supports procedures since v11+
+1. **Complete engine parity** - Align MariaDB/MySQL with PostgreSQL
+2. **Native support** - Both engines support procedures natively
+3. **Existing pattern** - Follow PostgreSQL implementation
 
 ### **📋 Recommended Implementation Order:**
 
@@ -341,10 +349,10 @@ This matrix shows which engines correctly implement the required abstract method
 - ✅ Added test coverage (3 tests passing)
 - ✅ PostgreSQL now has full Function support
 
-**Phase 2: PostgreSQLProcedure** (MEDIUM priority)
-- Implement `PostgreSQLProcedure` with create/drop/alter methods
-- Very similar to Function, fast implementation
-- PostgreSQL supports procedures since v11+
+**Phase 2: PostgreSQLProcedure** ✅ **DONE**
+- ✅ Implemented `PostgreSQLProcedure` with create/drop/alter methods
+- ✅ Added test coverage (3 tests passing)
+- ✅ PostgreSQL now has full Procedure support
 
 **Phase 3: MariaDB/MySQL Procedure** (MEDIUM priority)
 - Complete `MariaDBProcedure` and `MySQLProcedure`
