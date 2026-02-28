@@ -1,4 +1,4 @@
-# Code Style Guidelines (v1.3)
+# Code Style Guidelines (v1.4)
 
 These rules define the expected coding style for this project.
 They apply to all contributors, including humans, AI-assisted tools, and automated systems.
@@ -63,7 +63,15 @@ They are mandatory unless explicitly stated otherwise.
 
 ---
 
-## 3. Naming Conventions
+## 3. Commit Messages
+
+- Commit messages MUST be concise and non-verbose.
+- They serve as a brief summary of changes. Detailed explanations belong in the merge request description.
+- The merge request description MUST be comprehensive and well-written.
+
+---
+
+## 4. Naming Conventions
 
 - Variable, attribute, class, function, and parameter names MUST be descriptive.
 - Names MUST NOT be aggressively shortened.
@@ -96,7 +104,7 @@ self.par = par
 
 ---
 
-## 4. Python Typing
+## 5. Python Typing
 
 This project targets Python 3.14 and uses PEP 585 generics for standard collections.
 
@@ -188,7 +196,7 @@ if TYPE_CHECKING:
     from pkg.heavy import HeavyType  # TYPE_CHECKING: unavoidable circular import
 ```
 
-## 5. Import Rules
+## 6. Import Rules
 
 ### Submodules vs symbols (`from ... import ...`)
 
@@ -470,7 +478,7 @@ def get_dialect() -> str:
 
 ---
 
-## 6. Variable Definition Order
+## 7. Variable Definition Order
 
 When defining multiple variables in sequence, variables MUST be ordered by increasing number of characters in the
 variable name (shorter names first).
@@ -496,7 +504,7 @@ pos = self._editor.GetCurrentPos()
 
 ---
 
-## 7. Python Classes
+## 8. Python Classes
 
 ### Naming
 
@@ -569,14 +577,14 @@ class Example:
 
 ---
 
-## 8. Function and Method Size
+## 9. Function and Method Size
 
 - A function/method MUST be at most 50 lines.
 - If it exceeds 50 lines, it MUST be split into smaller functions/methods with clear names.
 
 ---
 
-## 9. Walrus Operator ( := )
+## 10. Walrus Operator ( := )
 
 - Always try to use the walrus operator when it improves clarity and avoids redundant calls.
 - Do NOT use it if it reduces readability.
@@ -601,7 +609,7 @@ if user is not None:
 
 ---
 
-## 10. Mypy & Static Analysis
+## 11. Mypy & Static Analysis
 
 - Code MUST be mypy-friendly.
 - Do NOT silence errors with `# type: ignore` unless there is no reasonable alternative.
