@@ -383,7 +383,7 @@ class SQLiteContext(AbstractContext):
                 id=i,
                 name=result['name'],
                 database=database,
-                sql=result['sql']
+                statement=result['sql']
             ))
 
         return results
@@ -396,7 +396,7 @@ class SQLiteContext(AbstractContext):
                 id=i,
                 name=result['name'],
                 database=database,
-                sql=result['sql']
+                statement=result['sql']
             ))
 
         return results
@@ -480,7 +480,7 @@ class SQLiteContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> SQLiteTrigger:
@@ -493,5 +493,5 @@ class SQLiteContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

@@ -6,6 +6,9 @@ from testcontainers.mysql import MySqlContainer
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
+from structures.engines.mysql.database import MySQLTable
+from structures.engines.mysql.datatype import MySQLDataType
+from structures.engines.mysql.indextype import MySQLIndexType
 
 
 MYSQL_VERSIONS: list[str] = [
@@ -13,6 +16,45 @@ MYSQL_VERSIONS: list[str] = [
     "mysql:8.0",
     # "mysql:5.7",  # Disabled: too slow and resource-intensive
 ]
+
+
+def create_users_table_mysql(mysql_database, mysql_session) -> MySQLTable:
+    ctx = mysql_session.context
+    ctx.set_database(mysql_database)
+
+    table = ctx.build_empty_table(mysql_database, name="users", engine="InnoDB", collation_name="utf8mb4_general_ci")
+
+    id_column = ctx.build_empty_column(
+        table,
+        MySQLDataType.INT,
+        name="id",
+        is_auto_increment=True,
+        is_nullable=False,
+        length=11,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        MySQLDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        MySQLIndexType.PRIMARY,
+        ["id"],
+        name="PRIMARY",
+    )
+    table.indexes.append(primary_index)
+
+    table.create()
+    mysql_database.tables.refresh()
+    return next(t for t in mysql_database.tables.get_value() if t.name == "users")
 
 
 def pytest_generate_tests(metafunc):
@@ -28,26 +70,8 @@ def mysql_container(mysql_version):
                         nano_cpus=1_000_000_000,
                         shm_size="256m",
                         )
-    # Expose SSH port
-    container.with_exposed_ports(22)
     
     with container:
-        # Install and configure SSH in the container
-        install_ssh_commands = [
-            "apt-get update",
-            "apt-get install -y openssh-server",
-            "mkdir -p /var/run/sshd",
-            "echo 'root:testpassword' | chpasswd",
-            "sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config",
-            "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config",
-            "/usr/sbin/sshd",
-        ]
-        
-        for cmd in install_ssh_commands:
-            exit_code, output = container.exec(cmd)
-            if exit_code != 0 and "sshd" not in cmd:
-                raise RuntimeError(f"Failed to execute: {cmd}\nOutput: {output}")
-        
         yield container
 
 
@@ -83,3 +107,34 @@ def mysql_database(mysql_session):
     for table in database.tables.get_value():
         mysql_session.context.execute(f"DROP TABLE IF EXISTS `testdb`.`{table.name}`")
     mysql_session.context.execute("SET FOREIGN_KEY_CHECKS = 1")
+
+
+# Unified fixtures for base test suites
+@pytest.fixture
+def session(mysql_session):
+    """Alias for mysql_session to match base test suite parameter names."""
+    return mysql_session
+
+
+@pytest.fixture
+def database(mysql_database):
+    """Alias for mysql_database to match base test suite parameter names."""
+    return mysql_database
+
+
+@pytest.fixture
+def create_users_table():
+    """Provide the create_users_table helper function."""
+    return create_users_table_mysql
+
+
+@pytest.fixture
+def datatype_class():
+    """Provide the engine-specific datatype class."""
+    return MySQLDataType
+
+
+@pytest.fixture
+def indextype_class():
+    """Provide the engine-specific indextype class."""
+    return MySQLIndexType

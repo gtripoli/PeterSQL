@@ -511,6 +511,7 @@ class SQLRecord(abc.ABC):
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(id={self.id}, table={self.table.name}, values={self.values})"
 
+    @property
     def is_new(self) -> bool:
         return self.id <= -1
 
@@ -577,7 +578,7 @@ class SQLRecord(abc.ABC):
         results = []
         with table.database.context.transaction() as transaction:
             for record in records:
-                if record.is_new():
+                if record.is_new:
                     continue
 
                 if raw_delete_record := record.raw_delete_record():
@@ -590,7 +591,8 @@ class SQLRecord(abc.ABC):
         if not self.is_valid():
             raise ValueError("Record is not yet valid")
 
-        if self.is_new():
+
+        if self.is_new:
             method = self.insert
         else:
             method = self.update
@@ -603,7 +605,15 @@ class SQLView(abc.ABC):
     id: int
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
-    sql: str
+    statement: str
+
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    @property
+    def sql_safe_name(self) -> str:
+        return self.database.context.build_sql_safe_name(self.name)
 
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
@@ -611,16 +621,25 @@ class SQLView(abc.ABC):
 
         return new_view
 
+    def save(self):
+        if self.is_new:
+            result = self.create()
+        else:
+            result = self.alter()
+        
+        self.database.refresh()
+        return result
+
     @abc.abstractmethod
-    def create(self):
+    def create(self) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def drop(self):
+    def drop(self) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def alter(self):
+    def alter(self) -> bool:
         raise NotImplementedError
 
 
@@ -629,15 +648,44 @@ class SQLTrigger(abc.ABC):
     id: int
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
-    sql: str
+    statement: str
     timing: Literal['BEFORE', 'AFTER'] = 'BEFORE'
     event: Literal['INSERT', 'UPDATE', 'DELETE'] = 'INSERT'
+
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    @property
+    def sql_safe_name(self) -> str:
+        return self.database.context.build_sql_safe_name(self.name)
 
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
         new_view = self.__class__(**field_values)
 
         return new_view
+
+    def save(self):
+        if self.is_new:
+            result = self.create()
+        else:
+            result = self.alter()
+        
+        self.database.refresh()
+        return result
+
+    @abc.abstractmethod
+    def create(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self) -> bool:
+        raise NotImplementedError
 
 
 @dataclasses.dataclass(eq=False)
@@ -646,11 +694,40 @@ class SQLProcedure(abc.ABC):
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
 
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    @property
+    def sql_safe_name(self) -> str:
+        return self.database.context.build_sql_safe_name(self.name)
+
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
         new_view = self.__class__(**field_values)
 
         return new_view
+
+    def save(self):
+        if self.is_new:
+            result = self.create()
+        else:
+            result = self.alter()
+        
+        self.database.refresh()
+        return result
+
+    @abc.abstractmethod
+    def create(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self) -> bool:
+        raise NotImplementedError
 
 
 @dataclasses.dataclass(eq=False)
@@ -659,11 +736,40 @@ class SQLFunction(abc.ABC):
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
 
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    @property
+    def sql_safe_name(self) -> str:
+        return self.database.context.build_sql_safe_name(self.name)
+
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}
         new_view = self.__class__(**field_values)
 
         return new_view
+
+    def save(self):
+        if self.is_new:
+            result = self.create()
+        else:
+            result = self.alter()
+        
+        self.database.refresh()
+        return result
+
+    @abc.abstractmethod
+    def create(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self) -> bool:
+        raise NotImplementedError
 
 
 @dataclasses.dataclass(eq=False)
@@ -671,6 +777,14 @@ class SQLEvent(abc.ABC):
     id: int
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
+
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    @property
+    def sql_safe_name(self) -> str:
+        return self.database.context.build_sql_safe_name(self.name)
 
     def copy(self):
         field_values = {field.name: getattr(self, field.name) for field in dataclasses.fields(self)}

@@ -6,6 +6,9 @@ from testcontainers.mysql import MySqlContainer
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
+from structures.engines.mariadb.database import MariaDBTable
+from structures.engines.mariadb.datatype import MariaDBDataType
+from structures.engines.mariadb.indextype import MariaDBIndexType
 
 MARIADB_VERSIONS: list[str] = [
     "mariadb:latest",
@@ -13,6 +16,45 @@ MARIADB_VERSIONS: list[str] = [
     "mariadb:10.11",
     "mariadb:5.5",
 ]
+
+
+def create_users_table_mariadb(mariadb_database, mariadb_session) -> MariaDBTable:
+    ctx = mariadb_session.context
+    ctx.set_database(mariadb_database)
+
+    table = ctx.build_empty_table(mariadb_database, name="users", engine="InnoDB", collation_name="utf8mb4_general_ci")
+
+    id_column = ctx.build_empty_column(
+        table,
+        MariaDBDataType.INT,
+        name="id",
+        is_auto_increment=True,
+        is_nullable=False,
+        length=11,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        MariaDBDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        MariaDBIndexType.PRIMARY,
+        ["id"],
+        name="PRIMARY",
+    )
+    table.indexes.append(primary_index)
+
+    table.create()
+    mariadb_database.tables.refresh()
+    return next(t for t in mariadb_database.tables.get_value() if t.name == "users")
 
 
 def pytest_generate_tests(metafunc):
@@ -28,26 +70,8 @@ def mariadb_container(mariadb_version):
                         nano_cpus=1_000_000_000,
                         shm_size="256m",
                         )
-    # Expose SSH port
-    container.with_exposed_ports(22)
     
     with container:
-        # Install and configure SSH in the container
-        install_ssh_commands = [
-            "apt-get update",
-            "apt-get install -y openssh-server",
-            "mkdir -p /var/run/sshd",
-            "echo 'root:testpassword' | chpasswd",
-            "sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config",
-            "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config",
-            "/usr/sbin/sshd",
-        ]
-        
-        for cmd in install_ssh_commands:
-            exit_code, output = container.exec(cmd)
-            if exit_code != 0 and "sshd" not in cmd:
-                raise RuntimeError(f"Failed to execute: {cmd}\nOutput: {output}")
-        
         yield container
 
 
@@ -83,3 +107,34 @@ def mariadb_database(mariadb_session):
     for table in database.tables.get_value():
         mariadb_session.context.execute(f"DROP TABLE IF EXISTS `testdb`.`{table.name}`")
     mariadb_session.context.execute("SET FOREIGN_KEY_CHECKS = 1")
+
+
+# Unified fixtures for base test suites
+@pytest.fixture
+def session(mariadb_session):
+    """Alias for mariadb_session to match base test suite parameter names."""
+    return mariadb_session
+
+
+@pytest.fixture
+def database(mariadb_database):
+    """Alias for mariadb_database to match base test suite parameter names."""
+    return mariadb_database
+
+
+@pytest.fixture
+def create_users_table():
+    """Provide the create_users_table helper function."""
+    return create_users_table_mariadb
+
+
+@pytest.fixture
+def datatype_class():
+    """Provide the engine-specific datatype class."""
+    return MariaDBDataType
+
+
+@pytest.fixture
+def indextype_class():
+    """Provide the engine-specific indextype class."""
+    return MariaDBIndexType

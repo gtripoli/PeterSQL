@@ -22,19 +22,27 @@ class PostgreSQLTable(SQLTable):
     def raw_create(self) -> str:
         columns = [str(PostgreSQLColumnBuilder(column)) for column in self.columns]
 
-        indexes = [str(PostgreSQLIndexBuilder(index)) for index in self.indexes]
+        # Only PRIMARY KEY constraints can be inline in CREATE TABLE
+        # Other indexes must be created separately with CREATE INDEX
+        inline_constraints = []
+        for index in self.indexes:
+            if index.type.name == "PRIMARY":
+                inline_constraints.append(str(PostgreSQLIndexBuilder(index, inline=True)))
 
-        columns_and_indexes = columns + indexes
+        columns_and_constraints = columns + inline_constraints
+
+        # Use schema if specified, otherwise use database name
+        schema_or_db = self.schema if self.schema else self.database.name
 
         return f"""
-            CREATE TABLE "{self.database.name}"."{self.name}" (
-                {', '.join(columns_and_indexes)}
+            CREATE TABLE "{schema_or_db}"."{self.name}" (
+                {', '.join(columns_and_constraints)}
             );
             """
 
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f'ALTER TABLE "{self.database.name}"."{table.name}" RENAME TO "{new_name}";'
-        self.database.context.execute(sql)
+        statement = f'ALTER TABLE "{self.database.name}"."{table.name}" RENAME TO "{new_name}";'
+        self.database.context.execute(statement)
 
         return True
 
@@ -52,8 +60,10 @@ class PostgreSQLTable(SQLTable):
         with self.database.context.transaction() as transaction:
             transaction.execute(self.raw_create())
 
+            # Only create non-PRIMARY indexes separately (PRIMARY is already inline in CREATE TABLE)
             for index in self.indexes:
-                index.create()
+                if index.type.name != "PRIMARY":
+                    index.create()
 
             for foreign_key in self.foreign_keys:
                 foreign_key.create()
@@ -130,15 +140,15 @@ class PostgreSQLColumn(SQLColumn):
 @dataclasses.dataclass
 class PostgreSQLIndex(SQLIndex):
     def create(self) -> bool:
-        sql = str(PostgreSQLIndexBuilder(self))
-        return self.table.database.context.execute(sql)
+        statement = str(PostgreSQLIndexBuilder(self, inline=False))
+        return self.table.database.context.execute(statement)
 
     def drop(self) -> bool:
         if self.type.name == "PRIMARY":
-            sql = f'ALTER TABLE "{self.table.database.name}"."{self.table.name}" DROP CONSTRAINT "{self.name}";'
+            statement = f'ALTER TABLE "{self.table.database.name}"."{self.table.name}" DROP CONSTRAINT "{self.name}";'
         else:
-            sql = f'DROP INDEX IF EXISTS "{self.table.database.name}"."{self.name}";'
-        return self.table.database.context.execute(sql)
+            statement = f'DROP INDEX IF EXISTS "{self.table.database.name}"."{self.name}";'
+        return self.table.database.context.execute(statement)
 
     def alter(self, original_index: Self) -> bool:
         self.drop()
@@ -187,22 +197,22 @@ class PostgreSQLRecord(SQLRecord):
 @dataclasses.dataclass
 class PostgreSQLView(SQLView):
     def create(self) -> bool:
-        sql = f'CREATE VIEW "{self.database.name}"."{self.name}" AS {self.sql};'
-        return self.database.context.execute(sql)
-
-    def alter(self) -> bool:
-        sql = f'CREATE OR REPLACE VIEW "{self.database.name}"."{self.name}" AS {self.sql};'
+        sql = f'CREATE VIEW {self.database.sql_safe_name}.{self.sql_safe_name} AS {self.statement};'
         return self.database.context.execute(sql)
 
     def drop(self) -> bool:
-        sql = f'DROP VIEW IF EXISTS "{self.database.name}"."{self.name}";'
+        sql = f'DROP VIEW IF EXISTS {self.database.sql_safe_name}.{self.sql_safe_name};'
+        return self.database.context.execute(sql)
+
+    def alter(self) -> bool:
+        sql = f'CREATE OR REPLACE VIEW {self.database.sql_safe_name}.{self.sql_safe_name} AS {self.statement};'
         return self.database.context.execute(sql)
 
 
 @dataclasses.dataclass
 class PostgreSQLTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(self.sql)
+        return self.database.context.execute(self.statement)
 
     def alter(self) -> bool:
         self.drop()

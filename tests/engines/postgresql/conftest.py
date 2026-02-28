@@ -6,12 +6,52 @@ from testcontainers.postgres import PostgresContainer
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
+from structures.engines.postgresql.database import PostgreSQLTable
+from structures.engines.postgresql.datatype import PostgreSQLDataType
+from structures.engines.postgresql.indextype import PostgreSQLIndexType
 
 POSTGRESQL_VERSIONS: list[str] = [
     "postgres:latest",
     "postgres:16",
     "postgres:15",
 ]
+
+
+def create_users_table_postgresql(postgresql_database, postgresql_session) -> PostgreSQLTable:
+    ctx = postgresql_session.context
+
+    table = ctx.build_empty_table(postgresql_database, name="users")
+    table.schema = "public"
+
+    id_column = ctx.build_empty_column(
+        table,
+        PostgreSQLDataType.SERIAL,
+        name="id",
+        is_nullable=False,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        PostgreSQLDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        PostgreSQLIndexType.PRIMARY,
+        ["id"],
+        name="users_pkey",
+    )
+    table.indexes.append(primary_index)
+
+    table.create()
+    postgresql_database.tables.refresh()
+    return next(t for t in postgresql_database.tables.get_value() if t.name == "users")
 
 
 def pytest_generate_tests(metafunc):
@@ -29,35 +69,8 @@ def postgresql_container(postgresql_version):
         nano_cpus=1_000_000_000,
         shm_size="128m",
     )
-    # Expose SSH port
-    container.with_exposed_ports(22)
     
     with container:
-        # Install and configure SSH in the container
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        install_ssh_commands = [
-            ["sh", "-c", "apt-get update"],
-            ["sh", "-c", "DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server"],
-            ["sh", "-c", "mkdir -p /var/run/sshd"],
-            ["sh", "-c", "echo 'root:testpassword' | chpasswd"],
-            ["sh", "-c", "sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config"],
-            ["sh", "-c", "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config"],
-            ["sh", "-c", "nohup /usr/sbin/sshd -D > /dev/null 2>&1 &"],
-        ]
-        
-        for cmd in install_ssh_commands:
-            logger.info(f"Executing: {cmd}")
-            exit_code, output = container.exec(cmd)
-            logger.info(f"Exit code: {exit_code}, Output: {output}")
-            if exit_code != 0 and "sshd" not in cmd:
-                raise RuntimeError(f"Failed to execute: {cmd}\nExit code: {exit_code}\nOutput: {output}")
-        
-        # Verify SSH is running
-        exit_code, output = container.exec("ps aux | grep sshd")
-        logger.info(f"SSH processes: {output}")
-        
         yield container
 
 
@@ -80,3 +93,48 @@ def postgresql_session(postgresql_container):
     session.connect()
     yield session
     session.disconnect()
+
+
+@pytest.fixture(scope="function")
+def postgresql_database(postgresql_session):
+    """Fixture that provides a PostgreSQL database for tests."""
+    # PostgreSQL uses the 'test' database created by the container
+    # The 'public' schema is the default schema in that database
+    postgresql_session.context.databases.refresh()
+    database = next(db for db in postgresql_session.context.databases.get_value() if db.name == "test")
+    yield database
+    # Cleanup: drop all tables in public schema
+    database.tables.refresh()
+    for table in database.tables.get_value():
+        postgresql_session.context.execute(f"DROP TABLE IF EXISTS public.{table.name} CASCADE")
+
+
+# Unified fixtures for base test suites
+@pytest.fixture
+def session(postgresql_session):
+    """Alias for postgresql_session to match base test suite parameter names."""
+    return postgresql_session
+
+
+@pytest.fixture
+def database(postgresql_database):
+    """Alias for postgresql_database to match base test suite parameter names."""
+    return postgresql_database
+
+
+@pytest.fixture
+def create_users_table():
+    """Provide the create_users_table helper function."""
+    return create_users_table_postgresql
+
+
+@pytest.fixture
+def datatype_class():
+    """Provide the engine-specific datatype class."""
+    return PostgreSQLDataType
+
+
+@pytest.fixture
+def indextype_class():
+    """Provide the engine-specific indextype class."""
+    return PostgreSQLIndexType

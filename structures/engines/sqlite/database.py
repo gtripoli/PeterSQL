@@ -1,3 +1,4 @@
+import re
 import dataclasses
 from typing import Self, Optional, Dict
 
@@ -20,14 +21,14 @@ class SQLiteDatabase(SQLDatabase):
 @dataclasses.dataclass(eq=False)
 class SQLiteTable(SQLTable):
     def set_auto_increment(self, auto_increment):
-        sql = f"UPDATE sqlite_sequence SET seq = {auto_increment} WHERE name = '{self.name}';"
-        self.database.context.execute(sql)
+        statement = f"UPDATE sqlite_sequence SET seq = {auto_increment} WHERE name = '{self.name}';"
+        self.database.context.execute(statement)
 
         return True
 
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
+        self.database.context.execute(statement)
 
         return True
 
@@ -441,23 +442,29 @@ class SQLiteRecord(SQLRecord):
 
 
 class SQLiteView(SQLView):
+    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str):
+        match = re.search(r'CREATE\s+VIEW\s+.*?\s+AS\s+(.*)', statement, re.IGNORECASE | re.DOTALL)
+        if match:
+            statement = match.group(1).strip()
+
+        super().__init__(id=id, name=name, database=database, statement=statement)
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.name} AS {self.sql}")
+        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.sql_safe_name} AS {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
-        self.drop()
-        return self.create()
+        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.sql_safe_name} AS {self.statement}")
 
 
 class SQLiteTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.name} {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.sql_safe_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
         self.drop()

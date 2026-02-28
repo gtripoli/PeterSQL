@@ -198,7 +198,7 @@ class MySQLContext(AbstractContext):
                 id=i,
                 name=result["TABLE_NAME"],
                 database=database,
-                sql=result["VIEW_DEFINITION"]
+                statement=result["VIEW_DEFINITION"] or ""
             ))
 
         return results
@@ -217,9 +217,9 @@ class MySQLContext(AbstractContext):
         for i, result in enumerate(self.fetchall()):
             results.append(MySQLTrigger(
                 id=i,
-                name=result["TRIGGER_NAME"],
+                name=result['TRIGGER_NAME'],
                 database=database,
-                sql=result["ACTION_STATEMENT"]
+                statement=result['ACTION_STATEMENT']
             ))
 
         return results
@@ -498,7 +498,7 @@ class MySQLContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTrigger:
@@ -511,5 +511,5 @@ class MySQLContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

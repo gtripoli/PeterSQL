@@ -3,14 +3,16 @@ from typing import Optional
 import wx
 import wx.stc
 
+from gettext import gettext as _
+
 from helpers.sql import format_sql
-from helpers.bindings import AbstractModel
-from helpers.observables import Observable, debounce
+from helpers.bindings import AbstractModel, wx_call_after_debounce
+from helpers.observables import Observable
 
 from structures.connection import ConnectionEngine
 from structures.engines.database import SQLView
 
-from windows.main import CURRENT_SESSION, CURRENT_VIEW
+from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_VIEW
 
 
 class EditViewModel(AbstractModel):
@@ -25,7 +27,7 @@ class EditViewModel(AbstractModel):
         self.force = Observable()
         self.select_statement = Observable()
 
-        debounce(
+        wx_call_after_debounce(
             self.name, self.schema, self.definer, self.sql_security,
             self.algorithm, self.constraint, self.security_barrier,
             self.force, self.select_statement,
@@ -42,10 +44,10 @@ class EditViewModel(AbstractModel):
         
         if session := CURRENT_SESSION.get_value() :
             dialect = session.engine.value.dialect
-            formatted_sql = format_sql(view.sql, dialect)
+            formatted_sql = format_sql(view.statement, dialect)
             self.select_statement.set_initial(formatted_sql)
         else:
-            self.select_statement.set_initial(view.sql)
+            self.select_statement.set_initial(view.statement)
 
         if not session:
             return
@@ -68,7 +70,7 @@ class EditViewModel(AbstractModel):
             return
 
         view.name = self.name.get_value()
-        view.sql = self.select_statement.get_value()
+        view.statement = self.select_statement.get_value()
 
         session = CURRENT_SESSION.get_value()
         if not session:
@@ -142,7 +144,23 @@ class ViewEditorController:
         self.model = EditViewModel()
         
         self._bind_controls()
+        self._bind_buttons()
+        
+        wx_call_after_debounce(
+            self.model.name,
+            self.model.schema,
+            self.model.definer,
+            self.model.sql_security,
+            self.model.algorithm,
+            self.model.constraint,
+            self.model.security_barrier,
+            self.model.force,
+            self.model.select_statement,
+            callback=self.update_button_states
+        )
+
         CURRENT_VIEW.subscribe(self.on_current_view_changed)
+
 
     def _bind_controls(self):
         algorithm_radios = [
@@ -171,7 +189,110 @@ class ViewEditorController:
             select_statement=self.parent.stc_view_select,
         )
 
+    def _bind_buttons(self):
+        self.parent.btn_save_view.Bind(wx.EVT_BUTTON, self.on_save_view)
+        self.parent.btn_delete_view.Bind(wx.EVT_BUTTON, self.on_delete_view)
+        self.parent.btn_cancel_view.Bind(wx.EVT_BUTTON, self.on_cancel_view)
+
+    def _get_original_view(self, view: SQLView) -> Optional[SQLView]:
+        if view.is_new:
+            return None
+        
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not session or not database:
+            return None
+        
+        return next((v for v in database.views if v.id == view.id), None)
+
+    def _has_changes(self, view: SQLView) -> bool:
+        if view.is_new:
+            return True
+        
+        original = self._get_original_view(view)
+        if original is None:
+            return True
+        
+        self.model.update_view(view)
+        return view != original
+
+    def update_button_states(self):
+        view = CURRENT_VIEW.get_value()
+        
+        if view is None:
+            self.parent.btn_save_view.Enable(False)
+            self.parent.btn_cancel_view.Enable(False)
+            self.parent.btn_delete_view.Enable(False)
+        else:
+            has_changes = self._has_changes(view)
+            self.parent.btn_save_view.Enable(has_changes)
+            self.parent.btn_cancel_view.Enable(has_changes)
+            self.parent.btn_delete_view.Enable(not view.is_new)
+
+    def on_save_view(self, event):
+        self.do_save_view()
+
+    def on_delete_view(self, event):
+        self.do_delete_view()
+
+    def on_cancel_view(self, event):
+        self.do_cancel_view()
+
+    def do_save_view(self):
+        view = CURRENT_VIEW.get_value()
+        if not view:
+            return
+
+        session = CURRENT_SESSION.get_value()
+        if not session:
+            return
+
+        try:
+            view.save()
+            message = _("View created successfully") if view.is_new else _("View updated successfully")
+            wx.MessageBox(message, _("Success"), wx.OK | wx.ICON_INFORMATION)
+            self.update_button_states()
+        except Exception as e:
+            wx.MessageBox(_("Error saving view: {}").format(str(e)), _("Error"), wx.OK | wx.ICON_ERROR)
+
+
+    def do_delete_view(self):
+        view = CURRENT_VIEW.get_value()
+        if not view:
+            return
+
+        session = CURRENT_SESSION.get_value()
+        if not session:
+            return
+
+        result = wx.MessageBox(
+            _("Are you sure you want to delete view '{}'?").format(view.name),
+            _("Confirm Delete"),
+            wx.YES_NO | wx.ICON_QUESTION
+        )
+
+        if result != wx.YES:
+            return
+
+        try:
+            view.drop()
+            wx.MessageBox(_("View deleted successfully"), _("Success"), wx.OK | wx.ICON_INFORMATION)
+            CURRENT_VIEW.set_value(None)
+        except Exception as e:
+            wx.MessageBox(_("Error deleting view: {}").format(str(e)), _("Error"), wx.OK | wx.ICON_ERROR)
+
+    def do_cancel_view(self):
+        view = CURRENT_VIEW.get_value()
+        if not view:
+            return
+
+        CURRENT_VIEW.set_value(None)
+        CURRENT_VIEW.set_value(view)
+        self.update_button_states()
+
     def on_current_view_changed(self, view: Optional[SQLView]):
+        self.update_button_states()
+        
         if view is None:
             return
         

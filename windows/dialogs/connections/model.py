@@ -1,7 +1,6 @@
 from gettext import gettext as _
 
-from helpers import wx_call_after_debounce
-from helpers.bindings import AbstractModel
+from helpers.bindings import AbstractModel, wx_call_after_debounce
 from helpers.observables import Observable, CallbackEvent
 
 from structures.connection import Connection, ConnectionEngine

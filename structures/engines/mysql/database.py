@@ -44,8 +44,8 @@ class MySQLTable(SQLTable):
             """
 
     def alter_auto_increment(self, auto_increment: int):
-        sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE `{self.database.name}`.`{self.name}` AUTO_INCREMENT {auto_increment};"
+        self.database.context.execute(statement)
 
         return True
 
@@ -56,8 +56,8 @@ class MySQLTable(SQLTable):
         return self.database.context.execute(f"""ALTER TABLE `{self.database.name}`.`{self.name}` {charset} COLLATE {self.collation_name};""")
 
     def alter_engine(self, engine: str):
-        sql = f"ALTER TABLE `{self.database.name}`.`{self.name}` ENGINE {engine};"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE `{self.database.name}`.`{self.name}` ENGINE {engine};"
+        self.database.context.execute(statement)
 
         return True
 
@@ -313,21 +313,24 @@ class MySQLRecord(SQLRecord):
 
 class MySQLView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE VIEW {self.sql_safe_name} AS {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
-        return self.database.context.execute(f"CREATE OR REPLACE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW {self.sql_safe_name} AS {self.statement}")
 
 
 class MySQLTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER `{self.name}` {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER {self.sql_safe_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
         self.drop()
@@ -344,7 +347,7 @@ class MySQLFunction(SQLFunction):
     def create(self) -> bool:
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
         query = f"""
-            CREATE FUNCTION `{self.name}`({self.parameters})
+            CREATE FUNCTION {self.sql_safe_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
             BEGIN
@@ -354,7 +357,7 @@ class MySQLFunction(SQLFunction):
         return self.database.context.execute(query)
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
         self.drop()

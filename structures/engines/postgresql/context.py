@@ -211,7 +211,7 @@ class PostgreSQLContext(AbstractContext):
                 id=i,
                 name=f"{result['schemaname']}.{result['tgname']}",
                 database=database,
-                sql=result['sql']
+                statement=result['sql']
             ))
 
         return results
@@ -516,7 +516,7 @@ class PostgreSQLContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> PostgreSQLTrigger:
@@ -529,5 +529,5 @@ class PostgreSQLContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

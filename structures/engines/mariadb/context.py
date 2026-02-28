@@ -210,7 +210,7 @@ class MariaDBContext(AbstractContext):
                 id=i,
                 name=result['TABLE_NAME'],
                 database=database,
-                sql=result['VIEW_DEFINITION']
+                statement=result['VIEW_DEFINITION']
             ))
 
         return results
@@ -231,7 +231,7 @@ class MariaDBContext(AbstractContext):
                 id=i,
                 name=result['TRIGGER_NAME'],
                 database=database,
-                sql=result['ACTION_STATEMENT']
+                statement=result['ACTION_STATEMENT']
             ))
 
         return results
@@ -498,7 +498,7 @@ class MariaDBContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTrigger:
@@ -511,5 +511,5 @@ class MariaDBContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

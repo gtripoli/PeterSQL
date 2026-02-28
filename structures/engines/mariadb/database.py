@@ -34,8 +34,8 @@ class MariaDBTable(SQLTable):
             """
 
     def alter_auto_increment(self, auto_increment: int):
-        sql = f"ALTER TABLE {self.database.sql_safe_name}.{self.sql_safe_name} AUTO_INCREMENT {auto_increment};"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE {self.database.sql_safe_name}.{self.sql_safe_name} AUTO_INCREMENT {auto_increment};"
+        self.database.context.execute(statement)
 
         return True
 
@@ -317,21 +317,24 @@ class MariaDBRecord(SQLRecord):
 
 class MariaDBView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE VIEW {self.sql_safe_name} AS {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
-        return self.database.context.execute(f"CREATE OR REPLACE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW {self.sql_safe_name} AS {self.statement}")
 
 
 class MariaDBTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER `{self.name}` {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER {self.sql_safe_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
         self.drop()
@@ -343,22 +346,22 @@ class MariaDBFunction(SQLFunction):
     parameters: str = ""
     returns: str = ""
     deterministic: bool = False
-    sql: str = ""
+    statement: str = ""
 
     def create(self) -> bool:
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
         query = f"""
-            CREATE FUNCTION `{self.name}`({self.parameters})
+            CREATE FUNCTION {self.sql_safe_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
             BEGIN
-                {self.sql};
+                {self.statement};
             END
         """
         return self.database.context.execute(query)
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.sql_safe_name}")
 
     def alter(self) -> bool:
         self.drop()
