@@ -35,6 +35,15 @@ Comprehensive integration tests across all supported database engines.
 | | Alter | ✅ | ✅ | ✅ | ✅ |
 | | Drop | ✅ | ✅ | ✅ | ✅ |
 | | Get Definers | ✅ | ✅ | ❌ | ❌ |
+| **Function** | Create | ✅ | ✅ | ❌ | ⚠️ |
+| | Drop | ✅ | ✅ | ❌ | ⚠️ |
+| | Alter | ✅ | ✅ | ❌ | ⚠️ |
+| **Procedure** | Create | ⚠️ | ⚠️ | ❌ | ⚠️ |
+| | Drop | ⚠️ | ⚠️ | ❌ | ⚠️ |
+| | Alter | ⚠️ | ⚠️ | ❌ | ⚠️ |
+| **Event** | Create | ⚠️ | ⚠️ | ❌ | ❌ |
+| | Drop | ⚠️ | ⚠️ | ❌ | ❌ |
+| | Alter | ⚠️ | ⚠️ | ❌ | ❌ |
 | **Infrastructure** | SSH Tunnel | ✅ | ✅ | ❌ | ❌ |
 
 **Legend:**
@@ -261,8 +270,19 @@ This matrix shows which engines correctly implement the required abstract method
 - ✅ **Quoting refactored** - All engines now use `quote_identifier()` and `qualify()` instead of manual quoting
 - ✅ **`fully_qualified_name` property** - Centralized qualified name generation, PostgreSQL overrides for schema support
 - ✅ **Check constraints CRUD** - Full create/drop/alter support (MariaDB/MySQL/PostgreSQL/SQLite)
-- ⚠️ **Functions** - Only MariaDB/MySQL support (SQLite/PostgreSQL don't have Function class)
-- ⚠️ **Procedures** - Not implemented on any engine yet
+- ⚠️ **Functions** - Only MariaDB/MySQL implemented (PostgreSQL/SQLite missing implementation)
+  - MariaDB: ✅ `MariaDBFunction` with create/drop/alter
+  - MySQL: ✅ `MySQLFunction` with create/drop/alter
+  - PostgreSQL: ⚠️ NOT IMPLEMENTED (PostgreSQL supports functions natively, class missing)
+  - SQLite: ❌ N/A (SQLite doesn't support stored functions)
+- ⚠️ **Procedures** - NOT IMPLEMENTED on any engine
+  - Abstract `SQLProcedure` class exists but no engine implementation
+  - MariaDB/MySQL/PostgreSQL support procedures natively but classes missing
+  - SQLite: ❌ N/A (SQLite doesn't support stored procedures)
+- ⚠️ **Events** - NOT IMPLEMENTED on any engine
+  - Abstract `SQLEvent` class exists but no engine implementation
+  - MariaDB/MySQL support events natively but classes missing
+  - PostgreSQL/SQLite: ❌ N/A (don't support scheduled events)
 - ⚠️ **SQLite Check/ForeignKey** - Inline-only (no separate create/drop after table creation)
 - ⚠️ **SQLite Column.modify** - Not supported (SQLite doesn't support ALTER COLUMN)
 - ⚠️ **MariaDB 5.5** - CHECK constraints not supported (too old, released 2009)
@@ -274,3 +294,17 @@ This matrix shows which engines correctly implement the required abstract method
 - **Documentation** - Tests serve as executable API documentation
 - **Cross-Engine Validation** - Ensures consistent behavior across databases
 - **API Compliance** - Abstract methods matrix verifies all engines implement required methods
+
+## 🚧 Missing Implementations
+
+### **PostgreSQL**
+- ⚠️ `PostgreSQLFunction` - PostgreSQL supports functions, class needs implementation
+- ⚠️ `PostgreSQLProcedure` - PostgreSQL supports procedures (v11+), class needs implementation
+
+### **MariaDB/MySQL**
+- ⚠️ `MariaDBProcedure` / `MySQLProcedure` - Both support procedures, classes need implementation
+- ⚠️ `MariaDBEvent` / `MySQLEvent` - Both support events, classes need implementation
+
+### **All Engines**
+- ⚠️ No test coverage for Function/Procedure/Event (base test classes don't exist)
+- ⚠️ Abstract `SQLProcedure` and `SQLEvent` exist but unused
