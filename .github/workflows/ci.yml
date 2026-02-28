@@ -12,7 +12,7 @@ on:
 env:
   PYTHON_VERSION: "3.14"
   PIP_CACHE_DIR: /home/runner/.cache/pip
-  UV_CACHE_DIR: /home/runner/.cache/uv
+#  UV_CACHE_DIR: /home/runner/.cache/uv
   WHEEL_CACHE_DIR: /home/runner/.cache/wheels
   PIP_FIND_LINKS: /home/runner/.cache/wheels
   UV_FIND_LINKS: /home/runner/.cache/wheels
