@@ -32,6 +32,28 @@ SELECT * FROM products; -- Statement 3
 - **DB-wide tables**: All physical tables in the database, regardless of scope
 - **CURRENT_TABLE**: The table currently selected in the table editor UI (optional, may be `None`)
 
+### Scope Classification
+
+The scope classification determines which columns are suggested in expression contexts:
+
+- **SCOPED**: Explicit scope exists via FROM/JOIN clauses in the current statement
+  - Example: `SELECT id, | FROM users` → scope = `users` table
+  - Example: `SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT u.id, |` → scope = `u`, `o` tables
+  - Behavior: Suggest only columns from scope tables (qualified if multiple tables, unqualified if single table)
+
+- **VIRTUAL_SCOPED**: Implicit scope inferred from context without FROM/JOIN
+  - Via qualified columns: `SELECT users.id, |` → virtual scope = `users` (inferred from qualified column)
+  - Via CURRENT_TABLE: `SELECT id, |` with CURRENT_TABLE=users → virtual scope = `users`
+  - **Important:** When VIRTUAL_SCOPED via CURRENT_TABLE (no FROM/JOIN), columns MUST be qualified (e.g., `users.id`, not `id`)
+  - Behavior: Suggest columns from the inferred table(s), but allow DB-wide suggestions with prefix
+
+- **NO_SCOPED**: No scope information available
+  - No FROM/JOIN in current statement
+  - No qualified columns to infer scope from
+  - No CURRENT_TABLE set
+  - Example: `SELECT id, |` with CURRENT_TABLE=null and no qualified columns
+  - Behavior: Suggest only functions (no columns without prefix)
+
 ### Prefix and Token
 
 - **Token**: A valid SQL identifier matching `^[A-Za-z_][A-Za-z0-9_]*$` (or dialect-equivalent)
@@ -350,12 +372,12 @@ ORDER BY created_at |
 **Special case - Qualified column in SELECT_LIST:**
 ```sql
 SELECT users.id |
-→ Whitespace after qualified column → suggest AS (alias) + FROM {table} (table hint)
-→ Suggestions: AS, FROM users
+→ Whitespace after qualified column → suggest contextual keywords + plain keywords
+→ Suggestions: FROM users, AS, FROM
 
 SELECT users.id F|
 → Whitespace after qualified column + prefix 'F'
-→ Suggest: FROM {table} hint + FROM keyword + functions matching 'F' (no AS - doesn't match prefix)
+→ Suggest: FROM {table} (contextual keyword) + FROM (plain keyword)
 → Suggestions: FROM users, FROM
 
 SELECT users.id W|
@@ -364,7 +386,13 @@ SELECT users.id W|
 → Suggestions: [] (empty - no valid suggestions)
 ```
 
-**Rationale:** When a qualified column is used (e.g., `users.id`), the table name is already known. Suggesting `FROM {table}` as a hint helps the user quickly add the FROM clause with the correct table. With prefix, filter AS + FROM {table} + FROM keyword + functions by prefix. Some keywords (e.g., WHERE) are syntactically invalid after SELECT item and should not be suggested.
+**Terminology:**
+- **Contextual keyword**: A keyword enriched with context-specific information (e.g., `FROM users` where `users` is inferred from the qualified column)
+- **Plain keyword**: Generic keyword without context (e.g., `FROM`, `AS`)
+
+**Ordering:** Contextual keywords MUST appear before plain keywords.
+
+**Rationale:** When a qualified column is used (e.g., `users.id`), the table name is already known. Suggesting `FROM {table}` as a contextual keyword helps the user quickly add the FROM clause with the correct table. However, `FROM` plain keyword is also shown because the user might want to use a different table (e.g., `FROM orders AS users`). Contextual keywords are more specific and useful than plain keywords, so they appear first. With prefix, filter contextual keywords + plain keywords by prefix. Some keywords (e.g., WHERE) are syntactically invalid after SELECT item and should not be suggested.
 
 ---
 
@@ -463,7 +491,10 @@ These contexts suggest **columns** from scope tables only.
 #### SELECT_LIST Context (Special Case)
 
 **If statement has NO scope tables (no FROM/JOIN yet):**
-- `CURRENT_TABLE` columns MUST be included first (if set)
+- Without prefix: `CURRENT_TABLE` columns MUST be included first (if set)
+- With prefix: `CURRENT_TABLE` columns MUST be included ONLY if they match the prefix via:
+  - Column-name match (e.g., `SELECT na|` → `name` from CURRENT_TABLE)
+  - Table-name expansion (e.g., `SELECT u|` and CURRENT_TABLE is `users` → suggest `users.*` columns)
 - Database-wide columns MUST be included ONLY if prefix exists (guardrail: avoid noise when no prefix)
 - Functions and keywords are included
 
@@ -642,9 +673,9 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
 ```sql
 -- Assume CURRENT_TABLE = users
 SELECT u|
-→ id, name, email, ... (CURRENT_TABLE columns first, unqualified - no scope)
-→ Table-name expansion: (other tables starting with 'u')
-→ Column-name matching: orders.user_id, products.unit_price (DB-wide columns starting with 'u')
+→ users.id, users.name, users.email, ... (CURRENT_TABLE via table-name expansion)
+→ user_sessions.* (other tables starting with 'u')
+→ orders.user_id, products.unit_price (DB-wide columns starting with 'u')
 → Functions: UPPER, UUID, UNIX_TIMESTAMP
 ```
 
@@ -676,6 +707,13 @@ SELECT u| FROM users u JOIN orders o
 - All columns (unqualified if single table, qualified with alias-first if multiple tables) (filtered by prefix if present)
   - **Note:** With prefix, see **Generic Prefix Matching** section for table-name expansion rules
 - All functions (filtered by prefix if present)
+
+**Special case - previous item is qualified:**
+- If the select item immediately before the comma is a qualified column reference (`table.column` or `alias.column`), suggest columns from that same qualifier first.
+- This applies even when there is no FROM/JOIN scope and no prefix.
+- Do NOT include database-wide columns from other tables unless a prefix exists.
+
+**Rationale:** The user has already chosen a specific table/alias by qualifying the previous select item, so suggesting the remaining columns from the same qualifier is useful and avoids noisy DB-wide suggestions.
 
 **Examples:**
 ```sql

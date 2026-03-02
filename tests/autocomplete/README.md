@@ -2,6 +2,29 @@
 
 This directory contains golden test cases for SQL autocomplete functionality.
 
+## Design Principles
+
+### Minimum Noise Principle
+**Suggest only what is truly useful.**
+
+The autocomplete system prioritizes relevance and context over completeness:
+- Without prefix: Show the most useful suggestions for the current context
+- With prefix: Filter all available options that match the prefix
+- Contextual keywords (e.g., `FROM users`) appear before plain keywords (e.g., `FROM`)
+- Plain keywords that guide workflow (e.g., `FROM`, `AS`) are shown even without context
+- Avoid redundant suggestions that add noise without value
+
+**Example:**
+```sql
+SELECT users.id |
+→ Suggestions: FROM users, AS, FROM
+  (Contextual keyword first, then plain keywords for flexibility)
+
+SELECT users.id F|
+→ Suggestions: FROM users, FROM
+  (Both match prefix "F")
+```
+
 ## Test Structure
 
 Tests are organized in JSON files under `cases/` directory. Each file contains test cases for a specific autocomplete scenario.
@@ -58,97 +81,95 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (184 total tests):
+Golden tests organized by SQL query writing flow (182 total tests):
 
 ### 1. Query Start & Basic Context
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| EMPTY ![status](https://img.shields.io/badge/status-pass-brightgreen) | 1 | 1 | 0 | 0 | `\|` | Empty editor suggestions |
-| SINGLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | 6 | 6 | 0 | 0 | `SEL\|` | Single keyword/token suggestions |
-| CURSOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | 1 | 1 | 0 | 0 | `SELECT * FROM users\|` | Cursor position handling |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| EMPTY ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/empty.json` | 1 | 1 | 0 | 0 | `\|` | Empty editor suggestions |
+| SINGLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/single.json` | 6 | 6 | 0 | 0 | `SEL\|` | Single keyword/token suggestions |
 
 ### 2. SELECT Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| SEL | 7 | 0 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
-| SELECT_NO_SCOPE | 3 | 0 | 0 | 0 | `SELECT id, \|` | SELECT without FROM clause |
-| SELECT_WITH_SCOPE_CURRENT_TABLE | 4 | 0 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
-| SELECT_QUALIFIED_COLUMN_WHITESPACE | 5 | 0 | 0 | 0 | `SELECT users.id \|` | Qualified columns with whitespace |
-| WHITESPACE_COMMA_BEHAVIOR | 6 | 0 | 0 | 0 | `SELECT id,\|` | Comma and whitespace handling |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| SEL ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/sel.json` | 7 | 0 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
+| SELECT_PREFIX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_prefix.json` | 6 | 0 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
+| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_column_behavior.json` | 9 | 0 | 0 | 0 | `SELECT users.id \|` | Column whitespace and comma behavior |
+| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_scoped_current_table.json` | 4 | 0 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
 
 ### 3. FROM Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| FROM | 9 | 0 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
-| FROM_CLAUSE_PRIORITIZATION | 4 | 0 | 0 | 0 | `SELECT id FROM users u WHERE u.id = 1 FROM \|` | Table prioritization in FROM |
-| FROM_JOIN_CLAUSE_CURRENT_TABLE | 8 | 0 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM/JOIN with current table |
-| DERIVED_TABLES_CTE | 6 | 0 | 0 | 6 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| FROM | `cases/from.json` | 9 | 0 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
+| FROM_CLAUSE_PRIORITIZATION | `cases/from_clause_prioritization.json` | 4 | 0 | 0 | 0 | `SELECT id FROM users u WHERE u.id = 1 FROM \|` | Table prioritization in FROM |
+| FROM_JOIN_CLAUSE_CURRENT_TABLE | `cases/from_join_clause_current_table.json` | 8 | 0 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM/JOIN with current table |
+| DERIVED_TABLES_CTE | `cases/derived_tables_cte.json` | 6 | 0 | 0 | 6 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
 
 ### 4. JOIN Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| JOIN | 4 | 0 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
-| ON | 4 | 0 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
-| USING | 1 | 0 | 0 | 1 | `SELECT * FROM users JOIN orders USING (\|)` | JOIN USING clause |
-| OPERATOR_LEFT_COLUMN_FILTER | 5 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
-| SCOPE_RESTRICTION_JOIN_ON | 4 | 0 | 0 | 0 | `SELECT * FROM orders o JOIN products p ON p.id = \|` | Scope restriction in JOIN ON |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| JOIN | `cases/join.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
+| ON | `cases/on.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
+| USING | `cases/using.json` | 1 | 0 | 0 | 1 | `SELECT * FROM users JOIN orders USING (\|)` | JOIN USING clause |
+| OPERATOR_LEFT_COLUMN_FILTER | `cases/operator_left_column_filter.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
+| SCOPE_RESTRICTION_JOIN_ON | `cases/scope_restriction_join_on.json` | 4 | 0 | 0 | 0 | `SELECT * FROM orders o JOIN products p ON p.id = \|` | Scope restriction in JOIN ON |
 
 ### 5. WHERE Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| WHERE | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
-| SCOPE_RESTRICTION_WHERE | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
-| MW | 2 | 0 | 0 | 2 | `SELECT * FROM users WHERE id = 1 WHERE \|` | Multi-WHERE scenarios |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| WHERE | `cases/where.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
+| SCOPE_RESTRICTION_WHERE | `cases/scope_restriction_where.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
+| MW | `cases/mw.json` | 2 | 0 | 0 | 2 | `SELECT * FROM users WHERE id = 1 WHERE \|` | Multi-WHERE scenarios |
 
 ### 6. GROUP BY Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| GROUP | 3 | 0 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
-| SCOPE_RESTRICTION_ORDER_GROUP | 5 | 0 | 0 | 0 | `SELECT * FROM users u GROUP BY \|` | Scope restriction in GROUP/ORDER |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| GROUP | `cases/group.json` | 3 | 0 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
+| SCOPE_RESTRICTION_ORDER_GROUP | `cases/scope_restriction_order_group.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users u GROUP BY \|` | Scope restriction in GROUP/ORDER |
 
 ### 7. HAVING Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| HAVING | 4 | 0 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
-| HAVING_AGGREGATE_PRIORITY | 4 | 0 | 0 | 4 | `SELECT status, COUNT(*) FROM users GROUP BY status HAVING \|` | Aggregate function priority |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| HAVING | `cases/having.json` | 4 | 0 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
+| HAVING_AGGREGATE_PRIORITY | `cases/having_aggregate_priority.json` | 4 | 0 | 0 | 4 | `SELECT status, COUNT(*) FROM users GROUP BY status HAVING \|` | Aggregate function priority |
 
 ### 8. ORDER BY Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| ORDER | 5 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| ORDER | `cases/order.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 
 ### 9. LIMIT Clause
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| LIMIT | 2 | 0 | 0 | 2 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| LIMIT | `cases/limit.json` | 2 | 0 | 0 | 2 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
 
 ### 10. Advanced Features
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| DOT_COMPLETION | 9 | 0 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
-| DOT | 6 | 0 | 0 | 0 | `SELECT u.\| FROM users u` | Legacy dot tests |
-| ALIAS | 2 | 0 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
-| ALIAS_PREFIX_DISAMBIGUATION | 8 | 0 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
-| PREFIX_EXPANSION | 10 | 0 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
-| SCOPE | 3 | 0 | 0 | 0 | `SELECT * FROM (SELECT id FROM users) AS u WHERE \|` | Scope management |
-| FUT | 1 | 0 | 0 | 1 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| DOT_COMPLETION | `cases/dot_completion.json` | 9 | 0 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
+| DOT | `cases/dot.json` | 6 | 0 | 0 | 0 | `SELECT u.\| FROM users u` | Legacy dot tests |
+| ALIAS | `cases/alias.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
+| ALIAS_PREFIX_DISAMBIGUATION | `cases/alias_prefix_disambiguation.json` | 8 | 0 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
+| PREFIX_EXPANSION | `cases/prefix_expansion.json` | 10 | 0 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
+| SCOPE | `cases/scope.json` | 3 | 0 | 0 | 0 | `SELECT * FROM (SELECT id FROM users) AS u WHERE \|` | Scope management |
+| FUT | `cases/fut.json` | 1 | 0 | 0 | 1 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions |
+| CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | `SELECT na\|me FROM users` | Cursor position handling |
 
 ### 11. Multi-Query & Special Cases
-| Test Group | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|-------|---|---|---|---------------|-------------|
-| MULTI_QUERY_SUPPORT | 8 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
-| MQ | 4 | 0 | 0 | 4 | `SELECT * FROM users; \|` | Multi-query scenarios |
-| OUT_OF_SCOPE_HINTS | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE id = \|` | Out-of-scope suggestions |
-| CURR | 2 | 0 | 0 | 2 | `SELECT \|` (current_table=users) | Current table handling |
-| LEX | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
-| ALX | 6 | 0 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
-| PERF | 2 | 0 | 0 | 0 | Large schema performance tests | Performance tests |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
+|------------|------|-------|---|---|---|---------------|-------------|
+| MULTI_QUERY_SUPPORT | `cases/multi_query_support.json` | 8 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
+| MQ | `cases/mq.json` | 4 | 0 | 0 | 4 | `SELECT * FROM users; \|` | Multi-query scenarios |
+| OUT_OF_SCOPE_HINTS | `cases/out_of_scope_hints.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE id = \|` | Out-of-scope suggestions |
+| LEX | `cases/lex.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
+| ALX | `cases/alx.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
+| PERF | `cases/perf.json` | 2 | 0 | 0 | 0 | Large schema performance tests | Performance tests |
 
 ### Summary Statistics
-- **Total Tests**: 184
+- **Total Tests**: 182
 - **✅ Passing**: 8 (4%)
-- **❌ Failing**: 0 (0%)
-- **⚠️ Expected Failures (xfail)**: 58 (32%)
+- **❌ Failing**: 5 (3%)
+- **⚠️ Expected Failures (xfail)**: 56 (31%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend

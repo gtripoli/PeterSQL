@@ -1,0 +1,205 @@
+{
+  "group": "SELECT_COLUMN_BEHAVIOR",
+  "cases": [
+    {
+      "case_id": "NO_SCOPED_WHITESPACE_001",
+      "title": "After column + space suggests clause keywords only",
+      "sql": "SELECT id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "prefix": null,
+        "comment": "Whitespace after column = selection complete. AS for alias, FROM to continue query building.",
+        "suggestions": [
+          "AS",
+          "FROM"
+        ],
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST"
+      }
+    },
+    {
+      "case_id": "NO_SCOPED_WHITESPACE_002",
+      "title": "After unqualified column + space + prefix: suggest ONLY matching keywords",
+      "sql": "SELECT id F",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "F",
+        "comment": "Whitespace after column = selection complete. With prefix, show ONLY matching keywords.",
+        "suggestions": [
+          "FROM"
+        ]
+      }
+    },
+    {
+      "case_id": "NO_SCOPED_WHITESPACE_003",
+      "title": "After unqualified column + space + prefix A: suggest AS only",
+      "sql": "SELECT name A",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "A",
+        "comment": "Whitespace after column = selection complete. Prefix A matches AS keyword only.",
+        "suggestions": [
+          "AS"
+        ]
+      }
+    },
+    {
+      "case_id": "NO_SCOPED_COMMA_001",
+      "title": "After column + comma suggests next-item (columns + functions)",
+      "sql": "SELECT id, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Comma = next-item rules. With no scope and no prefix, expect functions.",
+        "suggestions_contains": [
+          "COUNT",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_WHITESPACE_001",
+      "title": "After qualified column + space: suggest ONLY keywords, NOT functions",
+      "sql": "SELECT products.id ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Whitespace after qualified column = selection complete. Contextual keyword first, then plain keywords.",
+        "suggestions": [
+          "FROM products",
+          "AS",
+          "FROM"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_WHITESPACE_002",
+      "title": "After qualified column + space + prefix: suggest ONLY matching keywords",
+      "sql": "SELECT products.id F",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "F",
+        "comment": "Whitespace after qualified column = selection complete. Even with prefix, show ONLY keywords (not functions/columns).",
+        "suggestions": [
+          "FROM products",
+          "FROM"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_WHITESPACE_003",
+      "title": "After qualified column + space + prefix W: no valid suggestions",
+      "sql": "SELECT orders.total W",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "W",
+        "comment": "After a qualified select item, WHERE is not valid in this position. No suggestions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_COMMA_001",
+      "title": "After qualified column + comma: suggest columns and functions",
+      "sql": "SELECT items.id, ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Comma = next item. Previous item is qualified, so suggest columns from the same qualifier even with no scope/prefix.",
+        "suggestions_contains": [
+          "items.name",
+          "items.price",
+          "COUNT",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_COMMA_002",
+      "title": "After qualified column + comma + prefix: suggest matching same-table columns + functions",
+      "sql": "SELECT items.id, p",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "p",
+        "comment": "Comma + prefix. Previous item qualified, so suggest same-table columns starting with 'p' + functions.",
+        "suggestions_contains": [
+          "items.price",
+          "PI"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_CURRENT_TABLE_001",
+      "title": "VIRTUAL_SCOPED via CURRENT_TABLE + comma: suggest current table columns (qualified) + functions",
+      "sql": "SELECT id, ",
+      "dialect": "generic",
+      "current_table": "orders",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Comma = next-item. CURRENT_TABLE creates virtual scope. Columns MUST be qualified (table.column) when no FROM/JOIN exists.",
+        "suggestions_contains": [
+          "orders.id",
+          "orders.user_id",
+          "orders.total",
+          "COUNT",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_CURRENT_TABLE_002",
+      "title": "VIRTUAL_SCOPED via CURRENT_TABLE + whitespace: suggest contextual keyword + plain keywords",
+      "sql": "SELECT id ",
+      "dialect": "generic",
+      "current_table": "products",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Whitespace after column = selection complete. CURRENT_TABLE creates virtual scope. Contextual keyword FROM {table} first, then plain keywords.",
+        "suggestions": [
+          "FROM products",
+          "AS",
+          "FROM"
+        ]
+      }
+    }
+  ]
+}

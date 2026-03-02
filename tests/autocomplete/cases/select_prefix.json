@@ -1,0 +1,180 @@
+{
+  "group": "SELECT_PREFIX",
+  "cases": [
+    {
+      "case_id": "CURR_001",
+      "title": "CURRENT_TABLE columns prioritized over scope and database",
+      "sql": "SELECT u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "user_sessions.id",
+          "user_sessions.user_id",
+          "user_sessions.session_token",
+          "user_sessions.expires_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "CURR_002",
+      "title": "CURRENT_TABLE behavior is scoped to current statement (multi-query)",
+      "sql": "SELECT * FROM users u WHERE id = 1; SELECT u|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "user_sessions.id",
+          "user_sessions.user_id",
+          "user_sessions.session_token",
+          "user_sessions.expires_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "CURR_003",
+      "title": "CURRENT_TABLE table-name expansion competes with other db-wide table expansions",
+      "sql": "SELECT c|",
+      "dialect": "generic",
+      "current_table": "customers",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "c",
+        "suggestions": [
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "carts.id",
+          "carts.customer_id",
+          "carts.created_at",
+          "carts.cart_total",
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    },
+    {
+      "case_id": "CURR_004",
+      "title": "CURRENT_TABLE expansion + db-wide expansion + id column-name match + I* functions",
+      "sql": "SELECT i|",
+      "dialect": "generic",
+      "current_table": "items",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "i",
+        "suggestions": [
+          "items.id",
+          "items.item_name",
+          "items.stock",
+          "items.price",
+          "inventory.id",
+          "inventory.product_id",
+          "inventory.quantity",
+          "inventory.warehouse_location",
+          "carts.id",
+          "customers.id",
+          "orders.id",
+          "orders_archive.id",
+          "payments.id",
+          "products.id",
+          "user_sessions.id",
+          "users.id",
+          "IF",
+          "IFNULL"
+        ],
+        "note": "Ordering: (1) table-name expansion for tables starting with prefix (schema order per table), (2) db-wide column-name matches for prefix (table name alphabetical), (3) functions filtered by prefix (alphabetical)."
+      }
+    },
+    {
+      "case_id": "SEL_NO_SCOPE_002",
+      "title": "SELECT without scope and no CURRENT_TABLE - DB-wide columns allowed",
+      "sql": "SELECT p|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "p",
+        "comment": "No scope. Table-name expansion: products.* and payments.* in schema order (both match prefix 'p').",
+        "suggestions": [
+          "products.id",
+          "products.name",
+          "products.price",
+          "products.unit_price",
+          "products.stock",
+          "payments.id",
+          "payments.order_id",
+          "payments.amount",
+          "payments.method",
+          "payments.created_at",
+          "items.price",
+          "inventory.product_id"
+        ]
+      }
+    },
+    {
+      "case_id": "SEL_NO_SCOPE_003",
+      "title": "SELECT without scope - deduplication between table expansion and column match",
+      "sql": "SELECT u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Table-name expansion: users.* in schema order. Column-name matching: orders.user_id, products.unit_price.",
+        "suggestions": [
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "user_sessions.id",
+          "user_sessions.user_id",
+          "user_sessions.session_token",
+          "user_sessions.expires_at",
+          "orders.user_id",
+          "products.unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    }
+  ]
+}

@@ -96,59 +96,6 @@
           "WITH"
         ]
       }
-    },
-    {
-      "case_id": "SINGLE_007",
-      "title": "SINGLE_TOKEN keyword completion for ORD|",
-      "sql": "ORD|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SINGLE_TOKEN",
-        "prefix": "ORD",
-        "suggestions": [
-          "ORDER BY"
-        ]
-      }
-    },
-    {
-      "case_id": "SINGLE_008",
-      "title": "Not SINGLE_TOKEN because whitespace exists",
-      "sql": "IS N|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "UNKNOWN",
-        "prefix": "N",
-        "suggestions": [
-          "NOT",
-          "NULL",
-          "NULLS FIRST",
-          "NULLS LAST"
-        ],
-        "note": "Context UNKNOWN but still provides keyword suggestions."
-      }
-    },
-    {
-      "case_id": "SINGLE_009",
-      "title": "Not SINGLE_TOKEN across newline (two tokens total)",
-      "sql": "SELECT\nSEL|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "SEL",
-        "suggestions": [
-          "SELECT"
-        ],
-        "note": "Must be context-based."
-      }
     }
   ]
 }

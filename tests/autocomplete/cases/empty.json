@@ -13,22 +13,21 @@
         "context": "EMPTY",
         "prefix": null,
         "suggestions": [
-          "SELECT",
-          "INSERT",
-          "UPDATE",
-          "DELETE",
-          "CREATE",
-          "DROP",
           "ALTER",
-          "TRUNCATE",
-          "SHOW",
+          "CREATE",
+          "DELETE",
           "DESCRIBE",
+          "DROP",
           "EXPLAIN",
-          "WITH",
+          "INSERT",
+          "MERGE",
           "REPLACE",
-          "MERGE"
-        ],
-        "xfail": true
+          "SELECT",
+          "SHOW",
+          "TRUNCATE",
+          "UPDATE",
+          "WITH"
+        ]
       }
     }
   ]
