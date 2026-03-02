@@ -63,3 +63,7 @@ def test_golden_case(file_name: str, case: Dict[str, Any]) -> None:
             assert needle in response.suggestions, (file_name, case["case_id"], needle)
     else:
         raise AssertionError("Case must define 'suggestions' or 'suggestions_contains'")
+
+    if "suggestions_not_contains" in expected:
+        for needle in expected["suggestions_not_contains"]:
+            assert needle not in response.suggestions, (file_name, case["case_id"], needle)

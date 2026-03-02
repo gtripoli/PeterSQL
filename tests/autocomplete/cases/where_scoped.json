@@ -1,0 +1,80 @@
+{
+  "group": "WHERE_SCOPED",
+  "cases": [
+    {
+      "case_id": "WHERE_SCOPE_001",
+      "title": "WHERE with scope - no DB-wide columns, only scope tables",
+      "sql": "SELECT * FROM items WHERE z|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "z",
+        "comment": "Scope=[items]. No scope column starts with 'z'. DB-wide columns excluded. Only functions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "WHERE_SCOPE_002",
+      "title": "WHERE with JOIN scope - only scope table columns",
+      "sql": "SELECT * FROM products p JOIN items i ON p.id=i.product_id WHERE q|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "q",
+        "comment": "Scope=[products as p, items as i]. Scope columns: i.quantity. DB-wide excluded.",
+        "suggestions": [
+          "i.quantity"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_SCOPE_003",
+      "title": "WHERE with CURRENT_TABLE not in scope - CURRENT_TABLE ignored",
+      "sql": "SELECT * FROM products WHERE c|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "c",
+        "comment": "Scope=[products]. CURRENT_TABLE=users not in scope. No scope column starts with 'c'.",
+        "suggestions": [
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_SCOPE_004",
+      "title": "WHERE with CURRENT_TABLE in scope - CURRENT_TABLE included",
+      "sql": "SELECT * FROM customers WHERE c|",
+      "dialect": "generic",
+      "current_table": "customers",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "c",
+        "comment": "Scope=[customers]. CURRENT_TABLE=customers in scope. Unqualified columns first, then qualified.",
+        "suggestions": [
+          "created_at",
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "customers.created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    }
+  ]
+}

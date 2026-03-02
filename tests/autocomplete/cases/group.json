@@ -4,7 +4,7 @@
     {
       "case_id": "GROUP_001",
       "title": "GROUP BY without prefix suggests columns + functions",
-      "sql": "SELECT COUNT(*) FROM users GROUP BY |",
+      "sql": "SELECT COUNT(*) FROM products GROUP BY |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -13,17 +13,19 @@
         "context": "GROUP_BY_CLAUSE",
         "prefix": null,
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -44,26 +46,8 @@
     },
     {
       "case_id": "GROUP_002",
-      "title": "GROUP BY with prefix filters columns/functions",
-      "sql": "SELECT COUNT(*) FROM users GROUP BY s|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "GROUP_BY_CLAUSE",
-        "prefix": "s",
-        "suggestions": [
-          "users.status",
-          "SUBSTR",
-          "SUM"
-        ]
-      }
-    },
-    {
-      "case_id": "GROUP_003",
       "title": "GROUP BY after comma suggests more group keys",
-      "sql": "SELECT COUNT(*) FROM users GROUP BY status, |",
+      "sql": "SELECT COUNT(*) FROM items GROUP BY item_name, |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -71,18 +55,19 @@
         "mode": "CONTEXT",
         "context": "GROUP_BY_CLAUSE",
         "prefix": null,
+        "comment": "MUST NOT suggest item_name (already present in GROUP BY).",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "stock",
+          "price",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -98,6 +83,44 @@
           "UPPER",
           "UUID",
           "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_003",
+      "title": "GROUP_BY with scope - no DB-wide columns",
+      "sql": "SELECT * FROM items GROUP BY s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Scope=[items]. Only scope column items.stock. DB-wide excluded.",
+        "suggestions": [
+          "stock",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_004",
+      "title": "GROUP_BY with CURRENT_TABLE not in scope - CURRENT_TABLE ignored",
+      "sql": "SELECT * FROM orders GROUP BY s|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Scope=[orders]. CURRENT_TABLE=users not in scope. Only scope column orders.status.",
+        "suggestions": [
+          "status",
+          "SUBSTR",
+          "SUM"
         ]
       }
     }

@@ -115,15 +115,13 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where.json` | 10 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
-| SCOPE_RESTRICTION_WHERE | `cases/scope_restriction_where.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
-| MW | `cases/mw.json` | 2 | 0 | 0 | 2 | `SELECT * FROM users WHERE id = 1 WHERE \|` | Multi-WHERE scenarios |
+| WHERE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where.json` | 11 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
+| WHERE_SCOPED ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where_scoped.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
 
 ### 6. GROUP BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| GROUP | `cases/group.json` | 3 | 0 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
-| SCOPE_RESTRICTION_ORDER_GROUP | `cases/scope_restriction_order_group.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users u GROUP BY \|` | Scope restriction in GROUP/ORDER |
+| GROUP ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/group.json` | 4 | 0 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
 
 ### 7. HAVING Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -134,6 +132,7 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
+| ORDER_BY ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order_by.json` | 3 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 | ORDER | `cases/order.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 
 ### 9. LIMIT Clause

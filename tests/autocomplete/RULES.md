@@ -812,7 +812,13 @@ SELECT * FROM |
 - It is set
 - It is not already present in the current statement
 
-**Rationale:** FROM_CLAUSE is a table-selection context (scope construction). Prioritizing tables already referenced in SELECT improves UX since users typically want to use the same tables. Even if scope already exists elsewhere in the statement (e.g., user editing a completed query), the only restriction is to avoid suggesting tables already present.
+**Table re-suggestion policy (self-join support):**
+
+Physical tables already present in FROM/JOIN:
+- **WITHOUT alias**: MUST NOT be suggested again (e.g., `FROM products, |` → products excluded)
+- **WITH alias**: MAY be suggested again for self-join (e.g., `FROM products p, |` → products allowed)
+
+**Rationale:** FROM_CLAUSE is a table-selection context (scope construction). Prioritizing tables already referenced in SELECT improves UX since users typically want to use the same tables. Tables without aliases cannot be re-used (SQL syntax error), but tables with aliases enable self-join patterns (e.g., `FROM users u1 JOIN users u2`).
 
 #### 4b. With prefix
 
@@ -957,7 +963,13 @@ SELECT * FROM users JOIN |
 - It is set
 - It is not already present in the current statement
 
-**Rationale:** JOIN_CLAUSE is a table-selection context (scope extension). It follows the same rule as FROM_CLAUSE. The only restriction is to avoid suggesting tables already present.
+**Table re-suggestion policy (self-join support):**
+
+Physical tables already present in FROM/JOIN:
+- **WITHOUT alias**: MUST NOT be suggested again (e.g., `FROM orders JOIN |` → orders excluded)
+- **WITH alias**: MAY be suggested again for self-join (e.g., `FROM orders o JOIN |` → orders allowed)
+
+**Rationale:** JOIN_CLAUSE is a table-selection context (scope extension). It follows the same rule as FROM_CLAUSE. Tables without aliases cannot be re-used (SQL syntax error), but tables with aliases enable self-join patterns (e.g., `FROM users u1 JOIN users u2`).
 
 #### 5b. With prefix
 
@@ -1369,16 +1381,19 @@ SELECT COUNT(*) FROM users GROUP BY s|
 
 **Show:**
 - Columns in scope (unqualified if single table, qualified with alias-first if multiple tables) (filtered by prefix if present)
+  - **MUST NOT suggest columns already present in the GROUP BY clause**
 - Functions (filtered by prefix if present)
 
 **Examples:**
 ```sql
 SELECT COUNT(*) FROM users GROUP BY status, |
 → id, name, email, password, is_enabled, created_at, ...  (single table: unqualified)
+→ NOT: status (already present in GROUP BY)
 → DATE, YEAR, MONTH, ...
 
 SELECT COUNT(*) FROM users u GROUP BY is_enabled, c|
 → created_at  (single table: unqualified)
+→ NOT: is_enabled (already present)
 ```
 
 ---
