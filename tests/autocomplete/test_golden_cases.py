@@ -58,12 +58,12 @@ def test_golden_case(file_name: str, case: Dict[str, Any]) -> None:
 
     if "suggestions" in expected:
         assert response.suggestions == expected["suggestions"], (file_name, case["case_id"])
-    elif "suggestions_contains" in expected:
+    elif "suggestions_contains" in expected and "suggestions_not_contains" in expected:
         for needle in expected["suggestions_contains"]:
             assert needle in response.suggestions, (file_name, case["case_id"], needle)
-    else:
-        raise AssertionError("Case must define 'suggestions' or 'suggestions_contains'")
-
-    if "suggestions_not_contains" in expected:
         for needle in expected["suggestions_not_contains"]:
             assert needle not in response.suggestions, (file_name, case["case_id"], needle)
+    else:
+        raise AssertionError(
+            "Case must define 'suggestions' OR both 'suggestions_contains' AND 'suggestions_not_contains'"
+        )

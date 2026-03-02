@@ -4,7 +4,7 @@
     {
       "case_id": "LIMIT_001",
       "title": "LIMIT offers no suggestions",
-      "sql": "SELECT * FROM users LIMIT |",
+      "sql": "SELECT * FROM products LIMIT |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -12,14 +12,13 @@
         "mode": "NO_SUGGESTIONS",
         "context": "LIMIT_OFFSET_CLAUSE",
         "prefix": null,
-        "suggestions": [],
-        "xfail": true
+        "suggestions": []
       }
     },
     {
       "case_id": "LIMIT_002",
       "title": "OFFSET offers no suggestions",
-      "sql": "SELECT * FROM users LIMIT 10 OFFSET |",
+      "sql": "SELECT * FROM orders LIMIT 10 OFFSET |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -27,8 +26,34 @@
         "mode": "NO_SUGGESTIONS",
         "context": "LIMIT_OFFSET_CLAUSE",
         "prefix": null,
-        "suggestions": [],
-        "xfail": true
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "LIMIT_003",
+      "title": "LIMIT after number suggests OFFSET",
+      "sql": "SELECT * FROM customers LIMIT 10 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "AFTER_LIMIT_NUMBER",
+        "prefix": null,
+        "comment": "After LIMIT number: suggest OFFSET keyword.",
+        "suggestions_contains": [
+          "OFFSET"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "COUNT",
+          "SUM",
+          "NULL",
+          "CURRENT_DATE",
+          "ASC",
+          "DESC"
+        ]
       }
     }
   ]

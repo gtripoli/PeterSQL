@@ -4,7 +4,7 @@
     {
       "case_id": "ORDER_001",
       "title": "ORDER BY without prefix: columns, functions, then sort keywords",
-      "sql": "SELECT * FROM users ORDER BY |",
+      "sql": "SELECT * FROM products ORDER BY |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -13,17 +13,19 @@
         "context": "ORDER_BY_CLAUSE",
         "prefix": null,
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -38,18 +40,14 @@
           "UNIX_TIMESTAMP",
           "UPPER",
           "UUID",
-          "YEAR",
-          "ASC",
-          "DESC",
-          "NULLS FIRST",
-          "NULLS LAST"
+          "YEAR"
         ]
       }
     },
     {
       "case_id": "ORDER_002",
       "title": "ORDER BY with prefix filters columns/functions/keywords",
-      "sql": "SELECT * FROM users ORDER BY c|",
+      "sql": "SELECT * FROM customers ORDER BY c|",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -58,20 +56,17 @@
         "context": "ORDER_BY_CLAUSE",
         "prefix": "c",
         "suggestions": [
-          "users.created_at",
+          "created_at",
+          "COALESCE",
           "CONCAT",
-          "COUNT",
-          "CURRENT_DATE",
-          "CURRENT_TIME",
-          "CURRENT_TIMESTAMP"
-        ],
-        "xfail": true
+          "COUNT"
+        ]
       }
     },
     {
       "case_id": "ORDER_003",
-      "title": "ORDER BY after column + space suggests sort direction keywords",
-      "sql": "SELECT * FROM users ORDER BY created_at |",
+      "title": "ORDER BY after column + space suggests sort direction keywords and clause keywords",
+      "sql": "SELECT * FROM items ORDER BY stock |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -79,19 +74,29 @@
         "mode": "AFTER_ORDER_COLUMN",
         "context": "ORDER_BY_AFTER_COLUMN",
         "prefix": null,
-        "suggestions": [
+        "comment": "After column: sort direction keywords (ASC/DESC) and clause keywords (LIMIT, etc.). MUST NOT suggest columns, functions, or literals.",
+        "suggestions_contains": [
           "ASC",
           "DESC",
           "NULLS FIRST",
-          "NULLS LAST"
+          "NULLS LAST",
+          "LIMIT"
         ],
-        "xfail": true
+        "suggestions_not_contains": [
+          "id",
+          "stock",
+          "item_name",
+          "COUNT",
+          "SUM",
+          "NULL",
+          "CURRENT_DATE"
+        ]
       }
     },
     {
       "case_id": "ORDER_004",
       "title": "ORDER BY after comma suggests more sort keys",
-      "sql": "SELECT * FROM users ORDER BY created_at DESC, |",
+      "sql": "SELECT * FROM orders ORDER BY created_at DESC, |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -99,37 +104,26 @@
         "mode": "CONTEXT",
         "context": "ORDER_BY_CLAUSE",
         "prefix": null,
-        "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+        "comment": "After comma: suggest columns and functions for next sort key. MUST NOT suggest ASC/DESC (no column specified yet) or literals.",
+        "suggestions_contains": [
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at",
           "AVG",
-          "COALESCE",
-          "CONCAT",
           "COUNT",
-          "DATE",
-          "GROUP_CONCAT",
-          "LENGTH",
-          "LOWER",
-          "MAX",
-          "MIN",
-          "MONTH",
-          "NOW",
-          "NULLIF",
-          "ROW_NUMBER",
-          "SUBSTR",
-          "SUM",
-          "TRIM",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID",
-          "YEAR",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
           "ASC",
           "DESC",
           "NULLS FIRST",
-          "NULLS LAST"
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
         ]
       }
     },
@@ -144,7 +138,8 @@
         "mode": "CONTEXT",
         "context": "ORDER_BY_CLAUSE",
         "prefix": null,
-        "suggestions": [
+        "comment": "ORDER BY without column: suggest columns and functions. MUST NOT suggest ASC/DESC (no column specified yet) or literals.",
+        "suggestions_contains": [
           "u.id",
           "u.name",
           "u.email",
@@ -156,30 +151,50 @@
           "o.status",
           "o.created_at",
           "AVG",
-          "COALESCE",
-          "CONCAT",
           "COUNT",
-          "DATE",
-          "GROUP_CONCAT",
-          "LENGTH",
-          "LOWER",
-          "MAX",
-          "MIN",
-          "MONTH",
-          "NOW",
-          "NULLIF",
-          "ROW_NUMBER",
-          "SUBSTR",
-          "SUM",
-          "TRIM",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID",
-          "YEAR",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
           "ASC",
           "DESC",
           "NULLS FIRST",
-          "NULLS LAST"
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_006",
+      "title": "ORDER_BY after comma in JOIN with aliases",
+      "sql": "SELECT * FROM products p JOIN items i ON p.id=i.product_id ORDER BY p.name, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Comma = next-item rules. Scope columns + functions. MUST NOT suggest ASC/DESC or literals.",
+        "suggestions_contains": [
+          "p.id",
+          "p.name",
+          "i.id",
+          "i.quantity",
+          "AVG",
+          "COUNT"
+        ],
+        "suggestions_not_contains": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
         ]
       }
     }

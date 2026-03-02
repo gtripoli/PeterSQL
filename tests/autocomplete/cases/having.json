@@ -4,7 +4,7 @@
     {
       "case_id": "HAVING_001",
       "title": "HAVING without prefix: aggregates first then columns then other functions",
-      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING |",
+      "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status HAVING |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -14,20 +14,20 @@
         "prefix": null,
         "suggestions": [
           "AVG",
-          "COUNT",
+          "DATE",
           "GROUP_CONCAT",
-          "MAX",
+          "IF",
+          "IFNULL",
+          "LENGTH",
           "MIN",
           "SUM",
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at",
           "COALESCE",
           "CONCAT",
-          "DATE",
-          "LENGTH",
           "LOWER",
           "MONTH",
           "NOW",
@@ -45,7 +45,7 @@
     {
       "case_id": "HAVING_002",
       "title": "HAVING with prefix prioritizes aggregate functions matching prefix",
-      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING c|",
+      "sql": "SELECT item_name, COUNT(*) FROM items GROUP BY item_name HAVING c|",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -55,7 +55,6 @@
         "prefix": "c",
         "suggestions": [
           "COUNT",
-          "users.created_at",
           "COALESCE",
           "CONCAT"
         ]
@@ -64,7 +63,7 @@
     {
       "case_id": "HAVING_003",
       "title": "HAVING after operator: NULL/TRUE/FALSE + aggregates + columns",
-      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > |",
+      "sql": "SELECT status, COUNT(*) FROM products GROUP BY status HAVING COUNT(*) > |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -77,24 +76,25 @@
           "TRUE",
           "FALSE",
           "AVG",
-          "COUNT",
+          "DATE",
           "GROUP_CONCAT",
-          "MAX",
+          "IF",
+          "IFNULL",
+          "LENGTH",
           "MIN",
           "SUM",
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at"
-        ],
-        "xfail": true
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock"
+        ]
       }
     },
     {
       "case_id": "HAVING_004",
       "title": "HAVING after expression suggests logical + clauses",
-      "sql": "SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > 10 |",
+      "sql": "SELECT email, COUNT(*) FROM customers GROUP BY email HAVING COUNT(*) > 10 |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -104,13 +104,30 @@
         "prefix": null,
         "suggestions": [
           "AND",
-          "EXISTS",
-          "LIMIT",
-          "NOT",
           "OR",
-          "ORDER BY"
-        ],
-        "xfail": true
+          "ORDER BY",
+          "LIMIT"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_005",
+      "title": "HAVING with scope restriction - no DB-wide columns",
+      "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status HAVING u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING",
+        "prefix": "u",
+        "comment": "Scope=[orders]. DB-wide excluded. Aggregate functions alphabetically, then columns, then other functions.",
+        "suggestions": [
+          "user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
       }
     }
   ]

@@ -126,19 +126,17 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 7. HAVING Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| HAVING | `cases/having.json` | 4 | 0 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
-| HAVING_AGGREGATE_PRIORITY | `cases/having_aggregate_priority.json` | 4 | 0 | 0 | 4 | `SELECT status, COUNT(*) FROM users GROUP BY status HAVING \|` | Aggregate function priority |
+| HAVING ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/having.json` | 5 | 0 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
 
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| ORDER_BY ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order_by.json` | 3 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
-| ORDER | `cases/order.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
+| ORDER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 
 ### 9. LIMIT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| LIMIT | `cases/limit.json` | 2 | 0 | 0 | 2 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
+| LIMIT ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/limit.json` | 3 | 0 | 0 | 0 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
 
 ### 10. Advanced Features
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |

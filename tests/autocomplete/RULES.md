@@ -1264,27 +1264,30 @@ SELECT * FROM users WHERE id > 10 |
 
 **Important:** Only show columns from tables specified in FROM and JOIN clauses (using alias if defined, otherwise table name).
 
+**MUST NOT suggest literals:** Do NOT suggest `NULL`, `TRUE`, `FALSE`, `CURRENT_DATE`, `CURRENT_TIME`, `CURRENT_TIMESTAMP` in ORDER BY context. Ordering by constants is meaningless as all rows would have the same sort value.
+
 #### 7a. Without prefix
 
 **Show:**
 - Columns in scope (unqualified if single table, qualified with alias-first if multiple tables)
   - **Note:** With prefix, see **Generic Prefix Matching** section for table-name expansion rules
 - Functions
-- Keywords: `ASC`, `DESC`, `NULLS FIRST`, `NULLS LAST`
 
-**Ordering:** Columns first, then functions, then keywords (ASC/DESC). Users typically need to choose the column before specifying sort direction.
+**MUST NOT suggest sort direction keywords:** Do NOT suggest `ASC`, `DESC`, `NULLS FIRST`, `NULLS LAST` in `ORDER BY |` without a column specified. These keywords are only meaningful after a column/expression (see section 7c).
+
+**Ordering:** Columns first, then functions. Users must choose the column before specifying sort direction.
 
 **Examples:**
 ```sql
 SELECT * FROM users ORDER BY |
 → id, name, email, password, is_enabled, created_at, ...  (single table: unqualified, columns first)
 → COUNT, SUM, AVG, ...                         (functions)
-→ ASC, DESC, NULLS FIRST, NULLS LAST           (keywords last)
+→ NOT: ASC, DESC (no column specified yet)
 
 SELECT * FROM users u JOIN orders o ON u.id = o.user_id ORDER BY |
 → u.id, u.name, o.total, o.created_at, ...  (columns first)
 → COUNT, SUM, AVG, ...                      (functions)
-→ ASC, DESC                                 (keywords last)
+→ NOT: ASC, DESC (no column specified yet)
 ```
 
 #### 7b. With prefix
