@@ -4,7 +4,7 @@
     {
       "case_id": "FROM_PRIO_001",
       "title": "FROM clause without prefix: prioritize tables referenced in SELECT",
-      "sql": "SELECT users.id FROM ",
+      "sql": "SELECT products.id FROM |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -12,37 +12,38 @@
         "mode": "CONTEXT",
         "context": "FROM_CLAUSE",
         "prefix": null,
-        "comment": "users is referenced in SELECT (qualified column), should be prioritized first even without prefix",
+        "comment": "products is referenced in SELECT (qualified column), should be prioritized first even without prefix",
         "suggestions": [
-          "users",
+          "products",
           "customers",
           "orders",
           "payments",
-          "products"
+          "users"
         ]
       }
     },
     {
       "case_id": "FROM_PRIO_002",
       "title": "FROM clause with prefix: prioritize referenced table",
-      "sql": "SELECT users.name FROM u",
+      "sql": "SELECT orders.total FROM o|",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
         "context": "FROM_CLAUSE",
-        "prefix": "u",
-        "comment": "users matches prefix 'u' and is referenced in SELECT",
+        "prefix": "o",
+        "comment": "orders matches prefix 'o' and is referenced in SELECT",
         "suggestions": [
-          "users"
+          "orders",
+          "orders_archive"
         ]
       }
     },
     {
       "case_id": "FROM_PRIO_003",
       "title": "FROM clause: multiple tables referenced in SELECT",
-      "sql": "SELECT users.id, orders.total FROM ",
+      "sql": "SELECT items.id, products.name FROM |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -50,33 +51,12 @@
         "mode": "CONTEXT",
         "context": "FROM_CLAUSE",
         "prefix": null,
-        "comment": "Both orders and users are referenced in SELECT, so they appear first (in order of reference), followed by other tables alphabetically",
+        "comment": "Both items and products are referenced in SELECT, so they appear first (in order of reference), followed by other tables alphabetically",
         "suggestions": [
-          "orders",
-          "users",
-          "customers",
-          "payments",
-          "products"
-        ]
-      }
-    },
-    {
-      "case_id": "FROM_PRIO_004",
-      "title": "FROM clause: no qualified columns in SELECT",
-      "sql": "SELECT * FROM ",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "CONTEXT",
-        "context": "FROM_CLAUSE",
-        "prefix": null,
-        "comment": "No tables referenced in SELECT, so all tables in alphabetical order",
-        "suggestions": [
-          "customers",
-          "orders",
-          "payments",
+          "items",
           "products",
+          "customers",
+          "orders",
           "users"
         ]
       }

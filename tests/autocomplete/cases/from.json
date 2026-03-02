@@ -13,10 +13,15 @@
         "context": "FROM_CLAUSE",
         "prefix": null,
         "suggestions": [
+          "carts",
           "customers",
+          "inventory",
+          "items",
           "orders",
+          "orders_archive",
           "payments",
           "products",
+          "user_sessions",
           "users"
         ]
       }
@@ -33,14 +38,15 @@
         "context": "FROM_CLAUSE",
         "prefix": "u",
         "suggestions": [
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
     {
       "case_id": "FROM_003",
       "title": "FROM after comma suggests more tables",
-      "sql": "SELECT * FROM users, |",
+      "sql": "SELECT * FROM products, |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -49,17 +55,22 @@
         "context": "FROM_CLAUSE",
         "prefix": null,
         "suggestions": [
+          "carts",
           "customers",
+          "inventory",
+          "items",
           "orders",
+          "orders_archive",
           "payments",
-          "products"
+          "user_sessions",
+          "users"
         ]
       }
     },
     {
       "case_id": "FROM_004",
       "title": "FROM after table + space suggests JOIN/AS/WHERE etc",
-      "sql": "SELECT * FROM users |",
+      "sql": "SELECT * FROM orders |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -84,7 +95,7 @@
     {
       "case_id": "FROM_005",
       "title": "FROM includes CTE names defined in same statement",
-      "sql": "WITH active_users AS (SELECT id, name FROM users) SELECT * FROM |",
+      "sql": "WITH active_products AS (SELECT id, name FROM products) SELECT * FROM |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -93,10 +104,15 @@
         "context": "FROM_CLAUSE",
         "prefix": null,
         "suggestions": [
+          "carts",
           "customers",
+          "inventory",
+          "items",
           "orders",
+          "orders_archive",
           "payments",
           "products",
+          "user_sessions",
           "users"
         ]
       }
@@ -104,7 +120,7 @@
     {
       "case_id": "FROM_006",
       "title": "CTE not visible across statements",
-      "sql": "WITH a AS (SELECT 1) SELECT * FROM a; SELECT * FROM |",
+      "sql": "WITH another AS (SELECT 1) SELECT * FROM another; SELECT * FROM |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -113,10 +129,15 @@
         "context": "FROM_CLAUSE",
         "prefix": null,
         "suggestions": [
+          "carts",
           "customers",
+          "inventory",
+          "items",
           "orders",
+          "orders_archive",
           "payments",
           "products",
+          "user_sessions",
           "users"
         ]
       }
@@ -124,7 +145,7 @@
     {
       "case_id": "FROM_007",
       "title": "After AS with space, no suggestions (user typing alias)",
-      "sql": "SELECT * FROM users AS |",
+      "sql": "SELECT * FROM items AS |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -139,14 +160,14 @@
     {
       "case_id": "FROM_008",
       "title": "After AS with partial alias, no suggestions",
-      "sql": "SELECT * FROM users AS u|",
+      "sql": "SELECT * FROM items AS i|",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
         "context": "FROM_CLAUSE",
-        "prefix": "u",
+        "prefix": "i",
         "comment": "User is typing alias name after AS, so no suggestions should interfere",
         "suggestions": []
       }
@@ -154,7 +175,7 @@
     {
       "case_id": "FROM_009",
       "title": "After complete alias with space, suggest clause keywords (no AS since alias exists)",
-      "sql": "SELECT * FROM users AS u |",
+      "sql": "SELECT * FROM items AS i |",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",

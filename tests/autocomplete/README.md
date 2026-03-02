@@ -100,24 +100,22 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 3. FROM Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| FROM | `cases/from.json` | 9 | 0 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
-| FROM_CLAUSE_PRIORITIZATION | `cases/from_clause_prioritization.json` | 4 | 0 | 0 | 0 | `SELECT id FROM users u WHERE u.id = 1 FROM \|` | Table prioritization in FROM |
-| FROM_JOIN_CLAUSE_CURRENT_TABLE | `cases/from_join_clause_current_table.json` | 8 | 0 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM/JOIN with current table |
-| DERIVED_TABLES_CTE | `cases/derived_tables_cte.json` | 6 | 0 | 0 | 6 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
+| FROM ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/from.json` | 9 | 0 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
+| FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/from_clause_prioritization.json` | 3 | 0 | 0 | 0 | `SELECT id FROM users u WHERE u.id = 1 FROM \|` | Table prioritization in FROM |
+| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/from_clause_current_table.json` | 3 | 0 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
 
 ### 4. JOIN Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| JOIN | `cases/join.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
-| ON | `cases/on.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
-| USING | `cases/using.json` | 1 | 0 | 0 | 1 | `SELECT * FROM users JOIN orders USING (\|)` | JOIN USING clause |
-| OPERATOR_LEFT_COLUMN_FILTER | `cases/operator_left_column_filter.json` | 5 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
-| SCOPE_RESTRICTION_JOIN_ON | `cases/scope_restriction_join_on.json` | 4 | 0 | 0 | 0 | `SELECT * FROM orders o JOIN products p ON p.id = \|` | Scope restriction in JOIN ON |
+| JOIN ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
+| JOIN_ON ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_on.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
+| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_after_table.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders \|` | Keywords after JOIN table |
+| JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_operator_left_column_filter.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
 
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| WHERE | `cases/where.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
+| WHERE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where.json` | 10 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
 | SCOPE_RESTRICTION_WHERE | `cases/scope_restriction_where.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
 | MW | `cases/mw.json` | 2 | 0 | 0 | 2 | `SELECT * FROM users WHERE id = 1 WHERE \|` | Multi-WHERE scenarios |
 
@@ -158,6 +156,7 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 11. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
+| DERIVED_TABLES_CTE | `cases/derived_tables_cte.json` | 8 | 0 | 0 | 8 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
 | MULTI_QUERY_SUPPORT | `cases/multi_query_support.json` | 8 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
 | MQ | `cases/mq.json` | 4 | 0 | 0 | 4 | `SELECT * FROM users; \|` | Multi-query scenarios |
 | OUT_OF_SCOPE_HINTS | `cases/out_of_scope_hints.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE id = \|` | Out-of-scope suggestions |
