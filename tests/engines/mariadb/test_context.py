@@ -2,6 +2,7 @@ import pytest
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBContext:
     """Tests for MariaDB context methods."""
 

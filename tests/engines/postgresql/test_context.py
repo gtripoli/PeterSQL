@@ -2,6 +2,7 @@ import pytest
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLContext:
     """Tests for PostgreSQL context - focus on reading database structures."""
 

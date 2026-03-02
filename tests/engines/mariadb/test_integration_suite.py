@@ -13,26 +13,31 @@ from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests,
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBTable(BaseTableTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBRecord(BaseRecordTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBColumn(BaseColumnTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBIndex(BaseIndexTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBForeignKey(BaseForeignKeyTests):
     
     def get_datatype_class(self):
@@ -46,11 +51,13 @@ class TestMariaDBForeignKey(BaseForeignKeyTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBCheck(BaseCheckTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBTrigger(BaseTriggerTests):
     
     def get_trigger_statement(self, db_name: str, table_name: str) -> str:
@@ -58,6 +65,7 @@ class TestMariaDBTrigger(BaseTriggerTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewSave(BaseViewSaveTests):
     
     def get_view_statement(self) -> str:
@@ -71,6 +79,7 @@ class TestMariaDBViewSave(BaseViewSaveTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewIsNew(BaseViewIsNewTests):
     
     def get_simple_view_statement(self) -> str:
@@ -78,5 +87,6 @@ class TestMariaDBViewIsNew(BaseViewIsNewTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewDefiner(BaseViewDefinerTests):
     pass

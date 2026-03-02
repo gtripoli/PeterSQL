@@ -80,25 +80,25 @@
 
 ### 2.2 MySQL
 
-| Object Type | Create | Read | Update | Delete | Notes | Evidence |
-|-------------|--------|------|--------|--------|-------|----------|
-| **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `MySQLContext.get_databases()` |
-| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLTable` |
-| **Column** | ✅ | ✅ | ✅ | ✅ | ADD/MODIFY/RENAME/DROP | `MySQLColumn` |
-| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX | `MySQLIndex` |
-| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.PRIMARY` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLForeignKey` |
-| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.UNIQUE` |
-| **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MySQLColumn.server_default` |
-| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLView` |
-| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLTrigger` |
-| **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLFunction` |
-| **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
-| **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MySQLRecord` |
+| Object Type | Create | Read | Update | Delete | Notes | Evidence                        |
+|-------------|--------|------|--------|--------|-------|---------------------------------|
+| **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `MySQLContext.get_databases()`  |
+| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLTable`                    |
+| **Column** | ✅ | ✅ | ✅ | ✅ | ADD/MODIFY/RENAME/DROP | `MySQLColumn`                   |
+| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX | `MySQLIndex`                    |
+| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.PRIMARY`        |
+| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLForeignKey`               |
+| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.UNIQUE`         |
+| **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | —                               |
+| **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MySQLColumn.server_default`    |
+| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLView`                     |
+| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLTrigger`                  |
+| **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLFunction`                 |
+| **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only        |
+| **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MySQLRecord`                   |
 | **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
-| **Engine** | ✅ | ✅ | ✅ | ➖ | InnoDB, MyISAM, etc. | `MySQLTable.alter_engine()` |
+| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `after_connect()`               |
+| **Engine** | ✅ | ✅ | ✅ | ➖ | InnoDB, MyISAM, etc. | `MySQLTable.alter_engine()`     |
 
 ---
 
@@ -121,7 +121,7 @@
 | **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
 | **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MariaDBRecord` |
 | **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
+| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `after_connect()` |
 | **Engine** | ✅ | ✅ | ✅ | ➖ | InnoDB, Aria, etc. | `MariaDBTable.alter_engine()` |
 
 ---
@@ -147,7 +147,7 @@
 | **Sequence** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 | **Records** | ✅ | ✅ | ✅ | ✅ | Uses parameterized queries | `PostgreSQLRecord` |
 | **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
+| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `after_connect()` |
 | **Custom Types/Enum** | ❌ | ✅ | ❌ | ❌ | Read-only introspection | `_load_custom_types()` |
 | **Extension** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
 

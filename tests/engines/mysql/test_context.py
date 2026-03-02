@@ -2,6 +2,7 @@ import pytest
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLContext:
     """Tests for MySQL context methods."""
 

@@ -58,8 +58,9 @@ class SSHTunnel:
             self.ssh_executable,
             "-N",
             "-o", "ExitOnForwardFailure=yes",
-            "-o", "ServerAliveInterval=30",
-            "-o", "ServerAliveCountMax=3",
+            "-o", "ServerAliveInterval=10",
+            "-o", "ServerAliveCountMax=6",
+            "-o", "TCPKeepAlive=yes",
             "-L", f"{self.local_address}:{self.local_port}:127.0.0.1:{self.remote_port}",
             "-p", str(self.ssh_port),
         ]
@@ -80,8 +81,8 @@ class SSHTunnel:
 
         self._process = subprocess.Popen(
             cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             start_new_session=True,
         )
@@ -91,6 +92,7 @@ class SSHTunnel:
         atexit.register(self.stop)
 
     def stop(self):
+        logger.info("Stopping SSH tunnel...")
         if not self._process:
             return
 

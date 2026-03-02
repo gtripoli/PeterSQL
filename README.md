@@ -1,5 +1,5 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-50%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-54%25-brightgreen)
 
 ![SQLite](https://img.shields.io/badge/SQLite-tested-lightgrey)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-lightgrey)

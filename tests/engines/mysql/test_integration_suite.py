@@ -13,28 +13,33 @@ from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests,
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLTable(BaseTableTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLRecord(BaseRecordTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLColumn(BaseColumnTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLIndex(BaseIndexTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLForeignKey(BaseForeignKeyTests):
-    
+
     def get_datatype_class(self):
         return MySQLDataType
 
@@ -46,20 +51,23 @@ class TestMySQLForeignKey(BaseForeignKeyTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLCheck(BaseCheckTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLTrigger(BaseTriggerTests):
-    
+
     def get_trigger_statement(self, db_name: str, table_name: str) -> str:
         return f"AFTER INSERT ON {db_name}.{table_name} FOR EACH ROW BEGIN END"
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLViewSave(BaseViewSaveTests):
-    
+
     def get_view_statement(self) -> str:
         return "SELECT 1 as id, 'test' as name"
 
@@ -71,12 +79,14 @@ class TestMySQLViewSave(BaseViewSaveTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLViewIsNew(BaseViewIsNewTests):
-    
+
     def get_simple_view_statement(self) -> str:
         return "SELECT 1 as id"
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLViewDefiner(BaseViewDefinerTests):
     pass

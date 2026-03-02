@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from constants import Language
 

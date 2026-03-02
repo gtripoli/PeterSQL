@@ -24,26 +24,31 @@ from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLTable(BaseTableTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLRecord(BaseRecordTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLColumn(BaseColumnTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLIndex(BaseIndexTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLForeignKey(BaseForeignKeyTests):
     
     def get_datatype_class(self):
@@ -57,11 +62,13 @@ class TestPostgreSQLForeignKey(BaseForeignKeyTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLCheck(BaseCheckTests):
     pass
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLTrigger(BaseTriggerTests):
     
     def get_trigger_statement(self, db_name: str, table_name: str) -> str:
@@ -79,6 +86,7 @@ class TestPostgreSQLTrigger(BaseTriggerTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLViewSave(BaseViewSaveTests):
     
     def get_view_statement(self) -> str:
@@ -92,6 +100,7 @@ class TestPostgreSQLViewSave(BaseViewSaveTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLFunction(BaseFunctionTests):
     
     def get_function_statement(self) -> str:
@@ -105,6 +114,7 @@ class TestPostgreSQLFunction(BaseFunctionTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLProcedure(BaseProcedureTests):
     
     def get_procedure_statement(self) -> str:
@@ -115,6 +125,7 @@ class TestPostgreSQLProcedure(BaseProcedureTests):
 
 
 @pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLViewIsNew(BaseViewIsNewTests):
     
     def get_simple_view_statement(self) -> str:
