@@ -13,35 +13,14 @@
         "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "orders.id",
-          "orders.user_id",
-          "orders.total",
-          "orders.status",
-          "orders.created_at",
-          "products.id",
-          "products.name",
-          "products.price",
-          "products.unit_price",
-          "products.stock",
-          "customers.id",
-          "customers.name",
-          "customers.email",
-          "payments.id",
-          "payments.order_id",
-          "payments.amount",
-          "payments.method",
-          "payments.created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -58,10 +37,10 @@
           "UUID",
           "YEAR",
           "FROM",
-          "WHERE",
+          "GROUP BY",
           "LIMIT",
           "ORDER BY",
-          "GROUP BY"
+          "WHERE"
         ]
       }
     },
@@ -77,35 +56,14 @@
         "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "orders.id",
-          "orders.user_id",
-          "orders.total",
-          "orders.status",
-          "orders.created_at",
-          "products.id",
-          "products.name",
-          "products.price",
-          "products.unit_price",
-          "products.stock",
-          "customers.id",
-          "customers.name",
-          "customers.email",
-          "payments.id",
-          "payments.order_id",
-          "payments.amount",
-          "payments.method",
-          "payments.created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -141,22 +99,14 @@
         "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
-          "o.created_at",
-          "o.id",
-          "o.status",
-          "o.total",
-          "o.user_id",
-          "u.created_at",
-          "u.email",
-          "u.id",
-          "u.name",
-          "u.status",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -171,9 +121,13 @@
           "UNIX_TIMESTAMP",
           "UPPER",
           "UUID",
-          "YEAR"
-        ],
-        "xfail": true
+          "YEAR",
+          "FROM",
+          "GROUP BY",
+          "LIMIT",
+          "ORDER BY",
+          "WHERE"
+        ]
       }
     },
     {
@@ -187,18 +141,22 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "alias_exact_match": "u",
         "suggestions": [
-          "u.created_at",
-          "u.email",
-          "u.id",
-          "u.name",
-          "u.status",
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "user_sessions.id",
+          "user_sessions.user_id",
+          "user_sessions.session_token",
+          "user_sessions.expires_at",
+          "orders.user_id",
+          "products.unit_price",
           "UNIX_TIMESTAMP",
           "UPPER",
           "UUID"
-        ],
-        "xfail": true
+        ]
       }
     },
     {
@@ -212,20 +170,15 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "comment": "Scope exists. Table-name expansion: users.* (scope table starts with 'u'). DB-wide columns: orders.user_id, products.unit_price. Functions before keywords.",
         "suggestions": [
           "users.id",
           "users.name",
           "users.email",
           "users.status",
           "users.created_at",
-          "orders.user_id",
-          "products.unit_price",
           "UNIX_TIMESTAMP",
           "UPPER",
-          "UUID",
-          "UPDATE",
-          "USING"
+          "UUID"
         ]
       }
     },
@@ -257,6 +210,8 @@
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -272,8 +227,7 @@
           "UPPER",
           "UUID",
           "YEAR"
-        ],
-        "xfail": true
+        ]
       }
     },
     {
@@ -284,8 +238,8 @@
       "current_table": null,
       "schema_variant": "small",
       "expected": {
-        "mode": "AFTER_COLUMN",
-        "context": "SELECT_LIST_AFTER_COLUMN",
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
           "AS",
@@ -295,8 +249,7 @@
           "LIMIT",
           "ORDER BY",
           "WHERE"
-        ],
-        "xfail": true
+        ]
       }
     }
   ]

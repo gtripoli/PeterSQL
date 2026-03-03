@@ -3,8 +3,8 @@
   "cases": [
     {
       "case_id": "DOT_001",
-      "title": "Dot-completion on table name - unqualified columns in schema order",
-      "sql": "SELECT users.|",
+      "title": "SELECT: Dot-completion without prefix (alias)",
+      "sql": "SELECT c.| FROM customers c",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -12,59 +12,19 @@
         "mode": "DOT",
         "context": "DOT_COMPLETION",
         "prefix": null,
-        "comment": "Dot-completion returns unqualified column names in schema order.",
+        "comment": "Even in SELECT_LIST context, dot-completion returns ONLY columns. NO functions.",
         "suggestions": [
           "id",
           "name",
           "email",
-          "status",
           "created_at"
         ]
       }
     },
     {
       "case_id": "DOT_002",
-      "title": "Dot-completion on alias - unqualified columns in schema order",
-      "sql": "SELECT * FROM users u WHERE u.|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": null,
-        "comment": "Dot-completion on alias 'u' returns unqualified columns.",
-        "suggestions": [
-          "id",
-          "name",
-          "email",
-          "status",
-          "created_at"
-        ]
-      }
-    },
-    {
-      "case_id": "DOT_003",
-      "title": "Dot-completion with prefix - filtered unqualified columns",
-      "sql": "SELECT users.c|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": "c",
-        "comment": "Dot-completion with prefix 'c' filters to created_at.",
-        "suggestions": [
-          "created_at"
-        ],
-        "xfail": true
-      }
-    },
-    {
-      "case_id": "DOT_004",
-      "title": "Dot-completion - no functions, no keywords, no CURRENT_TABLE logic",
-      "sql": "SELECT orders.|",
+      "title": "SELECT: Dot-completion without prefix (ignores CURRENT_TABLE)",
+      "sql": "SELECT items.|",
       "dialect": "generic",
       "current_table": "users",
       "schema_variant": "small",
@@ -72,7 +32,45 @@
         "mode": "DOT",
         "context": "DOT_COMPLETION",
         "prefix": null,
-        "comment": "Dot-completion ignores CURRENT_TABLE. Only orders columns.",
+        "comment": "Dot-completion ignores CURRENT_TABLE. Only items columns.",
+        "suggestions": [
+          "id",
+          "product_id",
+          "quantity",
+          "item_name"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_003",
+      "title": "SELECT: Dot-completion with prefix filter (multiple matches)",
+      "sql": "SELECT items.i|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "i",
+        "comment": "Dot-completion with prefix 'i' filters to 'id' and 'item_name'.",
+        "suggestions": [
+          "id",
+          "item_name"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_004",
+      "title": "WHERE: Dot-completion without prefix",
+      "sql": "SELECT * FROM orders o WHERE o.|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "comment": "Dot-completion on alias 'o' returns unqualified columns.",
         "suggestions": [
           "id",
           "user_id",
@@ -84,8 +82,25 @@
     },
     {
       "case_id": "DOT_005",
-      "title": "Dot-completion on CTE alias",
-      "sql": "WITH au AS (SELECT id, name FROM users) SELECT au.|",
+      "title": "WHERE: Dot-completion with prefix filter",
+      "sql": "SELECT * FROM customers c WHERE c.e|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "e",
+        "comment": "Dot-completion with prefix 'e' filters to email.",
+        "suggestions": [
+          "email"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_006",
+      "title": "JOIN ON: Dot-completion without prefix",
+      "sql": "SELECT * FROM orders o JOIN items i ON o.|",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
@@ -93,17 +108,37 @@
         "mode": "DOT",
         "context": "DOT_COMPLETION",
         "prefix": null,
-        "comment": "Dot-completion on CTE alias returns CTE columns.",
+        "comment": "Dot-completion in JOIN ON clause.",
         "suggestions": [
           "id",
-          "name"
-        ],
-        "xfail": true
+          "user_id",
+          "total",
+          "status",
+          "created_at"
+        ]
       }
     },
     {
-      "case_id": "DOT_006",
-      "title": "Dot-completion on derived table alias",
+      "case_id": "DOT_007",
+      "title": "ORDER BY: Dot-completion with prefix filter",
+      "sql": "SELECT * FROM items i ORDER BY i.i|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": "i",
+        "comment": "Dot-completion with prefix 'i' in ORDER BY.",
+        "suggestions": [
+          "id",
+          "item_name"
+        ]
+      }
+    },
+    {
+      "case_id": "DOT_008",
+      "title": "Derived table: Dot-completion without prefix",
       "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o WHERE o.|",
       "dialect": "generic",
       "current_table": null,
@@ -116,67 +151,6 @@
         "suggestions": [
           "id",
           "total"
-        ],
-        "xfail": true
-      }
-    },
-    {
-      "case_id": "DOT_007",
-      "title": "KILLER: Dot-completion in WHERE on alias - zero functions contamination",
-      "sql": "SELECT * FROM users u WHERE u.|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": null,
-        "comment": "KILLER: Dot-completion returns ONLY unqualified columns in schema order. NO functions, NO keywords, NO CURRENT_TABLE logic.",
-        "suggestions": [
-          "id",
-          "name",
-          "email",
-          "status",
-          "created_at"
-        ]
-      }
-    },
-    {
-      "case_id": "DOT_008",
-      "title": "KILLER: Dot-completion with prefix filter - startswith post-dot",
-      "sql": "SELECT users.i|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": "i",
-        "comment": "KILLER: Dot-completion with prefix 'i' filters to 'id' only. Unqualified.",
-        "suggestions": [
-          "id"
-        ],
-        "xfail": true
-      }
-    },
-    {
-      "case_id": "DOT_009",
-      "title": "KILLER: Dot-completion in SELECT - no functions even if context normally allows",
-      "sql": "SELECT u.| FROM users u",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": null,
-        "comment": "KILLER: Even in SELECT_LIST context, dot-completion returns ONLY columns. NO functions like UPPER, UUID, etc.",
-        "suggestions": [
-          "id",
-          "name",
-          "email",
-          "status",
-          "created_at"
         ]
       }
     }

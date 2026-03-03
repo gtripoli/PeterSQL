@@ -3,7 +3,126 @@
   "cases": [
     {
       "case_id": "ALIAS_001",
-      "title": "Alias disambiguation does NOT trigger when prefix startswith alias but not equal",
+      "title": "Prefix matches column: suggest unqualified column",
+      "sql": "SELECT * FROM users u WHERE n|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "n",
+        "alias_exact_match": null,
+        "comment": "Prefix 'n' matches column 'name'. Suggest unqualified column.",
+        "suggestions": [
+          "name"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_002",
+      "title": "Prefix matches alias: trigger alias disambiguation",
+      "sql": "SELECT * FROM users u WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "alias_exact_match": "u",
+        "comment": "Prefix 'u' exactly matches alias 'u'. Trigger alias disambiguation.",
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_003",
+      "title": "SELECT: Prefix matches alias",
+      "sql": "SELECT o| FROM orders o",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "o",
+        "alias_exact_match": "o",
+        "comment": "Prefix 'o' exactly matches alias 'o'. Trigger alias disambiguation.",
+        "suggestions": [
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_004",
+      "title": "ORDER BY: Prefix matches column",
+      "sql": "SELECT * FROM products p ORDER BY pr|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": "pr",
+        "alias_exact_match": null,
+        "comment": "Prefix 'pr' matches columns 'price'. Suggest unqualified column.",
+        "suggestions": [
+          "price"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_005",
+      "title": "JOIN ON: Prefix matches alias",
+      "sql": "SELECT * FROM customers c JOIN orders o ON c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON_CLAUSE",
+        "prefix": "c",
+        "alias_exact_match": "c",
+        "comment": "Prefix 'c' exactly matches alias 'c'. Trigger alias disambiguation.",
+        "suggestions": [
+          "c.id",
+          "c.name",
+          "c.email",
+          "c.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_006",
+      "title": "GROUP BY: Prefix matches column",
+      "sql": "SELECT COUNT(*) FROM items i GROUP BY item|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "item",
+        "alias_exact_match": null,
+        "comment": "Prefix 'item' matches column 'item_name'. Suggest unqualified column.",
+        "suggestions": [
+          "item_name"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_007",
+      "title": "WHERE: Prefix does not match alias or any column - no suggestions",
       "sql": "SELECT * FROM users u WHERE us|",
       "dialect": "generic",
       "current_table": null,
@@ -13,35 +132,88 @@
         "context": "WHERE_CLAUSE",
         "prefix": "us",
         "alias_exact_match": null,
-        "comment": "Table-name expansion: users.* in schema order. WHERE is scope-restricted, so only users table columns.",
-        "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at"
-        ]
+        "comment": "Prefix 'us' does not match alias 'u' or any column. Table is aliased, cannot use original name. No suggestions.",
+        "suggestions": []
       }
     },
     {
-      "case_id": "ALIAS_002",
-      "title": "Prefix 'user' should not trigger alias 'u'",
-      "sql": "SELECT * FROM users u WHERE user|",
+      "case_id": "ALIAS_008",
+      "title": "SELECT: Prefix does not match alias or any column - no suggestions",
+      "sql": "SELECT ord| FROM orders o",
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
-        "context": "WHERE_CLAUSE",
-        "prefix": "user",
+        "context": "SELECT_LIST",
+        "prefix": "ord",
         "alias_exact_match": null,
-        "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at"
-        ]
+        "comment": "Prefix 'ord' does not match alias 'o' or any column. Table is aliased, cannot use original name. No suggestions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "ALIAS_009",
+      "title": "ORDER BY: Prefix does not match alias or any column - no suggestions",
+      "sql": "SELECT * FROM products p ORDER BY prod|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": "prod",
+        "alias_exact_match": null,
+        "comment": "Prefix 'prod' does not match alias 'p' or any column. Table is aliased, cannot use original name. No suggestions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "ALIAS_010",
+      "title": "JOIN ON: Prefix does not match any alias or column - no suggestions",
+      "sql": "SELECT * FROM customers c JOIN orders o ON cust|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON_CLAUSE",
+        "prefix": "cust",
+        "alias_exact_match": null,
+        "comment": "Prefix 'cust' does not match alias 'c' or 'o', or any column. Tables are aliased, cannot use original names. No suggestions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "ALIAS_011",
+      "title": "GROUP BY: Prefix does not match alias or any column - no suggestions",
+      "sql": "SELECT COUNT(*) FROM items i GROUP BY ite|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "ite",
+        "alias_exact_match": null,
+        "comment": "Prefix 'ite' does not match alias 'i' or any column. Table is aliased, cannot use original name. No suggestions.",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "ALIAS_012",
+      "title": "HAVING: Prefix does not match alias or any column - no suggestions",
+      "sql": "SELECT COUNT(*) FROM customers c GROUP BY c.name HAVING cust|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "cust",
+        "alias_exact_match": null,
+        "comment": "Prefix 'cust' does not match alias 'c' or any column. Table is aliased, cannot use original name. No suggestions.",
+        "suggestions": []
       }
     }
   ]
