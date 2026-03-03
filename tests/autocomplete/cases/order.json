@@ -197,6 +197,23 @@
           "CURRENT_DATE"
         ]
       }
+    },
+    {
+      "case_id": "ORDER_007",
+      "title": "ORDER BY after column with prefix filters sort keywords",
+      "sql": "SELECT * FROM users ORDER BY created_at D|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_AFTER_COLUMN",
+        "prefix": "D",
+        "comment": "After a complete ORDER BY column, prefix filtering should target sort-direction keywords only.",
+        "suggestions": [
+          "DESC"
+        ]
+      }
     }
   ]
 }

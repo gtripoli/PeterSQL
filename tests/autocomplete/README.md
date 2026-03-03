@@ -81,7 +81,7 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (178 total tests):
+Golden tests organized by SQL query writing flow (179 total tests):
 
 ### 1. Query Start & Basic Context
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -131,7 +131,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| ORDER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
+| ORDER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order.json` | 7 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 
 ### 9. LIMIT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -161,7 +161,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 | PERF | `cases/perf.json` | 2 | 0 | 0 | 0 | Large schema performance tests | Performance tests |
 
 ### Summary Statistics
-- **Total Tests**: 178
+- **Total Tests**: 179
 - **✅ Passing**: 8 (4%)
 - **❌ Failing**: 5 (3%)
 - **⚠️ Expected Failures (xfail)**: 52 (29%)
