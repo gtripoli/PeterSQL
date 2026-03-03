@@ -1,0 +1,24 @@
+{
+  "group": "CURSOR_IN_TOKEN",
+  "cases": [
+    {
+      "case_id": "CURSOR_001",
+      "title": "SELECT_LIST no-scope: middle-token cursor uses left fragment as prefix",
+      "sql": "SELECT na|me",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "na",
+        "comment": "Cursor is inside token 'name': only left fragment 'na' is used for prefix matching.",
+        "suggestions": [
+          "users.name",
+          "products.name",
+          "customers.name"
+        ]
+      }
+    }
+  ]
+}

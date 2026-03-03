@@ -81,7 +81,7 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (182 total tests):
+Golden tests organized by SQL query writing flow (178 total tests):
 
 ### 1. Query Start & Basic Context
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -141,14 +141,13 @@ Golden tests organized by SQL query writing flow (182 total tests):
 ### 10. Advanced Features
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| DOT_COMPLETION | `cases/dot_completion.json` | 9 | 0 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
-| DOT | `cases/dot.json` | 6 | 0 | 0 | 0 | `SELECT u.\| FROM users u` | Legacy dot tests |
-| ALIAS | `cases/alias.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
-| ALIAS_PREFIX_DISAMBIGUATION | `cases/alias_prefix_disambiguation.json` | 8 | 0 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
-| PREFIX_EXPANSION | `cases/prefix_expansion.json` | 10 | 0 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
-| SCOPE | `cases/scope.json` | 3 | 0 | 0 | 0 | `SELECT * FROM (SELECT id FROM users) AS u WHERE \|` | Scope management |
-| FUT | `cases/fut.json` | 1 | 0 | 0 | 1 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions |
-| CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | `SELECT na\|me FROM users` | Cursor position handling |
+| DOT_COMPLETION ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/dot_completion.json` | 8 | 0 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
+| ALIAS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/alias.json` | 12 | 0 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
+| ALIAS_PREFIX_DISAMBIGUATION ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/alias_prefix_disambiguation.json` | 8 | 0 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
+| PREFIX_EXPANSION ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/prefix_expansion.json` | 6 | 0 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
+| SCOPE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/scope.json` | 3 | 0 | 0 | 0 | `SELECT * FROM (SELECT id FROM users) AS u WHERE \|` | Scope management |
+| WINDOW_FUNCTIONS_OVER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/window_functions_over.json` | 1 | 0 | 0 | 0 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions OVER clause |
+| CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | `SELECT na\|me FROM users` | Cursor position handling |
 
 ### 11. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -162,10 +161,10 @@ Golden tests organized by SQL query writing flow (182 total tests):
 | PERF | `cases/perf.json` | 2 | 0 | 0 | 0 | Large schema performance tests | Performance tests |
 
 ### Summary Statistics
-- **Total Tests**: 182
+- **Total Tests**: 178
 - **✅ Passing**: 8 (4%)
 - **❌ Failing**: 5 (3%)
-- **⚠️ Expected Failures (xfail)**: 56 (31%)
+- **⚠️ Expected Failures (xfail)**: 52 (29%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend

@@ -1,9 +1,9 @@
 {
-  "group": "FUT",
+  "group": "WINDOW_FUNCTIONS_OVER",
   "cases": [
     {
-      "case_id": "FUT_001",
-      "title": "Window function OVER context (future enhancement marker)",
+      "case_id": "WINDOW_OVER_001",
+      "title": "Window function OVER clause suggests partition/order keywords",
       "sql": "SELECT *, ROW_NUMBER() OVER | FROM users",
       "dialect": "generic",
       "current_table": null,
@@ -15,8 +15,7 @@
         "suggestions": [
           "ORDER BY",
           "PARTITION BY"
-        ],
-        "xfail": true
+        ]
       }
     }
   ]

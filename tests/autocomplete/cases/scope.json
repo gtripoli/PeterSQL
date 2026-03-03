@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "SCOPE_001",
-      "title": "Derived table columns available with alias in WHERE",
+      "title": "WHERE with derived table alias: scope columns only",
       "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o WHERE |",
       "dialect": "generic",
       "current_table": null,
@@ -12,13 +12,18 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
+        "comment": "Derived table alias 'o' must define scope in WHERE. No DB-wide columns.",
         "suggestions": [
+          "o.id",
+          "o.total",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -39,7 +44,7 @@
     },
     {
       "case_id": "SCOPE_002",
-      "title": "CTE columns available and qualified by CTE name",
+      "title": "WHERE with CTE in scope: only CTE columns and functions",
       "sql": "WITH active_users AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM active_users WHERE |",
       "dialect": "generic",
       "current_table": null,
@@ -48,18 +53,18 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
+        "comment": "CTE 'active_users' is the only scope source for columns in WHERE.",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "active_users.id",
+          "active_users.name",
           "AVG",
           "COALESCE",
           "CONCAT",
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -80,7 +85,7 @@
     },
     {
       "case_id": "SCOPE_003",
-      "title": "ON other-side prioritization works with derived tables and CTEs",
+      "title": "JOIN_ON after operator with derived table + CTE",
       "sql": "WITH au AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM (SELECT id, total FROM orders) AS o JOIN au ON o.id = |",
       "dialect": "generic",
       "current_table": null,
@@ -89,10 +94,10 @@
         "mode": "AFTER_OPERATOR",
         "context": "JOIN_ON_AFTER_OPERATOR",
         "prefix": null,
+        "comment": "After 'o.id =', prioritize other-side table au.*; exclude immediate-left column o.id.",
         "suggestions": [
           "au.id",
           "au.name",
-          "o.id",
           "o.total",
           "NULL",
           "TRUE",
@@ -103,6 +108,8 @@
           "COUNT",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -118,8 +125,7 @@
           "UPPER",
           "UUID",
           "YEAR"
-        ],
-        "xfail": true
+        ]
       }
     }
   ]
