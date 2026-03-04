@@ -287,6 +287,34 @@
         ],
         "xfail": true
       }
+    },
+    {
+      "case_id": "FROM_005_MOVED",
+      "title": "FROM includes CTE names defined in same statement (moved from from.json)",
+      "sql": "WITH active_products AS (SELECT id, name FROM products) SELECT * FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "CTE 'active_products' available as table candidate.",
+        "suggestions": [
+          "active_products",
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "user_sessions",
+          "users"
+        ],
+        "xfail": true
+      }
     }
   ]
 }

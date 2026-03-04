@@ -618,9 +618,11 @@ SEL| → SELECT (SINGLE_TOKEN)
 #### 3a. Without prefix (after SELECT, no FROM/JOIN in query)
 
 **Show:**
-- `CURRENT_TABLE` columns (if set)
+- `CURRENT_TABLE` columns (if set) - **required for keywords to be useful**
+- Keywords (FROM, WHERE, etc.) - **only if CURRENT_TABLE is set**
 - Functions
-- Keywords (FROM, WHERE, etc.)
+
+**Important:** Keywords like FROM, WHERE are only valid when a table is available (CURRENT_TABLE or scope). Without CURRENT_TABLE and without scope, `SELECT WHERE` or `SELECT FROM` is syntactically invalid.
 
 **Examples:**
 ```sql
@@ -630,10 +632,9 @@ SELECT |
 → COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
 → FROM, WHERE, LIMIT, ...
 
--- No CURRENT_TABLE set
+-- No CURRENT_TABLE set (syntactically invalid to suggest keywords)
 SELECT |
 → COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
-→ FROM, WHERE, LIMIT, ...
 ```
 
 #### 3a-bis. Without prefix (after SELECT, with FROM/JOIN in query)
@@ -675,9 +676,9 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
 - **When NO scope tables AND NO prefix:**
   - `CURRENT_TABLE` columns (if set)
   - Functions
-  - Keywords
-  - **Rationale:** Without prefix, user hasn't typed anything yet - show everything relevant
-   
+  - Keywords (FROM, WHERE, etc.) - only if CURRENT_TABLE is set
+  - **Rationale:** Without CURRENT_TABLE, keywords like FROM/WHERE are syntactically invalid
+    
 - **When scope tables exist (FROM/JOIN present):**
   - `CURRENT_TABLE` columns MUST be included ONLY if `CURRENT_TABLE` is in scope
   - If `CURRENT_TABLE` is not in scope, it MUST be ignored

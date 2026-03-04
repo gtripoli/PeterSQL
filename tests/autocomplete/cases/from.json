@@ -93,31 +93,6 @@
       }
     },
     {
-      "case_id": "FROM_005",
-      "title": "FROM includes CTE names defined in same statement",
-      "sql": "WITH active_products AS (SELECT id, name FROM products) SELECT * FROM |",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "CONTEXT",
-        "context": "FROM_CLAUSE",
-        "prefix": null,
-        "suggestions": [
-          "carts",
-          "customers",
-          "inventory",
-          "items",
-          "orders",
-          "orders_archive",
-          "payments",
-          "products",
-          "users",
-          "user_sessions"
-        ]
-      }
-    },
-    {
       "case_id": "FROM_006",
       "title": "CTE not visible across statements",
       "sql": "WITH another AS (SELECT 1) SELECT * FROM another; SELECT * FROM |",
