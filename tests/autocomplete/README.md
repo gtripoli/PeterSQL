@@ -161,10 +161,10 @@ Golden tests organized by SQL query writing flow (178 total tests):
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 178
-- **✅ Passing**: 96 (54%)
-- **❌ Failing**: 72 (40%)
-- **⚠️ Expected Failures (xfail)**: 10 (6%)
+- **Total Tests**: 712 (178 base × 4 engines)
+- **✅ Passing**: 288 (72 base × 4 engines, 40%)
+- **❌ Failing**: 424 (remaining tests, 60%)
+- **⚠️ Expected Failures (xfail)**: 40 (10 × 4 engines, 6%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend
