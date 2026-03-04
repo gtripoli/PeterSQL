@@ -74,7 +74,7 @@ class ContextDetector:
         return match.group(0)
     
     def _detect_context_with_regex(self, left_text: str, prefix: str) -> SQLContext:
-        left_upper = left_text.strip().upper()
+        left_upper = left_text.upper()
         
         select_pos = left_upper.rfind("SELECT")
         from_pos = left_upper.rfind("FROM")
@@ -108,6 +108,10 @@ class ContextDetector:
         
         if on_pos > select_pos and on_pos != -1:
             if on_pos > max(join_pos, from_pos, where_pos, -1):
+                if self._is_after_join_on_operator(left_text, on_pos, prefix):
+                    return SQLContext.JOIN_ON_AFTER_OPERATOR
+                if self._is_after_join_on_expression(left_text, on_pos, prefix):
+                    return SQLContext.JOIN_ON_AFTER_EXPRESSION
                 return SQLContext.JOIN_ON
         
         if join_pos > select_pos and join_pos != -1:
@@ -138,6 +142,69 @@ class ContextDetector:
             return False
 
         return True
+
+    @staticmethod
+    def _is_after_join_on_expression(left_text: str, on_pos: int, prefix: str) -> bool:
+        if prefix:
+            return False
+
+        on_clause = left_text[on_pos + 4:]
+        on_clause_stripped = on_clause.strip()
+        if not on_clause_stripped:
+            return False
+
+        return bool(
+            re.search(
+                r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s*"
+                r"(?:=|!=|<>|<=|>=|<|>)\s*"
+                r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*$",
+                on_clause_stripped,
+                re.IGNORECASE,
+            )
+        )
+
+    def _is_after_join_on_operator(self, left_text: str, on_pos: int, prefix: str) -> bool:
+        if prefix:
+            return False
+
+        on_clause = left_text[on_pos + 4:]
+        if not (
+            match := re.search(
+                r"(?:(?P<qualifier>[A-Za-z_][A-Za-z0-9_]*)\.)?[A-Za-z_][A-Za-z0-9_]*\s*"
+                r"(?:=|!=|<>|<=|>=|<|>)\s*$",
+                on_clause,
+                re.IGNORECASE,
+            )
+        ):
+            return False
+
+        left_qualifier = match.group("qualifier")
+        if not left_qualifier:
+            return False
+
+        from_qualifier = self._extract_from_qualifier(left_text)
+        if not from_qualifier:
+            return False
+
+        return left_qualifier.lower() == from_qualifier.lower()
+
+    def _extract_from_qualifier(self, left_text: str) -> Optional[str]:
+        if not (
+            from_match := re.search(
+                r"\bFROM\s+([A-Za-z_][A-Za-z0-9_]*)"
+                r"\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?",
+                left_text,
+                re.IGNORECASE,
+            )
+        ):
+            return None
+
+        table_name = from_match.group(1)
+        alias = from_match.group(2)
+        if alias and alias.upper() not in self._join_after_table_keywords:
+            return alias
+
+        return table_name
     
     def _extract_scope_from_select(self, parsed: sqlglot.exp.Select, database: Optional[SQLDatabase]) -> QueryScope:
         from_tables = []

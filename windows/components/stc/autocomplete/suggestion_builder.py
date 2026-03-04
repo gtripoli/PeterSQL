@@ -20,12 +20,19 @@ class SuggestionBuilder:
     _select_list_excluded_functions = {
         "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP"
     }
+
+    _join_expression_excluded_functions = {
+        "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP",
+        "PI", "POW", "POWER",
+    }
     
     _max_database_columns = 400
     
     _scope_restricted_contexts = {
         SQLContext.WHERE_CLAUSE,
         SQLContext.JOIN_ON,
+        SQLContext.JOIN_ON_AFTER_OPERATOR,
+        SQLContext.JOIN_ON_AFTER_EXPRESSION,
         SQLContext.ORDER_BY_CLAUSE,
         SQLContext.GROUP_BY_CLAUSE,
         SQLContext.HAVING_CLAUSE
@@ -105,6 +112,12 @@ class SuggestionBuilder:
         
         if context == SQLContext.JOIN_ON:
             return self._build_join_on(scope, prefix, statement)
+
+        if context == SQLContext.JOIN_ON_AFTER_OPERATOR:
+            return self._build_join_on_after_operator(scope, prefix)
+
+        if context == SQLContext.JOIN_ON_AFTER_EXPRESSION:
+            return self._build_join_on_after_expression(prefix)
         
         if context == SQLContext.WHERE_CLAUSE:
             return self._build_where_clause(scope, prefix, statement)
@@ -481,10 +494,28 @@ class SuggestionBuilder:
     def _table_name_sort_key(name: str) -> tuple[str, str]:
         normalized = "".join(ch for ch in name.lower() if ch.isalnum())
         return normalized, name.lower()
+
+    @staticmethod
+    def _is_after_join_on_keyword(statement: str) -> bool:
+        import re
+
+        return bool(re.search(r"\bON\s*$", statement, re.IGNORECASE))
+
+    @staticmethod
+    def _sort_columns_by_name(columns: list[CompletionItem]) -> list[CompletionItem]:
+        return sorted(columns, key=lambda item: item.name.lower())
     
     def _build_join_on(self, scope: QueryScope, prefix: str, statement: str = "") -> list[CompletionItem]:
         items = []
-        columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.JOIN_ON)
+        if prefix:
+            columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.JOIN_ON)
+        else:
+            join_columns = self._get_join_table_columns(scope, None)
+            if self._is_after_join_on_keyword(statement):
+                join_columns = self._sort_columns_by_name(join_columns)
+
+            columns = list(join_columns)
+            columns.extend(self._get_from_table_columns(scope, None))
         
         # Filter out the column on the left side of the operator (same logic as WHERE)
         if not prefix and statement:
@@ -495,8 +526,47 @@ class SuggestionBuilder:
                 columns = [c for c in columns if c.name.lower() != left_column.lower()]
         
         items.extend(columns)
-        items.extend(self._build_functions(prefix))
+        if prefix:
+            items.extend(self._build_functions(prefix))
+        else:
+            items.extend(self._build_join_expression_functions(prefix))
         return items
+
+    def _build_join_on_after_expression(self, prefix: str) -> list[CompletionItem]:
+        keywords = ["AND", "NOT", "OR", "GROUP BY", "LIMIT", "ORDER BY", "WHERE"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [keyword for keyword in keywords if keyword.startswith(prefix_upper)]
+
+        return [CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD) for keyword in keywords]
+
+    def _build_join_on_after_operator(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
+        columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.JOIN_ON_AFTER_OPERATOR)
+
+        if not prefix:
+            columns = self._get_join_table_columns(scope, None)
+            columns.extend(self._get_from_table_columns(scope, None))
+
+        items = list(columns)
+        if not prefix:
+            items.extend(
+                CompletionItem(name=literal, item_type=CompletionItemType.KEYWORD)
+                for literal in ["NULL", "TRUE", "FALSE"]
+            )
+
+        if prefix:
+            items.extend(self._build_functions(prefix))
+        else:
+            items.extend(self._build_join_expression_functions(prefix))
+        return items
+
+    def _build_join_expression_functions(self, prefix: str) -> list[CompletionItem]:
+        functions = self._build_functions(prefix)
+        return [
+            function
+            for function in functions
+            if function.name not in self._join_expression_excluded_functions
+        ]
     
     def _build_where_clause(self, scope: QueryScope, prefix: str, statement: str = "") -> list[CompletionItem]:
         items = []

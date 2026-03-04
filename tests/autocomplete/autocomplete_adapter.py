@@ -114,6 +114,10 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
         mode = "EMPTY"
     elif sql_context.name == "JOIN_AFTER_TABLE":
         mode = "AFTER_JOIN_TABLE"
+    elif sql_context.name in {"JOIN_ON_AFTER_OPERATOR", "WHERE_AFTER_OPERATOR", "HAVING_AFTER_OPERATOR"}:
+        mode = "AFTER_OPERATOR"
+    elif sql_context.name in {"JOIN_ON_AFTER_EXPRESSION", "WHERE_AFTER_EXPRESSION", "HAVING_AFTER_EXPRESSION"}:
+        mode = "AFTER_EXPRESSION"
     elif result.prefix:
         mode = "PREFIX"
     else:
