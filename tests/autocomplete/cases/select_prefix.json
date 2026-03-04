@@ -136,6 +136,9 @@
           "carts.customer_id",
           "carts.created_at",
           "carts.cart_total",
+          "users.created_at",
+          "orders.created_at",
+          "payments.created_at",
           "COALESCE",
           "CONCAT",
           "COUNT"

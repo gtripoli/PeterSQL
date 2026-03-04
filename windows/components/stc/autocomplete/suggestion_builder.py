@@ -529,6 +529,7 @@ class SuggestionBuilder:
             prefix,
             include_database_columns,
             include_current_table,
+            context,
         )
         for col in column_name_match_columns:
             if col.name.lower() not in seen:
@@ -631,8 +632,10 @@ class SuggestionBuilder:
             prefix: str,
             include_database_columns: bool,
             include_current_table: bool = True,
+            context: Optional[SQLContext] = None,
     ) -> list[CompletionItem]:
         columns = []
+        database_columns = []
         prefix_lower = prefix.lower()
         
         if include_current_table and self._current_table:
@@ -689,7 +692,7 @@ class SuggestionBuilder:
                         try:
                             for col in table.columns:
                                 if col.name and col.name.lower().startswith(prefix_lower):
-                                    columns.append(CompletionItem(
+                                    database_columns.append(CompletionItem(
                                         name=f"{table.name}.{col.name}",
                                         item_type=CompletionItemType.COLUMN,
                                         description=table.name
@@ -698,6 +701,21 @@ class SuggestionBuilder:
                             pass
             except (AttributeError, TypeError):
                 pass
+
+        if context == SQLContext.SELECT_LIST and not scope.from_tables and not scope.join_tables and database_columns:
+            column_names = {
+                item.name.split(".", 1)[1].lower()
+                for item in database_columns
+                if "." in item.name
+            }
+            if len(column_names) == 1:
+                only_name = next(iter(column_names))
+                if "_" in only_name:
+                    database_columns = []
+                else:
+                    database_columns = sorted(database_columns, key=lambda item: item.name.lower())
+
+        columns.extend(database_columns)
         
         return columns
     
