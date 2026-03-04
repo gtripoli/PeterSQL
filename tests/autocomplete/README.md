@@ -109,7 +109,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 |------------|------|-------|---|---|---|---------------|-------------|
 | JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
 | JOIN_ON ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_on.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
-| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_after_table.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders \|` | Keywords after JOIN table |
+| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_after_table.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users JOIN orders \|` | Keywords after JOIN table |
 | JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_operator_left_column_filter.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
 
 ### 5. WHERE Clause
@@ -162,8 +162,8 @@ Golden tests organized by SQL query writing flow (178 total tests):
 
 ### Summary Statistics
 - **Total Tests**: 178
-- **✅ Passing**: 87 (49%)
-- **❌ Failing**: 82 (46%)
+- **✅ Passing**: 91 (51%)
+- **❌ Failing**: 78 (44%)
 - **⚠️ Expected Failures (xfail)**: 9 (5%)
 - **⚪ Not Implemented**: 0 (0%)
 
