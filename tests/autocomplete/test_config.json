@@ -20,7 +20,7 @@
     "functions_all": [
       "AVG", "COALESCE", "CONCAT", "COUNT", "DATE", "GROUP_CONCAT", "IF", "IFNULL",
       "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "LENGTH", "LOWER", "MAX", "MIN", "MONTH", "NOW", "NULLIF", "ROW_NUMBER",
-      "SUBSTR", "SUM", "TRIM", "UNIX_TIMESTAMP", "UPPER", "UUID", "YEAR"
+      "PI", "POW", "POWER", "SUBSTR", "SUM", "TRIM", "UNIX_TIMESTAMP", "UPPER", "UUID", "YEAR"
     ],
     "aggregate_functions": [
       "AVG", "COUNT", "GROUP_CONCAT", "MAX", "MIN", "SUM"

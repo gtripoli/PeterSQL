@@ -25,7 +25,10 @@
           "payments.method",
           "payments.created_at",
           "items.price",
-          "inventory.product_id"
+          "inventory.product_id",
+          "PI",
+          "POW",
+          "POWER"
         ]
       }
     },

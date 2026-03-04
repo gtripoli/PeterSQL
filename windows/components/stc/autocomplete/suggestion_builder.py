@@ -175,6 +175,14 @@ class SuggestionBuilder:
             return self._build_select_list_after_comma(scope, prefix, left_statement, has_scope)
 
         if prefix:
+            if has_scope and (single_reference := self._get_single_unaliased_scope_reference(scope)):
+                columns = self._build_single_scope_prefix_columns(single_reference, prefix)
+                items = list(columns)
+                items.extend(self._build_select_list_functions(prefix))
+                hints = self._get_out_of_scope_table_hints(scope, prefix, columns)
+                items.extend(hints)
+                return items
+
             columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
             items = list(columns)
             items.extend(self._build_select_list_functions(prefix))
@@ -188,6 +196,62 @@ class SuggestionBuilder:
 
         items = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
         items.extend(self._build_select_list_functions(prefix))
+        return items
+
+    @staticmethod
+    def _get_single_unaliased_scope_reference(scope: QueryScope) -> Optional[TableReference]:
+        references = scope.from_tables + scope.join_tables
+        if len(references) != 1:
+            return None
+
+        reference = references[0]
+        if reference.alias:
+            return None
+        if not reference.table:
+            return None
+
+        return reference
+
+    @staticmethod
+    def _build_single_scope_prefix_columns(reference: TableReference, prefix: str) -> list[CompletionItem]:
+        table = reference.table
+        if not table:
+            return []
+
+        prefix_lower = prefix.lower()
+        table_name_matches_prefix = reference.name.lower().startswith(prefix_lower)
+
+        matched_columns: list[str] = []
+        all_columns: list[str] = []
+        try:
+            for column in table.columns:
+                if not column.name:
+                    continue
+                all_columns.append(column.name)
+                if column.name.lower().startswith(prefix_lower):
+                    matched_columns.append(column.name)
+        except (AttributeError, TypeError):
+            return []
+
+        if not table_name_matches_prefix:
+            return [
+                CompletionItem(name=column_name, item_type=CompletionItemType.COLUMN, description=reference.name)
+                for column_name in matched_columns
+            ]
+
+        items = [
+            CompletionItem(name=column_name, item_type=CompletionItemType.COLUMN, description=reference.name)
+            for column_name in matched_columns
+        ]
+        items.extend(
+            CompletionItem(name=f"{reference.name}.{column_name}", item_type=CompletionItemType.COLUMN, description=reference.name)
+            for column_name in matched_columns
+        )
+        items.extend(
+            CompletionItem(name=f"{reference.name}.{column_name}", item_type=CompletionItemType.COLUMN, description=reference.name)
+            for column_name in all_columns
+            if column_name not in matched_columns
+        )
         return items
 
     @staticmethod
@@ -855,13 +919,22 @@ class SuggestionBuilder:
         
         has_scope_column_match = False
         for col in existing_columns:
-            if col.item_type == CompletionItemType.COLUMN and '.' in col.name:
-                parts = col.name.split('.')
+            if col.item_type != CompletionItemType.COLUMN:
+                continue
+
+            column_name = col.name
+            if "." in column_name:
+                parts = column_name.split(".", 1)
                 if len(parts) == 2:
                     table_part, col_part = parts
                     if table_part.lower() in in_scope_table_names and col_part.lower().startswith(prefix_lower):
                         has_scope_column_match = True
                         break
+                continue
+
+            if column_name.lower().startswith(prefix_lower):
+                has_scope_column_match = True
+                break
         
         if has_scope_column_match:
             return []

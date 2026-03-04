@@ -12,11 +12,13 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "p",
-        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=products not in scope (ignored). Prefix 'p' matches no scope columns. Only functions suggested.",
+        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=products not in scope (ignored). Prefix 'p' matches only out-of-scope tables, so show table hints.",
         "suggestions": [
           "PI",
           "POW",
-          "POWER"
+          "POWER",
+          "products (+ Add via FROM/JOIN)",
+          "payments (+ Add via FROM/JOIN)"
         ]
       }
     },
@@ -31,13 +33,14 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "p",
-        "comment": "Scope=[products]. Single table. CURRENT_TABLE=orders not in scope (ignored). Prefix 'p' matches column name 'price' AND table name 'products'. Order: unqualified column-name match, qualified column-name match, table-name expansion remaining, functions.",
+        "comment": "Scope=[products]. Single table. CURRENT_TABLE=orders not in scope (ignored). Prefix 'p' returns unqualified match first, then qualified match, then remaining qualified columns in schema order.",
         "suggestions": [
           "price",
           "products.price",
           "products.id",
           "products.name",
           "products.unit_price",
+          "products.stock",
           "PI",
           "POW",
           "POWER"
@@ -56,12 +59,13 @@
         "context": "SELECT_LIST",
         "prefix": "i",
         "alias_exact_match": "i",
-        "comment": "Scope=[items as i]. Single table. CURRENT_TABLE=items in scope via alias 'i'. Prefix 'i' equals alias → alias-exact-match mode. Suggestions in schema order.",
+        "comment": "Scope=[items as i]. Single table. CURRENT_TABLE=items in scope via alias 'i'. Prefix 'i' equals alias, so suggestions are qualified with alias plus matching functions.",
         "suggestions": [
           "i.id",
-          "i.order_id",
-          "i.name",
+          "i.item_name",
+          "i.stock",
           "i.price",
+          "IF",
           "IFNULL"
         ]
       }
@@ -77,7 +81,7 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=items not in scope (ignored). Prefix 'u' matches ONLY column name 'user_id' (not table name 'orders'). Order: unqualified column-name match, functions.",
+        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=items not in scope (ignored). Prefix 'u' matches only unqualified column 'user_id', then matching functions.",
         "suggestions": [
           "user_id",
           "UNIX_TIMESTAMP",

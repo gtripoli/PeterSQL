@@ -95,7 +95,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 | SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 7 | 7 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
 | SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 6 | 6 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
 | SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 9 | 9 | 0 | 0 | `SELECT users.id \|` | Column whitespace and comma behavior |
-| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_scoped_current_table.json` | 4 | 0 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
+| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 4 | 4 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
 
 ### 3. FROM Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -162,8 +162,8 @@ Golden tests organized by SQL query writing flow (178 total tests):
 
 ### Summary Statistics
 - **Total Tests**: 178
-- **✅ Passing**: 56 (31%)
-- **❌ Failing**: 112 (63%)
+- **✅ Passing**: 60 (34%)
+- **❌ Failing**: 108 (61%)
 - **⚠️ Expected Failures (xfail)**: 10 (6%)
 - **⚪ Not Implemented**: 0 (0%)
 
