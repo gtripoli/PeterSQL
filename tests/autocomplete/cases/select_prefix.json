@@ -168,18 +168,18 @@
           "inventory.product_id",
           "inventory.quantity",
           "inventory.warehouse_location",
-          "carts.id",
-          "customers.id",
-          "orders.id",
-          "orders_archive.id",
-          "payments.id",
-          "products.id",
-          "user_sessions.id",
           "users.id",
+          "orders.id",
+          "products.id",
+          "customers.id",
+          "payments.id",
+          "user_sessions.id",
+          "carts.id",
+          "orders_archive.id",
           "IF",
           "IFNULL"
         ],
-        "note": "Ordering: (1) table-name expansion for tables starting with prefix (schema order per table), (2) db-wide column-name matches for prefix (table name alphabetical), (3) functions filtered by prefix (alphabetical)."
+        "note": "Ordering: (1) table-name expansion for tables starting with prefix (schema order per table), (2) db-wide column-name matches for prefix (table name schema order), (3) functions filtered by prefix (alphabetical)."
       }
     }
   ]
