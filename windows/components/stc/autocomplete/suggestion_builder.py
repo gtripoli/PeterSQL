@@ -83,7 +83,7 @@ class SuggestionBuilder:
                             for table in self._database.tables
                             if table.name.lower() not in in_scope_table_names
                         ]
-                        return sorted(tables, key=lambda x: x.name.lower())
+                        return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
                     except (AttributeError, TypeError):
                         return []
                 else:
@@ -430,7 +430,7 @@ class SuggestionBuilder:
         # This ensures SELECT users.id FROM | shows users first
         def sort_key(table):
             is_referenced = table.name.lower() in referenced_tables
-            return (not is_referenced, table.name.lower())
+            return (not is_referenced, self._table_name_sort_key(table.name))
         
         return sorted(tables, key=sort_key)
     
@@ -453,7 +453,12 @@ class SuggestionBuilder:
             prefix_lower = prefix.lower()
             tables = [t for t in tables if t.name.lower().startswith(prefix_lower)]
         
-        return sorted(tables, key=lambda x: x.name.lower())
+        return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+
+    @staticmethod
+    def _table_name_sort_key(name: str) -> tuple[str, str]:
+        normalized = "".join(ch for ch in name.lower() if ch.isalnum())
+        return normalized, name.lower()
     
     def _build_join_on(self, scope: QueryScope, prefix: str, statement: str = "") -> list[CompletionItem]:
         items = []

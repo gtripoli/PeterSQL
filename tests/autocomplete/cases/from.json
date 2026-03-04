@@ -21,8 +21,8 @@
           "orders_archive",
           "payments",
           "products",
-          "user_sessions",
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
@@ -62,8 +62,8 @@
           "orders",
           "orders_archive",
           "payments",
-          "user_sessions",
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
@@ -112,8 +112,8 @@
           "orders_archive",
           "payments",
           "products",
-          "user_sessions",
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
@@ -137,8 +137,8 @@
           "orders_archive",
           "payments",
           "products",
-          "user_sessions",
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
