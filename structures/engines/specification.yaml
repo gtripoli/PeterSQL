@@ -1,0 +1,51 @@
+schema_version: 1
+scope: global
+common:
+  keywords:
+  - ALTER
+  - AND
+  - AS
+  - ASC
+  - BETWEEN
+  - CREATE
+  - CROSS JOIN
+  - DELETE
+  - DESC
+  - DESCRIBE
+  - DROP
+  - EXISTS
+  - EXPLAIN
+  - 'FALSE'
+  - FROM
+  - FULL JOIN
+  - GROUP BY
+  - HAVING
+  - IN
+  - INNER JOIN
+  - INSERT
+  - IS NOT NULL
+  - IS NULL
+  - JOIN
+  - LEFT JOIN
+  - LIKE
+  - LIMIT
+  - MERGE
+  - NOT
+  - 'NULL'
+  - NULLS FIRST
+  - NULLS LAST
+  - OFFSET
+  - 'ON'
+  - OR
+  - ORDER BY
+  - REPLACE
+  - RIGHT JOIN
+  - SELECT
+  - SHOW
+  - 'TRUE'
+  - TRUNCATE
+  - UPDATE
+  - USING
+  - WHERE
+  - WITH
+  functions: []

@@ -1,16 +1,12 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any
 
 import pytest
 
-from tests.autocomplete.autocomplete_adapter import (
-    AVAILABLE_ENGINES,
-    AutocompleteRequest,
-    get_suggestions,
-)
+from tests.autocomplete.autocomplete_adapter import AutocompleteRequest
+from tests.autocomplete.autocomplete_adapter import SUPPORTED_ENGINE_VERSIONS
+from tests.autocomplete.autocomplete_adapter import get_suggestions
 
 
 ROOT = Path(__file__).resolve().parent
@@ -18,18 +14,28 @@ CASES_DIR = ROOT / "cases"
 CONFIG_PATH = ROOT / "test_config.json"
 
 
-def _load_json(path: Path) -> Dict[str, Any]:
+def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _iter_cases() -> Iterable[Tuple[str, Dict[str, Any]]]:
+def _iter_cases() -> list[tuple[str, dict[str, Any]]]:
+    cases: list[tuple[str, dict[str, Any]]] = []
     for path in sorted(CASES_DIR.glob("*.json")):
         payload = _load_json(path)
         for case in payload["cases"]:
-            yield (path.name, case)
+            cases.append((path.name, case))
+    return cases
 
 
-def _schema_for_variant(config: Dict[str, Any], schema_variant: str) -> Dict[str, Any]:
+def _iter_engine_targets() -> list[tuple[str, str]]:
+    targets: list[tuple[str, str]] = []
+    for engine, versions in SUPPORTED_ENGINE_VERSIONS.items():
+        for version in versions:
+            targets.append((engine, version))
+    return targets
+
+
+def _schema_for_variant(config: dict[str, Any], schema_variant: str) -> dict[str, Any]:
     if schema_variant == "small":
         return config["schema_small"]
     if schema_variant == "big":
@@ -37,9 +43,14 @@ def _schema_for_variant(config: Dict[str, Any], schema_variant: str) -> Dict[str
     raise ValueError(f"Unknown schema_variant: {schema_variant}")
 
 
-@pytest.mark.parametrize("engine", AVAILABLE_ENGINES)
-@pytest.mark.parametrize("file_name,case", list(_iter_cases()))
-def test_golden_case(file_name: str, case: Dict[str, Any], engine: str) -> None:
+@pytest.mark.parametrize("engine,engine_version", _iter_engine_targets())
+@pytest.mark.parametrize("file_name,case", _iter_cases())
+def test_golden_case(
+    file_name: str,
+    case: dict[str, Any],
+    engine: str,
+    engine_version: str,
+) -> None:
     config = _load_json(CONFIG_PATH)
     expected = case["expected"]
 
@@ -54,16 +65,28 @@ def test_golden_case(file_name: str, case: Dict[str, Any], engine: str) -> None:
         current_table=case.get("current_table"),
         schema=schema,
         engine=engine,
+        engine_version=engine_version,
     )
 
     response = get_suggestions(request)
 
-    assert response.mode == expected["mode"], (file_name, case["case_id"], engine)
-    assert response.context == expected["context"], (file_name, case["case_id"], engine)
+    assert response.mode == expected["mode"], (
+        file_name,
+        case["case_id"],
+        engine,
+        engine_version,
+    )
+    assert response.context == expected["context"], (
+        file_name,
+        case["case_id"],
+        engine,
+        engine_version,
+    )
     assert response.prefix == expected.get("prefix"), (
         file_name,
         case["case_id"],
         engine,
+        engine_version,
     )
 
     if "suggestions" in expected:
@@ -71,6 +94,7 @@ def test_golden_case(file_name: str, case: Dict[str, Any], engine: str) -> None:
             file_name,
             case["case_id"],
             engine,
+            engine_version,
         )
     elif "suggestions_contains" in expected and "suggestions_not_contains" in expected:
         for needle in expected["suggestions_contains"]:
@@ -78,6 +102,7 @@ def test_golden_case(file_name: str, case: Dict[str, Any], engine: str) -> None:
                 file_name,
                 case["case_id"],
                 engine,
+                engine_version,
                 needle,
             )
         for needle in expected["suggestions_not_contains"]:
@@ -85,6 +110,7 @@ def test_golden_case(file_name: str, case: Dict[str, Any], engine: str) -> None:
                 file_name,
                 case["case_id"],
                 engine,
+                engine_version,
                 needle,
             )
     else:

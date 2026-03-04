@@ -1,73 +1,32 @@
-from __future__ import annotations
-
 import json
-import yaml
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Optional
 from unittest.mock import Mock
 
+import yaml
+
 from constants import WORKDIR
+from structures.engines.database import SQLColumn
+from structures.engines.database import SQLDatabase
+from structures.engines.database import SQLDataType
+from structures.engines.database import SQLTable
 from windows.components.stc.autocomplete.auto_complete import SQLCompletionProvider
-from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLDataType
+from windows.components.stc.autocomplete.context_detector import ContextDetector
+from windows.components.stc.autocomplete.dot_completion_handler import (
+    DotCompletionHandler,
+)
+from windows.components.stc.autocomplete.sql_context import SQLContext
+from windows.components.stc.autocomplete.statement_extractor import StatementExtractor
 
-
-def _get_engine_names() -> list[str]:
-    """Get list of engine names that have functions.yaml."""
-    return ["mysql", "postgresql", "mariadb", "sqlite"]
-
-
-AVAILABLE_ENGINES = _get_engine_names()
-
-
-def _load_functions_from_yaml(engine: str) -> list[str]:
-    """Load function names from engine's functions.yaml."""
-    yaml_path = WORKDIR / "structures" / "engines" / engine / "functions.yaml"
-    if not yaml_path.exists():
-        return []
-
-    with open(yaml_path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    versions = data.get("versions", [])
-    if versions:
-        functions = versions[0].get("functions", [])
-    else:
-        functions = data.get("functions", [])
-
-    return [func["name"] for func in functions]
-
-
-def _load_keywords_from_config() -> list[str]:
-    """Load generic SQL keywords from test_config.json."""
-    config_path = WORKDIR / "tests" / "autocomplete" / "test_config.json"
-    if not config_path.exists():
-        return []
-
-    with open(config_path, encoding="utf-8") as f:
-        config = json.load(f)
-
-    return config.get("vocab", {}).get("keywords_all", [])
-
-
-def _load_functions_from_config() -> list[str]:
-    """Load generic SQL functions from test_config.json."""
-    config_path = WORKDIR / "tests" / "autocomplete" / "test_config.json"
-    if not config_path.exists():
-        return []
-
-    with open(config_path, encoding="utf-8") as f:
-        config = json.load(f)
-
-    return config.get("vocab", {}).get("functions_all", [])
-
-
-ENGINE_FUNCTIONS: Dict[str, list[str]] = {
-    engine: _load_functions_from_config() for engine in AVAILABLE_ENGINES
+SUPPORTED_ENGINE_VERSIONS: dict[str, list[str]] = {
+    "mysql": ["8", "9"],
+    "mariadb": ["5", "10", "11", "12"],
+    "postgresql": ["15", "16", "17", "18"],
+    "sqlite": ["3"],
 }
-ENGINE_KEYWORDS: Dict[str, list[str]] = {
-    engine: _load_keywords_from_config() for engine in AVAILABLE_ENGINES
-}
+
+AVAILABLE_ENGINES: list[str] = list(SUPPORTED_ENGINE_VERSIONS.keys())
 
 
 @dataclass(frozen=True)
@@ -75,8 +34,9 @@ class AutocompleteRequest:
     sql: str
     dialect: str
     current_table: Optional[str]
-    schema: Dict[str, Any]
-    engine: str = "generic"
+    schema: dict[str, Any]
+    engine: str = "mysql"
+    engine_version: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -84,88 +44,234 @@ class AutocompleteResponse:
     mode: str
     context: str
     prefix: Optional[str]
-    suggestions: List[str]
-    extras: Dict[str, Any]
+    suggestions: list[str]
+    extras: dict[str, Any]
+
+
+def _load_legacy_vocab() -> dict[str, list[str]]:
+    config_path = WORKDIR / "tests" / "autocomplete" / "test_config.json"
+    if not config_path.exists():
+        return {"functions": [], "keywords": []}
+
+    with open(config_path, encoding="utf-8") as file_handle:
+        config = json.load(file_handle)
+
+    vocab = config.get("vocab", {})
+    return {
+        "functions": vocab.get("functions_all", []),
+        "keywords": vocab.get("keywords_all", []),
+    }
+
+
+def _resolve_engine_version(engine: str, requested_version: Optional[str]) -> str:
+    versions = SUPPORTED_ENGINE_VERSIONS.get(engine, [])
+    if not versions:
+        return ""
+
+    if requested_version and requested_version in versions:
+        return requested_version
+
+    return versions[0]
+
+
+def _load_yaml(path: Any) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+
+    with open(path, encoding="utf-8") as file_handle:
+        data = yaml.safe_load(file_handle)
+
+    if not isinstance(data, dict):
+        return {}
+
+    return data
+
+
+def _merge_spec_lists(
+    base_items: list[str], add_items: list[str], remove_items: list[str]
+) -> list[str]:
+    removed_values = {item.upper() for item in remove_items}
+    merged = [item for item in base_items if item.upper() not in removed_values]
+
+    existing_values = {item.upper() for item in merged}
+    for item in add_items:
+        if item.upper() not in existing_values:
+            merged.append(item)
+            existing_values.add(item.upper())
+
+    return merged
+
+
+def _extract_names(items: Any) -> list[str]:
+    if not isinstance(items, list):
+        return []
+
+    names: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            names.append(item)
+            continue
+        if isinstance(item, dict):
+            name = item.get("name")
+            if isinstance(name, str):
+                names.append(name)
+    return names
+
+
+def _load_engine_vocab(
+    engine: str, engine_version: Optional[str]
+) -> dict[str, list[str]]:
+    global_spec_path = WORKDIR / "structures" / "engines" / "specification.yaml"
+    engine_spec_path = (
+        WORKDIR / "structures" / "engines" / engine / "specification.yaml"
+    )
+
+    global_spec = _load_yaml(global_spec_path)
+    engine_spec = _load_yaml(engine_spec_path)
+
+    global_common = (
+        global_spec.get("common", {})
+        if isinstance(global_spec.get("common", {}), dict)
+        else {}
+    )
+    engine_common = (
+        engine_spec.get("common", {})
+        if isinstance(engine_spec.get("common", {}), dict)
+        else {}
+    )
+
+    keywords = _extract_names(global_common.get("keywords", []))
+    functions = _extract_names(global_common.get("functions", []))
+
+    keywords = _merge_spec_lists(
+        keywords,
+        _extract_names(engine_common.get("keywords", [])),
+        [],
+    )
+    functions = _merge_spec_lists(
+        functions,
+        _extract_names(engine_common.get("functions", [])),
+        [],
+    )
+
+    selected_version = _resolve_engine_version(engine, engine_version)
+    versions_map = (
+        engine_spec.get("versions", {})
+        if isinstance(engine_spec.get("versions", {}), dict)
+        else {}
+    )
+    version_spec = (
+        versions_map.get(selected_version, {})
+        if isinstance(versions_map.get(selected_version, {}), dict)
+        else {}
+    )
+
+    keywords = _merge_spec_lists(
+        keywords,
+        _extract_names(version_spec.get("keywords_add", [])),
+        _extract_names(version_spec.get("keywords_remove", [])),
+    )
+    functions = _merge_spec_lists(
+        functions,
+        _extract_names(version_spec.get("functions_add", [])),
+        _extract_names(version_spec.get("functions_remove", [])),
+    )
+
+    return {"functions": functions, "keywords": keywords}
+
+
+def _select_vocab(request: AutocompleteRequest) -> dict[str, list[str]]:
+    if request.dialect == "generic":
+        return _load_legacy_vocab()
+
+    if request.engine not in AVAILABLE_ENGINES:
+        return _load_legacy_vocab()
+
+    return _load_engine_vocab(request.engine, request.engine_version)
 
 
 def _create_mock_database(
-    schema: Dict[str, Any], engine: str = "generic"
+    schema: dict[str, Any], vocab: dict[str, list[str]]
 ) -> SQLDatabase:
-    mock_db = Mock(spec=SQLDatabase)
-    mock_db.name = "test_db"
+    mock_database = Mock(spec=SQLDatabase)
+    mock_database.name = "test_db"
 
     mock_context = Mock()
-    mock_context.KEYWORDS = ENGINE_KEYWORDS.get(engine, [])
-    mock_context.FUNCTIONS = ENGINE_FUNCTIONS.get(engine, [])
-    mock_db.context = mock_context
+    mock_context.KEYWORDS = vocab.get("keywords", [])
+    mock_context.FUNCTIONS = vocab.get("functions", [])
+    mock_database.context = mock_context
 
-    tables = []
+    tables: list[SQLTable] = []
     for table_data in schema.get("tables", []):
         mock_table = Mock(spec=SQLTable)
         mock_table.name = table_data["name"]
-        mock_table.database = mock_db
+        mock_table.database = mock_database
 
-        columns = []
-        for col_data in table_data.get("columns", []):
-            mock_col = Mock(spec=SQLColumn)
-            mock_col.name = col_data["name"]
-            mock_col.datatype = Mock(spec=SQLDataType)
-            mock_col.table = mock_table
-            columns.append(mock_col)
+        columns: list[SQLColumn] = []
+        for column_data in table_data.get("columns", []):
+            mock_column = Mock(spec=SQLColumn)
+            mock_column.name = column_data["name"]
+            mock_column.datatype = Mock(spec=SQLDataType)
+            mock_column.table = mock_table
+            columns.append(mock_column)
 
         mock_table.columns = columns
         tables.append(mock_table)
 
-    mock_db.tables = tables
-    return mock_db
+    mock_database.tables = tables
+    return mock_database
+
+
+def _resolve_current_table(
+    database: SQLDatabase, current_table_name: Optional[str]
+) -> Optional[SQLTable]:
+    if not current_table_name:
+        return None
+
+    for table in database.tables:
+        if table.name == current_table_name:
+            return table
+
+    return None
 
 
 def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
-    from windows.components.stc.autocomplete.context_detector import ContextDetector
-    from windows.components.stc.autocomplete.statement_extractor import (
-        StatementExtractor,
-    )
-
-    engine = request.engine if request.engine in AVAILABLE_ENGINES else "mysql"
-    database = _create_mock_database(request.schema, engine)
-
-    current_table = None
-    if request.current_table:
-        for table in database.tables:
-            if table.name == request.current_table:
-                current_table = table
-                break
+    vocab = _select_vocab(request)
+    database = _create_mock_database(request.schema, vocab)
+    current_table = _resolve_current_table(database, request.current_table)
 
     provider = SQLCompletionProvider(
-        get_database=lambda: database, get_current_table=lambda: current_table
+        get_database=lambda: database,
+        get_current_table=lambda: current_table,
     )
 
-    cursor_pos = request.sql.find("|")
-    if cursor_pos == -1:
-        cursor_pos = len(request.sql)
+    cursor_position = request.sql.find("|")
+    if cursor_position == -1:
+        cursor_position = len(request.sql)
 
     text = request.sql.replace("|", "")
 
-    from windows.components.stc.autocomplete.dot_completion_handler import (
-        DotCompletionHandler,
-    )
-    from windows.components.stc.autocomplete.sql_context import SQLContext
-
     extractor = StatementExtractor()
-    statement, relative_pos = extractor.extract_current_statement(text, cursor_pos)
+    statement, relative_position = extractor.extract_current_statement(
+        text, cursor_position
+    )
 
     detector = ContextDetector()
-    sql_context, scope, prefix = detector.detect(statement, relative_pos, database)
+    sql_context, scope, _prefix = detector.detect(
+        statement, relative_position, database
+    )
 
     dot_handler = DotCompletionHandler(database, scope)
-    is_dot = dot_handler.is_dot_completion(statement, relative_pos)
-
-    if is_dot:
+    if dot_handler.is_dot_completion(statement, relative_position):
         sql_context = SQLContext.DOT_COMPLETION
 
-    result = provider.get(text=text, pos=cursor_pos)
-
-    suggestions = [item.name for item in result.items]
+    completion_result = provider.get(text=text, pos=cursor_position)
+    if completion_result is None:
+        suggestions: list[str] = []
+        completion_prefix: str = ""
+    else:
+        suggestions = [item.name for item in completion_result.items]
+        completion_prefix = completion_result.prefix
 
     if sql_context.name == "DOT_COMPLETION":
         mode = "DOT"
@@ -185,7 +291,7 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
         "HAVING_AFTER_EXPRESSION",
     }:
         mode = "AFTER_EXPRESSION"
-    elif result.prefix:
+    elif completion_prefix:
         mode = "PREFIX"
     else:
         mode = "CONTEXT"
@@ -193,7 +299,7 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
     return AutocompleteResponse(
         mode=mode,
         context=sql_context.name,
-        prefix=result.prefix if result.prefix else None,
+        prefix=completion_prefix or None,
         suggestions=suggestions,
         extras={},
     )

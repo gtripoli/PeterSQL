@@ -81,7 +81,12 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (178 total tests):
+Golden tests organized by SQL query writing flow (178 base tests, executed across 11 engine/version targets):
+
+- mysql: `8`, `9`
+- mariadb: `5`, `10`, `11`, `12`
+- postgresql: `15`, `16`, `17`, `18`
+- sqlite: `3`
 
 ### 1. Query Start & Basic Context
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -161,10 +166,10 @@ Golden tests organized by SQL query writing flow (178 total tests):
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 712 (178 base × 4 engines)
-- **✅ Passing**: 288 (72 base × 4 engines, 40%)
-- **❌ Failing**: 424 (remaining tests, 60%)
-- **⚠️ Expected Failures (xfail)**: 40 (10 × 4 engines, 6%)
+- **Total Tests**: 1958 (178 base × 11 engine/version targets)
+- **✅ Passing**: 792 (72 base × 11 targets, 40%)
+- **❌ Failing**: 1056 (remaining tests, 54%)
+- **⚠️ Expected Failures (xfail)**: 110 (10 base × 11 targets, 6%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend
