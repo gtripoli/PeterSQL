@@ -41,10 +41,11 @@ The scope classification determines which columns are suggested in expression co
   - Example: `SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT u.id, |` → scope = `u`, `o` tables
   - Behavior: Suggest only columns from scope tables (qualified if multiple tables, unqualified if single table)
 
-- **VIRTUAL_SCOPED**: Implicit scope inferred from context without FROM/JOIN
+- **VIRTUAL_SCOPED**: Implicit scope inferred from context without explicit FROM/JOIN
   - Via qualified columns: `SELECT users.id, |` → virtual scope = `users` (inferred from qualified column)
   - Via CURRENT_TABLE: `SELECT id, |` with CURRENT_TABLE=users → virtual scope = `users`
-  - **Important:** When VIRTUAL_SCOPED via CURRENT_TABLE (no FROM/JOIN), columns MUST be qualified (e.g., `users.id`, not `id`)
+  - **CRITICAL:** VIRTUAL_SCOPED requires CURRENT_TABLE to be set in UI (or qualified column present)
+  - When VIRTUAL_SCOPED via CURRENT_TABLE (no FROM/JOIN), columns MUST be qualified (e.g., `users.id`, not `id`)
   - Behavior: Suggest columns from the inferred table(s), but allow DB-wide suggestions with prefix
 
 - **NO_SCOPED**: No scope information available
@@ -570,7 +571,7 @@ SELECT dt.| FROM (SELECT id, total FROM orders) AS dt
 
 ### 1. EMPTY (Empty editor)
 
-**Trigger:** Completely empty editor
+**Trigger:** Completely empty editor (no characters typed)
 
 **Show:**
 - Primary keywords: `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`, `ALTER`, `TRUNCATE`, `SHOW`, `DESCRIBE`, `EXPLAIN`, `WITH`, `REPLACE`, `MERGE`
@@ -590,6 +591,10 @@ SELECT dt.| FROM (SELECT id, total FROM orders) AS dt
 
 **Token definition:** A valid identifier matching the pattern `^[A-Za-z_][A-Za-z0-9_]*$` (or dialect-equivalent). This excludes symbols like `(`, `)`, `,`, `.`, etc. Examples: `SEL` ✅, `SEL(` ❌, `SELECT,` ❌.
 
+**Distinction from EMPTY:**
+- EMPTY: No characters typed (cursor at position 0)
+- SINGLE_TOKEN: At least one character typed, no whitespace
+
 **Note:** Token matching is dialect-aware; the pattern above is the default baseline. Some dialects may support `$`, `#`, or unicode characters in identifiers.
 
 **Show:**
@@ -597,17 +602,9 @@ SELECT dt.| FROM (SELECT id, total FROM orders) AS dt
 
 **Examples:**
 ```sql
-SEL|  → SELECT
-INS|  → INSERT
-UPD|  → UPDATE
-```
-
-**Not SINGLE_TOKEN:**
-```sql
-SELECT
-SEL|
-→ This is two tokens (SELECT + SEL), not SINGLE_TOKEN context
-→ Use context detection instead
+S|   → SELECT, SHOW, SET (SINGLE_TOKEN - one character typed)
+SEL| → SELECT (SINGLE_TOKEN)
+|   → SELECT, INSERT, UPDATE (EMPTY - no characters)
 ```
 
 ---
@@ -621,11 +618,19 @@ SEL|
 #### 3a. Without prefix (after SELECT, no FROM/JOIN in query)
 
 **Show:**
+- `CURRENT_TABLE` columns (if set)
 - Functions
 - Keywords (FROM, WHERE, etc.)
 
 **Examples:**
 ```sql
+-- Assume CURRENT_TABLE = users
+SELECT |
+→ users.id, users.name, users.email, users.status, users.created_at
+→ COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
+→ FROM, WHERE, LIMIT, ...
+
+-- No CURRENT_TABLE set
 SELECT |
 → COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
 → FROM, WHERE, LIMIT, ...
@@ -667,6 +672,12 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
   - Database-wide table-name expansion and column-name matching are included
   - Functions are included
   
+- **When NO scope tables AND NO prefix:**
+  - `CURRENT_TABLE` columns (if set)
+  - Functions
+  - Keywords
+  - **Rationale:** Without prefix, user hasn't typed anything yet - show everything relevant
+   
 - **When scope tables exist (FROM/JOIN present):**
   - `CURRENT_TABLE` columns MUST be included ONLY if `CURRENT_TABLE` is in scope
   - If `CURRENT_TABLE` is not in scope, it MUST be ignored
@@ -1380,7 +1391,7 @@ SELECT COUNT(*) FROM users u JOIN orders o ON u.id = o.user_id GROUP BY |
 ```sql
 SELECT COUNT(*) FROM users GROUP BY s|
 → Table-name expansion: (none - no tables starting with 's')
-→ Column-name matching: (none - no columns starting with 's' in users table)
+→ Column-name matching: status (column starting with 's', single table: unqualified)
 → Functions: SUM, SUBSTR
 ```
 
@@ -1897,8 +1908,8 @@ customers    + Add via FROM/JOIN
 
 #### Ordering (within SELECT_LIST with scope)
 
-1. Scope columns
-2. Functions
+1. Functions matching prefix
+2. Scope columns matching prefix
 3. Out-of-scope table hints
 4. Keywords
 
