@@ -14,6 +14,27 @@ from structures.engines.database import SQLDatabase
 
 class ContextDetector:
     _prefix_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+    _join_after_table_pattern = re.compile(
+        r"\b(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)(?:\s+OUTER)?\s+)?JOIN\s+([A-Za-z_][A-Za-z0-9_]*)"
+        r"\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*$",
+        re.IGNORECASE,
+    )
+    _join_after_table_keywords = {
+        "AS",
+        "ON",
+        "USING",
+        "WHERE",
+        "GROUP",
+        "ORDER",
+        "LIMIT",
+        "JOIN",
+        "INNER",
+        "LEFT",
+        "RIGHT",
+        "FULL",
+        "CROSS",
+        "OUTER",
+    }
     
     def __init__(self, dialect: Optional[str] = None):
         self._dialect = dialect
@@ -31,7 +52,7 @@ class ContextDetector:
         prefix = self._extract_prefix(text, cursor_pos)
         
         try:
-            context = self._detect_context_with_regex(left_text_stripped)
+            context = self._detect_context_with_regex(left_text, prefix)
             scope = self._extract_scope_from_text(text, database)
             return context, scope, prefix
         except Exception as ex:
@@ -52,8 +73,8 @@ class ContextDetector:
             return ""
         return match.group(0)
     
-    def _detect_context_with_regex(self, left_text: str) -> SQLContext:
-        left_upper = left_text.upper()
+    def _detect_context_with_regex(self, left_text: str, prefix: str) -> SQLContext:
+        left_upper = left_text.strip().upper()
         
         select_pos = left_upper.rfind("SELECT")
         from_pos = left_upper.rfind("FROM")
@@ -91,6 +112,8 @@ class ContextDetector:
         
         if join_pos > select_pos and join_pos != -1:
             if join_pos > max(from_pos, where_pos, -1):
+                if self._is_after_join_table(left_text, prefix):
+                    return SQLContext.JOIN_AFTER_TABLE
                 return SQLContext.JOIN_CLAUSE
         
         if where_pos > select_pos and where_pos != -1:
@@ -102,6 +125,19 @@ class ContextDetector:
                 return SQLContext.FROM_CLAUSE
         
         return SQLContext.SELECT_LIST
+
+    def _is_after_join_table(self, left_text: str, prefix: str) -> bool:
+        if prefix:
+            return False
+
+        if not (match := self._join_after_table_pattern.search(left_text.rstrip())):
+            return False
+
+        alias = match.group(2)
+        if alias and alias.upper() in self._join_after_table_keywords:
+            return False
+
+        return True
     
     def _extract_scope_from_select(self, parsed: sqlglot.exp.Select, database: Optional[SQLDatabase]) -> QueryScope:
         from_tables = []

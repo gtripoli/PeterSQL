@@ -112,6 +112,8 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
         mode = "DOT"
     elif sql_context.name == "EMPTY":
         mode = "EMPTY"
+    elif sql_context.name == "JOIN_AFTER_TABLE":
+        mode = "AFTER_JOIN_TABLE"
     elif result.prefix:
         mode = "PREFIX"
     else:

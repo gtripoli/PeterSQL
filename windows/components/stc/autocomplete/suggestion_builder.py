@@ -98,11 +98,10 @@ class SuggestionBuilder:
             return self._build_from_clause(prefix, statement)
         
         if context == SQLContext.JOIN_CLAUSE:
-            if not prefix and scope.join_tables:
-                if statement.rstrip().endswith(scope.join_tables[-1].name):
-                    keywords = ["AS", "ON", "USING"]
-                    return [CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD) for kw in keywords]
             return self._build_join_clause(prefix, scope)
+
+        if context == SQLContext.JOIN_AFTER_TABLE:
+            return self._build_join_after_table(scope)
         
         if context == SQLContext.JOIN_ON:
             return self._build_join_on(scope, prefix, statement)
@@ -469,6 +468,14 @@ class SuggestionBuilder:
             tables = [t for t in tables if t.name.lower().startswith(prefix_lower)]
         
         return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+
+    @staticmethod
+    def _build_join_after_table(scope: QueryScope) -> list[CompletionItem]:
+        keywords = ["ON", "USING"]
+        if not scope.join_tables or not scope.join_tables[-1].alias:
+            keywords.insert(0, "AS")
+
+        return [CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD) for kw in keywords]
 
     @staticmethod
     def _table_name_sort_key(name: str) -> tuple[str, str]:

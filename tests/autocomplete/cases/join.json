@@ -57,8 +57,7 @@
           "AS",
           "ON",
           "USING"
-        ],
-        "xfail": true
+        ]
       }
     },
     {

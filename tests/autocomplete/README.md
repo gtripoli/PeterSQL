@@ -107,7 +107,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 ### 4. JOIN Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 5 | 0 | 1 | `SELECT * FROM users \|` | Basic JOIN suggestions |
+| JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
 | JOIN_ON ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_on.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
 | JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_after_table.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders \|` | Keywords after JOIN table |
 | JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/join_operator_left_column_filter.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
@@ -162,9 +162,9 @@ Golden tests organized by SQL query writing flow (178 total tests):
 
 ### Summary Statistics
 - **Total Tests**: 178
-- **✅ Passing**: 80 (45%)
+- **✅ Passing**: 81 (46%)
 - **❌ Failing**: 88 (49%)
-- **⚠️ Expected Failures (xfail)**: 10 (6%)
+- **⚠️ Expected Failures (xfail)**: 9 (5%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend
