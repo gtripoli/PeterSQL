@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "FROM_PRIO_001",
-      "title": "FROM clause without prefix: prioritize tables referenced in SELECT",
+      "title": "FROM clause without prefix: only referenced tables from qualified SELECT columns",
       "sql": "SELECT products.id FROM |",
       "dialect": "generic",
       "current_table": null,
@@ -12,19 +12,15 @@
         "mode": "CONTEXT",
         "context": "FROM_CLAUSE",
         "prefix": null,
-        "comment": "products is referenced in SELECT (qualified column), should be prioritized first even without prefix",
+        "comment": "products is referenced in SELECT (qualified column), so only referenced tables are suggested",
         "suggestions": [
-          "products",
-          "customers",
-          "orders",
-          "payments",
-          "users"
+          "products"
         ]
       }
     },
     {
       "case_id": "FROM_PRIO_002",
-      "title": "FROM clause with prefix: prioritize referenced table",
+      "title": "FROM clause with prefix: only referenced tables are considered",
       "sql": "SELECT orders.total FROM o|",
       "dialect": "generic",
       "current_table": null,
@@ -33,16 +29,15 @@
         "mode": "PREFIX",
         "context": "FROM_CLAUSE",
         "prefix": "o",
-        "comment": "orders matches prefix 'o' and is referenced in SELECT",
+        "comment": "orders matches prefix 'o' and is referenced in SELECT, so only referenced tables are suggested",
         "suggestions": [
-          "orders",
-          "orders_archive"
+          "orders"
         ]
       }
     },
     {
       "case_id": "FROM_PRIO_003",
-      "title": "FROM clause: multiple tables referenced in SELECT",
+      "title": "FROM clause: multiple referenced tables preserve left-to-right SELECT order",
       "sql": "SELECT items.id, products.name FROM |",
       "dialect": "generic",
       "current_table": null,
@@ -51,13 +46,10 @@
         "mode": "CONTEXT",
         "context": "FROM_CLAUSE",
         "prefix": null,
-        "comment": "Both items and products are referenced in SELECT, so they appear first (in order of reference), followed by other tables alphabetically",
+        "comment": "Both items and products are referenced in SELECT, so only those tables are suggested in reference order",
         "suggestions": [
           "items",
-          "products",
-          "customers",
-          "orders",
-          "users"
+          "products"
         ]
       }
     }

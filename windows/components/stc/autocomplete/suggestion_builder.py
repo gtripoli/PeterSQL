@@ -407,9 +407,9 @@ class SuggestionBuilder:
         except (AttributeError, TypeError):
             return []
         
-        # Extract tables referenced in SELECT list (e.g., SELECT users.id FROM | → prioritize users)
-        # This applies ALWAYS, with or without prefix
-        referenced_tables = set()
+        # Extract tables referenced in SELECT list (e.g., SELECT users.id FROM | → users only)
+        # This applies ALWAYS, with or without prefix when qualified refs are present
+        referenced_tables = []
         if statement:
             import re
             # Find qualified columns in SELECT: table.column
@@ -419,20 +419,31 @@ class SuggestionBuilder:
                 select_list = select_match.group(1)
                 # Extract table names from qualified columns
                 qualified_refs = re.findall(r'\b(\w+)\.\w+', select_list)
-                referenced_tables = {ref.lower() for ref in qualified_refs}
+                seen = set()
+                for ref in qualified_refs:
+                    ref_lower = ref.lower()
+                    if ref_lower in seen:
+                        continue
+                    seen.add(ref_lower)
+                    referenced_tables.append(ref_lower)
+
+        if referenced_tables:
+            referenced_set = set(referenced_tables)
+            tables = [table for table in tables if table.name.lower() in referenced_set]
+
+            if prefix:
+                prefix_lower = prefix.lower()
+                tables = [table for table in tables if table.name.lower().startswith(prefix_lower)]
+
+            referenced_order = {name: index for index, name in enumerate(referenced_tables)}
+            return sorted(tables, key=lambda table: referenced_order.get(table.name.lower(), len(referenced_tables)))
         
         # Filter by prefix if present
         if prefix:
             prefix_lower = prefix.lower()
             tables = [t for t in tables if t.name.lower().startswith(prefix_lower)]
         
-        # Sort: referenced tables first, then alphabetically
-        # This ensures SELECT users.id FROM | shows users first
-        def sort_key(table):
-            is_referenced = table.name.lower() in referenced_tables
-            return (not is_referenced, self._table_name_sort_key(table.name))
-        
-        return sorted(tables, key=sort_key)
+        return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
     
     def _build_join_clause(self, prefix: str, scope: QueryScope) -> list[CompletionItem]:
         if not self._database:

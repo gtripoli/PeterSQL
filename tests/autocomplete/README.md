@@ -101,8 +101,8 @@ Golden tests organized by SQL query writing flow (178 total tests):
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
 | FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 9 | 9 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
-| FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/from_clause_prioritization.json` | 3 | 0 | 0 | 0 | `SELECT id FROM users u WHERE u.id = 1 FROM \|` | Table prioritization in FROM |
-| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/from_clause_current_table.json` | 3 | 0 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
+| FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | `SELECT products.id FROM \|` | FROM filtering by qualified SELECT tables |
+| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 3 | 3 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
 
 ### 4. JOIN Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -162,8 +162,8 @@ Golden tests organized by SQL query writing flow (178 total tests):
 
 ### Summary Statistics
 - **Total Tests**: 178
-- **✅ Passing**: 69 (39%)
-- **❌ Failing**: 99 (56%)
+- **✅ Passing**: 75 (42%)
+- **❌ Failing**: 93 (52%)
 - **⚠️ Expected Failures (xfail)**: 10 (6%)
 - **⚪ Not Implemented**: 0 (0%)
 

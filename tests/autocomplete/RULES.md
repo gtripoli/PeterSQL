@@ -293,7 +293,13 @@ SELECT ui|
    - If alias exists: `alias.column` (e.g., `u.id`)
    - If no alias: `table.column` (e.g., `users.id`)
 
-3. **Consistency rule - Qualified context:** If the query already uses qualified columns (e.g., `users.id`), suggestions should be qualified for consistency, even for single table contexts.
+3. **CRITICAL - Aliased tables:** When a table has an alias, the original table name CANNOT be used for qualification. SQL will reject `table.column` when an alias exists.
+   - **Correct:** `FROM users u WHERE u.id = 1` (use alias)
+   - **INCORRECT:** `FROM users u WHERE users.id = 1` (SQL error - table name not accessible)
+   - **Implication for autocomplete:** If prefix does not match the alias and does not match any column name, return empty suggestions. Do NOT suggest qualified columns with the original table name.
+   - **Example:** `FROM users u WHERE us|` → NO suggestions (prefix 'us' does not match alias 'u' or any column)
+
+4. **Consistency rule - Qualified context:** If the query already uses qualified columns (e.g., `users.id`), suggestions should be qualified for consistency, even for single table contexts.
    - This applies when the user has explicitly written `table.column` or `alias.column` in the query
    - Helps maintain consistent code style within the same query
 
@@ -786,7 +792,7 @@ SELECT table.column |
 - All physical tables
 - `CURRENT_TABLE` (if set and not already present in current statement)
 
-**Prioritization:** If SELECT list contains qualified columns (e.g., `SELECT users.id`), prioritize those tables first in suggestions, even without prefix. When multiple tables are referenced, follow their left-to-right appearance order in the SELECT list.
+**Prioritization/Filtering:** If SELECT list contains qualified columns (e.g., `SELECT users.id`), suggest ONLY those referenced tables in FROM suggestions. When multiple tables are referenced, follow their left-to-right appearance order in the SELECT list.
 
 **Examples:**
 ```sql
@@ -794,10 +800,10 @@ SELECT * FROM |
 → customers, orders, products, users  (alphabetical - no prioritization)
 
 SELECT users.id FROM |
-→ users, customers, orders, products  (users FIRST - referenced in SELECT)
+→ users  (ONLY referenced table from qualified SELECT column)
 
 SELECT orders.total, users.name FROM |
-→ orders, users, customers, products  (orders FIRST, then users - left-to-right order from SELECT)
+→ orders, users  (ONLY referenced tables, left-to-right from SELECT)
 
 WITH active_users AS (SELECT * FROM users WHERE status = 'active')
 SELECT * FROM |
@@ -818,7 +824,7 @@ Physical tables already present in FROM/JOIN:
 - **WITHOUT alias**: MUST NOT be suggested again (e.g., `FROM products, |` → products excluded)
 - **WITH alias**: MAY be suggested again for self-join (e.g., `FROM products p, |` → products allowed)
 
-**Rationale:** FROM_CLAUSE is a table-selection context (scope construction). Prioritizing tables already referenced in SELECT improves UX since users typically want to use the same tables. Tables without aliases cannot be re-used (SQL syntax error), but tables with aliases enable self-join patterns (e.g., `FROM users u1 JOIN users u2`).
+**Rationale:** FROM_CLAUSE is a table-selection context (scope construction). When users explicitly type qualified columns in SELECT, suggesting only referenced tables reduces ambiguous choices (e.g., `product` vs `products`) and avoids accidental wrong-table selection. Tables without aliases cannot be re-used (SQL syntax error), but tables with aliases enable self-join patterns (e.g., `FROM users u1 JOIN users u2`).
 
 #### 4b. With prefix
 
@@ -827,7 +833,7 @@ Physical tables already present in FROM/JOIN:
 - Physical tables starting with the prefix
 - `CURRENT_TABLE` (if set, matches prefix, and not already present in current statement)
 
-**Prioritization:** Same as 4a - if SELECT list contains qualified columns, prioritize those tables first (among matching tables). When multiple tables are referenced, follow their left-to-right appearance order in the SELECT list.
+**Prioritization/Filtering:** Same as 4a - if SELECT list contains qualified columns, filter to ONLY referenced tables, then apply prefix matching within that set. When multiple tables are referenced, follow their left-to-right appearance order in the SELECT list.
 
 **Examples:**
 ```sql
@@ -835,13 +841,13 @@ SELECT * FROM u|
 → users
 
 SELECT users.column FROM u|
-→ users (prioritized - already referenced in SELECT)
+→ users (ONLY referenced table matches prefix)
 
 SELECT products.price, users.name FROM u|
-→ users (prioritized - referenced in SELECT, even though products appears first)
+→ users (ONLY referenced table matching prefix)
 
 SELECT orders.total, users.name FROM o|
-→ orders (prioritized - appears first in SELECT, left-to-right)
+→ orders (ONLY referenced table matching prefix)
 
 WITH active_users AS (...)
 SELECT * FROM a|
