@@ -1,5 +1,29 @@
 schema_version: 1
 engine: sqlite
+documentation:
+  purpose: SQLite vocabulary and version deltas.
+  fields:
+  - schema_version: Specification schema version.
+  - engine: Engine name.
+  - common.keywords: Engine common keywords.
+  - common.functions: Engine common function specs.
+  - versions.<major>.keywords_remove: Keywords to remove for that major version.
+  - versions.<major>.functions_remove: Function names to remove for that major version.
+  notes:
+  - Runtime selection uses exact major match, else highest configured major <= server major.
+example:
+  schema_version: 1
+  engine: sqlite
+  common:
+    keywords:
+    - ROWID
+    functions:
+    - name: ABS
+      summary: Absolute value.
+  versions:
+    '3':
+      keywords_remove:
+      - LEGACY_KEYWORD
 common:
   keywords: []
   functions:
@@ -16,12 +40,11 @@ common:
     aliases: []
     summary: The abs(X) function returns the absolute value of the numeric argument
       X.
-    description: 'The abs(X) function returns the absolute value of the numeric argument
-      X.
-      Abs(X) returns NULL if X is NULL. Abs(X) returns 0.0 if X is a string or
-      blob that cannot be converted to a numeric value. If X is the integer
-      -9223372036854775808 then abs(X) throws an integer overflow error since
-      there is no equivalent positive 64-bit two complement value.'
+    description: The abs(X) function returns the absolute value of the numeric argument
+      X. Abs(X) returns NULL if X is NULL. Abs(X) returns 0.0 if X is a string or
+      blob that cannot be converted to a numeric value. If X is the integer -9223372036854775808
+      then abs(X) throws an integer overflow error since there is no equivalent positive
+      64-bit two complement value.
     examples: []
   - name: AVG
     category_id: aggregate_functions
@@ -36,12 +59,11 @@ common:
     aliases: []
     summary: The avg() function returns the average value of all non-NULL X within
       a
-    description: 'The avg() function returns the average value of all non-NULL X within
-      a
-      group. String and BLOB values that do not look like numbers are interpreted
-      as 0. The result of avg() is always a floating point value as long as at
-      there is at least one non-NULL input even if all inputs are integers. The
-      result of avg() is NULL if and only if there are no non-NULL inputs.'
+    description: The avg() function returns the average value of all non-NULL X within
+      a group. String and BLOB values that do not look like numbers are interpreted
+      as 0. The result of avg() is always a floating point value as long as at there
+      is at least one non-NULL input even if all inputs are integers. The result of
+      avg() is NULL if and only if there are no non-NULL inputs.
     examples: []
   - name: CHANGES
     category_id: scalar_sql_functions
@@ -52,13 +74,11 @@ common:
     tags: []
     aliases: []
     summary: The changes() function returns the number of database rows that were
-    description: 'The changes() function returns the number of database rows that
-      were
-      changed or inserted or deleted by the most recently completed INSERT,
-      DELETE, or UPDATE statement, exclusive of statements in lower-level
-      triggers. The changes() SQL function is a wrapper around the
-      sqlite3_changes() C/C++ function and hence follows the same rules for
-      counting changes.'
+    description: The changes() function returns the number of database rows that were
+      changed or inserted or deleted by the most recently completed INSERT, DELETE,
+      or UPDATE statement, exclusive of statements in lower-level triggers. The changes()
+      SQL function is a wrapper around the sqlite3_changes() C/C++ function and hence
+      follows the same rules for counting changes.
     examples: []
   - name: CHAR
     category_id: scalar_sql_functions
@@ -81,9 +101,8 @@ common:
     tags: []
     aliases: []
     summary: The char(X1,X2,...,XN) function returns a string composed of characters
-    description: 'The char(X1,X2,...,XN) function returns a string composed of characters
-      having the unicode code point values of integers X1 through XN,
-      respectively.'
+    description: The char(X1,X2,...,XN) function returns a string composed of characters
+      having the unicode code point values of integers X1 through XN, respectively.
     examples: []
   - name: COALESCE
     category_id: scalar_sql_functions
@@ -104,9 +123,8 @@ common:
     aliases: []
     summary: The coalesce() function returns a copy of its first non-NULL argument,
       or
-    description: 'The coalesce() function returns a copy of its first non-NULL argument,
-      or
-      NULL if all arguments are NULL. Coalesce() must have at least 2 arguments.'
+    description: The coalesce() function returns a copy of its first non-NULL argument,
+      or NULL if all arguments are NULL. Coalesce() must have at least 2 arguments.
     examples: []
   - name: COUNT1
     category_id: aggregate_functions
@@ -121,10 +139,9 @@ common:
     aliases: []
     summary: The count(X) function returns a count of the number of times that X is
       not
-    description: 'The count(X) function returns a count of the number of times that
-      X is not
-      NULL in a group. The count(*) function (with no arguments) returns the
-      total number of rows in the group.'
+    description: The count(X) function returns a count of the number of times that
+      X is not NULL in a group. The count(*) function (with no arguments) returns
+      the total number of rows in the group.
     examples: []
   - name: COUNT2
     category_id: aggregate_functions
@@ -139,10 +156,9 @@ common:
     aliases: []
     summary: The count(X) function returns a count of the number of times that X is
       not
-    description: 'The count(X) function returns a count of the number of times that
-      X is not
-      NULL in a group. The count(*) function (with no arguments) returns the
-      total number of rows in the group.'
+    description: The count(X) function returns a count of the number of times that
+      X is not NULL in a group. The count(*) function (with no arguments) returns
+      the total number of rows in the group.
     examples: []
   - name: CUME_DIST
     category_id: window_functions
@@ -153,10 +169,9 @@ common:
     tags: []
     aliases: []
     summary: The cumulative distribution.
-    description: 'The cumulative distribution. Calculated as row-number/partition-rows,
-      where
-      row-number is the value returned by row_number() for the last peer in the
-      group and partition-rows the number of rows in the partition.'
+    description: The cumulative distribution. Calculated as row-number/partition-rows,
+      where row-number is the value returned by row_number() for the last peer in
+      the group and partition-rows the number of rows in the partition.
     examples: []
   - name: DATE
     category_id: date_and_time_functions
@@ -179,10 +194,9 @@ common:
     tags: []
     aliases: []
     summary: All five date and time functions take a time value as an argument.
-    description: 'All five date and time functions take a time value as an argument.
-      The time
-      value is followed by zero or more modifiers. The strftime() function also
-      takes a format string as its first argument.'
+    description: All five date and time functions take a time value as an argument.
+      The time value is followed by zero or more modifiers. The strftime() function
+      also takes a format string as its first argument.
     examples: []
   - name: DATETIME
     category_id: date_and_time_functions
@@ -205,10 +219,9 @@ common:
     tags: []
     aliases: []
     summary: All five date and time functions take a time value as an argument.
-    description: 'All five date and time functions take a time value as an argument.
-      The time
-      value is followed by zero or more modifiers. The strftime() function also
-      takes a format string as its first argument.'
+    description: All five date and time functions take a time value as an argument.
+      The time value is followed by zero or more modifiers. The strftime() function
+      also takes a format string as its first argument.
     examples: []
   - name: DENSE_RANK
     category_id: window_functions
@@ -220,12 +233,11 @@ common:
     aliases: []
     summary: The number of the current row's peer group within its partition - the
       rank
-    description: 'The number of the current row''s peer group within its partition
-      - the rank
-      of the current row without gaps. Partitions are numbered starting from 1 in
-      the order defined by the ORDER BY clause in the window definition. If there
+    description: The number of the current row's peer group within its partition -
+      the rank of the current row without gaps. Partitions are numbered starting from
+      1 in the order defined by the ORDER BY clause in the window definition. If there
       is no ORDER BY clause, then all rows are considered peers and this function
-      always returns 1.'
+      always returns 1.
     examples: []
   - name: FIRST_VALUE
     category_id: window_functions
@@ -240,10 +252,9 @@ common:
     aliases: []
     summary: This built-in window function calculates the window frame for each row
       in
-    description: 'This built-in window function calculates the window frame for each
-      row in
-      the same way as an aggregate window function. It returns the value of expr
-      evaluated against the first row in the window frame for each row.'
+    description: This built-in window function calculates the window frame for each
+      row in the same way as an aggregate window function. It returns the value of
+      expr evaluated against the first row in the window frame for each row.
     examples: []
   - name: GLOB
     category_id: scalar_sql_functions
@@ -261,13 +272,12 @@ common:
     aliases: []
     summary: The glob(X,Y) function is equivalent to the expression "Y GLOB X".
     description: 'The glob(X,Y) function is equivalent to the expression "Y GLOB X".
-      Note
-      that the X and Y arguments are reversed in the glob() function relative to
-      the infix GLOB operator. Y is the string and X is the pattern. So, for
-      example, the following expressions are equivalent: name GLOB ''*helium*''
-      glob(''*helium*'',name) If the sqlite3_create_function() interface is used to
-      override the glob(X,Y) function with an alternative implementation then the
-      GLOB operator will invoke the alternative implementation.'
+      Note that the X and Y arguments are reversed in the glob() function relative
+      to the infix GLOB operator. Y is the string and X is the pattern. So, for example,
+      the following expressions are equivalent: name GLOB ''*helium*'' glob(''*helium*'',name)
+      If the sqlite3_create_function() interface is used to override the glob(X,Y)
+      function with an alternative implementation then the GLOB operator will invoke
+      the alternative implementation.'
     examples: []
   - name: GROUP_CONCAT1
     category_id: aggregate_functions
@@ -282,11 +292,10 @@ common:
     aliases: []
     summary: The group_concat() function returns a string which is the concatenation
       of
-    description: 'The group_concat() function returns a string which is the concatenation
-      of
-      all non-NULL values of X. If parameter Y is present then it is used as the
+    description: The group_concat() function returns a string which is the concatenation
+      of all non-NULL values of X. If parameter Y is present then it is used as the
       separator between instances of X. A comma (",") is used as the separator if
-      Y is omitted. The order of the concatenated elements is arbitrary.'
+      Y is omitted. The order of the concatenated elements is arbitrary.
     examples: []
   - name: GROUP_CONCAT2
     category_id: aggregate_functions
@@ -304,11 +313,10 @@ common:
     aliases: []
     summary: The group_concat() function returns a string which is the concatenation
       of
-    description: 'The group_concat() function returns a string which is the concatenation
-      of
-      all non-NULL values of X. If parameter Y is present then it is used as the
+    description: The group_concat() function returns a string which is the concatenation
+      of all non-NULL values of X. If parameter Y is present then it is used as the
       separator between instances of X. A comma (",") is used as the separator if
-      Y is omitted. The order of the concatenated elements is arbitrary.'
+      Y is omitted. The order of the concatenated elements is arbitrary.
     examples: []
   - name: HEX
     category_id: scalar_sql_functions
@@ -322,14 +330,13 @@ common:
     tags: []
     aliases: []
     summary: The hex() function interprets its argument as a BLOB and returns a string
-    description: 'The hex() function interprets its argument as a BLOB and returns
-      a string
-      which is the upper-case hexadecimal rendering of the content of that blob.
-      If the argument X in "hex(X)" is an integer or floating point number, then
-      "interprets its argument as a BLOB" means that the binary number is first
+    description: The hex() function interprets its argument as a BLOB and returns
+      a string which is the upper-case hexadecimal rendering of the content of that
+      blob. If the argument X in "hex(X)" is an integer or floating point number,
+      then "interprets its argument as a BLOB" means that the binary number is first
       converted into a UTF8 text representation, then that text is interpreted as
       a BLOB. Hence, "hex(12345678)" renders as "3132333435363738" not the binary
-      representation of the integer value "0000000000BC614E".'
+      representation of the integer value "0000000000BC614E".
     examples: []
   - name: IFNULL
     category_id: scalar_sql_functions
@@ -347,10 +354,9 @@ common:
     aliases: []
     summary: The ifnull() function returns a copy of its first non-NULL argument,
       or
-    description: 'The ifnull() function returns a copy of its first non-NULL argument,
-      or
-      NULL if both arguments are NULL. Ifnull() must have exactly 2 arguments.
-      The ifnull() function is equivalent to coalesce() with two arguments.'
+    description: The ifnull() function returns a copy of its first non-NULL argument,
+      or NULL if both arguments are NULL. Ifnull() must have exactly 2 arguments.
+      The ifnull() function is equivalent to coalesce() with two arguments.
     examples: []
   - name: IIF
     category_id: scalar_sql_functions
@@ -370,10 +376,9 @@ common:
     tags: []
     aliases: []
     summary: The iif(X,Y,Z) function returns the value Y if X is true, and Z otherwise.
-    description: 'The iif(X,Y,Z) function returns the value Y if X is true, and Z
-      otherwise.
-      The iif(X,Y,Z) function is logically equivalent to and generates the same
-      bytecode as the CASE expression "CASE WHEN X THEN Y ELSE Z END".'
+    description: The iif(X,Y,Z) function returns the value Y if X is true, and Z otherwise.
+      The iif(X,Y,Z) function is logically equivalent to and generates the same bytecode
+      as the CASE expression "CASE WHEN X THEN Y ELSE Z END".
     examples: []
   - name: INSTR
     category_id: scalar_sql_functions
@@ -390,13 +395,13 @@ common:
     tags: []
     aliases: []
     summary: The instr(X,Y) function finds the first occurrence of string Y within
-    description: 'The instr(X,Y) function finds the first occurrence of string Y within
-      string X and returns the number of prior characters plus 1, or 0 if Y is
-      nowhere found within X. Or, if X and Y are both BLOBs, then instr(X,Y)
-      returns one more than the number bytes prior to the first occurrence of Y,
-      or 0 if Y does not occur anywhere within X. If both arguments X and Y to
-      instr(X,Y) are non-NULL and are not BLOBs then both are interpreted as
-      strings. If either X or Y are NULL in instr(X,Y) then the result is NULL.'
+    description: The instr(X,Y) function finds the first occurrence of string Y within
+      string X and returns the number of prior characters plus 1, or 0 if Y is nowhere
+      found within X. Or, if X and Y are both BLOBs, then instr(X,Y) returns one more
+      than the number bytes prior to the first occurrence of Y, or 0 if Y does not
+      occur anywhere within X. If both arguments X and Y to instr(X,Y) are non-NULL
+      and are not BLOBs then both are interpreted as strings. If either X or Y are
+      NULL in instr(X,Y) then the result is NULL.
     examples: []
   - name: JULIANDAY
     category_id: date_and_time_functions
@@ -419,10 +424,9 @@ common:
     tags: []
     aliases: []
     summary: All five date and time functions take a time value as an argument.
-    description: 'All five date and time functions take a time value as an argument.
-      The time
-      value is followed by zero or more modifiers. The strftime() function also
-      takes a format string as its first argument.'
+    description: All five date and time functions take a time value as an argument.
+      The time value is followed by zero or more modifiers. The strftime() function
+      also takes a format string as its first argument.
     examples: []
   - name: LAG
     category_id: window_functions
@@ -455,11 +459,10 @@ common:
     tags: []
     aliases: []
     summary: The last_insert_rowid() function returns the ROWID of the last row insert
-    description: 'The last_insert_rowid() function returns the ROWID of the last row
-      insert
-      from the database connection which invoked the function. The
-      last_insert_rowid() SQL function is a wrapper around the
-      sqlite3_last_insert_rowid() C/C++ interface function.'
+    description: The last_insert_rowid() function returns the ROWID of the last row
+      insert from the database connection which invoked the function. The last_insert_rowid()
+      SQL function is a wrapper around the sqlite3_last_insert_rowid() C/C++ interface
+      function.
     examples: []
   - name: LAST_VALUE
     category_id: window_functions
@@ -474,10 +477,9 @@ common:
     aliases: []
     summary: This built-in window function calculates the window frame for each row
       in
-    description: 'This built-in window function calculates the window frame for each
-      row in
-      the same way as an aggregate window function. It returns the value of expr
-      evaluated against the last row in the window frame for each row.'
+    description: This built-in window function calculates the window frame for each
+      row in the same way as an aggregate window function. It returns the value of
+      expr evaluated against the last row in the window frame for each row.
     examples: []
   - name: LEAD
     category_id: window_functions
@@ -513,14 +515,13 @@ common:
     tags: []
     aliases: []
     summary: For a string value X, the length(X) function returns the number of
-    description: 'For a string value X, the length(X) function returns the number
-      of
-      characters (not bytes) in X prior to the first NUL character. Since SQLite
-      strings do not normally contain NUL characters, the length(X) function will
-      usually return the total number of characters in the string X. For a blob
-      value X, length(X) returns the number of bytes in the blob. If X is NULL
-      then length(X) is NULL. If X is numeric then length(X) returns the length
-      of a string representation of X.'
+    description: For a string value X, the length(X) function returns the number of
+      characters (not bytes) in X prior to the first NUL character. Since SQLite strings
+      do not normally contain NUL characters, the length(X) function will usually
+      return the total number of characters in the string X. For a blob value X, length(X)
+      returns the number of bytes in the blob. If X is NULL then length(X) is NULL.
+      If X is numeric then length(X) returns the length of a string representation
+      of X.
     examples: []
   - name: LIKE1
     category_id: scalar_sql_functions
@@ -538,19 +539,17 @@ common:
     aliases: []
     summary: The like() function is used to implement the "Y LIKE X &#91;ESCAPE Z&#93;"
     description: 'The like() function is used to implement the "Y LIKE X &#91;ESCAPE
-      Z&#93;"
-      expression. If the optional ESCAPE clause is present, then the like()
+      Z&#93;" expression. If the optional ESCAPE clause is present, then the like()
       function is invoked with three arguments. Otherwise, it is invoked with two
       arguments only. Note that the X and Y parameters are reversed in the like()
       function relative to the infix LIKE operator. X is the pattern and Y is the
-      string to match against that pattern. Hence, the following expressions are
-      equivalent: name LIKE ''%neon%'' like(''%neon%'',name) The
-      sqlite3_create_function() interface can be used to override the like()
-      function and thereby change the operation of the LIKE operator. When
-      overriding the like() function, it may be important to override both the
-      two and three argument versions of the like() function. Otherwise,
-      different code may be called to implement the LIKE operator depending on
-      whether or not an ESCAPE clause was specified.'
+      string to match against that pattern. Hence, the following expressions are equivalent:
+      name LIKE ''%neon%'' like(''%neon%'',name) The sqlite3_create_function() interface
+      can be used to override the like() function and thereby change the operation
+      of the LIKE operator. When overriding the like() function, it may be important
+      to override both the two and three argument versions of the like() function.
+      Otherwise, different code may be called to implement the LIKE operator depending
+      on whether or not an ESCAPE clause was specified.'
     examples: []
   - name: LIKE2
     category_id: scalar_sql_functions
@@ -571,19 +570,17 @@ common:
     aliases: []
     summary: The like() function is used to implement the "Y LIKE X &#91;ESCAPE Z&#93;"
     description: 'The like() function is used to implement the "Y LIKE X &#91;ESCAPE
-      Z&#93;"
-      expression. If the optional ESCAPE clause is present, then the like()
+      Z&#93;" expression. If the optional ESCAPE clause is present, then the like()
       function is invoked with three arguments. Otherwise, it is invoked with two
       arguments only. Note that the X and Y parameters are reversed in the like()
       function relative to the infix LIKE operator. X is the pattern and Y is the
-      string to match against that pattern. Hence, the following expressions are
-      equivalent: name LIKE ''%neon%'' like(''%neon%'',name) The
-      sqlite3_create_function() interface can be used to override the like()
-      function and thereby change the operation of the LIKE operator. When
-      overriding the like() function, it may be important to override both the
-      two and three argument versions of the like() function. Otherwise,
-      different code may be called to implement the LIKE operator depending on
-      whether or not an ESCAPE clause was specified.'
+      string to match against that pattern. Hence, the following expressions are equivalent:
+      name LIKE ''%neon%'' like(''%neon%'',name) The sqlite3_create_function() interface
+      can be used to override the like() function and thereby change the operation
+      of the LIKE operator. When overriding the like() function, it may be important
+      to override both the two and three argument versions of the like() function.
+      Otherwise, different code may be called to implement the LIKE operator depending
+      on whether or not an ESCAPE clause was specified.'
     examples: []
   - name: LIKELIHOOD
     category_id: scalar_sql_functions
@@ -600,16 +597,14 @@ common:
     tags: []
     aliases: []
     summary: The likelihood(X,Y) function returns argument X unchanged.
-    description: 'The likelihood(X,Y) function returns argument X unchanged. The value
-      Y in
-      likelihood(X,Y) must be a floating point constant between 0.0 and 1.0,
-      inclusive. The likelihood(X) function is a no-op that the code generator
-      optimizes away so that it consumes no CPU cycles during run-time (that is,
-      during calls to sqlite3_step()). The purpose of the likelihood(X,Y)
-      function is to provide a hint to the query planner that the argument X is a
-      boolean that is true with a probability of approximately Y. The unlikely(X)
-      function is short-hand for likelihood(X,0.0625). The likely(X) function is
-      short-hand for likelihood(X,0.9375).'
+    description: The likelihood(X,Y) function returns argument X unchanged. The value
+      Y in likelihood(X,Y) must be a floating point constant between 0.0 and 1.0,
+      inclusive. The likelihood(X) function is a no-op that the code generator optimizes
+      away so that it consumes no CPU cycles during run-time (that is, during calls
+      to sqlite3_step()). The purpose of the likelihood(X,Y) function is to provide
+      a hint to the query planner that the argument X is a boolean that is true with
+      a probability of approximately Y. The unlikely(X) function is short-hand for
+      likelihood(X,0.0625). The likely(X) function is short-hand for likelihood(X,0.9375).
     examples: []
   - name: LIKELY
     category_id: scalar_sql_functions
@@ -624,12 +619,11 @@ common:
     aliases: []
     summary: The likely(X) function returns the argument X unchanged.
     description: 'The likely(X) function returns the argument X unchanged. The likely(X)
-      function is a no-op that the code generator optimizes away so that it
-      consumes no CPU cycles at run-time (that is, during calls to
-      sqlite3_step()). The purpose of the likely(X) function is to provide a hint
-      to the query planner that the argument X is a boolean value that is usually
-      true. The likely(X) function is equivalent to likelihood(X,0.9375). See
-      also: unlikely(X).'
+      function is a no-op that the code generator optimizes away so that it consumes
+      no CPU cycles at run-time (that is, during calls to sqlite3_step()). The purpose
+      of the likely(X) function is to provide a hint to the query planner that the
+      argument X is a boolean value that is usually true. The likely(X) function is
+      equivalent to likelihood(X,0.9375). See also: unlikely(X).'
     examples: []
   - name: LOAD_EXTENSION1
     category_id: scalar_sql_functions
@@ -643,22 +637,19 @@ common:
     tags: []
     aliases: []
     summary: The load_extension(X,Y) function loads SQLite extensions out of the shared
-    description: 'The load_extension(X,Y) function loads SQLite extensions out of
-      the shared
-      library file named X using the entry point Y. The result of
-      load_extension() is always a NULL. If Y is omitted then the default entry
-      point name is used. The load_extension() function raises an exception if
-      the extension fails to load or initialize correctly. The load_extension()
-      function will fail if the extension attempts to modify or delete an SQL
-      function or collating sequence. The extension can add new functions or
-      collating sequences, but cannot modify or delete existing functions or
-      collating sequences because those functions and/or collating sequences
-      might be used elsewhere in the currently running SQL statement. To load an
-      extension that changes or deletes functions or collating sequences, use the
-      sqlite3_load_extension() C-language API.
-      For security reasons, extension
-      loaded is turned off by default and must be enabled by a prior call to
-      sqlite3_enable_load_extension().'
+    description: The load_extension(X,Y) function loads SQLite extensions out of the
+      shared library file named X using the entry point Y. The result of load_extension()
+      is always a NULL. If Y is omitted then the default entry point name is used.
+      The load_extension() function raises an exception if the extension fails to
+      load or initialize correctly. The load_extension() function will fail if the
+      extension attempts to modify or delete an SQL function or collating sequence.
+      The extension can add new functions or collating sequences, but cannot modify
+      or delete existing functions or collating sequences because those functions
+      and/or collating sequences might be used elsewhere in the currently running
+      SQL statement. To load an extension that changes or deletes functions or collating
+      sequences, use the sqlite3_load_extension() C-language API. For security reasons,
+      extension loaded is turned off by default and must be enabled by a prior call
+      to sqlite3_enable_load_extension().
     examples: []
   - name: LOAD_EXTENSION2
     category_id: scalar_sql_functions
@@ -675,22 +666,19 @@ common:
     tags: []
     aliases: []
     summary: The load_extension(X,Y) function loads SQLite extensions out of the shared
-    description: 'The load_extension(X,Y) function loads SQLite extensions out of
-      the shared
-      library file named X using the entry point Y. The result of
-      load_extension() is always a NULL. If Y is omitted then the default entry
-      point name is used. The load_extension() function raises an exception if
-      the extension fails to load or initialize correctly. The load_extension()
-      function will fail if the extension attempts to modify or delete an SQL
-      function or collating sequence. The extension can add new functions or
-      collating sequences, but cannot modify or delete existing functions or
-      collating sequences because those functions and/or collating sequences
-      might be used elsewhere in the currently running SQL statement. To load an
-      extension that changes or deletes functions or collating sequences, use the
-      sqlite3_load_extension() C-language API.
-      For security reasons, extension
-      loaded is turned off by default and must be enabled by a prior call to
-      sqlite3_enable_load_extension().'
+    description: The load_extension(X,Y) function loads SQLite extensions out of the
+      shared library file named X using the entry point Y. The result of load_extension()
+      is always a NULL. If Y is omitted then the default entry point name is used.
+      The load_extension() function raises an exception if the extension fails to
+      load or initialize correctly. The load_extension() function will fail if the
+      extension attempts to modify or delete an SQL function or collating sequence.
+      The extension can add new functions or collating sequences, but cannot modify
+      or delete existing functions or collating sequences because those functions
+      and/or collating sequences might be used elsewhere in the currently running
+      SQL statement. To load an extension that changes or deletes functions or collating
+      sequences, use the sqlite3_load_extension() C-language API. For security reasons,
+      extension loaded is turned off by default and must be enabled by a prior call
+      to sqlite3_enable_load_extension().
     examples: []
   - name: LOWER
     category_id: scalar_sql_functions
@@ -704,11 +692,10 @@ common:
     tags: []
     aliases: []
     summary: The lower(X) function returns a copy of string X with all ASCII characters
-    description: 'The lower(X) function returns a copy of string X with all ASCII
-      characters
-      converted to lower case. The default built-in lower() function works for
-      ASCII characters only. To do case conversions on non-ASCII characters, load
-      the ICU extension.'
+    description: The lower(X) function returns a copy of string X with all ASCII characters
+      converted to lower case. The default built-in lower() function works for ASCII
+      characters only. To do case conversions on non-ASCII characters, load the ICU
+      extension.
     examples: []
   - name: LTRIM1
     category_id: scalar_sql_functions
@@ -722,10 +709,9 @@ common:
     tags: []
     aliases: []
     summary: The ltrim(X,Y) function returns a string formed by removing any and all
-    description: 'The ltrim(X,Y) function returns a string formed by removing any
-      and all
-      characters that appear in Y from the left side of X. If the Y argument is
-      omitted, ltrim(X) removes spaces from the left side of X.'
+    description: The ltrim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from the left side of X. If the Y argument is
+      omitted, ltrim(X) removes spaces from the left side of X.
     examples: []
   - name: LTRIM2
     category_id: scalar_sql_functions
@@ -742,10 +728,9 @@ common:
     tags: []
     aliases: []
     summary: The ltrim(X,Y) function returns a string formed by removing any and all
-    description: 'The ltrim(X,Y) function returns a string formed by removing any
-      and all
-      characters that appear in Y from the left side of X. If the Y argument is
-      omitted, ltrim(X) removes spaces from the left side of X.'
+    description: The ltrim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from the left side of X. If the Y argument is
+      omitted, ltrim(X) removes spaces from the left side of X.
     examples: []
   - name: MAX1
     category_id: aggregate_functions
@@ -760,11 +745,10 @@ common:
     aliases: []
     summary: The max() aggregate function returns the maximum value of all values
       in the
-    description: 'The max() aggregate function returns the maximum value of all values
-      in the
-      group. The maximum value is the value that would be returned last in an
-      ORDER BY on the same column. Aggregate max() returns NULL if and only if
-      there are no non-NULL values in the group.'
+    description: The max() aggregate function returns the maximum value of all values
+      in the group. The maximum value is the value that would be returned last in
+      an ORDER BY on the same column. Aggregate max() returns NULL if and only if
+      there are no non-NULL values in the group.
     examples: []
   - name: MAX2
     category_id: scalar_sql_functions
@@ -784,15 +768,13 @@ common:
     tags: []
     aliases: []
     summary: The multi-argument max() function returns the argument with the maximum
-    description: 'The multi-argument max() function returns the argument with the
-      maximum
-      value, or return NULL if any argument is NULL. The multi-argument max()
-      function searches its arguments from left to right for an argument that
-      defines a collating function and uses that collating function for all
-      string comparisons. If none of the arguments to max() define a collating
-      function, then the BINARY collating function is used. Note that max() is a
-      simple function when it has 2 or more arguments but operates as an
-      aggregate function if given only a single argument.'
+    description: The multi-argument max() function returns the argument with the maximum
+      value, or return NULL if any argument is NULL. The multi-argument max() function
+      searches its arguments from left to right for an argument that defines a collating
+      function and uses that collating function for all string comparisons. If none
+      of the arguments to max() define a collating function, then the BINARY collating
+      function is used. Note that max() is a simple function when it has 2 or more
+      arguments but operates as an aggregate function if given only a single argument.
     examples: []
   - name: MIN1
     category_id: aggregate_functions
@@ -806,11 +788,10 @@ common:
     tags: []
     aliases: []
     summary: The min() aggregate function returns the minimum non-NULL value of all
-    description: 'The min() aggregate function returns the minimum non-NULL value
-      of all
-      values in the group. The minimum value is the first non-NULL value that
-      would appear in an ORDER BY of the column. Aggregate min() returns NULL if
-      and only if there are no non-NULL values in the group.'
+    description: The min() aggregate function returns the minimum non-NULL value of
+      all values in the group. The minimum value is the first non-NULL value that
+      would appear in an ORDER BY of the column. Aggregate min() returns NULL if and
+      only if there are no non-NULL values in the group.
     examples: []
   - name: MIN2
     category_id: scalar_sql_functions
@@ -830,14 +811,13 @@ common:
     tags: []
     aliases: []
     summary: The multi-argument min() function returns the argument with the minimum
-    description: 'The multi-argument min() function returns the argument with the
-      minimum
-      value. The multi-argument min() function searches its arguments from left
-      to right for an argument that defines a collating function and uses that
-      collating function for all string comparisons. If none of the arguments to
-      min() define a collating function, then the BINARY collating function is
-      used. Note that min() is a simple function when it has 2 or more arguments
-      but operates as an aggregate function if given only a single argument.'
+    description: The multi-argument min() function returns the argument with the minimum
+      value. The multi-argument min() function searches its arguments from left to
+      right for an argument that defines a collating function and uses that collating
+      function for all string comparisons. If none of the arguments to min() define
+      a collating function, then the BINARY collating function is used. Note that
+      min() is a simple function when it has 2 or more arguments but operates as an
+      aggregate function if given only a single argument.
     examples: []
   - name: NTH_VALUE
     category_id: window_functions
@@ -855,13 +835,12 @@ common:
     aliases: []
     summary: This built-in window function calculates the window frame for each row
       in
-    description: 'This built-in window function calculates the window frame for each
-      row in
-      the same way as an aggregate window function. It returns the value of expr
-      evaluated against the row N of the window frame. Rows are numbered within
-      the window frame starting from 1 in the order defined by the ORDER BY
-      clause if one is present, or in arbitrary order otherwise. If there is no
-      Nth row in the partition, then NULL is returned.'
+    description: This built-in window function calculates the window frame for each
+      row in the same way as an aggregate window function. It returns the value of
+      expr evaluated against the row N of the window frame. Rows are numbered within
+      the window frame starting from 1 in the order defined by the ORDER BY clause
+      if one is present, or in arbitrary order otherwise. If there is no Nth row in
+      the partition, then NULL is returned.
     examples: []
   - name: NTILE
     category_id: window_functions
@@ -875,12 +854,11 @@ common:
     tags: []
     aliases: []
     summary: Argument N is handled as an integer.
-    description: 'Argument N is handled as an integer. This function divides the partition
-      into N groups as evenly as possible and assigns an integer between 1 and N
-      to each group, in the order defined by the ORDER BY clause, or in arbitrary
-      order otherwise. If necessary, larger groups occur first. This function
-      returns the integer value assigned to the group that the current row is a
-      part of.'
+    description: Argument N is handled as an integer. This function divides the partition
+      into N groups as evenly as possible and assigns an integer between 1 and N to
+      each group, in the order defined by the ORDER BY clause, or in arbitrary order
+      otherwise. If necessary, larger groups occur first. This function returns the
+      integer value assigned to the group that the current row is a part of.
     examples: []
   - name: NULLIF
     category_id: scalar_sql_functions
@@ -898,13 +876,11 @@ common:
     aliases: []
     summary: The nullif(X,Y) function returns its first argument if the arguments
       are
-    description: 'The nullif(X,Y) function returns its first argument if the arguments
-      are
-      different and NULL if the arguments are the same. The nullif(X,Y) function
-      searches its arguments from left to right for an argument that defines a
-      collating function and uses that collating function for all string
-      comparisons. If neither argument to nullif() defines a collating function
-      then the BINARY is used.'
+    description: The nullif(X,Y) function returns its first argument if the arguments
+      are different and NULL if the arguments are the same. The nullif(X,Y) function
+      searches its arguments from left to right for an argument that defines a collating
+      function and uses that collating function for all string comparisons. If neither
+      argument to nullif() defines a collating function then the BINARY is used.
     examples: []
   - name: PERCENT_RANK
     category_id: window_functions
@@ -916,12 +892,11 @@ common:
     aliases: []
     summary: Despite the name, this function always returns a value between 0.0 and
       1.0
-    description: 'Despite the name, this function always returns a value between 0.0
-      and 1.0
-      equal to (rank - 1)/(partition-rows - 1), where rank is the value returned
-      by built-in window function rank() and partition-rows is the total number
-      of rows in the partition. If the partition contains only one row, this
-      function returns 0.0.'
+    description: Despite the name, this function always returns a value between 0.0
+      and 1.0 equal to (rank - 1)/(partition-rows - 1), where rank is the value returned
+      by built-in window function rank() and partition-rows is the total number of
+      rows in the partition. If the partition contains only one row, this function
+      returns 0.0.
     examples: []
   - name: PRINTF
     category_id: scalar_sql_functions
@@ -938,17 +913,16 @@ common:
     tags: []
     aliases: []
     summary: The printf(FORMAT,...) SQL function works like the sqlite3_mprintf()
-    description: 'The printf(FORMAT,...) SQL function works like the sqlite3_mprintf()
-      C-language function and the printf() function from the standard C library.
-      The first argument is a format string that specifies how to construct the
-      output string using values taken from subsequent arguments. If the FORMAT
-      argument is missing or NULL then the result is NULL. The %n format is
-      silently ignored and does not consume an argument. The %p format is an
-      alias for %X. The %z format is interchangeable with %s. If there are too
-      few arguments in the argument list, missing arguments are assumed to have a
-      NULL value, which is translated into 0 or 0.0 for numeric formats or an
-      empty string for %s. See the built-in printf() documentation for additional
-      information.'
+    description: The printf(FORMAT,...) SQL function works like the sqlite3_mprintf()
+      C-language function and the printf() function from the standard C library. The
+      first argument is a format string that specifies how to construct the output
+      string using values taken from subsequent arguments. If the FORMAT argument
+      is missing or NULL then the result is NULL. The %n format is silently ignored
+      and does not consume an argument. The %p format is an alias for %X. The %z format
+      is interchangeable with %s. If there are too few arguments in the argument list,
+      missing arguments are assumed to have a NULL value, which is translated into
+      0 or 0.0 for numeric formats or an empty string for %s. See the built-in printf()
+      documentation for additional information.
     examples: []
   - name: QUOTE
     category_id: scalar_sql_functions
@@ -963,13 +937,12 @@ common:
     aliases: []
     summary: The quote(X) function returns the text of an SQL literal which is the
       value
-    description: 'The quote(X) function returns the text of an SQL literal which is
-      the value
-      of its argument suitable for inclusion into an SQL statement. Strings are
-      surrounded by single-quotes with escapes on interior quotes as needed.
-      BLOBs are encoded as hexadecimal literals. Strings with embedded NUL
-      characters cannot be represented as string literals in SQL and hence the
-      returned string literal is truncated prior to the first NUL.'
+    description: The quote(X) function returns the text of an SQL literal which is
+      the value of its argument suitable for inclusion into an SQL statement. Strings
+      are surrounded by single-quotes with escapes on interior quotes as needed. BLOBs
+      are encoded as hexadecimal literals. Strings with embedded NUL characters cannot
+      be represented as string literals in SQL and hence the returned string literal
+      is truncated prior to the first NUL.
     examples: []
   - name: RANDOM
     category_id: scalar_sql_functions
@@ -980,8 +953,8 @@ common:
     tags: []
     aliases: []
     summary: The random() function returns a pseudo-random integer between
-    description: 'The random() function returns a pseudo-random integer between
-      -9223372036854775808 and +9223372036854775807.'
+    description: The random() function returns a pseudo-random integer between -9223372036854775808
+      and +9223372036854775807.
     examples: []
   - name: RANDOMBLOB
     category_id: scalar_sql_functions
@@ -996,10 +969,9 @@ common:
     aliases: []
     summary: The randomblob(N) function return an N-byte blob containing pseudo-random
     description: 'The randomblob(N) function return an N-byte blob containing pseudo-random
-      bytes. If N is less than 1 then a 1-byte random blob is returned. Hint:
-      applications can generate globally unique identifiers using this function
-      together with hex() and/or lower() like this: hex(randomblob(16))
-      lower(hex(randomblob(16)))'
+      bytes. If N is less than 1 then a 1-byte random blob is returned. Hint: applications
+      can generate globally unique identifiers using this function together with hex()
+      and/or lower() like this: hex(randomblob(16)) lower(hex(randomblob(16)))'
     examples: []
   - name: RANK
     category_id: window_functions
@@ -1010,10 +982,9 @@ common:
     tags: []
     aliases: []
     summary: The row_number() of the first peer in each group - the rank of the current
-    description: 'The row_number() of the first peer in each group - the rank of the
-      current
-      row with gaps. If there is no ORDER BY clause, then all rows are considered
-      peers and this function always returns 1.'
+    description: The row_number() of the first peer in each group - the rank of the
+      current row with gaps. If there is no ORDER BY clause, then all rows are considered
+      peers and this function always returns 1.
     examples: []
   - name: REPLACE
     category_id: scalar_sql_functions
@@ -1033,12 +1004,10 @@ common:
     tags: []
     aliases: []
     summary: The replace(X,Y,Z) function returns a string formed by substituting string
-    description: 'The replace(X,Y,Z) function returns a string formed by substituting
-      string
-      Z for every occurrence of string Y in string X. The BINARY collating
-      sequence is used for comparisons. If Y is an empty string then return X
-      unchanged. If Z is not initially a string, it is cast to a UTF-8 string
-      prior to processing.'
+    description: The replace(X,Y,Z) function returns a string formed by substituting
+      string Z for every occurrence of string Y in string X. The BINARY collating
+      sequence is used for comparisons. If Y is an empty string then return X unchanged.
+      If Z is not initially a string, it is cast to a UTF-8 string prior to processing.
     examples: []
   - name: ROUND1
     category_id: scalar_sql_functions
@@ -1052,10 +1021,9 @@ common:
     tags: []
     aliases: []
     summary: The round(X,Y) function returns a floating-point value X rounded to Y
-    description: 'The round(X,Y) function returns a floating-point value X rounded
-      to Y
-      digits to the right of the decimal point. If the Y argument is omitted, it
-      is assumed to be 0.'
+    description: The round(X,Y) function returns a floating-point value X rounded
+      to Y digits to the right of the decimal point. If the Y argument is omitted,
+      it is assumed to be 0.
     examples: []
   - name: ROUND2
     category_id: scalar_sql_functions
@@ -1072,10 +1040,9 @@ common:
     tags: []
     aliases: []
     summary: The round(X,Y) function returns a floating-point value X rounded to Y
-    description: 'The round(X,Y) function returns a floating-point value X rounded
-      to Y
-      digits to the right of the decimal point. If the Y argument is omitted, it
-      is assumed to be 0.'
+    description: The round(X,Y) function returns a floating-point value X rounded
+      to Y digits to the right of the decimal point. If the Y argument is omitted,
+      it is assumed to be 0.
     examples: []
   - name: ROW_NUMBER
     category_id: window_functions
@@ -1086,9 +1053,9 @@ common:
     tags: []
     aliases: []
     summary: The number of the row within the current partition.
-    description: 'The number of the row within the current partition. Rows are numbered
-      starting from 1 in the order defined by the ORDER BY clause in the window
-      definition, or in arbitrary order otherwise.'
+    description: The number of the row within the current partition. Rows are numbered
+      starting from 1 in the order defined by the ORDER BY clause in the window definition,
+      or in arbitrary order otherwise.
     examples: []
   - name: RTRIM1
     category_id: scalar_sql_functions
@@ -1102,10 +1069,9 @@ common:
     tags: []
     aliases: []
     summary: The rtrim(X,Y) function returns a string formed by removing any and all
-    description: 'The rtrim(X,Y) function returns a string formed by removing any
-      and all
-      characters that appear in Y from the right side of X. If the Y argument is
-      omitted, rtrim(X) removes spaces from the right side of X.'
+    description: The rtrim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from the right side of X. If the Y argument
+      is omitted, rtrim(X) removes spaces from the right side of X.
     examples: []
   - name: RTRIM2
     category_id: scalar_sql_functions
@@ -1122,10 +1088,9 @@ common:
     tags: []
     aliases: []
     summary: The rtrim(X,Y) function returns a string formed by removing any and all
-    description: 'The rtrim(X,Y) function returns a string formed by removing any
-      and all
-      characters that appear in Y from the right side of X. If the Y argument is
-      omitted, rtrim(X) removes spaces from the right side of X.'
+    description: The rtrim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from the right side of X. If the Y argument
+      is omitted, rtrim(X) removes spaces from the right side of X.
     examples: []
   - name: SIGN
     category_id: scalar_sql_functions
@@ -1139,11 +1104,10 @@ common:
     tags: []
     aliases: []
     summary: The sign(X) function returns -1, 0, or +1 if the argument X is a numeric
-    description: 'The sign(X) function returns -1, 0, or +1 if the argument X is a
-      numeric
-      value that is negative, zero, or positive, respectively. If the argument to
-      sign(X) is NULL or is a string or blob that cannot be losslessly converted
-      into a number, then sign(X) returns NULL.'
+    description: The sign(X) function returns -1, 0, or +1 if the argument X is a
+      numeric value that is negative, zero, or positive, respectively. If the argument
+      to sign(X) is NULL or is a string or blob that cannot be losslessly converted
+      into a number, then sign(X) returns NULL.
     examples: []
   - name: SOUNDEX
     category_id: scalar_sql_functions
@@ -1158,12 +1122,11 @@ common:
     aliases: []
     summary: The soundex(X) function returns a string that is the soundex encoding
       of
-    description: 'The soundex(X) function returns a string that is the soundex encoding
-      of
-      the string X. The string "?000" is returned if the argument is NULL or
-      contains no ASCII alphabetic characters. This function is omitted from
-      SQLite by default. It is only available if the SQLITE_SOUNDEX compile-time
-      option is used when SQLite is built.'
+    description: The soundex(X) function returns a string that is the soundex encoding
+      of the string X. The string "?000" is returned if the argument is NULL or contains
+      no ASCII alphabetic characters. This function is omitted from SQLite by default.
+      It is only available if the SQLITE_SOUNDEX compile-time option is used when
+      SQLite is built.
     examples: []
   - name: SQLITE_COMPILEOPTION_GET
     category_id: scalar_sql_functions
@@ -1177,11 +1140,10 @@ common:
     tags: []
     aliases: []
     summary: The sqlite_compileoption_get() SQL function is a wrapper around the
-    description: 'The sqlite_compileoption_get() SQL function is a wrapper around
-      the
-      sqlite3_compileoption_get() C/C++ function. This routine returns the N-th
-      compile-time option used to build SQLite or NULL if N is out of range. See
-      also the compile_options pragma.'
+    description: The sqlite_compileoption_get() SQL function is a wrapper around the
+      sqlite3_compileoption_get() C/C++ function. This routine returns the N-th compile-time
+      option used to build SQLite or NULL if N is out of range. See also the compile_options
+      pragma.
     examples: []
   - name: SQLITE_COMPILEOPTION_USED
     category_id: scalar_sql_functions
@@ -1195,12 +1157,11 @@ common:
     tags: []
     aliases: []
     summary: The sqlite_compileoption_used() SQL function is a wrapper around the
-    description: 'The sqlite_compileoption_used() SQL function is a wrapper around
-      the
-      sqlite3_compileoption_used() C/C++ function. When the argument X to
-      sqlite_compileoption_used(X) is a string which is the name of a
-      compile-time option, this routine returns true (1) or false (0) depending
-      on whether or not that option was used during the build.'
+    description: The sqlite_compileoption_used() SQL function is a wrapper around
+      the sqlite3_compileoption_used() C/C++ function. When the argument X to sqlite_compileoption_used(X)
+      is a string which is the name of a compile-time option, this routine returns
+      true (1) or false (0) depending on whether or not that option was used during
+      the build.
     examples: []
   - name: SQLITE_OFFSET
     category_id: scalar_sql_functions
@@ -1215,17 +1176,16 @@ common:
     aliases: []
     summary: The sqlite_offset(X) function returns the byte offset in the database
       file
-    description: 'The sqlite_offset(X) function returns the byte offset in the database
-      file
-      for the beginning of the record from which value would be read. If X is not
-      a column in an ordinary table, then sqlite_offset(X) returns NULL. The
-      value returned by sqlite_offset(X) might reference either the original
-      table or an index, depending on the query. If the value X would normally be
-      extracted from an index, the sqlite_offset(X) returns the offset to the
-      corresponding index record. If the value X would be extracted from the
-      original table, then sqlite_offset(X) returns the offset to the table
-      record. The sqlite_offset(X) SQL function is only available if SQLite is
-      built using the -DSQLITE_ENABLE_OFFSET_SQL_FUNC compile-time option.'
+    description: The sqlite_offset(X) function returns the byte offset in the database
+      file for the beginning of the record from which value would be read. If X is
+      not a column in an ordinary table, then sqlite_offset(X) returns NULL. The value
+      returned by sqlite_offset(X) might reference either the original table or an
+      index, depending on the query. If the value X would normally be extracted from
+      an index, the sqlite_offset(X) returns the offset to the corresponding index
+      record. If the value X would be extracted from the original table, then sqlite_offset(X)
+      returns the offset to the table record. The sqlite_offset(X) SQL function is
+      only available if SQLite is built using the -DSQLITE_ENABLE_OFFSET_SQL_FUNC
+      compile-time option.
     examples: []
   - name: SQLITE_SOURCE_ID
     category_id: scalar_sql_functions
@@ -1236,13 +1196,11 @@ common:
     tags: []
     aliases: []
     summary: The sqlite_source_id() function returns a string that identifies the
-    description: 'The sqlite_source_id() function returns a string that identifies
-      the
-      specific version of the source code that was used to build the SQLite
-      library. The string returned by sqlite_source_id() is the date and time
-      that the source code was checked in followed by the SHA3-256 hash for that
-      check-in. This function is an SQL wrapper around the sqlite3_sourceid() C
-      interface.'
+    description: The sqlite_source_id() function returns a string that identifies
+      the specific version of the source code that was used to build the SQLite library.
+      The string returned by sqlite_source_id() is the date and time that the source
+      code was checked in followed by the SHA3-256 hash for that check-in. This function
+      is an SQL wrapper around the sqlite3_sourceid() C interface.
     examples: []
   - name: SQLITE_VERSION
     category_id: scalar_sql_functions
@@ -1253,10 +1211,9 @@ common:
     tags: []
     aliases: []
     summary: The sqlite_version() function returns the version string for the SQLite
-    description: 'The sqlite_version() function returns the version string for the
-      SQLite
-      library that is running. This function is an SQL wrapper around the
-      sqlite3_libversion() C-interface.'
+    description: The sqlite_version() function returns the version string for the
+      SQLite library that is running. This function is an SQL wrapper around the sqlite3_libversion()
+      C-interface.
     examples: []
   - name: STRFTIME
     category_id: date_and_time_functions
@@ -1282,10 +1239,9 @@ common:
     tags: []
     aliases: []
     summary: All five date and time functions take a time value as an argument.
-    description: 'All five date and time functions take a time value as an argument.
-      The time
-      value is followed by zero or more modifiers. The strftime() function also
-      takes a format string as its first argument.'
+    description: All five date and time functions take a time value as an argument.
+      The time value is followed by zero or more modifiers. The strftime() function
+      also takes a format string as its first argument.
     examples: []
   - name: SUBSTR1
     category_id: scalar_sql_functions
@@ -1305,17 +1261,16 @@ common:
     tags: []
     aliases: []
     summary: The substr(X,Y,Z) function returns a substring of input string X that
-    description: 'The substr(X,Y,Z) function returns a substring of input string X
-      that
-      begins with the Y-th character and which is Z characters long. If Z is
-      omitted then substr(X,Y) returns all characters through the end of the
-      string X beginning with the Y-th. The left-most character of X is number 1.
-      If Y is negative then the first character of the substring is found by
-      counting from the right rather than the left. If Z is negative then the
-      abs(Z) characters preceding the Y-th character are returned. If X is a
-      string then characters indices refer to actual UTF-8 characters. If X is a
-      BLOB then the indices refer to bytes. "substring()" is an alias for
-      "substr()" beginning with SQLite version 3.34.'
+    description: The substr(X,Y,Z) function returns a substring of input string X
+      that begins with the Y-th character and which is Z characters long. If Z is
+      omitted then substr(X,Y) returns all characters through the end of the string
+      X beginning with the Y-th. The left-most character of X is number 1. If Y is
+      negative then the first character of the substring is found by counting from
+      the right rather than the left. If Z is negative then the abs(Z) characters
+      preceding the Y-th character are returned. If X is a string then characters
+      indices refer to actual UTF-8 characters. If X is a BLOB then the indices refer
+      to bytes. "substring()" is an alias for "substr()" beginning with SQLite version
+      3.34.
     examples: []
   - name: SUBSTR2
     category_id: scalar_sql_functions
@@ -1332,17 +1287,16 @@ common:
     tags: []
     aliases: []
     summary: The substr(X,Y,Z) function returns a substring of input string X that
-    description: 'The substr(X,Y,Z) function returns a substring of input string X
-      that
-      begins with the Y-th character and which is Z characters long. If Z is
-      omitted then substr(X,Y) returns all characters through the end of the
-      string X beginning with the Y-th. The left-most character of X is number 1.
-      If Y is negative then the first character of the substring is found by
-      counting from the right rather than the left. If Z is negative then the
-      abs(Z) characters preceding the Y-th character are returned. If X is a
-      string then characters indices refer to actual UTF-8 characters. If X is a
-      BLOB then the indices refer to bytes. "substring()" is an alias for
-      "substr()" beginning with SQLite version 3.34.'
+    description: The substr(X,Y,Z) function returns a substring of input string X
+      that begins with the Y-th character and which is Z characters long. If Z is
+      omitted then substr(X,Y) returns all characters through the end of the string
+      X beginning with the Y-th. The left-most character of X is number 1. If Y is
+      negative then the first character of the substring is found by counting from
+      the right rather than the left. If Z is negative then the abs(Z) characters
+      preceding the Y-th character are returned. If X is a string then characters
+      indices refer to actual UTF-8 characters. If X is a BLOB then the indices refer
+      to bytes. "substring()" is an alias for "substr()" beginning with SQLite version
+      3.34.
     examples: []
   - name: SUBSTRING1
     category_id: scalar_sql_functions
@@ -1362,17 +1316,16 @@ common:
     tags: []
     aliases: []
     summary: The substr(X,Y,Z) function returns a substring of input string X that
-    description: 'The substr(X,Y,Z) function returns a substring of input string X
-      that
-      begins with the Y-th character and which is Z characters long. If Z is
-      omitted then substr(X,Y) returns all characters through the end of the
-      string X beginning with the Y-th. The left-most character of X is number 1.
-      If Y is negative then the first character of the substring is found by
-      counting from the right rather than the left. If Z is negative then the
-      abs(Z) characters preceding the Y-th character are returned. If X is a
-      string then characters indices refer to actual UTF-8 characters. If X is a
-      BLOB then the indices refer to bytes. "substring()" is an alias for
-      "substr()" beginning with SQLite version 3.34.'
+    description: The substr(X,Y,Z) function returns a substring of input string X
+      that begins with the Y-th character and which is Z characters long. If Z is
+      omitted then substr(X,Y) returns all characters through the end of the string
+      X beginning with the Y-th. The left-most character of X is number 1. If Y is
+      negative then the first character of the substring is found by counting from
+      the right rather than the left. If Z is negative then the abs(Z) characters
+      preceding the Y-th character are returned. If X is a string then characters
+      indices refer to actual UTF-8 characters. If X is a BLOB then the indices refer
+      to bytes. "substring()" is an alias for "substr()" beginning with SQLite version
+      3.34.
     examples: []
   - name: SUBSTRING2
     category_id: scalar_sql_functions
@@ -1389,17 +1342,16 @@ common:
     tags: []
     aliases: []
     summary: The substr(X,Y,Z) function returns a substring of input string X that
-    description: 'The substr(X,Y,Z) function returns a substring of input string X
-      that
-      begins with the Y-th character and which is Z characters long. If Z is
-      omitted then substr(X,Y) returns all characters through the end of the
-      string X beginning with the Y-th. The left-most character of X is number 1.
-      If Y is negative then the first character of the substring is found by
-      counting from the right rather than the left. If Z is negative then the
-      abs(Z) characters preceding the Y-th character are returned. If X is a
-      string then characters indices refer to actual UTF-8 characters. If X is a
-      BLOB then the indices refer to bytes. "substring()" is an alias for
-      "substr()" beginning with SQLite version 3.34.'
+    description: The substr(X,Y,Z) function returns a substring of input string X
+      that begins with the Y-th character and which is Z characters long. If Z is
+      omitted then substr(X,Y) returns all characters through the end of the string
+      X beginning with the Y-th. The left-most character of X is number 1. If Y is
+      negative then the first character of the substring is found by counting from
+      the right rather than the left. If Z is negative then the abs(Z) characters
+      preceding the Y-th character are returned. If X is a string then characters
+      indices refer to actual UTF-8 characters. If X is a BLOB then the indices refer
+      to bytes. "substring()" is an alias for "substr()" beginning with SQLite version
+      3.34.
     examples: []
   - name: SUM
     category_id: aggregate_functions
@@ -1414,23 +1366,19 @@ common:
     aliases: []
     summary: The sum() and total() aggregate functions return sum of all non-NULL
       values
-    description: 'The sum() and total() aggregate functions return sum of all non-NULL
-      values
-      in the group. If there are no non-NULL input rows then sum() returns NULL
-      but total() returns 0.0. NULL is not normally a helpful result for the sum
-      of no rows but the SQL standard requires it and most other SQL database
+    description: The sum() and total() aggregate functions return sum of all non-NULL
+      values in the group. If there are no non-NULL input rows then sum() returns
+      NULL but total() returns 0.0. NULL is not normally a helpful result for the
+      sum of no rows but the SQL standard requires it and most other SQL database
       engines implement sum() that way so SQLite does it in the same way in order
-      to be compatible. The non-standard total() function is provided as a
-      convenient way to work around this design problem in the SQL language.
-      The
-      result of total() is always a floating point value. The result of sum() is
-      an integer value if all non-NULL inputs are integers. If any input to sum()
-      is neither an integer or a NULL then sum() returns a floating point value
-      which might be an approximation to the true sum.
-      Sum() will throw an
-      "integer overflow" exception if all inputs are integers or NULL and an
-      integer overflow occurs at any point during the computation. Total() never
-      throws an integer overflow.'
+      to be compatible. The non-standard total() function is provided as a convenient
+      way to work around this design problem in the SQL language. The result of total()
+      is always a floating point value. The result of sum() is an integer value if
+      all non-NULL inputs are integers. If any input to sum() is neither an integer
+      or a NULL then sum() returns a floating point value which might be an approximation
+      to the true sum. Sum() will throw an "integer overflow" exception if all inputs
+      are integers or NULL and an integer overflow occurs at any point during the
+      computation. Total() never throws an integer overflow.
     examples: []
   - name: TIME
     category_id: date_and_time_functions
@@ -1453,10 +1401,9 @@ common:
     tags: []
     aliases: []
     summary: All five date and time functions take a time value as an argument.
-    description: 'All five date and time functions take a time value as an argument.
-      The time
-      value is followed by zero or more modifiers. The strftime() function also
-      takes a format string as its first argument.'
+    description: All five date and time functions take a time value as an argument.
+      The time value is followed by zero or more modifiers. The strftime() function
+      also takes a format string as its first argument.
     examples: []
   - name: TOTAL
     category_id: aggregate_functions
@@ -1471,23 +1418,19 @@ common:
     aliases: []
     summary: The sum() and total() aggregate functions return sum of all non-NULL
       values
-    description: 'The sum() and total() aggregate functions return sum of all non-NULL
-      values
-      in the group. If there are no non-NULL input rows then sum() returns NULL
-      but total() returns 0.0. NULL is not normally a helpful result for the sum
-      of no rows but the SQL standard requires it and most other SQL database
+    description: The sum() and total() aggregate functions return sum of all non-NULL
+      values in the group. If there are no non-NULL input rows then sum() returns
+      NULL but total() returns 0.0. NULL is not normally a helpful result for the
+      sum of no rows but the SQL standard requires it and most other SQL database
       engines implement sum() that way so SQLite does it in the same way in order
-      to be compatible. The non-standard total() function is provided as a
-      convenient way to work around this design problem in the SQL language.
-      The
-      result of total() is always a floating point value. The result of sum() is
-      an integer value if all non-NULL inputs are integers. If any input to sum()
-      is neither an integer or a NULL then sum() returns a floating point value
-      which might be an approximation to the true sum.
-      Sum() will throw an
-      "integer overflow" exception if all inputs are integers or NULL and an
-      integer overflow occurs at any point during the computation. Total() never
-      throws an integer overflow.'
+      to be compatible. The non-standard total() function is provided as a convenient
+      way to work around this design problem in the SQL language. The result of total()
+      is always a floating point value. The result of sum() is an integer value if
+      all non-NULL inputs are integers. If any input to sum() is neither an integer
+      or a NULL then sum() returns a floating point value which might be an approximation
+      to the true sum. Sum() will throw an "integer overflow" exception if all inputs
+      are integers or NULL and an integer overflow occurs at any point during the
+      computation. Total() never throws an integer overflow.
     examples: []
   - name: TOTAL_CHANGES
     category_id: scalar_sql_functions
@@ -1499,11 +1442,10 @@ common:
     aliases: []
     summary: The total_changes() function returns the number of row changes caused
       by
-    description: 'The total_changes() function returns the number of row changes caused
-      by
-      INSERT, UPDATE or DELETE statements since the current database connection
-      was opened. This function is a wrapper around the sqlite3_total_changes()
-      C/C++ interface.'
+    description: The total_changes() function returns the number of row changes caused
+      by INSERT, UPDATE or DELETE statements since the current database connection
+      was opened. This function is a wrapper around the sqlite3_total_changes() C/C++
+      interface.
     examples: []
   - name: TRIM1
     category_id: scalar_sql_functions
@@ -1517,10 +1459,9 @@ common:
     tags: []
     aliases: []
     summary: The trim(X,Y) function returns a string formed by removing any and all
-    description: 'The trim(X,Y) function returns a string formed by removing any and
-      all
-      characters that appear in Y from both ends of X. If the Y argument is
-      omitted, trim(X) removes spaces from both ends of X.'
+    description: The trim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from both ends of X. If the Y argument is omitted,
+      trim(X) removes spaces from both ends of X.
     examples: []
   - name: TRIM2
     category_id: scalar_sql_functions
@@ -1537,10 +1478,9 @@ common:
     tags: []
     aliases: []
     summary: The trim(X,Y) function returns a string formed by removing any and all
-    description: 'The trim(X,Y) function returns a string formed by removing any and
-      all
-      characters that appear in Y from both ends of X. If the Y argument is
-      omitted, trim(X) removes spaces from both ends of X.'
+    description: The trim(X,Y) function returns a string formed by removing any and
+      all characters that appear in Y from both ends of X. If the Y argument is omitted,
+      trim(X) removes spaces from both ends of X.
     examples: []
   - name: TYPEOF
     category_id: scalar_sql_functions
@@ -1556,8 +1496,7 @@ common:
     summary: The typeof(X) function returns a string that indicates the datatype of
       the
     description: 'The typeof(X) function returns a string that indicates the datatype
-      of the
-      expression X: "null", "integer", "real", "text", or "blob".'
+      of the expression X: "null", "integer", "real", "text", or "blob".'
     examples: []
   - name: UNICODE
     category_id: scalar_sql_functions
@@ -1571,9 +1510,9 @@ common:
     tags: []
     aliases: []
     summary: The unicode(X) function returns the numeric unicode code point
-    description: 'The unicode(X) function returns the numeric unicode code point
-      corresponding to the first character of the string X. If the argument to
-      unicode(X) is not a string then the result is undefined.'
+    description: The unicode(X) function returns the numeric unicode code point corresponding
+      to the first character of the string X. If the argument to unicode(X) is not
+      a string then the result is undefined.
     examples: []
   - name: UNLIKELY
     category_id: scalar_sql_functions
@@ -1587,13 +1526,12 @@ common:
     tags: []
     aliases: []
     summary: The unlikely(X) function returns the argument X unchanged.
-    description: 'The unlikely(X) function returns the argument X unchanged. The unlikely(X)
-      function is a no-op that the code generator optimizes away so that it
-      consumes no CPU cycles at run-time (that is, during calls to
-      sqlite3_step()). The purpose of the unlikely(X) function is to provide a
-      hint to the query planner that the argument X is a boolean value that is
-      usually not true. The unlikely(X) function is equivalent to likelihood(X,
-      0.0625).'
+    description: The unlikely(X) function returns the argument X unchanged. The unlikely(X)
+      function is a no-op that the code generator optimizes away so that it consumes
+      no CPU cycles at run-time (that is, during calls to sqlite3_step()). The purpose
+      of the unlikely(X) function is to provide a hint to the query planner that the
+      argument X is a boolean value that is usually not true. The unlikely(X) function
+      is equivalent to likelihood(X, 0.0625).
     examples: []
   - name: UPPER
     category_id: scalar_sql_functions
@@ -1607,9 +1545,8 @@ common:
     tags: []
     aliases: []
     summary: The upper(X) function returns a copy of input string X in which all
-    description: 'The upper(X) function returns a copy of input string X in which
-      all
-      lower-case ASCII characters are converted to their upper-case equivalent.'
+    description: The upper(X) function returns a copy of input string X in which all
+      lower-case ASCII characters are converted to their upper-case equivalent.
     examples: []
   - name: ZEROBLOB
     category_id: scalar_sql_functions
@@ -1623,16 +1560,11 @@ common:
     tags: []
     aliases: []
     summary: The zeroblob(N) function returns a BLOB consisting of N bytes of 0x00.
-    description: 'The zeroblob(N) function returns a BLOB consisting of N bytes of
-      0x00.
-      SQLite manages these zeroblobs very efficiently. Zeroblobs can be used to
-      reserve space for a BLOB that is later written using incremental BLOB I/O.
-      This SQL function is implemented using the sqlite3_result_zeroblob()
-      routine from the C/C++ interface.'
+    description: The zeroblob(N) function returns a BLOB consisting of N bytes of
+      0x00. SQLite manages these zeroblobs very efficiently. Zeroblobs can be used
+      to reserve space for a BLOB that is later written using incremental BLOB I/O.
+      This SQL function is implemented using the sqlite3_result_zeroblob() routine
+      from the C/C++ interface.
     examples: []
 versions:
-  '3':
-    keywords_add: []
-    keywords_remove: []
-    functions_add: []
-    functions_remove: []
+  '3': {}

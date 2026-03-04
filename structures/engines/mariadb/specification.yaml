@@ -1,5 +1,30 @@
 schema_version: 1
 engine: mariadb
+documentation:
+  purpose: MariaDB vocabulary and version deltas.
+  fields:
+  - schema_version: Specification schema version.
+  - engine: Engine name.
+  - common.keywords: Engine common keywords.
+  - common.functions: Engine common function specs.
+  - versions.<major>.keywords_remove: Keywords to remove for that major version.
+  - versions.<major>.functions_remove: Function names to remove for that major version.
+  notes:
+  - Runtime selection uses exact major match, else highest configured major <= server
+    major.
+example:
+  schema_version: 1
+  engine: mariadb
+  common:
+    keywords:
+    - RETURNING
+    functions:
+    - name: ABS
+      summary: Returns absolute value.
+  versions:
+    '10':
+      functions_remove:
+      - FEATURE_ONLY_FROM_11
 common:
   keywords: []
   functions:
@@ -12613,9 +12638,6 @@ common:
     - sql: 'URL: https://mariadb.com/kb/en/yearweek/'
 versions:
   '5':
-    keywords_add: []
-    keywords_remove: []
-    functions_add: []
     functions_remove:
     - AES_DECRYPT
     - AES_ENCRYPT
@@ -12624,26 +12646,74 @@ versions:
     - CONNECTION_ID
     - CONV
     - CONVERT
+    - CUME_DIST
     - DATETIME
     - DECIMAL
     - DECODE
+    - DENSE_RANK
     - EQUALS
     - EXCEPT
+    - FIRST_VALUE
     - IFNULL
     - INET6_ATON
     - INTERSECT
     - IS_IPV4_COMPAT
     - IS_IPV4_MAPPED
+    - JSON_ARRAY
+    - JSON_ARRAYAGG
+    - JSON_ARRAY_APPEND
+    - JSON_ARRAY_INSERT
+    - JSON_ARRAY_INTERSECT
+    - JSON_COMPACT
+    - JSON_CONTAINS
+    - JSON_CONTAINS_PATH
+    - JSON_DEPTH
+    - JSON_DETAILED
+    - JSON_EQUALS
+    - JSON_EXISTS
+    - JSON_EXTRACT
+    - JSON_INSERT
+    - JSON_KEYS
+    - JSON_LENGTH
+    - JSON_LOOSE
     - JSON_MERGE
+    - JSON_MERGE_PATCH
+    - JSON_MERGE_PRESERVE
+    - JSON_NORMALIZE
+    - JSON_OBJECT
+    - JSON_OBJECTAGG
+    - JSON_OBJECT_FILTER_KEYS
+    - JSON_OBJECT_TO_ARRAY
+    - JSON_OVERLAPS
+    - JSON_QUERY
+    - JSON_QUOTE
+    - JSON_REMOVE
+    - JSON_REPLACE
+    - JSON_SCHEMA_VALID
+    - JSON_SEARCH
+    - JSON_SET
+    - JSON_TABLE
+    - JSON_TYPE
+    - JSON_UNQUOTE
     - JSON_VALID
+    - JSON_VALUE
+    - LAG
+    - LEAD
     - LENGTH
     - LIMIT
     - LPAD
     - LTRIM
     - MASTER_GTID_WAIT
     - NOW
+    - NTH_VALUE
+    - NTILE
     - OCTET_LENGTH
     - PASSWORD
+    - PERCENTILE_CONT
+    - PERCENTILE_DISC
+    - PERCENT_RANK
+    - RANK
+    - ROW_NUMBER
     - RPAD
     - RTRIM
     - SUBSTRING
@@ -12654,21 +12724,10 @@ versions:
     - VARBINARY
     - VARCHAR
   '10':
-    keywords_add: []
-    keywords_remove: []
-    functions_add: []
     functions_remove:
     - AES_DECRYPT
     - AES_ENCRYPT
     - CONV
     - TIMESTAMP
-  '11':
-    keywords_add: []
-    keywords_remove: []
-    functions_add: []
-    functions_remove: []
-  '12':
-    keywords_add: []
-    keywords_remove: []
-    functions_add: []
-    functions_remove: []
+  '11': {}
+  '12': {}

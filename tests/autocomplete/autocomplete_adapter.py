@@ -168,12 +168,12 @@ def _load_engine_vocab(
 
     keywords = _merge_spec_lists(
         keywords,
-        _extract_names(version_spec.get("keywords_add", [])),
+        [],
         _extract_names(version_spec.get("keywords_remove", [])),
     )
     functions = _merge_spec_lists(
         functions,
-        _extract_names(version_spec.get("functions_add", [])),
+        [],
         _extract_names(version_spec.get("functions_remove", [])),
     )
 

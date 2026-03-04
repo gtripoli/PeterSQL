@@ -1,5 +1,24 @@
 schema_version: 1
 scope: global
+documentation:
+  purpose: Shared SQL vocabulary applied before engine-specific specifications.
+  fields:
+  - schema_version: Specification schema version.
+  - scope: Must be global for this file.
+  - common.keywords: Common SQL keywords used across engines.
+  - common.functions: Optional common functions used across engines.
+  notes:
+  - Values are merged with engine specification common and version deltas.
+  - Keywords and function names are matched case-insensitively.
+example:
+  schema_version: 1
+  scope: global
+  common:
+    keywords:
+    - SELECT
+    - FROM
+    functions:
+    - COALESCE
 common:
   keywords:
   - ALTER

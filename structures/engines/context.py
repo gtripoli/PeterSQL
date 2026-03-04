@@ -223,12 +223,12 @@ class AbstractContext(abc.ABC):
 
         keywords = self._merge_spec_values(
             keywords,
-            self._extract_spec_names(version_spec.get("keywords_add", [])),
+            [],
             self._extract_spec_names(version_spec.get("keywords_remove", [])),
         )
         functions = self._merge_spec_values(
             functions,
-            self._extract_spec_names(version_spec.get("functions_add", [])),
+            [],
             self._extract_spec_names(version_spec.get("functions_remove", [])),
         )
 
