@@ -165,8 +165,14 @@ class SuggestionBuilder:
         has_scope = bool(scope.from_tables or scope.join_tables)
         left_statement = statement[:cursor_pos] if cursor_pos is not None else statement
 
-        if self._is_after_completed_select_item(left_statement):
+        if self._is_after_completed_select_item(left_statement) or self._is_after_completed_select_item_with_prefix(
+                left_statement,
+                prefix,
+        ):
             return self._build_select_completed_item_keywords(left_statement, scope, prefix)
+
+        if self._is_after_select_comma_context(left_statement, prefix):
+            return self._build_select_list_after_comma(scope, prefix, left_statement, has_scope)
 
         if prefix:
             columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
@@ -179,13 +185,6 @@ class SuggestionBuilder:
 
         if not has_scope:
             return self._build_select_list_functions(prefix)
-
-        if self._is_after_select_comma(left_statement):
-            columns = self._get_join_table_columns(scope, None)
-            columns.extend(self._get_from_table_columns(scope, None))
-            items = sorted(columns, key=lambda item: item.name.lower())
-            items.extend(self._build_select_list_functions(prefix))
-            return items
 
         items = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
         items.extend(self._build_select_list_functions(prefix))
@@ -215,6 +214,122 @@ class SuggestionBuilder:
             re.search(r"\bSELECT\b", statement, re.IGNORECASE)
             and re.search(r",\s+$", statement)
         )
+
+    @staticmethod
+    def _is_after_completed_select_item_with_prefix(statement: str, prefix: str) -> bool:
+        import re
+
+        if not prefix:
+            return False
+        if not statement.endswith(prefix):
+            return False
+        if not re.search(r"\bSELECT\b", statement, re.IGNORECASE):
+            return False
+        if re.search(r",\s*\w+$", statement):
+            return False
+
+        completed_item_match = re.search(r"(\w+(?:\.\w+)?)\s+\w+$", statement)
+        if not completed_item_match:
+            return False
+
+        return completed_item_match.group(1).upper() != "SELECT"
+
+    @staticmethod
+    def _is_after_select_comma_context(statement: str, prefix: str) -> bool:
+        import re
+
+        if not re.search(r"\bSELECT\b", statement, re.IGNORECASE):
+            return False
+        if re.search(r",\s+$", statement):
+            return True
+        if not prefix:
+            return False
+        return bool(re.search(r",\s*\w+$", statement))
+
+    def _build_select_list_after_comma(
+            self,
+            scope: QueryScope,
+            prefix: str,
+            statement: str,
+            has_scope: bool,
+    ) -> list[CompletionItem]:
+        qualifier = self._get_previous_select_item_qualifier(statement)
+        if qualifier:
+            columns = self._get_qualified_table_columns_by_name(qualifier, prefix, scope)
+            columns.extend(self._build_select_list_functions(prefix))
+            return columns
+
+        if not has_scope and self._current_table:
+            columns = self._get_current_table_columns(scope, prefix)
+            columns.extend(self._build_select_list_functions(prefix))
+            return columns
+
+        if not has_scope:
+            return self._build_select_list_functions(prefix)
+
+        columns = self._get_join_table_columns(scope, prefix)
+        columns.extend(self._get_from_table_columns(scope, prefix))
+        items = sorted(columns, key=lambda item: item.name.lower())
+        items.extend(self._build_select_list_functions(prefix))
+        return items
+
+    @staticmethod
+    def _get_previous_select_item_qualifier(statement: str) -> Optional[str]:
+        import re
+
+        select_match = re.search(r"\bSELECT\b(.*)$", statement, re.IGNORECASE | re.DOTALL)
+        if not select_match:
+            return None
+        select_body = select_match.group(1)
+        if "," not in select_body:
+            return None
+        before_last_comma = select_body.rsplit(",", 1)[0].rstrip()
+        qualifier_match = re.search(r"(\w+)\.\w+$", before_last_comma)
+        if not qualifier_match:
+            return None
+        return qualifier_match.group(1)
+
+    def _get_qualified_table_columns_by_name(
+            self,
+            qualifier: str,
+            prefix: str,
+            scope: QueryScope,
+    ) -> list[CompletionItem]:
+        reference = scope.aliases.get(qualifier.lower())
+        table = reference.table if reference and reference.table else None
+        display_name = reference.alias if reference and reference.alias else qualifier
+
+        if not table and self._database:
+            try:
+                table = next(
+                    (candidate for candidate in self._database.tables if candidate.name.lower() == qualifier.lower()),
+                    None,
+                )
+            except (AttributeError, TypeError):
+                table = None
+            display_name = qualifier
+
+        if not table:
+            return []
+
+        prefix_lower = prefix.lower() if prefix else None
+        result = []
+        try:
+            for column in table.columns:
+                if not column.name:
+                    continue
+                if prefix_lower and not column.name.lower().startswith(prefix_lower):
+                    continue
+                result.append(
+                    CompletionItem(
+                        name=f"{display_name}.{column.name}",
+                        item_type=CompletionItemType.COLUMN,
+                        description=getattr(table, "name", qualifier),
+                    )
+                )
+        except (AttributeError, TypeError):
+            return []
+        return result
     
     def _build_from_clause(self, prefix: str, statement: str = "") -> list[CompletionItem]:
         if not self._database:
@@ -391,8 +506,12 @@ class SuggestionBuilder:
     ) -> list[CompletionItem]:
         import re
 
+        processed_statement = left_statement
+        if prefix and left_statement.endswith(prefix):
+            processed_statement = left_statement[:-len(prefix)]
+
         suggestions = []
-        match = re.search(r"(\w+)(?:\.(\w+))?\s+$", left_statement)
+        match = re.search(r"(\w+)(?:\.(\w+))?\s+$", processed_statement)
         table_name = match.group(1) if match and match.group(2) else None
 
         if table_name is None and self._current_table and not scope.from_tables and not scope.join_tables:

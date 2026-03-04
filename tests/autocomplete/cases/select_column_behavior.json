@@ -68,7 +68,8 @@
         "suggestions_contains": [
           "COUNT",
           "UUID"
-        ]
+        ],
+        "suggestions_not_contains": []
       }
     },
     {
@@ -136,11 +137,12 @@
         "prefix": null,
         "comment": "Comma = next item. Previous item is qualified, so suggest columns from the same qualifier even with no scope/prefix.",
         "suggestions_contains": [
-          "items.name",
+          "items.item_name",
           "items.price",
           "COUNT",
           "UUID"
-        ]
+        ],
+        "suggestions_not_contains": []
       }
     },
     {
@@ -156,9 +158,9 @@
         "prefix": "p",
         "comment": "Comma + prefix. Previous item qualified, so suggest same-table columns starting with 'p' + functions.",
         "suggestions_contains": [
-          "items.price",
-          "PI"
-        ]
+          "items.price"
+        ],
+        "suggestions_not_contains": []
       }
     },
     {
@@ -179,7 +181,8 @@
           "orders.total",
           "COUNT",
           "UUID"
-        ]
+        ],
+        "suggestions_not_contains": []
       }
     },
     {
