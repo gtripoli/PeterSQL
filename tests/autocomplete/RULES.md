@@ -618,11 +618,13 @@ SEL| → SELECT (SINGLE_TOKEN)
 #### 3a. Without prefix (after SELECT, no FROM/JOIN in query)
 
 **Show:**
-- `CURRENT_TABLE` columns (if set) - **required for keywords to be useful**
-- Keywords (FROM, WHERE, etc.) - **only if CURRENT_TABLE is set**
+- `CURRENT_TABLE` columns (if set)
 - Functions
+- Keywords (FROM, WHERE, etc.) - **only if SELECT list already has items**
+  - e.g., `SELECT id |` → show keywords (can continue query)
+  - e.g., `SELECT |` → no keywords (nothing to continue)
 
-**Important:** Keywords like FROM, WHERE are only valid when a table is available (CURRENT_TABLE or scope). Without CURRENT_TABLE and without scope, `SELECT WHERE` or `SELECT FROM` is syntactically invalid.
+**Rationale:** Keywords like FROM/WHERE make sense to continue the query, but only if there's already something to continue from. Empty SELECT has no context for keywords.
 
 **Examples:**
 ```sql
@@ -630,9 +632,13 @@ SEL| → SELECT (SINGLE_TOKEN)
 SELECT |
 → users.id, users.name, users.email, users.status, users.created_at
 → COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
+
+-- SELECT with existing item + CURRENT_TABLE
+SELECT id |
+→ users.id, users.name, users.email, users.status, users.created_at
 → FROM, WHERE, LIMIT, ...
 
--- No CURRENT_TABLE set (syntactically invalid to suggest keywords)
+-- No CURRENT_TABLE set (empty SELECT)
 SELECT |
 → COUNT, SUM, AVG, MAX, MIN, UPPER, LOWER, ...
 ```
@@ -676,8 +682,8 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
 - **When NO scope tables AND NO prefix:**
   - `CURRENT_TABLE` columns (if set)
   - Functions
-  - Keywords (FROM, WHERE, etc.) - only if CURRENT_TABLE is set
-  - **Rationale:** Without CURRENT_TABLE, keywords like FROM/WHERE are syntactically invalid
+  - Keywords - only if SELECT list already has items (e.g., `SELECT id |`)
+  - **Rationale:** Keywords only make sense when there's something to continue from
     
 - **When scope tables exist (FROM/JOIN present):**
   - `CURRENT_TABLE` columns MUST be included ONLY if `CURRENT_TABLE` is in scope
