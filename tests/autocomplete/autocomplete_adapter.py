@@ -95,14 +95,14 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
     extractor = StatementExtractor()
     statement, relative_pos = extractor.extract_current_statement(text, cursor_pos)
     
-    dot_handler = DotCompletionHandler(database)
+    detector = ContextDetector()
+    sql_context, scope, prefix = detector.detect(statement, relative_pos, database)
+    
+    dot_handler = DotCompletionHandler(database, scope)
     is_dot = dot_handler.is_dot_completion(statement, relative_pos)
     
     if is_dot:
         sql_context = SQLContext.DOT_COMPLETION
-    else:
-        detector = ContextDetector()
-        sql_context, scope, prefix = detector.detect(statement, relative_pos, database)
     
     result = provider.get(text=text, pos=cursor_pos)
     
@@ -110,6 +110,8 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
     
     if sql_context.name == "DOT_COMPLETION":
         mode = "DOT"
+    elif sql_context.name == "EMPTY":
+        mode = "EMPTY"
     elif result.prefix:
         mode = "PREFIX"
     else:

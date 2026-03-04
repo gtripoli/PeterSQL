@@ -92,7 +92,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 ### 2. SELECT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| SEL ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/sel.json` | 7 | 0 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
+| SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 7 | 7 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
 | SELECT_PREFIX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_prefix.json` | 6 | 0 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
 | SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_column_behavior.json` | 9 | 0 | 0 | 0 | `SELECT users.id \|` | Column whitespace and comma behavior |
 | SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/select_scoped_current_table.json` | 4 | 0 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |

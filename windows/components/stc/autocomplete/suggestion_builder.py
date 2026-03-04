@@ -16,6 +16,10 @@ class SuggestionBuilder:
     _aggregate_functions = {
         "COUNT", "SUM", "AVG", "MAX", "MIN", "GROUP_CONCAT"
     }
+
+    _select_list_excluded_functions = {
+        "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP"
+    }
     
     _max_database_columns = 400
     
@@ -43,7 +47,14 @@ class SuggestionBuilder:
                 return True
         return False
     
-    def build(self, context: SQLContext, scope: QueryScope, prefix: str, statement: str = "") -> list[CompletionItem]:
+    def build(
+            self,
+            context: SQLContext,
+            scope: QueryScope,
+            prefix: str,
+            statement: str = "",
+            cursor_pos: Optional[int] = None,
+    ) -> list[CompletionItem]:
         if context == SQLContext.EMPTY:
             return self._build_empty(prefix)
         
@@ -51,7 +62,7 @@ class SuggestionBuilder:
             return self._build_single_token(prefix)
         
         if context == SQLContext.SELECT_LIST:
-            return self._build_select_list(scope, prefix, statement)
+            return self._build_select_list(scope, prefix, statement, cursor_pos)
         
         if context == SQLContext.FROM_CLAUSE:
             import re
@@ -144,37 +155,66 @@ class SuggestionBuilder:
         
         return sorted(keywords, key=lambda x: x.name)
     
-    def _build_select_list(self, scope: QueryScope, prefix: str, statement: str = "") -> list[CompletionItem]:
-        items = []
-        
+    def _build_select_list(
+            self,
+            scope: QueryScope,
+            prefix: str,
+            statement: str = "",
+            cursor_pos: Optional[int] = None,
+    ) -> list[CompletionItem]:
         has_scope = bool(scope.from_tables or scope.join_tables)
-        
-        # Check if we're after a complete qualified column (table.column + space)
-        # In this case, suggest ONLY keywords (FROM, WHERE, AS, etc.), NOT functions/columns
-        # This applies both with and without prefix: "SELECT table.column F" should suggest only FROM, not functions
-        if statement:
-            import re
-            # Match: table.column followed by whitespace (and optionally a prefix)
-            # Examples: "SELECT users.id " or "SELECT users.id F"
-            if re.search(r'\b\w+\.\w+\s+', statement):
-                return self._build_select_keywords(prefix)
-        
-        columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
-        items.extend(columns)
-        
-        items.extend(self._build_functions(prefix))
-        
+        left_statement = statement[:cursor_pos] if cursor_pos is not None else statement
+
+        if self._is_after_completed_select_item(left_statement):
+            return self._build_select_completed_item_keywords(left_statement, scope, prefix)
+
         if prefix:
-            items.extend(self._build_keywords(prefix))
-        
-        if has_scope and prefix:
-            hints = self._get_out_of_scope_table_hints(scope, prefix, columns)
-            items.extend(hints)
-        
-        if not has_scope and not prefix:
-            items.extend(self._build_select_keywords(prefix))
-        
+            columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
+            items = list(columns)
+            items.extend(self._build_select_list_functions(prefix))
+            if has_scope:
+                hints = self._get_out_of_scope_table_hints(scope, prefix, columns)
+                items.extend(hints)
+            return items
+
+        if not has_scope:
+            return self._build_select_list_functions(prefix)
+
+        if self._is_after_select_comma(left_statement):
+            columns = self._get_join_table_columns(scope, None)
+            columns.extend(self._get_from_table_columns(scope, None))
+            items = sorted(columns, key=lambda item: item.name.lower())
+            items.extend(self._build_select_list_functions(prefix))
+            return items
+
+        items = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
+        items.extend(self._build_select_list_functions(prefix))
         return items
+
+    @staticmethod
+    def _is_after_completed_select_item(statement: str) -> bool:
+        import re
+
+        if not re.search(r"\bSELECT\b", statement, re.IGNORECASE):
+            return False
+        if re.search(r",\s+$", statement):
+            return False
+
+        match = re.search(r"(\w+(?:\.\w+)?)\s+$", statement)
+        if not match:
+            return False
+
+        token = match.group(1).upper()
+        return token != "SELECT"
+
+    @staticmethod
+    def _is_after_select_comma(statement: str) -> bool:
+        import re
+
+        return bool(
+            re.search(r"\bSELECT\b", statement, re.IGNORECASE)
+            and re.search(r",\s+$", statement)
+        )
     
     def _build_from_clause(self, prefix: str, statement: str = "") -> list[CompletionItem]:
         if not self._database:
@@ -342,6 +382,43 @@ class SuggestionBuilder:
             CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
             for kw in keywords
         ]
+
+    def _build_select_completed_item_keywords(
+            self,
+            left_statement: str,
+            scope: QueryScope,
+            prefix: str,
+    ) -> list[CompletionItem]:
+        import re
+
+        suggestions = []
+        match = re.search(r"(\w+)(?:\.(\w+))?\s+$", left_statement)
+        table_name = match.group(1) if match and match.group(2) else None
+
+        if table_name is None and self._current_table and not scope.from_tables and not scope.join_tables:
+            table_name = self._current_table.name
+
+        if table_name:
+            suggestions.append(f"FROM {table_name}")
+
+        suggestions.extend(["AS", "FROM"])
+
+        if prefix:
+            prefix_upper = prefix.upper()
+            suggestions = [item for item in suggestions if item.upper().startswith(prefix_upper)]
+
+        return [
+            CompletionItem(name=item, item_type=CompletionItemType.KEYWORD)
+            for item in suggestions
+        ]
+
+    def _build_select_list_functions(self, prefix: str) -> list[CompletionItem]:
+        functions = self._build_functions(prefix)
+        return [
+            item
+            for item in functions
+            if item.name not in self._select_list_excluded_functions
+        ]
     
     def _build_functions(self, prefix: str) -> list[CompletionItem]:
         if not self._database:
@@ -396,6 +473,9 @@ class SuggestionBuilder:
         
         is_scope_restricted = context and self._is_scope_restricted_context(context)
         has_scope = bool(scope.from_tables or scope.join_tables)
+
+        if context == SQLContext.SELECT_LIST and not has_scope:
+            return []
         
         if context == SQLContext.SELECT_LIST:
             if not has_scope and self._current_table:
@@ -408,9 +488,14 @@ class SuggestionBuilder:
         columns.extend(self._get_from_table_columns(scope, None))
         columns.extend(self._get_join_table_columns(scope, None))
         
-        if context == SQLContext.SELECT_LIST or not is_scope_restricted:
-            if len(columns) < self._max_database_columns:
-                columns.extend(self._get_database_columns(scope, None))
+        include_database_columns = False
+        if context == SQLContext.SELECT_LIST:
+            include_database_columns = not has_scope
+        elif not is_scope_restricted:
+            include_database_columns = True
+
+        if include_database_columns and len(columns) < self._max_database_columns:
+            columns.extend(self._get_database_columns(scope, None))
         
         return columns
     
@@ -420,6 +505,7 @@ class SuggestionBuilder:
         
         is_scope_restricted = context and self._is_scope_restricted_context(context)
         has_scope = bool(scope.from_tables or scope.join_tables)
+        include_database_columns = not is_scope_restricted and not (context == SQLContext.SELECT_LIST and has_scope)
         
         include_current_table = True
         if context == SQLContext.SELECT_LIST and has_scope:
@@ -427,13 +513,23 @@ class SuggestionBuilder:
         elif is_scope_restricted:
             include_current_table = False
         
-        table_expansion_columns = self._get_table_name_expansion_columns(scope, prefix, is_scope_restricted, include_current_table)
+        table_expansion_columns = self._get_table_name_expansion_columns(
+            scope,
+            prefix,
+            include_database_columns,
+            include_current_table,
+        )
         for col in table_expansion_columns:
             if col.name.lower() not in seen:
                 seen.add(col.name.lower())
                 columns.append(col)
         
-        column_name_match_columns = self._get_column_name_match_columns(scope, prefix, is_scope_restricted, include_current_table)
+        column_name_match_columns = self._get_column_name_match_columns(
+            scope,
+            prefix,
+            include_database_columns,
+            include_current_table,
+        )
         for col in column_name_match_columns:
             if col.name.lower() not in seen:
                 seen.add(col.name.lower())
@@ -441,7 +537,13 @@ class SuggestionBuilder:
         
         return columns
     
-    def _get_table_name_expansion_columns(self, scope: QueryScope, prefix: str, is_scope_restricted: bool, include_current_table: bool = True) -> list[CompletionItem]:
+    def _get_table_name_expansion_columns(
+            self,
+            scope: QueryScope,
+            prefix: str,
+            include_database_columns: bool,
+            include_current_table: bool = True,
+    ) -> list[CompletionItem]:
         columns = []
         prefix_lower = prefix.lower()
         
@@ -498,7 +600,7 @@ class SuggestionBuilder:
                 except (AttributeError, TypeError):
                     pass
         
-        if not is_scope_restricted and self._database:
+        if include_database_columns and self._database:
             in_scope_table_names = set()
             if self._current_table:
                 in_scope_table_names.add(self._current_table.name.lower())
@@ -523,7 +625,13 @@ class SuggestionBuilder:
         
         return columns
     
-    def _get_column_name_match_columns(self, scope: QueryScope, prefix: str, is_scope_restricted: bool, include_current_table: bool = True) -> list[CompletionItem]:
+    def _get_column_name_match_columns(
+            self,
+            scope: QueryScope,
+            prefix: str,
+            include_database_columns: bool,
+            include_current_table: bool = True,
+    ) -> list[CompletionItem]:
         columns = []
         prefix_lower = prefix.lower()
         
@@ -568,7 +676,7 @@ class SuggestionBuilder:
                 except (AttributeError, TypeError):
                     pass
         
-        if not is_scope_restricted and self._database:
+        if include_database_columns and self._database:
             in_scope_table_names = set()
             if self._current_table:
                 in_scope_table_names.add(self._current_table.name.lower())

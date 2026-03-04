@@ -64,7 +64,7 @@ class SQLCompletionProvider:
                         return CompletionResult(items=tuple(items), prefix=prefix or "", prefix_length=len(prefix) if prefix else 0)
 
             builder = SuggestionBuilder(database, scope.current_table)
-            items = builder.build(context, scope, prefix, statement)
+            items = builder.build(context, scope, prefix, statement, relative_pos)
 
             return CompletionResult(items=tuple(items), prefix=prefix, prefix_length=len(prefix))
         except Exception as ex:
