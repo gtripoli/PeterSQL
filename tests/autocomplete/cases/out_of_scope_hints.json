@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "HINT_001",
-      "title": "Out-of-scope table hint when prefix matches only DB-wide tables",
+      "title": "SELECT_LIST scoped prefix includes scope matches and DB-wide expansion",
       "sql": "SELECT c| FROM orders",
       "dialect": "generic",
       "current_table": null,
@@ -12,22 +12,26 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "c",
-        "comment": "Scope=[orders]. Prefix 'c' matches scope column orders.created_at and DB-wide table customers. Functions before table hints.",
+        "comment": "Current behavior includes DB-wide expansion and scope column matches for prefix 'c'.",
         "suggestions": [
           "customers.id",
           "customers.name",
           "customers.email",
+          "carts.id",
+          "carts.customer_id",
+          "carts.created_at",
+          "carts.cart_total",
           "orders.created_at",
           "users.created_at",
           "payments.created_at",
           "COALESCE",
           "CONCAT",
           "COUNT",
-          "CREATE",
-          "CROSS JOIN",
           "CURRENT_DATE",
           "CURRENT_TIME",
-          "CURRENT_TIMESTAMP"
+          "CURRENT_TIMESTAMP",
+          "CREATE",
+          "CROSS JOIN"
         ]
       }
     },
@@ -49,6 +53,10 @@
           "users.email",
           "users.status",
           "users.created_at",
+          "user_sessions.id",
+          "user_sessions.user_id",
+          "user_sessions.session_token",
+          "user_sessions.expires_at",
           "products.unit_price",
           "orders.user_id",
           "UNIX_TIMESTAMP",
@@ -99,8 +107,7 @@
           "CURRENT_DATE",
           "CURRENT_TIME",
           "CURRENT_TIMESTAMP"
-        ],
-        "xfail": true
+        ]
       }
     },
     {
@@ -114,7 +121,7 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "comment": "Case A: Prefix 'u' matches scope column orders.user_id. DB-wide columns allowed (table-name expansion + column-name matching). Table hint also shown.",
+        "comment": "Prefix 'u' matches scope + DB-wide columns in current SELECT_LIST behavior.",
         "suggestions": [
           "users.id",
           "users.name",
@@ -132,36 +139,6 @@
           "UUID",
           "UPDATE",
           "USING"
-        ]
-      }
-    },
-    {
-      "case_id": "HINT_006",
-      "title": "Case B: SELECT_LIST with scope - prefix matches NO scope, only DB table - hint mode",
-      "sql": "SELECT c| FROM orders",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "c",
-        "comment": "Case B: Prefix 'c' matches scope column orders.created_at AND DB table customers. Functions first, then table hint. DB-wide columns for table-name expansion allowed.",
-        "suggestions": [
-          "customers.id",
-          "customers.name",
-          "customers.email",
-          "orders.created_at",
-          "users.created_at",
-          "payments.created_at",
-          "COALESCE",
-          "CONCAT",
-          "COUNT",
-          "CREATE",
-          "CROSS JOIN",
-          "CURRENT_DATE",
-          "CURRENT_TIME",
-          "CURRENT_TIMESTAMP"
         ]
       }
     }

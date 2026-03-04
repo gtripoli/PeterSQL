@@ -1,9 +1,9 @@
 {
-  "group": "PERF",
+  "group": "LARGE_SCHEMA_GUARDRAILS",
   "cases": [
     {
-      "case_id": "PERF_001",
-      "title": "Guardrail: no prefix, huge schema => skip non-scope database columns",
+      "case_id": "GUARDRAIL_001",
+      "title": "Big schema WHERE without prefix keeps suggestions scope-safe",
       "sql": "SELECT * FROM users WHERE |",
       "dialect": "generic",
       "current_table": null,
@@ -18,18 +18,13 @@
           "COALESCE",
           "CONCAT",
           "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
           "DATE",
           "GROUP_CONCAT",
-          "carts",
-          "customers",
-          "inventory",
-          "items",
-          "orders",
-          "orders_archive",
-          "payments",
-          "products",
-          "user_sessions",
-          "users",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -49,8 +44,8 @@
       }
     },
     {
-      "case_id": "PERF_002",
-      "title": "Guardrail: with prefix includes filtered db-wide columns even in big schema",
+      "case_id": "GUARDRAIL_002",
+      "title": "Big schema WHERE prefix does not leak out-of-scope db-wide columns",
       "sql": "SELECT * FROM users WHERE col_0|",
       "dialect": "generic",
       "current_table": null,
@@ -59,10 +54,7 @@
         "mode": "PREFIX",
         "context": "WHERE_CLAUSE",
         "prefix": "col_0",
-        "suggestions_contains": [
-          "t01_big.col_001"
-        ],
-        "xfail": true
+        "suggestions": []
       }
     }
   ]

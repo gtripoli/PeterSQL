@@ -81,7 +81,7 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (179 total tests):
+Golden tests organized by SQL query writing flow (178 total tests):
 
 ### 1. Query Start & Basic Context
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -152,19 +152,19 @@ Golden tests organized by SQL query writing flow (179 total tests):
 ### 11. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| DERIVED_TABLES_CTE | `cases/derived_tables_cte.json` | 8 | 0 | 0 | 8 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
-| MULTI_QUERY_SUPPORT | `cases/multi_query_support.json` | 8 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
-| MQ | `cases/mq.json` | 4 | 0 | 0 | 4 | `SELECT * FROM users; \|` | Multi-query scenarios |
-| OUT_OF_SCOPE_HINTS | `cases/out_of_scope_hints.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users WHERE id = \|` | Out-of-scope suggestions |
-| LEX | `cases/lex.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
-| ALX | `cases/alx.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
-| PERF | `cases/perf.json` | 2 | 0 | 0 | 0 | Large schema performance tests | Performance tests |
+| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/derived_tables_cte.json` | 8 | 0 | 0 | 8 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
+| MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/multi_query_support.json` | 7 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
+| MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/mq.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
+| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/out_of_scope_hints.json` | 5 | 0 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
+| LEX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/lex.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
+| ALX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/alx.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
+| LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 179
-- **✅ Passing**: 8 (4%)
-- **❌ Failing**: 5 (3%)
-- **⚠️ Expected Failures (xfail)**: 52 (29%)
+- **Total Tests**: 178
+- **✅ Passing**: 56 (31%)
+- **❌ Failing**: 112 (63%)
+- **⚠️ Expected Failures (xfail)**: 10 (6%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend
@@ -193,7 +193,7 @@ uv run pytest tests/autocomplete/test_golden_cases.py -k "ON"
 
 ### DERIVED_TABLES_CTE (xfail - Future Enhancement)
 
-**Status**: All 6 tests marked as `xfail` (expected failure)
+**Status**: All 8 tests marked as `xfail` (expected failure)
 
 **Feature Description**: Support for Common Table Expressions (CTEs) and derived tables (subqueries in FROM/JOIN clauses). This requires:
 1. Extracting column names from CTE and derived table SELECT lists
