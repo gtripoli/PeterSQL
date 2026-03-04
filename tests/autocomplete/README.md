@@ -100,7 +100,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 ### 3. FROM Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 9 | 9 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
+| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 8 | 8 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
 | FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | `SELECT products.id FROM \|` | FROM filtering by qualified SELECT tables |
 | FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 3 | 3 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
 
@@ -152,7 +152,7 @@ Golden tests organized by SQL query writing flow (178 total tests):
 ### 11. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/derived_tables_cte.json` | 8 | 0 | 0 | 8 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
+| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/derived_tables_cte.json` | 9 | 0 | 0 | 9 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
 | MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/multi_query_support.json` | 7 | 0 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
 | MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/mq.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
 | OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/out_of_scope_hints.json` | 5 | 0 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
@@ -162,9 +162,9 @@ Golden tests organized by SQL query writing flow (178 total tests):
 
 ### Summary Statistics
 - **Total Tests**: 178
-- **✅ Passing**: 97 (54%)
+- **✅ Passing**: 96 (54%)
 - **❌ Failing**: 72 (40%)
-- **⚠️ Expected Failures (xfail)**: 9 (5%)
+- **⚠️ Expected Failures (xfail)**: 10 (6%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend
