@@ -81,7 +81,7 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (178 base tests, executed across 11 engine/version targets):
+Golden tests organized by SQL query writing flow (180 base tests, executed across 11 engine/version targets):
 
 - mysql: `8`, `9`
 - mariadb: `5`, `10`, `11`, `12`
@@ -121,17 +121,17 @@ Golden tests organized by SQL query writing flow (178 base tests, executed acros
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
 | WHERE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where.json` | 11 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
-| WHERE_SCOPED ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where_scoped.json` | 4 | 0 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
+| WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
 
 ### 6. GROUP BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| GROUP ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/group.json` | 4 | 0 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
+| GROUP ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/group.json` | 6 | 6 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
 
 ### 7. HAVING Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| HAVING ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/having.json` | 5 | 0 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
+| HAVING ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/having.json` | 5 | 5 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
 
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -166,9 +166,9 @@ Golden tests organized by SQL query writing flow (178 base tests, executed acros
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 1958 (178 base × 11 engine/version targets)
-- **✅ Passing**: 792 (72 base × 11 targets, 40%)
-- **❌ Failing**: 1056 (remaining tests, 54%)
+- **Total Tests**: 1980 (180 base × 11 engine/version targets)
+- **✅ Passing**: 957 (87 base × 11 targets, 48%)
+- **❌ Failing**: 913 (remaining tests, 46%)
 - **⚠️ Expected Failures (xfail)**: 110 (10 base × 11 targets, 6%)
 - **⚪ Not Implemented**: 0 (0%)
 

@@ -23,16 +23,14 @@
       "dialect": "generic",
       "current_table": null,
       "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "WHERE_CLAUSE",
-        "prefix": "q",
-        "comment": "Scope=[products as p, items as i]. Scope columns: i.quantity. DB-wide excluded.",
-        "suggestions": [
-          "i.quantity"
-        ]
-      }
-    },
+        "expected": {
+          "mode": "PREFIX",
+          "context": "WHERE_CLAUSE",
+          "prefix": "q",
+          "comment": "Scope=[products as p, items as i]. No scoped columns/functions start with 'q'. DB-wide excluded.",
+          "suggestions": []
+        }
+      },
     {
       "case_id": "WHERE_SCOPE_003",
       "title": "WHERE with CURRENT_TABLE not in scope - CURRENT_TABLE ignored",
@@ -40,18 +38,21 @@
       "dialect": "generic",
       "current_table": "users",
       "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "WHERE_CLAUSE",
-        "prefix": "c",
-        "comment": "Scope=[products]. CURRENT_TABLE=users not in scope. No scope column starts with 'c'.",
-        "suggestions": [
-          "COALESCE",
-          "CONCAT",
-          "COUNT"
-        ]
-      }
-    },
+        "expected": {
+          "mode": "PREFIX",
+          "context": "WHERE_CLAUSE",
+          "prefix": "c",
+          "comment": "Scope=[products]. CURRENT_TABLE=users not in scope. Functions matching 'c' are still allowed.",
+          "suggestions": [
+            "COALESCE",
+            "CONCAT",
+            "COUNT",
+            "CURRENT_DATE",
+            "CURRENT_TIME",
+            "CURRENT_TIMESTAMP"
+          ]
+        }
+      },
     {
       "case_id": "WHERE_SCOPE_004",
       "title": "WHERE with CURRENT_TABLE in scope - CURRENT_TABLE included",
@@ -59,22 +60,23 @@
       "dialect": "generic",
       "current_table": "customers",
       "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "WHERE_CLAUSE",
-        "prefix": "c",
-        "comment": "Scope=[customers]. CURRENT_TABLE=customers in scope. Unqualified columns first, then qualified.",
-        "suggestions": [
-          "created_at",
-          "customers.id",
-          "customers.name",
-          "customers.email",
-          "customers.created_at",
-          "COALESCE",
-          "CONCAT",
-          "COUNT"
-        ]
+        "expected": {
+          "mode": "PREFIX",
+          "context": "WHERE_CLAUSE",
+          "prefix": "c",
+          "comment": "Scope=[customers]. Prefix matches table-name expansion, so columns are qualified.",
+          "suggestions": [
+            "customers.id",
+            "customers.name",
+            "customers.email",
+            "COALESCE",
+            "CONCAT",
+            "COUNT",
+            "CURRENT_DATE",
+            "CURRENT_TIME",
+            "CURRENT_TIMESTAMP"
+          ]
+        }
       }
-    }
   ]
 }

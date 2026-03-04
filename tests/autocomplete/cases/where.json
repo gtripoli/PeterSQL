@@ -193,9 +193,9 @@
         "mode": "PREFIX",
         "context": "WHERE_CLAUSE",
         "prefix": "u",
-        "comment": "Scope-restricted: only scope table columns. Column-name matching: orders.user_id (scope table column starts with 'u'). DB-wide columns excluded.",
+        "comment": "Scope-restricted: single table in scope, so column-name match is unqualified (user_id). DB-wide columns excluded.",
         "suggestions": [
-          "orders.user_id",
+          "user_id",
           "UNIX_TIMESTAMP",
           "UPPER",
           "UUID"

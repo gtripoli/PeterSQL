@@ -123,6 +123,60 @@
           "SUM"
         ]
       }
+    },
+    {
+      "case_id": "GROUP_005",
+      "title": "GROUP BY with two FROM tables and prefix uses qualified column matches",
+      "sql": "SELECT * FROM orders, products GROUP BY s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Multiple tables in scope: column-name matches must be qualified.",
+        "suggestions": [
+          "orders.status",
+          "products.stock",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_006",
+      "title": "GROUP BY with two FROM tables and no prefix suggests qualified scope columns",
+      "sql": "SELECT * FROM orders, products GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Multiple tables in scope: columns are qualified with table name.",
+        "suggestions_contains": [
+          "orders.id",
+          "orders.status",
+          "products.id",
+          "products.stock",
+          "AVG",
+          "COUNT",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "status",
+          "stock",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "PI",
+          "POW",
+          "POWER"
+        ]
+      }
     }
   ]
 }

@@ -14,11 +14,9 @@
         "prefix": null,
         "suggestions": [
           "AVG",
-          "DATE",
+          "COUNT",
           "GROUP_CONCAT",
-          "IF",
-          "IFNULL",
-          "LENGTH",
+          "MAX",
           "MIN",
           "SUM",
           "id",
@@ -28,6 +26,10 @@
           "created_at",
           "COALESCE",
           "CONCAT",
+          "DATE",
+          "IF",
+          "IFNULL",
+          "LENGTH",
           "LOWER",
           "MONTH",
           "NOW",
@@ -76,11 +78,9 @@
           "TRUE",
           "FALSE",
           "AVG",
-          "DATE",
+          "COUNT",
           "GROUP_CONCAT",
-          "IF",
-          "IFNULL",
-          "LENGTH",
+          "MAX",
           "MIN",
           "SUM",
           "id",
@@ -105,6 +105,8 @@
         "suggestions": [
           "AND",
           "OR",
+          "NOT",
+          "EXISTS",
           "ORDER BY",
           "LIMIT"
         ]
@@ -119,7 +121,7 @@
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
-        "context": "HAVING",
+        "context": "HAVING_CLAUSE",
         "prefix": "u",
         "comment": "Scope=[orders]. DB-wide excluded. Aggregate functions alphabetically, then columns, then other functions.",
         "suggestions": [

@@ -1,3 +1,5 @@
+import re
+
 from typing import Optional
 
 from windows.components.stc.autocomplete.completion_types import (
@@ -45,6 +47,24 @@ class SuggestionBuilder:
         "POWER",
     }
 
+    _group_by_excluded_functions = {
+        "CURRENT_DATE",
+        "CURRENT_TIME",
+        "CURRENT_TIMESTAMP",
+        "PI",
+        "POW",
+        "POWER",
+    }
+
+    _having_excluded_functions = {
+        "CURRENT_DATE",
+        "CURRENT_TIME",
+        "CURRENT_TIMESTAMP",
+        "PI",
+        "POW",
+        "POWER",
+    }
+
     _max_database_columns = 400
 
     _scope_restricted_contexts = {
@@ -55,6 +75,8 @@ class SuggestionBuilder:
         SQLContext.ORDER_BY_CLAUSE,
         SQLContext.GROUP_BY_CLAUSE,
         SQLContext.HAVING_CLAUSE,
+        SQLContext.HAVING_AFTER_OPERATOR,
+        SQLContext.HAVING_AFTER_EXPRESSION,
     }
 
     def __init__(
@@ -163,14 +185,26 @@ class SuggestionBuilder:
         if context == SQLContext.WHERE_CLAUSE:
             return self._build_where_clause(scope, prefix, statement)
 
+        if context == SQLContext.WHERE_AFTER_EXPRESSION:
+            return self._build_where_after_expression(prefix, statement)
+
+        if context == SQLContext.WHERE_AFTER_OPERATOR:
+            return self._build_where_after_operator(scope, prefix, statement)
+
         if context == SQLContext.ORDER_BY_CLAUSE:
             return self._build_order_by(scope, prefix)
 
         if context == SQLContext.GROUP_BY_CLAUSE:
-            return self._build_group_by(scope, prefix)
+            return self._build_group_by(scope, prefix, statement, cursor_pos)
 
         if context == SQLContext.HAVING_CLAUSE:
             return self._build_having(scope, prefix)
+
+        if context == SQLContext.HAVING_AFTER_OPERATOR:
+            return self._build_having_after_operator(scope, prefix)
+
+        if context == SQLContext.HAVING_AFTER_EXPRESSION:
+            return self._build_having_after_expression(prefix)
 
         if context == SQLContext.LIMIT_OFFSET_CLAUSE:
             return []
@@ -691,33 +725,186 @@ class SuggestionBuilder:
     def _build_where_clause(
         self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
-        items = []
+        if self._is_where_in_value_list(statement):
+            return self._build_where_literals(prefix)
 
-        columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.WHERE_CLAUSE)
+        columns = self._build_where_columns(scope, prefix)
+        columns = self._exclude_left_column_from_where(statement, columns)
 
-        # Filter out the column on the left side of the operator
-        # e.g., "WHERE users.id = |" should NOT suggest users.id
-        if not prefix and statement:
-            import re
-
-            # Match: column_name (qualified or not) followed by operator and whitespace
-            # Operators: =, !=, <>, <, >, <=, >=, LIKE, IN, etc.
-            match = re.search(
-                r"(\w+\.?\w*)\s*(?:=|!=|<>|<|>|<=|>=|LIKE|IN|NOT\s+IN)\s*$",
-                statement,
-                re.IGNORECASE,
-            )
-            if match:
-                left_column = match.group(1).strip()
-                # Remove the left column from suggestions
-                columns = [c for c in columns if c.name.lower() != left_column.lower()]
-
-        functions = self._build_functions(prefix)
-
-        items.extend(columns)
-        items.extend(functions)
-
+        items = list(columns)
+        items.extend(self._build_functions(prefix))
         return items
+
+    def _build_where_after_expression(
+        self, prefix: str, statement: str = ""
+    ) -> list[CompletionItem]:
+        if self._is_after_is_keyword(statement):
+            return self._build_after_is_keywords(prefix)
+
+        keywords = ["AND", "OR", "GROUP BY", "HAVING", "LIMIT", "ORDER BY"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [
+                keyword for keyword in keywords if keyword.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD)
+            for keyword in keywords
+        ]
+
+    def _build_where_after_operator(
+        self, scope: QueryScope, prefix: str, statement: str = ""
+    ) -> list[CompletionItem]:
+        columns = self._build_where_columns(scope, prefix)
+        columns = self._exclude_left_column_from_where(statement, columns)
+
+        items = self._build_where_literals(prefix)
+        items.extend(columns)
+        items.extend(self._build_functions(prefix))
+        return items
+
+    @staticmethod
+    def _exclude_left_column_from_where(
+        statement: str, columns: list[CompletionItem]
+    ) -> list[CompletionItem]:
+        if not statement:
+            return columns
+
+        match = re.search(
+            r"(\w+\.?\w*)\s*(?:=|!=|<>|<=|>=|<|>|LIKE|IN|NOT\s+IN|BETWEEN)\s*$",
+            statement,
+            re.IGNORECASE,
+        )
+        if not match:
+            return columns
+
+        left_column = match.group(1).strip().lower()
+        filtered = []
+        for column in columns:
+            column_name = column.name.lower()
+            if column_name == left_column:
+                continue
+            if "." in column_name and column_name.split(".", 1)[1] == left_column:
+                continue
+            filtered.append(column)
+        return filtered
+
+    def _build_where_columns(
+        self, scope: QueryScope, prefix: str
+    ) -> list[CompletionItem]:
+        if not (single_reference := self._get_single_scope_reference(scope)):
+            return self._resolve_columns_in_scope(
+                scope, prefix, SQLContext.WHERE_CLAUSE
+            )
+
+        if (
+            prefix
+            and single_reference.alias
+            and prefix.lower() == single_reference.alias.lower()
+        ):
+            return self._get_alias_columns(prefix, scope)
+
+        return self._build_single_table_where_columns(single_reference, prefix)
+
+    @staticmethod
+    def _get_single_scope_reference(scope: QueryScope) -> Optional[TableReference]:
+        references = scope.from_tables + scope.join_tables
+        if len(references) != 1:
+            return None
+
+        reference = references[0]
+        if not reference.table:
+            return None
+        return reference
+
+    def _build_single_table_where_columns(
+        self, reference: TableReference, prefix: str
+    ) -> list[CompletionItem]:
+        table = reference.table
+        if not table:
+            return []
+
+        if not prefix:
+            return self._build_unqualified_table_columns(reference)
+
+        if reference.alias:
+            return self._build_unqualified_table_columns(reference, prefix)
+
+        return self._build_single_scope_prefix_columns(reference, prefix)
+
+    @staticmethod
+    def _build_unqualified_table_columns(
+        reference: TableReference, prefix: str = ""
+    ) -> list[CompletionItem]:
+        table = reference.table
+        if not table:
+            return []
+
+        prefix_lower = prefix.lower()
+        items = []
+        try:
+            for column in table.columns:
+                if not column.name:
+                    continue
+                if prefix and not column.name.lower().startswith(prefix_lower):
+                    continue
+                items.append(
+                    CompletionItem(
+                        name=column.name,
+                        item_type=CompletionItemType.COLUMN,
+                        description=reference.name,
+                    )
+                )
+        except (AttributeError, TypeError):
+            return []
+        return items
+
+    @staticmethod
+    def _build_where_literals(prefix: str) -> list[CompletionItem]:
+        literals = [
+            "NULL",
+            "TRUE",
+            "FALSE",
+            "CURRENT_DATE",
+            "CURRENT_TIME",
+            "CURRENT_TIMESTAMP",
+        ]
+        if prefix:
+            prefix_upper = prefix.upper()
+            literals = [
+                literal for literal in literals if literal.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=literal, item_type=CompletionItemType.KEYWORD)
+            for literal in literals
+        ]
+
+    @staticmethod
+    def _build_after_is_keywords(prefix: str) -> list[CompletionItem]:
+        keywords = ["NULL", "NOT NULL", "TRUE", "FALSE"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [
+                keyword for keyword in keywords if keyword.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD)
+            for keyword in keywords
+        ]
+
+    @staticmethod
+    def _is_after_is_keyword(statement: str) -> bool:
+        return bool(re.search(r"\bIS\s+$", statement, re.IGNORECASE))
+
+    @staticmethod
+    def _is_where_in_value_list(statement: str) -> bool:
+        if not statement:
+            return False
+
+        return bool(re.search(r"\bIN\s*\([^)]*,\s*$", statement, re.IGNORECASE))
 
     def _build_order_by(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
         items = []
@@ -742,32 +929,132 @@ class SuggestionBuilder:
 
         return items
 
-    def _build_group_by(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
-        items = []
-        items.extend(
-            self._resolve_columns_in_scope(scope, prefix, SQLContext.GROUP_BY_CLAUSE)
-        )
-        items.extend(self._build_functions(prefix))
+    def _build_group_by(
+        self,
+        scope: QueryScope,
+        prefix: str,
+        statement: str = "",
+        cursor_pos: Optional[int] = None,
+    ) -> list[CompletionItem]:
+        left_statement = statement[:cursor_pos] if cursor_pos is not None else statement
+        columns = self._build_where_columns(scope, prefix)
+        columns = self._exclude_group_by_existing_columns(columns, left_statement)
+
+        items = list(columns)
+        items.extend(self._build_group_by_functions(prefix))
         return items
+
+    def _build_group_by_functions(self, prefix: str) -> list[CompletionItem]:
+        functions = self._build_functions(prefix)
+        return [
+            function
+            for function in functions
+            if function.name not in self._group_by_excluded_functions
+        ]
+
+    @staticmethod
+    def _exclude_group_by_existing_columns(
+        columns: list[CompletionItem], left_statement: str
+    ) -> list[CompletionItem]:
+        grouped_column_names = SuggestionBuilder._extract_group_by_column_names(
+            left_statement
+        )
+        if not grouped_column_names:
+            return columns
+
+        filtered = []
+        for column in columns:
+            column_name = column.name.lower()
+            base_name = (
+                column_name.split(".", 1)[1] if "." in column_name else column_name
+            )
+            if column_name in grouped_column_names or base_name in grouped_column_names:
+                continue
+            filtered.append(column)
+        return filtered
+
+    @staticmethod
+    def _extract_group_by_column_names(left_statement: str) -> set[str]:
+        if not (
+            match := re.search(
+                r"\bGROUP\s+BY\s+(?P<clause>.+)$", left_statement, re.IGNORECASE
+            )
+        ):
+            return set()
+
+        clause = match.group("clause")
+        if not clause:
+            return set()
+
+        grouped_names: set[str] = set()
+        for raw_part in clause.split(","):
+            part = raw_part.strip()
+            if not part:
+                continue
+
+            if token := re.match(
+                r"(?:(?P<table>[A-Za-z_][A-Za-z0-9_]*)\.)?(?P<column>[A-Za-z_][A-Za-z0-9_]*)$",
+                part,
+                re.IGNORECASE,
+            ):
+                table_name = token.group("table")
+                column_name = token.group("column")
+                grouped_names.add(column_name.lower())
+                if table_name:
+                    grouped_names.add(f"{table_name.lower()}.{column_name.lower()}")
+
+        return grouped_names
 
     def _build_having(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
-        items = []
-
         aggregate_funcs = self._build_aggregate_functions(prefix)
-        items.extend(aggregate_funcs)
+        columns = self._build_where_columns(scope, prefix)
+        other_funcs = self._build_having_other_functions(prefix)
+        return aggregate_funcs + columns + other_funcs
 
-        items.extend(
-            self._resolve_columns_in_scope(scope, prefix, SQLContext.HAVING_CLAUSE)
-        )
+    def _build_having_after_operator(
+        self, scope: QueryScope, prefix: str
+    ) -> list[CompletionItem]:
+        literals = self._build_having_literals(prefix)
+        aggregate_funcs = self._build_aggregate_functions(prefix)
+        columns = self._build_where_columns(scope, prefix)
+        return literals + aggregate_funcs + columns
 
-        other_funcs = [
-            f
-            for f in self._build_functions(prefix)
-            if f.name not in self._aggregate_functions
+    @staticmethod
+    def _build_having_after_expression(prefix: str) -> list[CompletionItem]:
+        keywords = ["AND", "OR", "NOT", "EXISTS", "ORDER BY", "LIMIT"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [
+                keyword for keyword in keywords if keyword.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD)
+            for keyword in keywords
         ]
-        items.extend(other_funcs)
 
-        return items
+    def _build_having_other_functions(self, prefix: str) -> list[CompletionItem]:
+        functions = self._build_functions(prefix)
+        return [
+            function
+            for function in functions
+            if function.name not in self._aggregate_functions
+            and function.name not in self._having_excluded_functions
+        ]
+
+    @staticmethod
+    def _build_having_literals(prefix: str) -> list[CompletionItem]:
+        literals = ["NULL", "TRUE", "FALSE"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            literals = [
+                literal for literal in literals if literal.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=literal, item_type=CompletionItemType.KEYWORD)
+            for literal in literals
+        ]
 
     def _build_keywords(self, prefix: str) -> list[CompletionItem]:
         if not self._database:
