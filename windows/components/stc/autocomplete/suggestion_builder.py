@@ -449,7 +449,11 @@ class SuggestionBuilder:
         if not self._database:
             return []
         
-        in_scope_table_names = {ref.name.lower() for ref in scope.from_tables + scope.join_tables}
+        in_scope_table_names = {
+            ref.name.lower()
+            for ref in scope.from_tables + scope.join_tables
+            if not ref.alias
+        }
         
         try:
             tables = [

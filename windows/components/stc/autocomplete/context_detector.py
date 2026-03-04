@@ -147,7 +147,8 @@ class ContextDetector:
         sql_keywords = {
             'WHERE', 'ORDER', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET', 'UNION', 
             'INTERSECT', 'EXCEPT', 'ON', 'USING', 'AND', 'OR', 'NOT', 'IN', 
-            'EXISTS', 'BETWEEN', 'LIKE', 'IS', 'NULL', 'ASC', 'DESC'
+            'EXISTS', 'BETWEEN', 'LIKE', 'IS', 'NULL', 'ASC', 'DESC',
+            'AS', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'FULL', 'CROSS', 'OUTER'
         }
         
         from_pattern = re.compile(r'\bFROM\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*(?:,|\bJOIN\b|\bWHERE\b|\bORDER\b|\bGROUP\b|\bLIMIT\b|$)', re.IGNORECASE)
