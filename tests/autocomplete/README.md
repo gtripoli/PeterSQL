@@ -89,80 +89,80 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 - sqlite: `3`
 
 ### 1. Query Start & Basic Context
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| EMPTY ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/empty.json` | 1 | 1 | 0 | 0 | `\|` | Empty editor suggestions |
-| SINGLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/single.json` | 6 | 6 | 0 | 0 | `SEL\|` | Single keyword/token suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| EMPTY ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/empty.json` | 1 | 1 | 0 | 0 | Entry-point suggestions when the editor is empty. |
+| SINGLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/single.json` | 6 | 6 | 0 | 0 | Single-token bootstrap and keyword completion before full parsing. |
 
 ### 2. SELECT Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 4 | 4 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
-| SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 5 | 5 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
-| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 9 | 9 | 0 | 0 | `SELECT users.id \|` | Column whitespace and comma behavior |
-| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 3 | 3 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 4 | 4 | 0 | 0 | Baseline SELECT-list suggestions (functions/keywords) without table scope. |
+| SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 5 | 5 | 0 | 0 | Prefix filtering in SELECT with and without `current_table` influence. |
+| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 9 | 9 | 0 | 0 | Comma/whitespace transitions after columns and expression boundaries. |
+| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 3 | 3 | 0 | 0 | Scope-aware SELECT suggestions when FROM/JOIN tables are already known. |
 
 ### 3. FROM Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 8 | 8 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
-| FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | `SELECT products.id FROM \|` | FROM filtering by qualified SELECT tables |
-| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 1 | 1 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 8 | 8 | 0 | 0 | Table and clause-keyword suggestions while building FROM. |
+| FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | Prioritization when SELECT already references qualified tables. |
+| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 1 | 1 | 0 | 0 | FROM behavior when `current_table` is set and should affect choices. |
 
 ### 4. JOIN Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users \|` | Basic JOIN suggestions |
-| JOIN_ON ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_on.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users u JOIN orders o ON \|` | JOIN ON clause suggestions |
-| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_after_table.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users JOIN orders \|` | Keywords after JOIN table |
-| JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_operator_left_column_filter.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users JOIN orders ON users.id = \|` | Column filtering after operators |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 6 | 0 | 0 | JOIN table suggestions and join-keyword progression. |
+| JOIN_ON ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_on.json` | 6 | 6 | 0 | 0 | ON-clause column/function suggestions with correct scope ordering. |
+| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_after_table.json` | 4 | 4 | 0 | 0 | Keyword transitions immediately after a JOIN target table. |
+| JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_operator_left_column_filter.json` | 6 | 6 | 0 | 0 | Left-side table exclusion after JOIN operators (`=`, `<`, `>`, etc.). |
 
 ### 5. WHERE Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 10 | 10 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
-| WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 10 | 10 | 0 | 0 | WHERE context, operator, and expression-follow-up suggestion rules. |
+| WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | WHERE suggestions constrained to active scope/aliases only. |
 
 ### 6. GROUP BY Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| GROUP ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/group.json` | 6 | 6 | 0 | 0 | `SELECT status, COUNT(*) FROM users GROUP BY \|` | GROUP BY suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| GROUP ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/group.json` | 6 | 6 | 0 | 0 | GROUP BY column suggestions and post-expression transitions. |
 
 ### 7. HAVING Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| HAVING ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/having.json` | 5 | 5 | 0 | 0 | `SELECT status FROM users GROUP BY status HAVING \|` | Basic HAVING clause |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| HAVING ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/having.json` | 5 | 5 | 0 | 0 | Aggregate-aware HAVING behavior for operators and follow-up keywords. |
 
 ### 8. ORDER BY Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| ORDER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/order.json` | 7 | 7 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| ORDER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/order.json` | 7 | 7 | 0 | 0 | ORDER BY columns plus sort-direction keyword flow. |
 
 ### 9. LIMIT Clause
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| LIMIT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/limit.json` | 3 | 3 | 0 | 0 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| LIMIT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/limit.json` | 3 | 3 | 0 | 0 | LIMIT/OFFSET context behavior and post-number suggestions. |
 
 ### 10. Advanced Features
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| DOT_COMPLETION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/dot_completion.json` | 7 | 7 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
-| ALIAS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias.json` | 11 | 11 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
-| ALIAS_PREFIX_DISAMBIGUATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias_prefix_disambiguation.json` | 7 | 7 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
-| PREFIX_EXPANSION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/prefix_expansion.json` | 6 | 6 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
-| WINDOW_FUNCTIONS_OVER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/window_functions_over.json` | 1 | 1 | 0 | 0 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions OVER clause |
-| CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | `SELECT na\|me FROM users` | Cursor position handling |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| DOT_COMPLETION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/dot_completion.json` | 7 | 7 | 0 | 0 | `table_or_alias.` completion, including prefix filtering after dot. |
+| ALIAS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias.json` | 11 | 11 | 0 | 0 | Alias resolution and qualified suggestions in scoped expressions. |
+| ALIAS_PREFIX_DISAMBIGUATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias_prefix_disambiguation.json` | 7 | 7 | 0 | 0 | Exact alias-prefix disambiguation versus generic prefix matching. |
+| PREFIX_EXPANSION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/prefix_expansion.json` | 6 | 6 | 0 | 0 | Prefix expansion behavior across columns, functions, and qualifiers. |
+| WINDOW_FUNCTIONS_OVER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/window_functions_over.json` | 1 | 1 | 0 | 0 | OVER-clause bootstrap suggestions (`PARTITION BY`, `ORDER BY`). |
+| CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | Correct prefix/context when cursor is inside an existing token. |
 
 ### 11. Multi-Query & Special Cases
-| Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
-|------------|------|-------|---|---|---|---------------|-------------|
-| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/derived_tables_cte.json` | 9 | 9 | 0 | 0 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
-| MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/multi_query_support.json` | 7 | 7 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
-| MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/mq.json` | 1 | 1 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
-| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/out_of_scope_hints.json` | 4 | 4 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
-| LEX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/lex.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
-| ALX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alx.json` | 5 | 5 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
-| LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/derived_tables_cte.json` | 9 | 9 | 0 | 0 | Minimal CTE/derived-table scope extraction for FROM/JOIN/WHERE and dot completion. |
+| MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/multi_query_support.json` | 7 | 7 | 0 | 0 | Statement isolation in multi-query editors with correct active-scope selection. |
+| MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/mq.json` | 1 | 1 | 0 | 0 | Separator edge behavior in multi-query parsing. |
+| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/out_of_scope_hints.json` | 4 | 4 | 0 | 0 | Scope-first prefix behavior when out-of-scope names also share the prefix. |
+| LEX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/lex.json` | 2 | 2 | 0 | 0 | Lexical resilience with quotes/comments around separators and dots. |
+| ALX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alx.json` | 5 | 5 | 0 | 0 | Advanced lexical interactions with alias parsing and token boundaries. |
+| LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | Large-schema guardrails for prefix filtering and noise control. |
 
 ### Summary Statistics
 - **Total Tests**: 1782 (162 base × 11 engine/version targets)
@@ -195,52 +195,6 @@ uv run pytest tests/autocomplete/test_golden_cases.py -k "ON"
 
 ## Implementation Notes
 
-### DERIVED_TABLES_CTE (xfail - Future Enhancement)
-
-**Status**: All 8 tests marked as `xfail` (expected failure)
-
-**Feature Description**: Support for Common Table Expressions (CTEs) and derived tables (subqueries in FROM/JOIN clauses). This requires:
-1. Extracting column names from CTE and derived table SELECT lists
-2. Creating mock table objects with those columns
-3. Making CTEs available as table suggestions in FROM/JOIN clauses
-4. Providing column suggestions from CTEs and derived tables in expression contexts
-
-**Implementation Attempts**:
-
-1. **Column Extraction (Partially Successful)**
-   - Added `_extract_columns_from_select()` in `context_detector.py` using sqlglot parser
-   - Successfully parsed SELECT lists to extract column names and aliases
-   - Handled `SELECT *` cases (returns empty list, requires full table resolution)
-   - Correctly identified CTEs and derived tables in SQL statements
-
-2. **Mock Table Creation (Failed)**
-   - Created `_create_mock_table()` to generate `SQLTable`-like objects with columns
-   - Initial approach: Used `unittest.mock.Mock(spec=SQLTable)` - failed due to iteration issues
-   - Second approach: Created simple Python classes (`MockTable`, `MockColumn`) - still incompatible
-   - Problem: Mock objects don't fully implement all methods/properties expected by `suggestion_builder.py`
-
-3. **CTE Suggestion in FROM_CLAUSE (Partially Successful)**
-   - Modified `_build_from_clause()` in `suggestion_builder.py` to extract CTEs via regex
-   - Successfully added CTEs to table suggestions
-   - Implemented prioritization: CTEs first, then referenced tables, then alphabetically
-   - This part worked correctly for CTE_004 test
-
-**Final Blocking Issue**:
-
-The implementation fails when `suggestion_builder.py` attempts to iterate over columns from mock tables. The error `AttributeError: 'NoneType' object has no attribute 'items'` occurs because:
-
-1. Mock table objects don't implement all required interfaces
-2. The existing code expects real `SQLTable` objects with `ObservableLazyList` for columns
-3. Mock objects lack methods like `__iter__`, property getters, and other SQLAlchemy-like behaviors
-4. Attempting to make mock objects fully compatible would require reimplementing significant portions of the `SQLTable` class
-
-**Required for Full Implementation**:
-
-1. **Refactor `suggestion_builder.py`**: Make column resolution more defensive and handle mock tables gracefully
-2. **Complete Mock Implementation**: Create a full `MockSQLTable` class that implements all required methods and properties
-3. **Alternative Approach**: Modify the architecture to use a different abstraction layer that doesn't require full `SQLTable` objects
-4. **Testing Infrastructure**: Add unit tests specifically for CTE/derived table column extraction before integration
-
-**Complexity Estimate**: Medium-High (requires architectural changes to column resolution logic)
-
-**Workaround**: Currently, CTEs and derived tables fall back to suggesting all database columns, which is incorrect but doesn't break existing functionality.
+- `DERIVED_TABLES_CTE` is fully enabled in the current suite with lightweight virtual-table scope resolution.
+- Current implementation intentionally targets common patterns (`WITH ... AS (SELECT col1, col2 ...)`, `FROM (SELECT col1, col2 ...) AS alias`) and avoids deep SQL normalization.
+- If we later need nested or highly dynamic CTE projection inference, we can extend parsing incrementally without changing the test contract.
