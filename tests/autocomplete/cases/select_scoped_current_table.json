@@ -35,6 +35,7 @@
         "prefix": "p",
         "comment": "Scope=[products]. Single table. CURRENT_TABLE=orders not in scope (ignored). Prefix 'p' returns unqualified match first, then qualified match, then remaining qualified columns in schema order.",
         "suggestions": [
+          "products.*",
           "price",
           "products.price",
           "products.id",

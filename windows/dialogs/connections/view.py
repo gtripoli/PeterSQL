@@ -54,6 +54,7 @@ class ConnectionsManager(ConnectionsDialog):
 
     def _on_current_connection(self, connection: Optional[Connection]):
         self.btn_open.Enable(bool(connection and connection.is_valid))
+        self.btn_test.Enable(bool(connection and connection.is_valid))
         self.btn_delete.Enable(bool(connection))
 
     def _on_pending_connection(self, connection: Connection):
@@ -116,6 +117,23 @@ class ConnectionsManager(ConnectionsDialog):
             self._app.open_main_frame()
 
         self.Hide()
+
+    def on_test_session(self, *args):
+        connection = CURRENT_CONNECTION()
+
+        session = Session(connection)
+
+        try :
+            self.verify_session(session)
+        except Exception as ex :
+            pass
+        else :
+            wx.MessageDialog(
+                None,
+                message=_("Connection established successfully"),
+                caption=_("Connection"),
+                style=wx.OK
+            ).ShowModal()
 
     def on_save(self, *args):
         connection = PENDING_CONNECTION.get_value()
@@ -185,7 +203,7 @@ class ConnectionsManager(ConnectionsDialog):
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
             self.connections_tree_ctrl.Expand(parent_item)
 
-    def verify_connection(self, session: Session):
+    def verify_session(self, session: Session):
         with Loader.cursor_wait():
             try:
                 session.connect(connect_timeout=10)
@@ -196,7 +214,7 @@ class ConnectionsManager(ConnectionsDialog):
                                  style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
                 raise ConnectionError(ex)
 
-    def on_open(self, event):
+    def on_connect(self, event):
         if PENDING_CONNECTION() and not self.on_save(event):
             return
 
@@ -205,7 +223,7 @@ class ConnectionsManager(ConnectionsDialog):
         session = Session(connection)
 
         try:
-            self.verify_connection(session)
+            self.verify_session(session)
         except ConnectionError as ex:
             logger.info(ex)
         except Exception as ex:

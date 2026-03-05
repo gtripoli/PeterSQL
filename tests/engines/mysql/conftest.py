@@ -12,8 +12,8 @@ from structures.engines.mysql.indextype import MySQLIndexType
 
 
 MYSQL_VERSIONS: list[str] = [
-    "mysql:latest",
-    "mysql:8.0",
+    "mysql:9",
+    "mysql:8",
     # "mysql:5.7",  # Disabled: too slow and resource-intensive
 ]
 
@@ -63,8 +63,8 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="module")
-def mysql_container(mysql_version):
-    container = MySqlContainer(mysql_version, name=f"petersql_test_{mysql_version.replace(':', '_')}",
+def mysql_container(mysql_version, worker_id):
+    container = MySqlContainer(mysql_version, name=f"petersql_test_{worker_id}_{mysql_version.replace(':', '_')}",
                         mem_limit="768m",
                         memswap_limit="1g",
                         nano_cpus=1_000_000_000,

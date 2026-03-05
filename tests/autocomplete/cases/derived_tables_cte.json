@@ -12,10 +12,10 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
-        "comment": "Scope resolves projected columns from derived table alias in WHERE context.",
+        "comment": "Derived alias in scope keeps WHERE columns alias-qualified.",
         "suggestions": [
-          "id",
-          "total",
+          "o.id",
+          "o.total",
           "AVG",
           "COALESCE",
           "CONCAT",

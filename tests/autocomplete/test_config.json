@@ -46,6 +46,14 @@
           {"name": "total", "type": "DECIMAL"},
           {"name": "status", "type": "VARCHAR"},
           {"name": "created_at", "type": "TIMESTAMP"}
+        ],
+        "foreign_keys": [
+          {
+            "name": "fk_orders_user_id",
+            "columns": ["user_id"],
+            "reference_table": "users",
+            "reference_columns": ["id"]
+          }
         ]
       },
       {

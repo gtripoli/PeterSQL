@@ -1072,6 +1072,9 @@ See **Scope-Restricted Expression Contexts** section for complete rules.
 **Trigger:** After `ON` keyword in JOIN clause
 
 **Show:**
+- FK join-condition hints (complete expressions) first, when a foreign key relationship exists between the current JOIN table and already scoped tables
+  - Direction: `left.pk = right.fk` when right-side table owns the FK
+  - Alias-first qualification always applies in hints
 - Columns from scope tables only (qualified with alias-first)
 - All functions
 
@@ -1082,6 +1085,7 @@ SELECT * FROM users JOIN orders ON |
 → COUNT, SUM, AVG, ...
 
 SELECT * FROM users u JOIN orders o ON |
+→ u.id = o.user_id   (FK hint first)
 → u.id, u.name, u.email, o.id, o.user_id, o.total, o.created_at
 → COUNT, SUM, AVG, ...
 ```
@@ -1091,6 +1095,7 @@ SELECT * FROM users u JOIN orders o ON |
 **Trigger:** After `ON` keyword with prefix in JOIN clause
 
 **Show:**
+- Prefix-matching FK join-condition hints first (if any)
 - Columns matching the prefix (see **Generic Prefix Matching for Column Contexts** section)
 - Functions matching the prefix
 

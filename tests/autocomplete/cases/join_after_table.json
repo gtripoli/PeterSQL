@@ -70,6 +70,23 @@
           "USING"
         ]
       }
+    },
+    {
+      "case_id": "JOIN_AFTER_TABLE_005",
+      "title": "After JOIN alias + prefix suggests ON",
+      "sql": "SELECT u.id FROM users u JOIN orders O|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_CLAUSE",
+        "prefix": "O",
+        "comment": "When JOIN table alias is complete and user types O, continue with ON keyword.",
+        "suggestions": [
+          "ON"
+        ]
+      }
     }
   ]
 }

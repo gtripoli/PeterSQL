@@ -84,6 +84,7 @@
         "alias_exact_match": "i",
         "comment": "SELECT_LIST with alias-exact-match. Prefix is 'i': only i.* columns in schema order; no extra fallback suggestions.",
         "suggestions": [
+          "i.*",
           "i.id",
           "i.item_name",
           "i.stock",

@@ -162,7 +162,7 @@ class SuggestionBuilder:
             return self._build_from_clause(prefix, statement, scope)
 
         if context == SQLContext.JOIN_CLAUSE:
-            return self._build_join_clause(prefix, scope)
+            return self._build_join_clause(prefix, scope, statement)
 
         if context == SQLContext.JOIN_AFTER_TABLE:
             return self._build_join_after_table(scope)
@@ -171,7 +171,7 @@ class SuggestionBuilder:
             return self._build_join_on(scope, prefix, statement)
 
         if context == SQLContext.JOIN_ON_AFTER_OPERATOR:
-            return self._build_join_on_after_operator(scope, prefix)
+            return self._build_join_on_after_operator(scope, prefix, statement)
 
         if context == SQLContext.JOIN_ON_AFTER_EXPRESSION:
             return self._build_join_on_after_expression(prefix)
@@ -353,6 +353,7 @@ class SuggestionBuilder:
     ) -> list[CompletionItem]:
         has_scope = bool(scope.from_tables or scope.join_tables)
         left_statement = statement[:cursor_pos] if cursor_pos is not None else statement
+        wildcard_items = self._build_select_wildcards(scope, prefix, has_scope)
 
         if self._is_after_completed_select_item(
             left_statement
@@ -376,7 +377,8 @@ class SuggestionBuilder:
                 columns = self._build_single_scope_prefix_columns(
                     single_reference, prefix
                 )
-                items = list(columns)
+                items = list(wildcard_items)
+                items.extend(columns)
                 items.extend(self._build_select_list_functions(prefix))
                 hints = self._get_out_of_scope_table_hints(scope, prefix, columns)
                 items.extend(hints)
@@ -385,7 +387,8 @@ class SuggestionBuilder:
             columns = self._resolve_columns_in_scope(
                 scope, prefix, SQLContext.SELECT_LIST
             )
-            items = list(columns)
+            items = list(wildcard_items)
+            items.extend(columns)
             items.extend(self._build_select_list_functions(prefix))
             if has_scope:
                 hints = self._get_out_of_scope_table_hints(scope, prefix, columns)
@@ -393,11 +396,49 @@ class SuggestionBuilder:
             return items
 
         if not has_scope:
-            return self._build_select_list_functions(prefix)
+            items = list(wildcard_items)
+            items.extend(self._build_select_list_functions(prefix))
+            return items
 
-        items = self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
+        items = list(wildcard_items)
+        items.extend(
+            self._resolve_columns_in_scope(scope, prefix, SQLContext.SELECT_LIST)
+        )
         items.extend(self._build_select_list_functions(prefix))
         return items
+
+    @staticmethod
+    def _build_select_wildcards(
+        scope: QueryScope, prefix: str, has_scope: bool
+    ) -> list[CompletionItem]:
+        wildcard_items: list[CompletionItem] = []
+
+        if not prefix or "*".startswith(prefix):
+            wildcard_items.append(
+                CompletionItem(name="*", item_type=CompletionItemType.COLUMN)
+            )
+
+        if not has_scope:
+            return wildcard_items
+
+        for ref in scope.from_tables + scope.join_tables:
+            qualifier = ref.alias if ref.alias else ref.name
+            item_name = f"{qualifier}.*"
+            if prefix and not item_name.lower().startswith(prefix.lower()):
+                continue
+            wildcard_items.append(
+                CompletionItem(name=item_name, item_type=CompletionItemType.COLUMN)
+            )
+
+        # preserve first occurrence order
+        deduped: list[CompletionItem] = []
+        seen: set[str] = set()
+        for item in wildcard_items:
+            if item.name in seen:
+                continue
+            seen.add(item.name)
+            deduped.append(item)
+        return deduped
 
     @staticmethod
     def _get_single_unaliased_scope_reference(
@@ -542,21 +583,28 @@ class SuggestionBuilder:
     ) -> list[CompletionItem]:
         qualifier = self._get_previous_select_item_qualifier(statement)
         if qualifier:
+            wildcards = self._build_select_wildcards(scope, prefix, has_scope)
             columns = self._get_qualified_table_columns_by_name(
                 qualifier, prefix, scope
             )
+            columns = list(wildcards) + columns
             columns.extend(self._build_select_list_functions(prefix))
             return columns
 
         if not has_scope and self._current_table:
-            columns = self._get_current_table_columns(scope, prefix)
+            wildcards = self._build_select_wildcards(scope, prefix, has_scope)
+            columns = list(wildcards)
+            columns.extend(self._get_current_table_columns(scope, prefix))
             columns.extend(self._build_select_list_functions(prefix))
             return columns
 
         if not has_scope:
-            return self._build_select_list_functions(prefix)
+            items = self._build_select_wildcards(scope, prefix, has_scope)
+            items.extend(self._build_select_list_functions(prefix))
+            return items
 
-        columns = self._get_join_table_columns(scope, prefix)
+        columns = self._build_select_wildcards(scope, prefix, has_scope)
+        columns.extend(self._get_join_table_columns(scope, prefix))
         columns.extend(self._get_from_table_columns(scope, prefix))
         items = columns  # Preserve schema order (do NOT sort alphabetically)
         items.extend(self._build_select_list_functions(prefix))
@@ -772,8 +820,17 @@ class SuggestionBuilder:
         ]
 
     def _build_join_clause(
-        self, prefix: str, scope: QueryScope
+        self, prefix: str, scope: QueryScope, statement: str = ""
     ) -> list[CompletionItem]:
+        if (
+            prefix
+            and scope.join_tables
+            and self._is_after_completed_join_table_with_prefix(
+                statement, prefix, scope
+            )
+        ):
+            return self._build_join_after_table_with_prefix(scope, prefix)
+
         database = self._database
         if not database:
             return []
@@ -825,6 +882,53 @@ class SuggestionBuilder:
         ]
 
     @staticmethod
+    def _build_join_after_table_with_prefix(
+        scope: QueryScope, prefix: str
+    ) -> list[CompletionItem]:
+        keywords = ["ON", "USING"]
+        if not scope.join_tables or not scope.join_tables[-1].alias:
+            keywords.insert(0, "AS")
+
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [kw for kw in keywords if kw.startswith(prefix_upper)]
+
+        return [
+            CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
+            for kw in keywords
+        ]
+
+    @staticmethod
+    def _is_after_completed_join_table_with_prefix(
+        statement: str, prefix: str, scope: QueryScope
+    ) -> bool:
+        if not statement or not prefix or not scope.join_tables:
+            return False
+
+        statement_trimmed = statement.rstrip()
+        if not statement_trimmed.endswith(prefix):
+            return False
+
+        last_ref = scope.join_tables[-1]
+        if not last_ref.table:
+            return False
+
+        prefix_lower = prefix.lower()
+
+        if prefix_lower == last_ref.name.lower() or (
+            bool(last_ref.alias) and prefix_lower == last_ref.alias.lower()
+        ):
+            return True
+
+        return bool(
+            re.search(
+                r"\bJOIN\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
+                statement_trimmed,
+                re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
     def _table_name_sort_key(name: str) -> tuple[str, str]:
         normalized = "".join(ch for ch in name.lower() if ch.isalnum())
         return normalized, name.lower()
@@ -842,6 +946,7 @@ class SuggestionBuilder:
     def _build_join_on(
         self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
+        fk_hints = self._build_join_fk_hints(scope, prefix)
         items = []
         if prefix:
             columns = self._resolve_columns_in_scope(scope, prefix, SQLContext.JOIN_ON)
@@ -849,9 +954,14 @@ class SuggestionBuilder:
             join_columns = self._get_join_table_columns(scope, None)
             if self._is_after_join_on_keyword(statement):
                 join_columns = self._sort_columns_by_name(join_columns)
-
-            columns = list(join_columns)
-            columns.extend(self._get_from_table_columns(scope, None))
+            from_columns = self._get_from_table_columns(scope, None)
+            left_qualifier = self._extract_left_qualifier(statement)
+            if left_qualifier and self._qualifier_is_join_side(scope, left_qualifier):
+                columns = list(from_columns)
+                columns.extend(join_columns)
+            else:
+                columns = list(join_columns)
+                columns.extend(from_columns)
 
         # Filter out the column on the left side of the operator (same logic as WHERE)
         if not prefix and statement:
@@ -864,12 +974,129 @@ class SuggestionBuilder:
                 left_column = match.group(1).strip()
                 columns = [c for c in columns if c.name.lower() != left_column.lower()]
 
+        items.extend(fk_hints)
         items.extend(columns)
         if prefix:
             items.extend(self._build_functions(prefix))
         else:
             items.extend(self._build_join_expression_functions(prefix))
         return items
+
+    def _build_join_fk_hints(
+        self, scope: QueryScope, prefix: str
+    ) -> list[CompletionItem]:
+        if not scope.join_tables:
+            return []
+
+        current_join = scope.join_tables[-1]
+        if not current_join.table:
+            return []
+
+        left_refs = scope.from_tables + scope.join_tables[:-1]
+        if not left_refs:
+            return []
+
+        hints: list[CompletionItem] = []
+        seen: set[str] = set()
+
+        for left_ref in left_refs:
+            if not left_ref.table:
+                continue
+
+            for condition in self._fk_conditions_between(left_ref, current_join):
+                if condition in seen:
+                    continue
+                if prefix and not condition.lower().startswith(prefix.lower()):
+                    continue
+                hints.append(
+                    CompletionItem(
+                        name=condition,
+                        item_type=CompletionItemType.KEYWORD,
+                    )
+                )
+                seen.add(condition)
+
+        return hints
+
+    def _fk_conditions_between(
+        self, left_ref: TableReference, right_ref: TableReference
+    ) -> list[str]:
+        conditions: list[str] = []
+
+        right_to_left = self._build_fk_conditions_from_ref(
+            source_ref=right_ref,
+            target_ref=left_ref,
+            flip=False,
+        )
+        conditions.extend(right_to_left)
+
+        left_to_right = self._build_fk_conditions_from_ref(
+            source_ref=left_ref,
+            target_ref=right_ref,
+            flip=True,
+        )
+        conditions.extend(left_to_right)
+
+        return conditions
+
+    def _build_fk_conditions_from_ref(
+        self, source_ref: TableReference, target_ref: TableReference, flip: bool
+    ) -> list[str]:
+        source_table = source_ref.table
+        if not source_table:
+            return []
+
+        try:
+            foreign_keys = list(source_table.foreign_keys)
+        except (AttributeError, TypeError):
+            return []
+
+        conditions: list[str] = []
+        for foreign_key in foreign_keys:
+            if not self._fk_targets_reference(foreign_key, target_ref.name):
+                continue
+
+            local_columns = list(getattr(foreign_key, "columns", []) or [])
+            reference_columns = list(
+                getattr(foreign_key, "reference_columns", []) or []
+            )
+            if not local_columns or not reference_columns:
+                continue
+
+            left_qualifier = target_ref.alias if target_ref.alias else target_ref.name
+            right_qualifier = source_ref.alias if source_ref.alias else source_ref.name
+            pairs: list[str] = []
+
+            for reference_column, local_column in zip(reference_columns, local_columns):
+                if flip:
+                    pairs.append(
+                        f"{right_qualifier}.{local_column} = {left_qualifier}.{reference_column}"
+                    )
+                else:
+                    pairs.append(
+                        f"{left_qualifier}.{reference_column} = {right_qualifier}.{local_column}"
+                    )
+
+            if pairs:
+                conditions.append(" AND ".join(pairs))
+
+        return conditions
+
+    @staticmethod
+    def _fk_targets_reference(foreign_key: object, target_table_name: str) -> bool:
+        reference_table = str(getattr(foreign_key, "reference_table", "") or "")
+        if not reference_table:
+            return False
+
+        target_lower = target_table_name.lower()
+        reference_lower = reference_table.lower()
+        if reference_lower == target_lower:
+            return True
+
+        if "." in reference_lower:
+            return reference_lower.split(".")[-1] == target_lower
+
+        return False
 
     def _build_join_on_after_expression(self, prefix: str) -> list[CompletionItem]:
         keywords = ["AND", "NOT", "OR", "GROUP BY", "LIMIT", "ORDER BY", "WHERE"]
@@ -885,15 +1112,23 @@ class SuggestionBuilder:
         ]
 
     def _build_join_on_after_operator(
-        self, scope: QueryScope, prefix: str
+        self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
         columns = self._resolve_columns_in_scope(
             scope, prefix, SQLContext.JOIN_ON_AFTER_OPERATOR
         )
 
         if not prefix:
-            columns = self._get_join_table_columns(scope, None)
-            columns.extend(self._get_from_table_columns(scope, None))
+            join_columns = self._get_join_table_columns(scope, None)
+            from_columns = self._get_from_table_columns(scope, None)
+
+            left_qualifier = self._extract_left_qualifier(statement)
+            if left_qualifier and self._qualifier_is_join_side(scope, left_qualifier):
+                columns = list(from_columns)
+                columns.extend(join_columns)
+            else:
+                columns = list(join_columns)
+                columns.extend(from_columns)
 
         items = list(columns)
         if not prefix:
@@ -907,6 +1142,30 @@ class SuggestionBuilder:
         else:
             items.extend(self._build_join_expression_functions(prefix))
         return items
+
+    @staticmethod
+    def _extract_left_qualifier(statement: str) -> Optional[str]:
+        if not statement:
+            return None
+
+        match = re.search(
+            r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|!=|<>|<=|>=|<|>|LIKE|IN|NOT\s+IN|BETWEEN)\s*$",
+            statement,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        return match.group(1)
+
+    @staticmethod
+    def _qualifier_is_join_side(scope: QueryScope, qualifier: str) -> bool:
+        q = qualifier.lower()
+        for ref in scope.join_tables:
+            if ref.alias and ref.alias.lower() == q:
+                return True
+            if ref.name.lower() == q:
+                return True
+        return False
 
     def _build_join_expression_functions(self, prefix: str) -> list[CompletionItem]:
         functions = self._build_functions(prefix)
@@ -1023,14 +1282,11 @@ class SuggestionBuilder:
         if not table:
             return []
 
-        if prefer_qualified:
+        if reference.alias or prefer_qualified:
             return self._build_qualified_columns_for_reference(reference, prefix)
 
         if not prefix:
             return self._build_unqualified_table_columns(reference)
-
-        if reference.alias:
-            return self._build_unqualified_table_columns(reference, prefix)
 
         return self._build_single_scope_prefix_columns(reference, prefix)
 
@@ -1481,7 +1737,9 @@ class SuggestionBuilder:
             table_name = self._current_table.name
 
         if table_name:
-            suggestions.append(f"FROM {table_name}")
+            suggestions.extend(
+                self._build_from_suggestions_for_qualifier(table_name, scope)
+            )
 
         if is_wildcard_select_item:
             suggestions.append("FROM")
@@ -1501,6 +1759,40 @@ class SuggestionBuilder:
             CompletionItem(name=item, item_type=CompletionItemType.KEYWORD)
             for item in suggestions
         ]
+
+    def _build_from_suggestions_for_qualifier(
+        self, qualifier: str, scope: QueryScope
+    ) -> list[str]:
+        qualifier_lower = qualifier.lower()
+
+        if qualifier_lower in scope.aliases:
+            ref = scope.aliases[qualifier_lower]
+            if ref.alias and ref.alias.lower() != ref.name.lower():
+                return [f"FROM {ref.name} {ref.alias}"]
+            return [f"FROM {ref.name}"]
+
+        if not self._database:
+            return []
+
+        try:
+            tables = list(self._database.tables)
+        except (AttributeError, TypeError):
+            return []
+
+        exact_match = next(
+            (table for table in tables if table.name.lower() == qualifier_lower), None
+        )
+        if exact_match is not None:
+            return [f"FROM {exact_match.name}"]
+
+        prefix_matches = [
+            table for table in tables if table.name.lower().startswith(qualifier_lower)
+        ]
+        if not prefix_matches:
+            return []
+
+        prefix_matches.sort(key=lambda t: self._table_name_sort_key(t.name))
+        return [f"FROM {table.name} {qualifier}" for table in prefix_matches]
 
     def _build_select_list_functions(self, prefix: str) -> list[CompletionItem]:
         functions = self._build_functions(prefix)

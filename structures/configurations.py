@@ -20,6 +20,7 @@ class SSHTunnelConfiguration(NamedTuple):
     username: Optional[str]
     password: Optional[str]
     local_port: int
+    extra_args: Optional[list[str]] = None
 
     @property
     def is_enabled(self) -> bool:

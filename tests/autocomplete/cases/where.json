@@ -371,6 +371,30 @@
           "email"
         ]
       }
+    },
+    {
+      "case_id": "WHERE_013",
+      "title": "Alias in scope forces qualified WHERE suggestions",
+      "sql": "SELECT * FROM users u WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "When table has alias, WHERE columns must stay alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
     }
   ]
 }

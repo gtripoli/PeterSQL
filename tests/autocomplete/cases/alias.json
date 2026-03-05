@@ -13,9 +13,9 @@
         "context": "WHERE_CLAUSE",
         "prefix": "n",
         "alias_exact_match": null,
-        "comment": "Prefix 'n' matches column 'name'. Suggest unqualified column.",
+        "comment": "Prefix 'n' matches aliased scope column; suggestions remain alias-qualified.",
         "suggestions": [
-          "name",
+          "u.name",
           "NOW",
           "NULLIF"
         ]
@@ -35,6 +35,7 @@
         "alias_exact_match": "o",
         "comment": "Prefix 'o' exactly matches alias 'o'. Trigger alias disambiguation.",
         "suggestions": [
+          "o.*",
           "o.id",
           "o.user_id",
           "o.total",
@@ -55,9 +56,9 @@
         "context": "ORDER_BY_CLAUSE",
         "prefix": "pr",
         "alias_exact_match": null,
-        "comment": "Prefix 'pr' matches columns 'price'. Suggest unqualified column.",
+        "comment": "Prefix 'pr' matches aliased scope column; ORDER BY suggestions remain alias-qualified.",
         "suggestions": [
-          "price"
+          "p.price"
         ]
       }
     },
@@ -99,9 +100,9 @@
         "context": "GROUP_BY_CLAUSE",
         "prefix": "item",
         "alias_exact_match": null,
-        "comment": "Prefix 'item' matches column 'item_name'. Suggest unqualified column.",
+        "comment": "Prefix 'item' matches aliased scope column; GROUP BY suggestions remain alias-qualified.",
         "suggestions": [
-          "item_name"
+          "i.item_name"
         ]
       }
     },
@@ -191,9 +192,9 @@
         "context": "GROUP_BY_CLAUSE",
         "prefix": "ite",
         "alias_exact_match": null,
-        "comment": "Prefix 'ite' matches column 'item_name'. Suggest unqualified column.",
+        "comment": "Prefix 'ite' matches aliased scope column; GROUP BY suggestions remain alias-qualified.",
         "suggestions": [
-          "item_name"
+          "i.item_name"
         ]
       }
     },

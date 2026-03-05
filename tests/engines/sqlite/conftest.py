@@ -1,3 +1,4 @@
+import sqlite3
 import pytest
 
 from structures.session import Session
@@ -7,6 +8,10 @@ from structures.configurations import SourceConfiguration
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
+
+SQLITE_VERSIONS: list[str] = [
+    f"sqlite:{sqlite3.sqlite_version}",
+]
 
 
 def pytest_collection_modifyitems(config, items):

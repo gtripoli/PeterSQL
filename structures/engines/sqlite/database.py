@@ -44,6 +44,11 @@ class SQLiteTable(SQLTable):
 
         return True
 
+    # @property
+    # def fully_qualified_name(self):
+    #     # SQLite doesn't need database prefix for table references
+    #     return self.quoted_name
+
     def raw_create(self) -> str:
         # PeterSQL schema emission policy (SQLite):
         #
@@ -317,6 +322,10 @@ class SQLiteColumn(SQLColumn):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteIndex(SQLIndex):
+    @property
+    def fully_qualified_name(self):
+        return self.table.database.context.qualify(self.table.database.name, self.name)
+
     def create(self) -> bool:
         if self.type == SQLiteIndexType.PRIMARY:
             return False  # PRIMARY is handled in table creation
@@ -332,8 +341,8 @@ class SQLiteIndex(SQLIndex):
         where_clause = f" WHERE {self.condition}" if self.condition else ""
 
         statement = (
-            f"CREATE {unique_index} IF NOT EXISTS {self.quoted_name} "
-            f"ON {self.table.fully_qualified_name}({columns_clause}){where_clause} "
+            f"CREATE {unique_index} IF NOT EXISTS {self.fully_qualified_name} "
+            f"ON {self.table.name}({columns_clause}){where_clause} "
         )
 
         return self.table.database.context.execute(statement)
@@ -345,6 +354,8 @@ class SQLiteIndex(SQLIndex):
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
             return False  # sqlite_ UNIQUE is handled in table creation
 
+
+        print(f"DROP INDEX IF EXISTS {self.fully_qualified_name}")
         return self.table.database.context.execute(
             f"DROP INDEX IF EXISTS {self.fully_qualified_name}"
         )

@@ -11,10 +11,10 @@ from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
 
 MARIADB_VERSIONS: list[str] = [
-    "mariadb:latest",
-    "mariadb:11.8",
-    "mariadb:10.11",
-    "mariadb:5.5",
+    "mariadb:12",
+    "mariadb:11",
+    "mariadb:10",
+    "mariadb:5",
 ]
 
 
@@ -63,8 +63,8 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="module")
-def mariadb_container(mariadb_version):
-    container = MySqlContainer(mariadb_version, name=f"petersql_test_{mariadb_version.replace(":", "_")}",
+def mariadb_container(mariadb_version, worker_id):
+    container = MySqlContainer(mariadb_version, name=f"petersql_test_{worker_id}_{mariadb_version.replace(":", "_")}",
                         mem_limit="768m",
                         memswap_limit="1g",
                         nano_cpus=1_000_000_000,

@@ -99,7 +99,7 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 |------------|------|-------|---|---|---|-------------|
 | SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 4 | 4 | 0 | 0 | Baseline SELECT-list suggestions (functions/keywords) without table scope. |
 | SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 5 | 5 | 0 | 0 | Prefix filtering in SELECT with and without `current_table` influence. |
-| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 13 | 13 | 0 | 0 | Comma/whitespace transitions after columns and expression boundaries. |
+| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 14 | 14 | 0 | 0 | Comma/whitespace transitions after columns and expression boundaries. |
 | SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 3 | 3 | 0 | 0 | Scope-aware SELECT suggestions when FROM/JOIN tables are already known. |
 
 ### 3. FROM Clause
@@ -113,14 +113,14 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
 | JOIN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join.json` | 6 | 6 | 0 | 0 | JOIN table suggestions and join-keyword progression. |
-| JOIN_ON ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_on.json` | 6 | 6 | 0 | 0 | ON-clause column/function suggestions with correct scope ordering. |
-| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_after_table.json` | 4 | 4 | 0 | 0 | Keyword transitions immediately after a JOIN target table. |
+| JOIN_ON ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_on.json` | 8 | 8 | 0 | 0 | ON-clause suggestions with scope ordering and FK condition hints. |
+| JOIN_AFTER_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_after_table.json` | 5 | 5 | 0 | 0 | Keyword transitions immediately after a JOIN target table, including aliased no-space prefixes. |
 | JOIN_OPERATOR_LEFT_COLUMN_FILTER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/join_operator_left_column_filter.json` | 6 | 6 | 0 | 0 | Left-side table exclusion after JOIN operators (`=`, `<`, `>`, etc.). |
 
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 11 | 11 | 0 | 0 | WHERE context, operator, expression follow-up, and qualified-style propagation rules. |
+| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 12 | 12 | 0 | 0 | WHERE context, operator, expression follow-up, and qualified-style propagation rules. |
 | WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | WHERE suggestions constrained to active scope/aliases only. |
 
 ### 6. GROUP BY Clause
@@ -165,8 +165,8 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | Large-schema guardrails for prefix filtering and noise control. |
 
 ### Summary Statistics
-- **Total Tests**: 1881 (171 base × 11 engine/version targets)
-- **✅ Passing**: 1881 (171 base × 11 targets, 100%)
+- **Total Tests**: 1936 (176 base × 11 engine/version targets)
+- **✅ Passing**: 1936 (176 base × 11 targets, 100%)
 - **❌ Failing**: 0 (remaining tests, 0%)
 - **⚠️ Expected Failures (xfail)**: 0 (0 base × 11 targets, 0%)
 - **⚪ Not Implemented**: 0 (0%)

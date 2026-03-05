@@ -7,7 +7,6 @@ import pymysql
 
 from helpers.logger import logger
 from structures.connection import Connection
-from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.mariadb import MAP_COLUMN_FIELDS

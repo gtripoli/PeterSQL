@@ -237,6 +237,25 @@
           "FROM"
         ]
       }
+    },
+    {
+      "case_id": "VIRTUAL_SCOPED_WILDCARD_001",
+      "title": "After alias wildcard + space: suggest real FROM targets, not alias as table",
+      "sql": "SELECT u.* |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "comment": "Alias wildcard is completed. FROM suggestions must map to real tables and include alias assignment.",
+        "suggestions": [
+          "FROM users u",
+          "FROM user_sessions u",
+          "FROM"
+        ]
+      }
     }
   ]
 }

@@ -12,11 +12,13 @@ from .components.dataview import TableForeignKeysDataViewCtrl
 from .components.dataview import TableCheckDataViewCtrl
 from .components.dataview import TableColumnsDataViewCtrl
 from .components.dataview import TableRecordsDataViewCtrl
+from wx.lib.agw.flatnotebook import FlatNotebook
 import wx
 import wx.xrc
 import wx.dataview
 import wx.stc
 import wx.lib.agw.hypertreelist
+import wx.aui
 
 import gettext
 _ = gettext.gettext
@@ -465,6 +467,7 @@ class ConnectionsDialog ( wx.Dialog ):
         self.btn_create_directory.Bind( wx.EVT_BUTTON, self.on_create_directory )
         self.btn_delete.Bind( wx.EVT_BUTTON, self.on_delete )
         self.btn_save.Bind( wx.EVT_BUTTON, self.on_save )
+        self.btn_test.Bind( wx.EVT_BUTTON, self.on_test_session )
         self.btn_open.Bind( wx.EVT_BUTTON, self.on_connect )
 
     def __del__( self ):
@@ -497,6 +500,9 @@ class ConnectionsDialog ( wx.Dialog ):
         event.Skip()
 
     def on_save( self, event ):
+        event.Skip()
+
+    def on_test_session( self, event ):
         event.Skip()
 
     def on_connect( self, event ):
@@ -1462,6 +1468,8 @@ class MainFrameView ( wx.Frame ):
         bSizer91 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.btn_delete_view = wx.Button( self.panel_views, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_delete_view.Enable( False )
+
         bSizer91.Add( self.btn_delete_view, 0, wx.ALL, 5 )
 
         self.btn_cancel_view = wx.Button( self.panel_views, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1641,17 +1649,15 @@ class MainFrameView ( wx.Frame ):
             MainFrameNotebookIndex += 1
 
         self.panel_query = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.panel_query.Enable( False )
-
         bSizer26 = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_textCtrl10 = wx.TextCtrl( self.panel_query, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
-        bSizer26.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+        self.m_splitter6 = wx.SplitterWindow( self.panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter6.Bind( wx.EVT_IDLE, self.m_splitter6OnIdle )
 
-        self.m_button12 = wx.Button( self.panel_query, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer26.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+        self.m_panel52 = wx.Panel( self.m_splitter6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer125 = wx.BoxSizer( wx.VERTICAL )
 
-        self.sql_query_editor = wx.stc.StyledTextCtrl( self.panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        self.sql_query_editor = wx.stc.StyledTextCtrl( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         self.sql_query_editor.SetUseTabs ( True )
         self.sql_query_editor.SetTabWidth ( 4 )
         self.sql_query_editor.SetIndent ( 4 )
@@ -1687,11 +1693,30 @@ class MainFrameView ( wx.Frame ):
         self.sql_query_editor.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
         self.sql_query_editor.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
         self.sql_query_editor.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-        bSizer26.Add( self.sql_query_editor, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer125.Add( self.sql_query_editor, 1, wx.EXPAND | wx.ALL, 5 )
 
-        self.notebook_sql_results = wx.Notebook( self.panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_button12 = wx.Button( self.m_panel52, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer125.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
-        bSizer26.Add( self.notebook_sql_results, 1, wx.EXPAND | wx.ALL, 5 )
+
+        self.m_panel52.SetSizer( bSizer125 )
+        self.m_panel52.Layout()
+        bSizer125.Fit( self.m_panel52 )
+        self.m_panel53 = wx.Panel( self.m_splitter6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_panel53.Hide()
+
+        bSizer1261 = wx.BoxSizer( wx.VERTICAL )
+
+        self.notebook_sql_results = FlatNotebook( self.m_panel53, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        bSizer1261.Add( self.notebook_sql_results, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_panel53.SetSizer( bSizer1261 )
+        self.m_panel53.Layout()
+        bSizer1261.Fit( self.m_panel53 )
+        self.m_splitter6.SplitHorizontally( self.m_panel52, self.m_panel53, -300 )
+        bSizer26.Add( self.m_splitter6, 1, wx.EXPAND, 5 )
 
 
         self.panel_query.SetSizer( bSizer26 )
@@ -1950,6 +1975,10 @@ class MainFrameView ( wx.Frame ):
     def panel_recordsOnContextMenu( self, event ):
         self.panel_records.PopupMenu( self.m_menu10, event.GetPosition() )
 
+    def m_splitter6OnIdle( self, event ):
+        self.m_splitter6.SetSashPosition( -300 )
+        self.m_splitter6.Unbind( wx.EVT_IDLE )
+
     def m_panel15OnContextMenu( self, event ):
         self.m_panel15.PopupMenu( self.m_menu3, event.GetPosition() )
 
@@ -2014,8 +2043,15 @@ class Trash ( wx.Panel ):
         self.rad_view_constraint.SetSelection( 0 )
         bSizer129.Add( self.rad_view_constraint, 0, wx.ALL|wx.EXPAND, 5 )
 
+        self.m_textCtrl10 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
+        bSizer129.Add( self.m_textCtrl10, 1, wx.ALL|wx.EXPAND, 5 )
+
 
         bSizer93.Add( bSizer129, 1, wx.EXPAND, 5 )
+
+        self.notebook_sql_results = wx.aui.AuiNotebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.aui.AUI_NB_DEFAULT_STYLE|wx.aui.AUI_NB_MIDDLE_CLICK_CLOSE )
+
+        bSizer93.Add( self.notebook_sql_results, 1, wx.EXPAND | wx.ALL, 5 )
 
 
         bSizer90.Add( bSizer93, 1, wx.EXPAND, 5 )

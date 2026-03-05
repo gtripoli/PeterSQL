@@ -11,6 +11,7 @@ from constants import WORKDIR
 from structures.engines.database import SQLColumn
 from structures.engines.database import SQLDatabase
 from structures.engines.database import SQLDataType
+from structures.engines.database import SQLForeignKey
 from structures.engines.database import SQLTable
 from windows.components.stc.autocomplete.auto_complete import SQLCompletionProvider
 from windows.components.stc.autocomplete.context_detector import ContextDetector
@@ -203,6 +204,7 @@ def _create_mock_database(
     mock_database.context = mock_context
 
     tables: list[SQLTable] = []
+    tables_by_name: dict[str, SQLTable] = {}
     for table_data in schema.get("tables", []):
         mock_table = Mock(spec=SQLTable)
         mock_table.name = table_data["name"]
@@ -217,7 +219,34 @@ def _create_mock_database(
             columns.append(mock_column)
 
         mock_table.columns = columns
+        mock_table.foreign_keys = []
         tables.append(mock_table)
+        tables_by_name[mock_table.name.lower()] = mock_table
+
+    for table_data in schema.get("tables", []):
+        table_name = table_data.get("name", "")
+        if not table_name:
+            continue
+
+        mock_table = tables_by_name.get(table_name.lower())
+        if not mock_table:
+            continue
+
+        foreign_keys: list[SQLForeignKey] = []
+        for index, fk_data in enumerate(table_data.get("foreign_keys", []), start=1):
+            if not isinstance(fk_data, dict):
+                continue
+
+            mock_fk = Mock(spec=SQLForeignKey)
+            mock_fk.id = index
+            mock_fk.name = fk_data.get("name", f"fk_{table_name}_{index}")
+            mock_fk.table = mock_table
+            mock_fk.columns = list(fk_data.get("columns", []))
+            mock_fk.reference_table = fk_data.get("reference_table", "")
+            mock_fk.reference_columns = list(fk_data.get("reference_columns", []))
+            foreign_keys.append(mock_fk)
+
+        mock_table.foreign_keys = foreign_keys
 
     mock_database.tables = tables
     return mock_database

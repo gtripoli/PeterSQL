@@ -57,8 +57,9 @@
         "mode": "PREFIX",
         "context": "JOIN_ON",
         "prefix": "u",
-        "comment": "No alias-exact-match available. In scope-restricted JOIN_ON: users table expansion + orders.user_id column-name match + u* functions.",
+        "comment": "Prefix-matching JOIN_ON includes FK complete-condition hints first, then scoped columns and functions.",
         "suggestions": [
+          "users.id = orders.user_id",
           "users.id",
           "users.name",
           "users.email",

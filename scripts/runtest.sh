@@ -131,11 +131,11 @@ elif [ "$UPDATE_BADGES" = true ]; then
     update_badges
 
 else
-    echo "Running local tests (excluding integration tests)..."
+    echo "Running unit tests..."
 
     # Run all tests except integration tests (testcontainers)
     # Integration tests are marked with @pytest.mark.integration
-    uv run pytest tests/ -m 'not integration'
+    uv run pytest tests/ --tb=short -m 'not integration'
 
     PYTEST_EXIT_CODE=$?
 

@@ -13,6 +13,7 @@
         "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
+          "*",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -54,6 +55,7 @@
         "context": "SELECT_LIST",
         "prefix": "u",
         "suggestions": [
+          "users.*",
           "users.id",
           "users.name",
           "users.email",
@@ -77,6 +79,9 @@
         "context": "SELECT_LIST",
         "prefix": null,
         "suggestions": [
+          "*",
+          "u.*",
+          "o.*",
           "o.id",
           "o.user_id",
           "o.total",

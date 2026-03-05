@@ -11,7 +11,8 @@ from structures.engines.postgresql.datatype import PostgreSQLDataType
 from structures.engines.postgresql.indextype import PostgreSQLIndexType
 
 POSTGRESQL_VERSIONS: list[str] = [
-    "postgres:latest",
+    "postgres:18",
+    "postgres:17",
     "postgres:16",
     "postgres:15",
 ]
@@ -60,10 +61,10 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="module")
-def postgresql_container(postgresql_version):
+def postgresql_container(postgresql_version, worker_id):
     container = PostgresContainer(
         postgresql_version,
-        name=f"petersql_test_{postgresql_version.replace(':', '_')}",
+        name=f"petersql_test_{worker_id}_{postgresql_version.replace(':', '_')}",
         mem_limit="512m",
         memswap_limit="768m",
         nano_cpus=1_000_000_000,
