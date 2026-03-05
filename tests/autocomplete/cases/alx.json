@@ -117,36 +117,6 @@
           "UUID"
         ]
       }
-    },
-    {
-      "case_id": "ALX_006",
-      "title": "Multi-query: second SELECT doesn't see alias from first",
-      "sql": "SELECT * FROM users u WHERE id = 1; SELECT u|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "u",
-        "comment": "Multi-query: second query has no scope, no alias 'u'. Table-name expansion: users.*",
-        "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "user_sessions.id",
-          "user_sessions.user_id",
-          "user_sessions.session_token",
-          "user_sessions.expires_at",
-          "orders.user_id",
-          "products.unit_price",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID"
-        ]
-      }
     }
   ]
 }

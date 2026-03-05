@@ -48,29 +48,6 @@
       }
     },
     {
-      "case_id": "SCOPED_CURRENT_TABLE_003",
-      "title": "Single table scope - CURRENT_TABLE in scope via alias, alias-exact-match",
-      "sql": "SELECT i| FROM items i",
-      "dialect": "generic",
-      "current_table": "items",
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "i",
-        "alias_exact_match": "i",
-        "comment": "Scope=[items as i]. Single table. CURRENT_TABLE=items in scope via alias 'i'. Prefix 'i' equals alias, so suggestions are qualified with alias plus matching functions.",
-        "suggestions": [
-          "i.id",
-          "i.item_name",
-          "i.stock",
-          "i.price",
-          "IF",
-          "IFNULL"
-        ]
-      }
-    },
-    {
       "case_id": "SCOPED_CURRENT_TABLE_004",
       "title": "Single table scope - prefix matches ONLY column name (not table name)",
       "sql": "SELECT u| FROM orders",

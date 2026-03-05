@@ -168,7 +168,7 @@ class SuggestionBuilder:
                         for kw in keywords
                     ]
 
-            return self._build_from_clause(prefix, statement)
+            return self._build_from_clause(prefix, statement, scope)
 
         if context == SQLContext.JOIN_CLAUSE:
             return self._build_join_clause(prefix, scope)
@@ -273,15 +273,27 @@ class SuggestionBuilder:
     def _resolve_table_alias(self, table_alias: str, scope: QueryScope, statement: str):
         for ref in scope.from_tables:
             if ref.alias and ref.alias.lower() == table_alias.lower():
+                if ref.table is not None:
+                    return ref.table
                 return self._get_table_by_name(ref.name)
             if ref.name.lower() == table_alias.lower():
+                if ref.table is not None:
+                    return ref.table
                 return self._get_table_by_name(ref.name)
 
         for ref in scope.join_tables:
             if ref.alias and ref.alias.lower() == table_alias.lower():
+                if ref.table is not None:
+                    return ref.table
                 return self._get_table_by_name(ref.name)
             if ref.name.lower() == table_alias.lower():
+                if ref.table is not None:
+                    return ref.table
                 return self._get_table_by_name(ref.name)
+
+        for ref in scope.cte_tables:
+            if ref.name.lower() == table_alias.lower() and ref.table is not None:
+                return ref.table
 
         if (
             scope.current_table
@@ -604,18 +616,29 @@ class SuggestionBuilder:
         return result
 
     def _build_from_clause(
-        self, prefix: str, statement: str = ""
+        self, prefix: str, statement: str = "", scope: QueryScope = QueryScope.empty()
     ) -> list[CompletionItem]:
-        if not self._database:
+        database = self._database
+        if not database:
             return []
 
         try:
-            tables = [
+            physical_tables = [
                 CompletionItem(name=table.name, item_type=CompletionItemType.TABLE)
-                for table in self._database.tables
+                for table in database.tables
             ]
         except (AttributeError, TypeError):
             return []
+
+        cte_names = [ref.name for ref in scope.cte_tables]
+        cte_set = {name.lower() for name in cte_names}
+        cte_tables = [
+            CompletionItem(name=name, item_type=CompletionItemType.TABLE)
+            for name in cte_names
+        ]
+        tables = cte_tables + [
+            table for table in physical_tables if table.name.lower() not in cte_set
+        ]
 
         # Extract tables referenced in SELECT list (e.g., SELECT users.id FROM | → users only)
         # This applies ALWAYS, with or without prefix when qualified refs are present
@@ -667,12 +690,17 @@ class SuggestionBuilder:
             prefix_lower = prefix.lower()
             tables = [t for t in tables if t.name.lower().startswith(prefix_lower)]
 
-        return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+        cte_result = [t for t in tables if t.name.lower() in cte_set]
+        physical_result = [t for t in tables if t.name.lower() not in cte_set]
+        return cte_result + sorted(
+            physical_result, key=lambda x: self._table_name_sort_key(x.name)
+        )
 
     def _build_join_clause(
         self, prefix: str, scope: QueryScope
     ) -> list[CompletionItem]:
-        if not self._database:
+        database = self._database
+        if not database:
             return []
 
         in_scope_table_names = {
@@ -682,19 +710,33 @@ class SuggestionBuilder:
         }
 
         try:
-            tables = [
+            physical_tables = [
                 CompletionItem(name=table.name, item_type=CompletionItemType.TABLE)
-                for table in self._database.tables
+                for table in database.tables
                 if table.name.lower() not in in_scope_table_names
             ]
         except (AttributeError, TypeError):
             return []
 
+        cte_tables = [
+            CompletionItem(name=ref.name, item_type=CompletionItemType.TABLE)
+            for ref in scope.cte_tables
+            if ref.name.lower() not in in_scope_table_names
+        ]
+        cte_set = {item.name.lower() for item in cte_tables}
+        tables = cte_tables + [
+            table for table in physical_tables if table.name.lower() not in cte_set
+        ]
+
         if prefix:
             prefix_lower = prefix.lower()
             tables = [t for t in tables if t.name.lower().startswith(prefix_lower)]
 
-        return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+        cte_result = [t for t in tables if t.name.lower() in cte_set]
+        physical_result = [t for t in tables if t.name.lower() not in cte_set]
+        return cte_result + sorted(
+            physical_result, key=lambda x: self._table_name_sort_key(x.name)
+        )
 
     @staticmethod
     def _build_join_after_table(scope: QueryScope) -> list[CompletionItem]:

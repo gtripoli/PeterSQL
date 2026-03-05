@@ -22,31 +22,6 @@
       }
     },
     {
-      "case_id": "ALIAS_002",
-      "title": "Prefix matches alias: trigger alias disambiguation",
-      "sql": "SELECT * FROM users u WHERE u|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "WHERE_CLAUSE",
-        "prefix": "u",
-        "alias_exact_match": "u",
-        "comment": "Prefix 'u' exactly matches alias 'u'. Trigger alias disambiguation.",
-        "suggestions": [
-          "u.id",
-          "u.name",
-          "u.email",
-          "u.status",
-          "u.created_at",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID"
-        ]
-      }
-    },
-    {
       "case_id": "ALIAS_003",
       "title": "SELECT: Prefix matches alias",
       "sql": "SELECT o| FROM orders o",

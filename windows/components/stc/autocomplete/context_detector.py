@@ -3,13 +3,19 @@ import re
 from typing import Optional
 
 import sqlglot
+from sqlglot import exp
 
 from helpers.logger import logger
 
-from windows.components.stc.autocomplete.query_scope import QueryScope, TableReference
+from windows.components.stc.autocomplete.query_scope import (
+    QueryScope,
+    TableReference,
+    VirtualColumn,
+    VirtualTable,
+)
 from windows.components.stc.autocomplete.sql_context import SQLContext
 
-from structures.engines.database import SQLDatabase
+from structures.engines.database import SQLDatabase, SQLTable
 
 
 class ContextDetector:
@@ -344,15 +350,15 @@ class ContextDetector:
         return table_name
 
     def _extract_scope_from_select(
-        self, parsed: sqlglot.exp.Select, database: Optional[SQLDatabase]
+        self, parsed: exp.Select, database: Optional[SQLDatabase]
     ) -> QueryScope:
         from_tables = []
         join_tables = []
         aliases = {}
 
         if from_clause := parsed.args.get("from"):
-            if isinstance(from_clause, sqlglot.exp.From):
-                for table_exp in from_clause.find_all(sqlglot.exp.Table):
+            if isinstance(from_clause, exp.From):
+                for table_exp in from_clause.find_all(exp.Table):
                     table_name = table_exp.name
                     alias = (
                         table_exp.alias
@@ -372,9 +378,9 @@ class ContextDetector:
                         aliases[alias.lower()] = ref
                     aliases[table_name.lower()] = ref
 
-        for join_exp in parsed.find_all(sqlglot.exp.Join):
+        for join_exp in parsed.find_all(exp.Join):
             if table_exp := join_exp.this:
-                if isinstance(table_exp, sqlglot.exp.Table):
+                if isinstance(table_exp, exp.Table):
                     table_name = table_exp.name
                     alias = (
                         table_exp.alias
@@ -405,6 +411,9 @@ class ContextDetector:
         self, text: str, database: Optional[SQLDatabase]
     ) -> QueryScope:
         cleaned_text = re.sub(r"--[^\n]*|/\*.*?\*/", " ", text, flags=re.DOTALL)
+        cte_tables, cte_end_pos = self._parse_cte_definitions(cleaned_text)
+        main_text = cleaned_text[cte_end_pos:] if cte_end_pos else cleaned_text
+        cte_lookup = {ref.name.lower(): ref for ref in cte_tables}
 
         sql_keywords = {
             "WHERE",
@@ -448,15 +457,22 @@ class ContextDetector:
         join_tables = []
         aliases = {}
 
-        for table_name, alias in self._extract_from_table_tokens(cleaned_text):
+        for table_name, alias, projected_columns in self._extract_from_table_tokens(
+            main_text
+        ):
             if table_name.upper() in sql_keywords:
                 continue
             if alias and alias.upper() in sql_keywords:
                 alias = None
 
-            table_obj = (
-                self._find_table_in_database(table_name, database) if database else None
-            )
+            table_obj = None
+            if projected_columns is not None:
+                table_obj = self._build_virtual_table(table_name, projected_columns)
+            elif table_name.lower() in cte_lookup:
+                table_obj = cte_lookup[table_name.lower()].table
+            elif database:
+                table_obj = self._find_table_in_database(table_name, database)
+
             ref = TableReference(name=table_name, alias=alias, table=table_obj)
             from_tables.append(ref)
 
@@ -464,7 +480,7 @@ class ContextDetector:
                 aliases[alias.lower()] = ref
             aliases[table_name.lower()] = ref
 
-        for match in join_pattern.finditer(cleaned_text):
+        for match in join_pattern.finditer(main_text):
             table_name = match.group(1)
             alias = match.group(2) if match.group(2) else None
 
@@ -473,9 +489,14 @@ class ContextDetector:
             if alias and alias.upper() in sql_keywords:
                 alias = None
 
-            table_obj = (
-                self._find_table_in_database(table_name, database) if database else None
-            )
+            if table_name.lower() in cte_lookup:
+                table_obj = cte_lookup[table_name.lower()].table
+            else:
+                table_obj = (
+                    self._find_table_in_database(table_name, database)
+                    if database
+                    else None
+                )
             ref = TableReference(name=table_name, alias=alias, table=table_obj)
             join_tables.append(ref)
 
@@ -488,10 +509,13 @@ class ContextDetector:
             join_tables=join_tables,
             current_table=None,
             aliases=aliases,
+            cte_tables=cte_tables,
         )
 
     @staticmethod
-    def _extract_from_table_tokens(text: str) -> list[tuple[str, Optional[str]]]:
+    def _extract_from_table_tokens(
+        text: str,
+    ) -> list[tuple[str, Optional[str], Optional[list[str]]]]:
         if not (
             from_match := re.search(
                 r"\bFROM\b(?P<section>.*?)(?:\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bHAVING\b|\bLIMIT\b|\bJOIN\b|$)",
@@ -505,10 +529,23 @@ class ContextDetector:
         if not from_section:
             return []
 
-        tables: list[tuple[str, Optional[str]]] = []
-        for raw_part in from_section.split(","):
+        tables: list[tuple[str, Optional[str], Optional[list[str]]]] = []
+        for raw_part in ContextDetector._split_top_level_parts(from_section):
             part = raw_part.strip()
             if not part:
+                continue
+
+            subquery_match = re.match(
+                r"^\((?P<subquery>.+)\)\s*(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*)$",
+                part,
+                re.IGNORECASE | re.DOTALL,
+            )
+            if subquery_match:
+                alias = subquery_match.group("alias")
+                columns = ContextDetector._extract_projected_columns(
+                    subquery_match.group("subquery")
+                )
+                tables.append((alias, alias, columns))
                 continue
 
             if not (
@@ -522,13 +559,132 @@ class ContextDetector:
 
             table_name = table_match.group("table")
             alias = table_match.group("alias") if table_match.group("alias") else None
-            tables.append((table_name, alias))
+            tables.append((table_name, alias, None))
 
         return tables
 
+    @staticmethod
+    def _split_top_level_parts(text: str) -> list[str]:
+        parts = []
+        start = 0
+        depth = 0
+        for idx, ch in enumerate(text):
+            if ch == "(":
+                depth += 1
+            elif ch == ")" and depth > 0:
+                depth -= 1
+            elif ch == "," and depth == 0:
+                parts.append(text[start:idx])
+                start = idx + 1
+        parts.append(text[start:])
+        return parts
+
+    @staticmethod
+    def _extract_projected_columns(subquery_sql: str) -> list[str]:
+        match = re.search(
+            r"\bSELECT\b\s+(?P<select>.*?)(?:\bFROM\b|$)",
+            subquery_sql,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            return []
+
+        select_list = match.group("select")
+        columns: list[str] = []
+        for raw_expr in ContextDetector._split_top_level_parts(select_list):
+            expr = raw_expr.strip()
+            if not expr or expr == "*":
+                continue
+
+            alias_match = re.search(
+                r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)$", expr, re.IGNORECASE
+            )
+            if alias_match:
+                col_name = alias_match.group(1)
+            else:
+                identifier_match = re.match(
+                    r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)$",
+                    expr,
+                )
+                if not identifier_match:
+                    continue
+                col_name = identifier_match.group(1)
+
+            if col_name not in columns:
+                columns.append(col_name)
+
+        return columns
+
+    @staticmethod
+    def _build_virtual_table(name: str, columns: list[str]) -> VirtualTable:
+        return VirtualTable(
+            name=name,
+            columns=[VirtualColumn(name=column) for column in columns],
+        )
+
+    def _parse_cte_definitions(self, text: str) -> tuple[list[TableReference], int]:
+        cte_refs: list[TableReference] = []
+        with_match = re.match(r"\s*WITH\s+", text, re.IGNORECASE)
+        if not with_match:
+            return cte_refs, 0
+
+        pos = with_match.end()
+        length = len(text)
+        while pos < length:
+            while pos < length and text[pos].isspace():
+                pos += 1
+
+            name_match = re.match(r"([A-Za-z_][A-Za-z0-9_]*)", text[pos:])
+            if not name_match:
+                break
+            cte_name = name_match.group(1)
+            pos += name_match.end()
+
+            while pos < length and text[pos].isspace():
+                pos += 1
+
+            if not re.match(r"AS\b", text[pos:], re.IGNORECASE):
+                break
+            pos += 2
+
+            while pos < length and text[pos].isspace():
+                pos += 1
+
+            if pos >= length or text[pos] != "(":
+                break
+
+            pos += 1
+            depth = 1
+            subquery_start = pos
+            while pos < length and depth > 0:
+                if text[pos] == "(":
+                    depth += 1
+                elif text[pos] == ")":
+                    depth -= 1
+                pos += 1
+
+            if depth != 0:
+                break
+
+            subquery_sql = text[subquery_start : pos - 1]
+            projected_columns = self._extract_projected_columns(subquery_sql)
+            virtual_table = self._build_virtual_table(cte_name, projected_columns)
+            cte_ref = TableReference(name=cte_name, alias=None, table=virtual_table)
+            cte_refs.append(cte_ref)
+
+            while pos < length and text[pos].isspace():
+                pos += 1
+
+            if pos < length and text[pos] == ",":
+                pos += 1
+                continue
+            break
+
+        return cte_refs, pos
+
     def _find_table_in_database(
         self, table_name: str, database: SQLDatabase
-    ) -> Optional:
+    ) -> Optional[SQLTable]:
         try:
             for table in database.tables:
                 if table.name.lower() == table_name.lower():

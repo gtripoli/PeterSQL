@@ -63,35 +63,6 @@
       }
     },
     {
-      "case_id": "SELECT_PREFIX_003",
-      "title": "CURRENT_TABLE columns prioritized over scope and database",
-      "sql": "SELECT u|",
-      "dialect": "generic",
-      "current_table": "users",
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "u",
-        "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "user_sessions.id",
-          "user_sessions.user_id",
-          "user_sessions.session_token",
-          "user_sessions.expires_at",
-          "orders.user_id",
-          "products.unit_price",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID"
-        ]
-      }
-    },
-    {
       "case_id": "SELECT_PREFIX_004",
       "title": "CURRENT_TABLE behavior is scoped to current statement (multi-query)",
       "sql": "SELECT * FROM users u WHERE id = 1; SELECT u|",

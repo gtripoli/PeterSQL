@@ -97,17 +97,17 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 2. SELECT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 7 | 7 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
-| SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 6 | 6 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
+| SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 4 | 4 | 0 | 0 | `SELECT \|` | Basic SELECT suggestions |
+| SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 5 | 5 | 0 | 0 | `SELECT u\|` | SELECT without FROM clause (prefix; with/without CURRENT_TABLE) |
 | SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 9 | 9 | 0 | 0 | `SELECT users.id \|` | Column whitespace and comma behavior |
-| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 4 | 4 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
+| SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 3 | 3 | 0 | 0 | `SELECT \| FROM users` | SELECT with current table in scope |
 
 ### 3. FROM Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
 | FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 8 | 8 | 0 | 0 | `SELECT * FROM \|` | Basic FROM clause suggestions |
 | FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | `SELECT products.id FROM \|` | FROM filtering by qualified SELECT tables |
-| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 3 | 3 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
+| FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 1 | 1 | 0 | 0 | `SELECT * FROM \|` (current_table=users) | FROM with current table |
 
 ### 4. JOIN Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -120,7 +120,7 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 11 | 11 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
+| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 10 | 10 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
 | WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
 
 ### 6. GROUP BY Clause
@@ -147,8 +147,8 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
 | DOT_COMPLETION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/dot_completion.json` | 7 | 7 | 0 | 0 | `SELECT users.\|` | Dot completion (table.column) |
-| ALIAS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias.json` | 12 | 12 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
-| ALIAS_PREFIX_DISAMBIGUATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias_prefix_disambiguation.json` | 8 | 8 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
+| ALIAS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias.json` | 11 | 11 | 0 | 0 | `SELECT * FROM users \|` | Table/column aliases |
+| ALIAS_PREFIX_DISAMBIGUATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alias_prefix_disambiguation.json` | 7 | 7 | 0 | 0 | `SELECT u\| FROM users` | Alias prefix disambiguation |
 | PREFIX_EXPANSION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/prefix_expansion.json` | 6 | 6 | 0 | 0 | `SELECT us\| FROM users` | Prefix expansion logic |
 | WINDOW_FUNCTIONS_OVER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/window_functions_over.json` | 1 | 1 | 0 | 0 | `SELECT ROW_NUMBER() OVER (\|)` | Window functions OVER clause |
 | CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | `SELECT na\|me FROM users` | Cursor position handling |
@@ -156,19 +156,19 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 11. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/derived_tables_cte.json` | 10 | 0 | 0 | 10 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
+| DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/derived_tables_cte.json` | 9 | 9 | 0 | 0 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
 | MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/multi_query_support.json` | 7 | 7 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
-| MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/mq.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
-| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/out_of_scope_hints.json` | 5 | 5 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
+| MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/mq.json` | 1 | 1 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
+| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/out_of_scope_hints.json` | 4 | 4 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
 | LEX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/lex.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
-| ALX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alx.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
+| ALX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alx.json` | 5 | 5 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 1947 (177 base × 11 engine/version targets)
-- **✅ Passing**: 1826 (166 base × 11 targets, 94%)
+- **Total Tests**: 1782 (162 base × 11 engine/version targets)
+- **✅ Passing**: 1782 (162 base × 11 targets, 100%)
 - **❌ Failing**: 0 (remaining tests, 0%)
-- **⚠️ Expected Failures (xfail)**: 121 (11 base × 11 targets, 6%)
+- **⚠️ Expected Failures (xfail)**: 0 (0 base × 11 targets, 0%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend

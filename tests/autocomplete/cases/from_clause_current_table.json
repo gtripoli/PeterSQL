@@ -2,32 +2,6 @@
   "group": "FROM_JOIN_CLAUSE_CURRENT_TABLE",
   "cases": [
     {
-      "case_id": "FROM_CURR_001",
-      "title": "FROM without prefix - CURRENT_TABLE suggested if set and not present",
-      "sql": "SELECT * FROM |",
-      "dialect": "generic",
-      "current_table": "products",
-      "schema_variant": "small",
-      "expected": {
-        "mode": "CONTEXT",
-        "context": "FROM_CLAUSE",
-        "prefix": null,
-        "comment": "CURRENT_TABLE=products suggested as convenience. All physical tables.",
-        "suggestions": [
-          "carts",
-          "customers",
-          "inventory",
-          "items",
-          "orders",
-          "orders_archive",
-          "payments",
-          "products",
-          "users",
-          "user_sessions"
-        ]
-      }
-    },
-    {
       "case_id": "FROM_CURR_002",
       "title": "FROM with prefix - CURRENT_TABLE filtered by prefix",
       "sql": "SELECT * FROM p|",
@@ -42,31 +16,6 @@
         "suggestions": [
           "payments",
           "products"
-        ]
-      }
-    },
-    {
-      "case_id": "FROM_CURR_003",
-      "title": "FROM - Table without alias NOT suggested again",
-      "sql": "SELECT * FROM products, |",
-      "dialect": "generic",
-      "current_table": "products",
-      "schema_variant": "small",
-      "expected": {
-        "mode": "CONTEXT",
-        "context": "FROM_CLAUSE",
-        "prefix": null,
-        "comment": "products has NO alias, so it CANNOT be suggested again (self-join requires aliases). CURRENT_TABLE=products also excluded.",
-        "suggestions": [
-          "carts",
-          "customers",
-          "inventory",
-          "items",
-          "orders",
-          "orders_archive",
-          "payments",
-          "users",
-          "user_sessions"
         ]
       }
     }

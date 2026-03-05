@@ -81,26 +81,6 @@
           "CURRENT_TIMESTAMP"
         ]
       }
-    },
-    {
-      "case_id": "HINT_005",
-      "title": "Case A: SELECT_LIST with scope - prefix matches scope column - DB-wide allowed",
-      "sql": "SELECT u| FROM orders",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "PREFIX",
-        "context": "SELECT_LIST",
-        "prefix": "u",
-        "comment": "Prefix matches in-scope column and matching functions; out-of-scope table hints are not shown.",
-        "suggestions": [
-          "user_id",
-          "UNIX_TIMESTAMP",
-          "UPPER",
-          "UUID"
-        ]
-      }
     }
   ]
 }

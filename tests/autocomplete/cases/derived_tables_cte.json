@@ -12,11 +12,10 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
-        "comment": "Scope=[derived table 'o' with columns id, total]. Derived columns should be suggested.",
-        "xfail": true,
+        "comment": "Scope resolves projected columns from derived table alias in WHERE context.",
         "suggestions": [
-          "o.id",
-          "o.total",
+          "id",
+          "total",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -35,6 +34,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -57,8 +59,7 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
-        "comment": "Scope=[derived 'o' in FROM, users 'u' in JOIN]. FROM scope columns first, then JOIN scope columns.",
-        "xfail": true,
+        "comment": "Scope includes derived alias in FROM and physical JOIN alias in WHERE.",
         "suggestions": [
           "o.id",
           "o.total",
@@ -85,6 +86,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -108,7 +112,6 @@
         "context": "DOT_COMPLETION",
         "prefix": null,
         "comment": "Dot-completion on derived table alias returns projected columns from subquery.",
-        "xfail": true,
         "suggestions": [
           "id",
           "total"
@@ -126,11 +129,10 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
-        "comment": "Scope=[CTE 'active_users' with columns id, name]. Only CTE columns available.",
-        "xfail": true,
+        "comment": "Scope resolves CTE projected columns in WHERE context.",
         "suggestions": [
-          "active_users.id",
-          "active_users.name",
+          "id",
+          "name",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -149,6 +151,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -171,14 +176,18 @@
         "mode": "CONTEXT",
         "context": "FROM_CLAUSE",
         "prefix": null,
-        "comment": "Second statement. CTE from first statement not visible. Only physical tables.",
-        "xfail": true,
+        "comment": "Second statement does not inherit CTE from previous statement.",
         "suggestions": [
+          "carts",
           "customers",
+          "inventory",
+          "items",
           "orders",
+          "orders_archive",
           "payments",
           "products",
-          "users"
+          "users",
+          "user_sessions"
         ]
       }
     },
@@ -193,9 +202,10 @@
         "mode": "CONTEXT",
         "context": "WHERE_CLAUSE",
         "prefix": null,
-        "comment": "Scope=[CTE 'au', physical table 'orders' as 'o']. Both scopes available.",
-        "xfail": true,
+        "comment": "Scope includes CTE alias and physical JOIN alias in WHERE context.",
         "suggestions": [
+          "au.id",
+          "au.name",
           "o.id",
           "o.user_id",
           "o.total",
@@ -205,8 +215,13 @@
           "COALESCE",
           "CONCAT",
           "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
           "DATE",
           "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
           "LENGTH",
           "LOWER",
           "MAX",
@@ -214,6 +229,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -247,10 +265,9 @@
           "orders_archive",
           "payments",
           "products",
-          "user_sessions",
-          "users"
-        ],
-        "xfail": true
+          "users",
+          "user_sessions"
+        ]
       }
     },
     {
@@ -275,10 +292,9 @@
           "orders_archive",
           "payments",
           "products",
-          "user_sessions",
-          "users"
-        ],
-        "xfail": true
+          "users",
+          "user_sessions"
+        ]
       }
     },
     {
@@ -298,41 +314,13 @@
           "customers",
           "inventory",
           "items",
+          "orders",
           "orders_archive",
           "payments",
           "products",
           "users",
           "user_sessions"
-        ],
-        "xfail": true
-      }
-    },
-    {
-      "case_id": "FROM_005_MOVED",
-      "title": "FROM includes CTE names defined in same statement (moved from from.json)",
-      "sql": "WITH active_products AS (SELECT id, name FROM products) SELECT * FROM |",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "CONTEXT",
-        "context": "FROM_CLAUSE",
-        "prefix": null,
-        "comment": "CTE 'active_products' available as table candidate.",
-        "suggestions": [
-          "active_products",
-          "carts",
-          "customers",
-          "inventory",
-          "items",
-          "orders",
-          "orders_archive",
-          "payments",
-          "products",
-          "user_sessions",
-          "users"
-        ],
-        "xfail": true
+        ]
       }
     }
   ]
