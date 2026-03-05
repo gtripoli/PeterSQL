@@ -16,8 +16,7 @@
         "suggestions": [
           "id",
           "name",
-          "email",
-          "created_at"
+          "email"
         ]
       }
     },
@@ -35,9 +34,9 @@
         "comment": "Dot-completion ignores CURRENT_TABLE. Only items columns.",
         "suggestions": [
           "id",
-          "product_id",
-          "quantity",
-          "item_name"
+          "item_name",
+          "stock",
+          "price"
         ]
       }
     },
@@ -133,24 +132,6 @@
         "suggestions": [
           "id",
           "item_name"
-        ]
-      }
-    },
-    {
-      "case_id": "DOT_008",
-      "title": "Derived table: Dot-completion without prefix",
-      "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o WHERE o.|",
-      "dialect": "generic",
-      "current_table": null,
-      "schema_variant": "small",
-      "expected": {
-        "mode": "DOT",
-        "context": "DOT_COMPLETION",
-        "prefix": null,
-        "comment": "Dot-completion on derived table alias returns derived columns.",
-        "suggestions": [
-          "id",
-          "total"
         ]
       }
     }

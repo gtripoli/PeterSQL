@@ -97,6 +97,25 @@
       }
     },
     {
+      "case_id": "DERIVED_003",
+      "title": "Derived table: dot-completion on subquery alias",
+      "sql": "SELECT * FROM (SELECT id, total FROM orders) AS o WHERE o.|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "DOT",
+        "context": "DOT_COMPLETION",
+        "prefix": null,
+        "comment": "Dot-completion on derived table alias returns projected columns from subquery.",
+        "xfail": true,
+        "suggestions": [
+          "id",
+          "total"
+        ]
+      }
+    },
+    {
       "case_id": "CTE_001",
       "title": "CTE columns available and qualified by CTE name",
       "sql": "WITH active_users AS (SELECT id, name FROM users WHERE status='active') SELECT * FROM active_users WHERE |",

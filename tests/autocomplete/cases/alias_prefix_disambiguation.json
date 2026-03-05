@@ -19,8 +19,11 @@
           "c.name",
           "c.email",
           "COALESCE",
+          "CONCAT",
           "COUNT",
-          "CURRENT_DATE"
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
         ]
       }
     },
@@ -84,7 +87,9 @@
           "i.id",
           "i.item_name",
           "i.stock",
-          "i.price"
+          "i.price",
+          "IF",
+          "IFNULL"
         ]
       }
     },
@@ -105,9 +110,12 @@
           "c.id",
           "c.name",
           "c.email",
-          "CHAR_LENGTH",
           "COALESCE",
-          "CONCAT"
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
         ]
       }
     },
@@ -131,7 +139,7 @@
           "p.unit_price",
           "p.stock",
           "PI",
-          "POSITION",
+          "POW",
           "POWER"
         ]
       }
@@ -147,13 +155,8 @@
         "mode": "PREFIX",
         "context": "WHERE_CLAUSE",
         "prefix": "cas",
-        "comment": "Prefix 'cas' does NOT match alias 'ca' exactly. Generic prefix mode. Scope-restricted: only carts table in schema order.",
-        "suggestions": [
-          "carts.id",
-          "carts.customer_id",
-          "carts.created_at",
-          "carts.cart_total"
-        ]
+        "comment": "Prefix 'cas' does NOT match alias 'ca' or any scope column/function in current behavior.",
+        "suggestions": []
       }
     }
   ]

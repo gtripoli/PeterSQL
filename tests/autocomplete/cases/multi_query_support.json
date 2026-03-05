@@ -14,13 +14,14 @@
         "prefix": null,
         "comment": "Cursor in second statement. First statement ignored. No scope in second statement.",
         "suggestions_contains": [
-          "users.id",
-          "inventory.warehouse_location",
           "AVG",
-          "CURRENT_TIMESTAMP",
-          "GROUP BY"
+          "COALESCE",
+          "DATE",
+          "NOW",
+          "UUID"
         ],
         "suggestions_not_contains": [
+          "users.id",
           "active_users.id"
         ]
       }
@@ -38,11 +39,11 @@
         "prefix": null,
         "comment": "Cursor in first statement. Second statement ignored. Scope=[users].",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -61,6 +62,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -85,11 +89,11 @@
         "prefix": null,
         "comment": "Cursor in second statement. Scope=[orders] from second statement only.",
         "suggestions": [
-          "orders.id",
-          "orders.user_id",
-          "orders.total",
-          "orders.status",
-          "orders.created_at",
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -108,6 +112,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -149,13 +156,14 @@
         "prefix": null,
         "comment": "Empty statement ignored. Cursor in third statement.",
         "suggestions_contains": [
-          "users.id",
-          "inventory.warehouse_location",
           "AVG",
-          "CURRENT_TIMESTAMP",
-          "GROUP BY"
+          "COALESCE",
+          "DATE",
+          "NOW",
+          "UUID"
         ],
         "suggestions_not_contains": [
+          "users.id",
           "active_products.id"
         ]
       }
@@ -173,11 +181,11 @@
         "prefix": null,
         "comment": "KILLER: Semicolon inside string literal is NOT a separator. Single statement. Scope=[users].",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -196,6 +204,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",
@@ -220,6 +231,11 @@
         "prefix": null,
         "comment": "KILLER: Semicolon inside comment is NOT a separator. Single statement. Scope=[users].",
         "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at",
           "AVG",
           "COALESCE",
           "CONCAT",
@@ -238,6 +254,9 @@
           "MONTH",
           "NOW",
           "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
           "ROW_NUMBER",
           "SUBSTR",
           "SUM",

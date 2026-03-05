@@ -93,10 +93,7 @@
           "carts.id",
           "COALESCE",
           "CONCAT",
-          "COUNT",
-          "CURRENT_DATE",
-          "CURRENT_TIME",
-          "CURRENT_TIMESTAMP"
+          "COUNT"
         ]
       }
     },

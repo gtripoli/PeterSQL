@@ -111,6 +111,9 @@ class SuggestionBuilder:
         if context == SQLContext.SINGLE_TOKEN:
             return self._build_single_token(prefix)
 
+        if context == SQLContext.DOT_COMPLETION:
+            return self._build_dot_completion(scope, prefix, statement)
+
         if context == SQLContext.SELECT_LIST:
             return self._build_select_list(scope, prefix, statement, cursor_pos)
 
@@ -209,6 +212,9 @@ class SuggestionBuilder:
         if context == SQLContext.HAVING_AFTER_EXPRESSION:
             return self._build_having_after_expression(prefix)
 
+        if context == SQLContext.WINDOW_OVER:
+            return self._build_window_over(prefix)
+
         if context == SQLContext.LIMIT_OFFSET_CLAUSE:
             return []
 
@@ -228,6 +234,71 @@ class SuggestionBuilder:
             keywords = [kw for kw in keywords if kw.name.startswith(prefix_upper)]
 
         return sorted(keywords, key=lambda x: x.name)
+
+    def _build_dot_completion(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        import re
+
+        cursor_pos = len(statement)
+        text_before_cursor = statement[:cursor_pos]
+
+        dot_match = re.search(
+            r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$",
+            text_before_cursor,
+        )
+        if not dot_match:
+            return []
+
+        table_alias = dot_match.group(1)
+        column_prefix = dot_match.group(2) if dot_match.group(2) else ""
+
+        resolved_table = self._resolve_table_alias(table_alias, scope, statement)
+        if not resolved_table:
+            return []
+
+        table_name = resolved_table.name
+        columns = resolved_table.columns
+
+        column_items = []
+        for col in columns:
+            col_name = col.name
+            if not column_prefix or col_name.upper().startswith(column_prefix.upper()):
+                column_items.append(
+                    CompletionItem(name=col_name, item_type=CompletionItemType.COLUMN)
+                )
+
+        return sorted(column_items, key=lambda x: x.name)
+
+    def _resolve_table_alias(self, table_alias: str, scope: QueryScope, statement: str):
+        for ref in scope.from_tables:
+            if ref.alias and ref.alias.lower() == table_alias.lower():
+                return self._get_table_by_name(ref.name)
+            if ref.name.lower() == table_alias.lower():
+                return self._get_table_by_name(ref.name)
+
+        for ref in scope.join_tables:
+            if ref.alias and ref.alias.lower() == table_alias.lower():
+                return self._get_table_by_name(ref.name)
+            if ref.name.lower() == table_alias.lower():
+                return self._get_table_by_name(ref.name)
+
+        if (
+            scope.current_table
+            and scope.current_table.name.lower() == table_alias.lower()
+        ):
+            return scope.current_table
+
+        return self._get_table_by_name(table_alias)
+
+    def _get_table_by_name(self, table_name: str):
+        try:
+            for table in self._database.tables:
+                if table.name.lower() == table_name.lower():
+                    return table
+        except (AttributeError, TypeError):
+            pass
+        return None
 
     def _build_single_token(self, prefix: str) -> list[CompletionItem]:
         if not self._database:
@@ -1106,6 +1177,20 @@ class SuggestionBuilder:
     @staticmethod
     def _build_having_after_expression(prefix: str) -> list[CompletionItem]:
         keywords = ["AND", "OR", "NOT", "EXISTS", "ORDER BY", "LIMIT"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [
+                keyword for keyword in keywords if keyword.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD)
+            for keyword in keywords
+        ]
+
+    @staticmethod
+    def _build_window_over(prefix: str) -> list[CompletionItem]:
+        keywords = ["ORDER BY", "PARTITION BY"]
         if prefix:
             prefix_upper = prefix.upper()
             keywords = [

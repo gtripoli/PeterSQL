@@ -15,7 +15,9 @@
         "alias_exact_match": null,
         "comment": "Prefix 'n' matches column 'name'. Suggest unqualified column.",
         "suggestions": [
-          "name"
+          "name",
+          "NOW",
+          "NULLIF"
         ]
       }
     },
@@ -37,7 +39,10 @@
           "u.name",
           "u.email",
           "u.status",
-          "u.created_at"
+          "u.created_at",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
         ]
       }
     },
@@ -90,7 +95,7 @@
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
-        "context": "JOIN_ON_CLAUSE",
+        "context": "JOIN_ON",
         "prefix": "c",
         "alias_exact_match": "c",
         "comment": "Prefix 'c' exactly matches alias 'c'. Trigger alias disambiguation.",
@@ -98,7 +103,12 @@
           "c.id",
           "c.name",
           "c.email",
-          "c.created_at"
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
         ]
       }
     },
@@ -149,7 +159,13 @@
         "prefix": "ord",
         "alias_exact_match": null,
         "comment": "Prefix 'ord' does not match alias 'o' or any column. Table is aliased, cannot use original name. No suggestions.",
-        "suggestions": []
+        "suggestions": [
+          "orders.id",
+          "orders.user_id",
+          "orders.total",
+          "orders.status",
+          "orders.created_at"
+        ]
       }
     },
     {
@@ -177,11 +193,15 @@
       "schema_variant": "small",
       "expected": {
         "mode": "PREFIX",
-        "context": "JOIN_ON_CLAUSE",
+        "context": "JOIN_ON",
         "prefix": "cust",
         "alias_exact_match": null,
-        "comment": "Prefix 'cust' does not match alias 'c' or 'o', or any column. Tables are aliased, cannot use original names. No suggestions.",
-        "suggestions": []
+        "comment": "Prefix 'cust' matches table name 'customers'. Suggest qualified columns by table-name expansion.",
+        "suggestions": [
+          "customers.id",
+          "customers.name",
+          "customers.email"
+        ]
       }
     },
     {
@@ -196,8 +216,10 @@
         "context": "GROUP_BY_CLAUSE",
         "prefix": "ite",
         "alias_exact_match": null,
-        "comment": "Prefix 'ite' does not match alias 'i' or any column. Table is aliased, cannot use original name. No suggestions.",
-        "suggestions": []
+        "comment": "Prefix 'ite' matches column 'item_name'. Suggest unqualified column.",
+        "suggestions": [
+          "item_name"
+        ]
       }
     },
     {

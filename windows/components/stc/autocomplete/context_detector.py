@@ -54,12 +54,22 @@ class ContextDetector:
         prefix = self._extract_prefix(text, cursor_pos)
 
         try:
-            context = self._detect_context_with_regex(left_text, prefix)
             scope = self._extract_scope_from_text(text, database)
+        except Exception:
+            scope = QueryScope.empty()
+
+        dot_match = self._check_dot_completion(left_text, prefix)
+        if dot_match:
+            table_alias = dot_match.group(1)
+            column_prefix = dot_match.group(2) if dot_match.group(2) else ""
+            return SQLContext.DOT_COMPLETION, scope, column_prefix
+
+        try:
+            context = self._detect_context_with_regex(left_text, prefix)
             return context, scope, prefix
         except Exception as ex:
             logger.debug(f"context detection error: {ex}")
-            return SQLContext.UNKNOWN, QueryScope.empty(), prefix
+            return SQLContext.UNKNOWN, scope, prefix
 
     def _extract_prefix(self, text: str, cursor_pos: int) -> str:
         if cursor_pos == 0:
@@ -74,6 +84,13 @@ class ContextDetector:
         if match is None:
             return ""
         return match.group(0)
+
+    _dot_pattern = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$")
+
+    def _check_dot_completion(self, left_text: str, prefix: str) -> Optional[re.Match]:
+        if "." in left_text:
+            return self._dot_pattern.search(left_text)
+        return None
 
     def _detect_context_with_regex(self, left_text: str, prefix: str) -> SQLContext:
         left_upper = left_text.upper()
@@ -91,6 +108,9 @@ class ContextDetector:
 
         if select_pos == -1:
             return SQLContext.UNKNOWN
+
+        if re.search(r"\bOVER\s*(?:\(\s*)?$", left_text, re.IGNORECASE):
+            return SQLContext.WINDOW_OVER
 
         max_pos = max(limit_pos, offset_pos)
         if max_pos > select_pos and max_pos != -1:
@@ -384,6 +404,8 @@ class ContextDetector:
     def _extract_scope_from_text(
         self, text: str, database: Optional[SQLDatabase]
     ) -> QueryScope:
+        cleaned_text = re.sub(r"--[^\n]*|/\*.*?\*/", " ", text, flags=re.DOTALL)
+
         sql_keywords = {
             "WHERE",
             "ORDER",
@@ -426,7 +448,7 @@ class ContextDetector:
         join_tables = []
         aliases = {}
 
-        for table_name, alias in self._extract_from_table_tokens(text):
+        for table_name, alias in self._extract_from_table_tokens(cleaned_text):
             if table_name.upper() in sql_keywords:
                 continue
             if alias and alias.upper() in sql_keywords:
@@ -442,7 +464,7 @@ class ContextDetector:
                 aliases[alias.lower()] = ref
             aliases[table_name.lower()] = ref
 
-        for match in join_pattern.finditer(text):
+        for match in join_pattern.finditer(cleaned_text):
             table_name = match.group(1)
             alias = match.group(2) if match.group(2) else None
 
