@@ -347,6 +347,30 @@
           "FALSE"
         ]
       }
+    },
+    {
+      "case_id": "WHERE_012",
+      "title": "Qualified SELECT style propagates to WHERE suggestions",
+      "sql": "SELECT users.id FROM users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "When SELECT already uses qualified columns, WHERE suggestions stay qualified for consistency.",
+        "suggestions_contains": [
+          "users.id",
+          "users.name",
+          "users.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
     }
   ]
 }

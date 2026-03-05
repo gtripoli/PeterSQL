@@ -8,9 +8,15 @@ from helpers.logger import logger
 from structures.engines.database import SQLDatabase, SQLTable
 
 from windows.components.stc.autocomplete.autocomplete_popup import AutoCompletePopup
-from windows.components.stc.autocomplete.completion_types import CompletionItem, CompletionItemType, CompletionResult
+from windows.components.stc.autocomplete.completion_types import (
+    CompletionItem,
+    CompletionItemType,
+    CompletionResult,
+)
 from windows.components.stc.autocomplete.context_detector import ContextDetector
-from windows.components.stc.autocomplete.dot_completion_handler import DotCompletionHandler
+from windows.components.stc.autocomplete.dot_completion_handler import (
+    DotCompletionHandler,
+)
 from windows.components.stc.autocomplete.statement_extractor import StatementExtractor
 from windows.components.stc.autocomplete.suggestion_builder import SuggestionBuilder
 
@@ -19,11 +25,11 @@ from windows.state import CURRENT_SESSION
 
 class SQLCompletionProvider:
     def __init__(
-            self,
-            get_database: Callable[[], Optional[SQLDatabase]],
-            get_current_table: Optional[Callable[[], Optional[SQLTable]]] = None,
-            *,
-            is_filter_editor: bool = False,
+        self,
+        get_database: Callable[[], Optional[SQLDatabase]],
+        get_current_table: Optional[Callable[[], Optional[SQLTable]]] = None,
+        *,
+        is_filter_editor: bool = False,
     ) -> None:
         self._get_database = get_database
         self._get_current_table = get_current_table or (lambda: None)
@@ -35,7 +41,7 @@ class SQLCompletionProvider:
         self._statement_extractor = StatementExtractor()
 
     def _get_current_dialect(self) -> Optional[str]:
-        if session := CURRENT_SESSION.get_value() :
+        if session := CURRENT_SESSION.get_value():
             return session.engine.value.dialect
 
     def get(self, text: str, pos: int) -> Optional[CompletionResult]:
@@ -48,25 +54,37 @@ class SQLCompletionProvider:
 
             safe_pos = self._clamp_position(pos=pos, text=text)
 
-            statement, relative_pos = self._statement_extractor.extract_current_statement(text, safe_pos)
+            statement, relative_pos = (
+                self._statement_extractor.extract_current_statement(text, safe_pos)
+            )
 
             if not self._context_detector:
                 return None
 
-            context, scope, prefix = self._context_detector.detect(statement, relative_pos, database)
+            context, scope, prefix = self._context_detector.detect(
+                statement, relative_pos, database
+            )
             scope.current_table = self._get_current_table()
-            
+
             if self._dot_handler:
                 self._dot_handler.refresh(database, scope)
                 if self._dot_handler.is_dot_completion(statement, relative_pos):
-                    items, prefix = self._dot_handler.get_completions(statement, relative_pos)
+                    items, prefix = self._dot_handler.get_completions(
+                        statement, relative_pos
+                    )
                     if items is not None:
-                        return CompletionResult(items=tuple(items), prefix=prefix or "", prefix_length=len(prefix) if prefix else 0)
+                        return CompletionResult(
+                            items=tuple(items),
+                            prefix=prefix or "",
+                            prefix_length=len(prefix) if prefix else 0,
+                        )
 
             builder = SuggestionBuilder(database, scope.current_table)
             items = builder.build(context, scope, prefix, statement, relative_pos)
 
-            return CompletionResult(items=tuple(items), prefix=prefix, prefix_length=len(prefix))
+            return CompletionResult(
+                items=tuple(items), prefix=prefix, prefix_length=len(prefix)
+            )
         except Exception as ex:
             logger.error(ex, exc_info=True)
             return None
@@ -91,15 +109,15 @@ class SQLCompletionProvider:
 
 class SQLAutoCompleteController:
     def __init__(
-            self,
-            editor: wx.stc.StyledTextCtrl,
-            provider: SQLCompletionProvider,
-            *,
-            settings: Optional[object] = None,
-            theme_loader: Optional[object] = None,
-            debounce_ms: int = 80,
-            is_enabled: bool = True,
-            min_prefix_length: int = 1,
+        self,
+        editor: wx.stc.StyledTextCtrl,
+        provider: SQLCompletionProvider,
+        *,
+        settings: Optional[object] = None,
+        theme_loader: Optional[object] = None,
+        debounce_ms: int = 80,
+        is_enabled: bool = True,
+        min_prefix_length: int = 1,
     ) -> None:
         self._editor = editor
         self._provider = provider
@@ -107,9 +125,17 @@ class SQLAutoCompleteController:
         self._theme_loader = theme_loader
 
         if settings:
-            self._debounce_ms = settings.get_value("settings", "autocomplete", "debounce_ms") or debounce_ms
-            self._min_prefix_length = settings.get_value("settings", "autocomplete", "min_prefix_length") or min_prefix_length
-            self._add_space_after_completion = settings.get_value("settings", "autocomplete", "add_space_after_completion")
+            self._debounce_ms = (
+                settings.get_value("settings", "autocomplete", "debounce_ms")
+                or debounce_ms
+            )
+            self._min_prefix_length = (
+                settings.get_value("settings", "autocomplete", "min_prefix_length")
+                or min_prefix_length
+            )
+            self._add_space_after_completion = settings.get_value(
+                "settings", "autocomplete", "add_space_after_completion"
+            )
             if self._add_space_after_completion is None:
                 self._add_space_after_completion = True
         else:
@@ -140,7 +166,7 @@ class SQLAutoCompleteController:
                 return separator
 
         session = CURRENT_SESSION.get_value()
-        if session and hasattr(session, 'context'):
+        if session and hasattr(session, "context"):
             return session.context.DEFAULT_STATEMENT_SEPARATOR
 
         return ";"
@@ -177,9 +203,7 @@ class SQLAutoCompleteController:
     def _show_popup(self, items: list[CompletionItem]) -> None:
         if not self._popup:
             self._popup = AutoCompletePopup(
-                self._editor,
-                settings=self._settings,
-                theme_loader=self._theme_loader
+                self._editor, settings=self._settings, theme_loader=self._theme_loader
             )
             self._popup.set_on_item_selected(self._on_item_completed)
 
@@ -205,7 +229,10 @@ class SQLAutoCompleteController:
 
         self._editor.SetSelection(start_pos, current_pos)
 
-        should_add_space = self._add_space_after_completion and item.item_type == CompletionItemType.KEYWORD
+        should_add_space = (
+            self._add_space_after_completion
+            and item.item_type == CompletionItemType.KEYWORD
+        )
         completion_text = item.name + " " if should_add_space else item.name
         self._editor.ReplaceSelection(completion_text)
 
@@ -213,7 +240,16 @@ class SQLAutoCompleteController:
         self._hide_popup()
 
         if should_add_space:
-            trigger_keywords = ['SELECT', 'FROM', 'JOIN', 'UPDATE', 'INTO', 'WHERE', 'AND', 'OR']
+            trigger_keywords = [
+                "SELECT",
+                "FROM",
+                "JOIN",
+                "UPDATE",
+                "INTO",
+                "WHERE",
+                "AND",
+                "OR",
+            ]
             if item.name.upper() in trigger_keywords:
                 wx.CallAfter(lambda: self._schedule_show(force=False))
 
@@ -289,7 +325,9 @@ class SQLAutoCompleteController:
         self._pending_call = None
 
     @staticmethod
-    def _unique_sorted_items(*, items: tuple[CompletionItem, ...]) -> list[CompletionItem]:
+    def _unique_sorted_items(
+        *, items: tuple[CompletionItem, ...]
+    ) -> list[CompletionItem]:
         seen_names: set[str] = set()
         unique_items: list[CompletionItem] = []
 
@@ -298,23 +336,4 @@ class SQLAutoCompleteController:
                 seen_names.add(item.name)
                 unique_items.append(item)
 
-        type_priority = {
-            CompletionItemType.COLUMN: 0,
-            CompletionItemType.TABLE: 1,
-            CompletionItemType.FUNCTION: 2,
-            CompletionItemType.KEYWORD: 3,
-        }
-
-        # Sort by type priority, but preserve order within same type
-        # This is important for TABLE items which have custom prioritization (e.g., referenced tables first)
-        def sort_key(item):
-            priority = type_priority.get(item.item_type, 999)
-            # For TABLE items, preserve the order from backend (don't sort alphabetically)
-            # For other types, sort alphabetically within the type
-            if item.item_type == CompletionItemType.TABLE:
-                # Use original index to preserve order
-                return (priority, items.index(item))
-            else:
-                return (priority, item.name.upper())
-        
-        return sorted(unique_items, key=sort_key)
+        return unique_items

@@ -216,6 +216,30 @@
           "DESC"
         ]
       }
+    },
+    {
+      "case_id": "ORDER_008",
+      "title": "Qualified SELECT style propagates to ORDER BY columns",
+      "sql": "SELECT u.id FROM users u ORDER BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Once query style is qualified, ORDER BY columns stay alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
     }
   ]
 }

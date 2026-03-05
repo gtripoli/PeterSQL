@@ -131,6 +131,30 @@
           "UUID"
         ]
       }
+    },
+    {
+      "case_id": "HAVING_006",
+      "title": "Qualified SELECT style propagates to HAVING columns",
+      "sql": "SELECT u.id, COUNT(*) FROM users u GROUP BY u.id HAVING |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "HAVING_CLAUSE",
+        "prefix": null,
+        "comment": "With qualified SELECT/GROUP style, HAVING column suggestions remain alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
     }
   ]
 }

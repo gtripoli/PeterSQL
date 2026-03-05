@@ -550,7 +550,7 @@ class ContextDetector:
 
             if not (
                 table_match := re.match(
-                    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?$",
+                    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s+[A-Za-z_][A-Za-z0-9_]*)?$",
                     part,
                     re.IGNORECASE,
                 )

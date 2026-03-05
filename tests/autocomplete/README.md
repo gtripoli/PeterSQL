@@ -99,13 +99,13 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 |------------|------|-------|---|---|---|-------------|
 | SEL ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/sel.json` | 4 | 4 | 0 | 0 | Baseline SELECT-list suggestions (functions/keywords) without table scope. |
 | SELECT_PREFIX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_prefix.json` | 5 | 5 | 0 | 0 | Prefix filtering in SELECT with and without `current_table` influence. |
-| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 9 | 9 | 0 | 0 | Comma/whitespace transitions after columns and expression boundaries. |
+| SELECT_COLUMN_BEHAVIOR ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_column_behavior.json` | 13 | 13 | 0 | 0 | Comma/whitespace transitions after columns and expression boundaries. |
 | SELECT_SCOPED_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/select_scoped_current_table.json` | 3 | 3 | 0 | 0 | Scope-aware SELECT suggestions when FROM/JOIN tables are already known. |
 
 ### 3. FROM Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 8 | 8 | 0 | 0 | Table and clause-keyword suggestions while building FROM. |
+| FROM ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from.json` | 11 | 11 | 0 | 0 | Table suggestions plus post-table clause transitions (including no-space continuations). |
 | FROM_CLAUSE_PRIORITIZATION ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_prioritization.json` | 3 | 3 | 0 | 0 | Prioritization when SELECT already references qualified tables. |
 | FROM_CLAUSE_CURRENT_TABLE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/from_clause_current_table.json` | 1 | 1 | 0 | 0 | FROM behavior when `current_table` is set and should affect choices. |
 
@@ -120,23 +120,23 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 10 | 10 | 0 | 0 | WHERE context, operator, and expression-follow-up suggestion rules. |
+| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 11 | 11 | 0 | 0 | WHERE context, operator, expression follow-up, and qualified-style propagation rules. |
 | WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | WHERE suggestions constrained to active scope/aliases only. |
 
 ### 6. GROUP BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| GROUP ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/group.json` | 6 | 6 | 0 | 0 | GROUP BY column suggestions and post-expression transitions. |
+| GROUP ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/group.json` | 7 | 7 | 0 | 0 | GROUP BY column suggestions, duplicate filtering, and qualified-style propagation. |
 
 ### 7. HAVING Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| HAVING ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/having.json` | 5 | 5 | 0 | 0 | Aggregate-aware HAVING behavior for operators and follow-up keywords. |
+| HAVING ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/having.json` | 6 | 6 | 0 | 0 | Aggregate-aware HAVING behavior, operators, and qualified-style propagation. |
 
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
-| ORDER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/order.json` | 7 | 7 | 0 | 0 | ORDER BY columns plus sort-direction keyword flow. |
+| ORDER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/order.json` | 8 | 8 | 0 | 0 | ORDER BY columns, sort-direction keyword flow, and qualified-style propagation. |
 
 ### 9. LIMIT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
@@ -165,8 +165,8 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | Large-schema guardrails for prefix filtering and noise control. |
 
 ### Summary Statistics
-- **Total Tests**: 1782 (162 base × 11 engine/version targets)
-- **✅ Passing**: 1782 (162 base × 11 targets, 100%)
+- **Total Tests**: 1881 (171 base × 11 engine/version targets)
+- **✅ Passing**: 1881 (171 base × 11 targets, 100%)
 - **❌ Failing**: 0 (remaining tests, 0%)
 - **⚠️ Expected Failures (xfail)**: 0 (0 base × 11 targets, 0%)
 - **⚪ Not Implemented**: 0 (0%)

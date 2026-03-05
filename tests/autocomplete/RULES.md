@@ -300,11 +300,13 @@ SELECT ui|
    - **Implication for autocomplete:** If prefix does not match the alias and does not match any column name, return empty suggestions. Do NOT suggest qualified columns with the original table name.
    - **Example:** `FROM users u WHERE us|` → NO suggestions (prefix 'us' does not match alias 'u' or any column)
 
-4. **Consistency rule - Qualified context:** If the query already uses qualified columns (e.g., `users.id`), suggestions should be qualified for consistency, even for single table contexts.
-   - This applies when the user has explicitly written `table.column` or `alias.column` in the query
-   - Helps maintain consistent code style within the same query
+4. **Consistency rule - Qualified context propagation:** If the query already uses at least one qualified column (e.g., `users.id` or `u.id`) in the SELECT list, column suggestions MUST stay qualified for consistency, even for single-table scopes.
+   - This is a style lock: once qualified style is used, autocomplete keeps qualified style.
+   - Applies to all column contexts: SELECT list (after comma), WHERE, JOIN ON, ORDER BY, GROUP BY, HAVING.
+   - For aliased tables, qualification MUST use alias only (never table name).
+   - For non-aliased tables, qualification uses `table.column`.
 
-**Rationale:** When only one table is in scope, qualification adds noise without value. However, when prefix matches a table name, qualified names clarify the source of the match and help users discover dot-completion. Column-name matches are prioritized (unqualified) because they are more specific than table-name expansion. When the user has already qualified columns in the query, maintaining that style keeps the code consistent.
+**Rationale:** When only one table is in scope, qualification usually adds noise. However, table-name prefix expansion and explicit qualified usage both express a clear qualification intent. Once user intent is qualified style, maintaining it across contexts keeps SQL consistent and avoids invalid `table.column` usage when aliases are present.
 
 **Examples:**
 ```sql
@@ -330,7 +332,7 @@ SELECT * FROM items WHERE i|
 → items.stock, items.price  (table-name expansion remaining, qualified - THIRD)
 → IF, IFNULL  (functions - FOURTH)
 
--- Single table with alias, no prefix: unqualified
+-- Single table with alias, no qualified style yet: unqualified
 SELECT * FROM users u WHERE |
 → id, name, email
 
@@ -338,10 +340,15 @@ SELECT * FROM users u WHERE |
 SELECT * FROM users u JOIN orders o ON u.id = o.user_id WHERE |
 → u.id, u.name, u.email, o.user_id, o.total, o.created_at
 
--- Consistency rule: qualified context (single table but query uses qualified)
-SELECT * FROM users WHERE users.id = c|
-→ users.created_at  (qualified for consistency, even though single table)
-→ COALESCE, CONCAT, COUNT  (functions)
+-- Consistency rule: qualified style propagates to all contexts
+SELECT u.id FROM users u WHERE |
+→ u.id, u.name, u.email, u.status, u.created_at
+
+SELECT u.id FROM users u ORDER BY |
+→ u.id, u.name, u.email, ...
+
+SELECT u.id, COUNT(*) FROM users u GROUP BY |
+→ u.id, u.name, u.email, ...
 ```
 
 **Note:** This rule applies to all contexts: SELECT_LIST, WHERE, JOIN ON, ORDER BY, GROUP BY, HAVING.

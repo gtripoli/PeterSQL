@@ -171,6 +171,66 @@
           "LIMIT"
         ]
       }
+    },
+    {
+      "case_id": "FROM_010",
+      "title": "After complete table without trailing space, suggest follow-up clauses",
+      "sql": "SELECT * FROM users|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "users",
+        "comment": "Even without trailing space, a completed table token should offer next-clause keywords.",
+        "suggestions": [
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "AS",
+          "WHERE",
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_011",
+      "title": "After complete table + prefix, filter follow-up clause keywords",
+      "sql": "SELECT * FROM users W|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "W",
+        "comment": "Prefix after a completed FROM table should filter clause keywords, returning WHERE.",
+        "suggestions": [
+          "WHERE"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_012",
+      "title": "After aliased table + prefix, suggest WHERE without AS",
+      "sql": "SELECT u.id FROM users u W|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "W",
+        "comment": "After alias is already defined, AS is invalid and WHERE should be suggested for prefix W.",
+        "suggestions": [
+          "WHERE"
+        ]
+      }
     }
   ]
 }

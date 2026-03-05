@@ -137,9 +137,18 @@
         "mode": "PREFIX",
         "context": "FROM_CLAUSE",
         "prefix": "users",
-        "comment": "Current parser behavior resolves token before separator as FROM prefix.",
+        "comment": "Cursor on separator resolves previous FROM statement and offers post-table clause continuations.",
         "suggestions": [
-          "users"
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "AS",
+          "WHERE",
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
         ]
       }
     },

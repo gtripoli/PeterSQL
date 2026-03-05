@@ -54,6 +54,40 @@
       }
     },
     {
+      "case_id": "NO_SCOPED_WILDCARD_001",
+      "title": "After wildcard + space + prefix: suggest clause keyword only",
+      "sql": "SELECT * F",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "F",
+        "comment": "Wildcard is a completed SELECT item. Prefix should continue clause keywords, not DB-wide columns.",
+        "suggestions": [
+          "FROM"
+        ]
+      }
+    },
+    {
+      "case_id": "NO_SCOPED_WILDCARD_002",
+      "title": "After wildcard + space: suggest FROM only",
+      "sql": "SELECT * |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "SELECT_LIST",
+        "prefix": null,
+        "comment": "Wildcard is a completed projection and cannot be aliased with AS.",
+        "suggestions": [
+          "FROM"
+        ]
+      }
+    },
+    {
       "case_id": "NO_SCOPED_COMMA_001",
       "title": "After column + comma suggests next-item (columns + functions)",
       "sql": "SELECT id, |",

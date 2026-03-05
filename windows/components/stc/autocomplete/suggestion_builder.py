@@ -128,6 +128,16 @@ class SuggestionBuilder:
             if prefix and re.search(r"\bAS\s+\w+$", statement_upper):
                 return []
 
+            if (
+                prefix
+                and scope.from_tables
+                and "," not in statement
+                and self._is_after_completed_from_table_with_prefix(
+                    statement, prefix, scope
+                )
+            ):
+                return self._build_from_followup_keywords(prefix, scope)
+
             if not prefix and scope.from_tables:
                 if "," in statement:
                     in_scope_table_names = {
@@ -147,26 +157,7 @@ class SuggestionBuilder:
                     except (AttributeError, TypeError):
                         return []
                 else:
-                    keywords = [
-                        "JOIN",
-                        "INNER JOIN",
-                        "LEFT JOIN",
-                        "RIGHT JOIN",
-                        "CROSS JOIN",
-                        "WHERE",
-                        "GROUP BY",
-                        "ORDER BY",
-                        "LIMIT",
-                    ]
-
-                    has_alias = any(ref.alias for ref in scope.from_tables)
-                    if not has_alias:
-                        keywords.insert(5, "AS")
-
-                    return [
-                        CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
-                        for kw in keywords
-                    ]
+                    return self._build_from_followup_keywords(prefix, scope)
 
             return self._build_from_clause(prefix, statement, scope)
 
@@ -204,10 +195,10 @@ class SuggestionBuilder:
             return self._build_group_by(scope, prefix, statement, cursor_pos)
 
         if context == SQLContext.HAVING_CLAUSE:
-            return self._build_having(scope, prefix)
+            return self._build_having(scope, prefix, statement)
 
         if context == SQLContext.HAVING_AFTER_OPERATOR:
-            return self._build_having_after_operator(scope, prefix)
+            return self._build_having_after_operator(scope, prefix, statement)
 
         if context == SQLContext.HAVING_AFTER_EXPRESSION:
             return self._build_having_after_expression(prefix)
@@ -260,15 +251,35 @@ class SuggestionBuilder:
         table_name = resolved_table.name
         columns = resolved_table.columns
 
+        try:
+            ordered_columns = self._order_columns_for_dot_completion(columns)
+        except (AttributeError, TypeError):
+            ordered_columns = []
+
         column_items = []
-        for col in columns:
+        for col in ordered_columns:
             col_name = col.name
             if not column_prefix or col_name.upper().startswith(column_prefix.upper()):
                 column_items.append(
                     CompletionItem(name=col_name, item_type=CompletionItemType.COLUMN)
                 )
 
-        return sorted(column_items, key=lambda x: x.name)
+        return column_items
+
+    @staticmethod
+    def _order_columns_for_dot_completion(columns: object) -> list[object]:
+        columns_list = list(columns)
+
+        def key(item_with_index: tuple[int, object]) -> tuple[int, int]:
+            idx, col = item_with_index
+            raw_id = getattr(col, "id", None)
+            if isinstance(raw_id, int):
+                return (0, raw_id)
+            if isinstance(raw_id, str) and raw_id.isdigit():
+                return (0, int(raw_id))
+            return (1, idx)
+
+        return [col for _, col in sorted(enumerate(columns_list), key=key)]
 
     def _resolve_table_alias(self, table_alias: str, scope: QueryScope, statement: str):
         for ref in scope.from_tables:
@@ -473,7 +484,7 @@ class SuggestionBuilder:
         if re.search(r",\s+$", statement):
             return False
 
-        match = re.search(r"(\w+(?:\.\w+)?)\s+$", statement)
+        match = re.search(r"(\*|\w+(?:\.\w+)?)\s+$", statement)
         if not match:
             return False
 
@@ -504,7 +515,7 @@ class SuggestionBuilder:
         if re.search(r",\s*\w+$", statement):
             return False
 
-        completed_item_match = re.search(r"(\w+(?:\.\w+)?)\s+\w+$", statement)
+        completed_item_match = re.search(r"(\*|\w+(?:\.\w+)?)\s+\w+$", statement)
         if not completed_item_match:
             return False
 
@@ -696,6 +707,70 @@ class SuggestionBuilder:
             physical_result, key=lambda x: self._table_name_sort_key(x.name)
         )
 
+    @staticmethod
+    def _is_after_completed_from_table_with_prefix(
+        statement: str, prefix: str, scope: QueryScope
+    ) -> bool:
+        import re
+
+        if not scope.from_tables:
+            return False
+
+        last_ref = scope.from_tables[-1]
+        if not last_ref.table:
+            return False
+
+        statement_trimmed = statement.rstrip()
+        if not statement_trimmed.endswith(prefix):
+            return False
+
+        prefix_lower = prefix.lower()
+        matches_completed_table = prefix_lower == last_ref.name.lower() or (
+            bool(last_ref.alias) and prefix_lower == last_ref.alias.lower()
+        )
+
+        if matches_completed_table:
+            return True
+
+        return bool(
+            re.search(
+                r"\bFROM\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
+                statement_trimmed,
+                re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
+    def _build_from_followup_keywords(
+        prefix: str, scope: QueryScope
+    ) -> list[CompletionItem]:
+        keywords = [
+            "JOIN",
+            "INNER JOIN",
+            "LEFT JOIN",
+            "RIGHT JOIN",
+            "CROSS JOIN",
+            "WHERE",
+            "GROUP BY",
+            "ORDER BY",
+            "LIMIT",
+        ]
+
+        has_alias = any(ref.alias for ref in scope.from_tables)
+        if not has_alias:
+            keywords.insert(5, "AS")
+
+        if prefix:
+            prefix_upper = prefix.upper()
+            filtered = [kw for kw in keywords if kw.startswith(prefix_upper)]
+            if filtered:
+                keywords = filtered
+
+        return [
+            CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
+            for kw in keywords
+        ]
+
     def _build_join_clause(
         self, prefix: str, scope: QueryScope
     ) -> list[CompletionItem]:
@@ -847,7 +922,7 @@ class SuggestionBuilder:
         if self._is_where_in_value_list(statement):
             return self._build_where_literals(prefix)
 
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
         columns = self._exclude_left_column_from_where(statement, columns)
 
         items = list(columns)
@@ -875,7 +950,7 @@ class SuggestionBuilder:
     def _build_where_after_operator(
         self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
         columns = self._exclude_left_column_from_where(statement, columns)
 
         items = self._build_where_literals(prefix)
@@ -910,8 +985,10 @@ class SuggestionBuilder:
         return filtered
 
     def _build_where_columns(
-        self, scope: QueryScope, prefix: str
+        self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
+        prefer_qualified = self._should_prefer_qualified_columns(statement)
+
         if not (single_reference := self._get_single_scope_reference(scope)):
             return self._resolve_columns_in_scope(
                 scope, prefix, SQLContext.WHERE_CLAUSE
@@ -924,7 +1001,9 @@ class SuggestionBuilder:
         ):
             return self._get_alias_columns(prefix, scope)
 
-        return self._build_single_table_where_columns(single_reference, prefix)
+        return self._build_single_table_where_columns(
+            single_reference, prefix, prefer_qualified
+        )
 
     @staticmethod
     def _get_single_scope_reference(scope: QueryScope) -> Optional[TableReference]:
@@ -938,11 +1017,14 @@ class SuggestionBuilder:
         return reference
 
     def _build_single_table_where_columns(
-        self, reference: TableReference, prefix: str
+        self, reference: TableReference, prefix: str, prefer_qualified: bool
     ) -> list[CompletionItem]:
         table = reference.table
         if not table:
             return []
+
+        if prefer_qualified:
+            return self._build_qualified_columns_for_reference(reference, prefix)
 
         if not prefix:
             return self._build_unqualified_table_columns(reference)
@@ -951,6 +1033,55 @@ class SuggestionBuilder:
             return self._build_unqualified_table_columns(reference, prefix)
 
         return self._build_single_scope_prefix_columns(reference, prefix)
+
+    @staticmethod
+    def _build_qualified_columns_for_reference(
+        reference: TableReference, prefix: str = ""
+    ) -> list[CompletionItem]:
+        table = reference.table
+        if not table:
+            return []
+
+        qualifier = reference.alias if reference.alias else reference.name
+        prefix_lower = prefix.lower()
+        items = []
+        try:
+            for column in table.columns:
+                if not column.name:
+                    continue
+                if prefix and not column.name.lower().startswith(prefix_lower):
+                    continue
+                items.append(
+                    CompletionItem(
+                        name=f"{qualifier}.{column.name}",
+                        item_type=CompletionItemType.COLUMN,
+                        description=reference.name,
+                    )
+                )
+        except (AttributeError, TypeError):
+            return []
+        return items
+
+    @staticmethod
+    def _should_prefer_qualified_columns(statement: str) -> bool:
+        if not statement:
+            return False
+
+        select_match = re.search(
+            r"\bSELECT\b(?P<body>.*?)(?:\bFROM\b|$)",
+            statement,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not select_match:
+            return False
+
+        select_body = select_match.group("body")
+        return bool(
+            re.search(
+                r"\b[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\b",
+                select_body,
+            )
+        )
 
     @staticmethod
     def _build_unqualified_table_columns(
@@ -1030,7 +1161,7 @@ class SuggestionBuilder:
     ) -> list[CompletionItem]:
         is_after_comma = bool(re.search(r",\s*$", statement) if statement else False)
 
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
 
         items = list(columns)
         items.extend(self._build_order_by_functions(prefix))
@@ -1134,7 +1265,7 @@ class SuggestionBuilder:
         cursor_pos: Optional[int] = None,
     ) -> list[CompletionItem]:
         left_statement = statement[:cursor_pos] if cursor_pos is not None else statement
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
         columns = self._exclude_group_by_existing_columns(columns, left_statement)
 
         items = list(columns)
@@ -1202,18 +1333,20 @@ class SuggestionBuilder:
 
         return grouped_names
 
-    def _build_having(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
+    def _build_having(
+        self, scope: QueryScope, prefix: str, statement: str = ""
+    ) -> list[CompletionItem]:
         aggregate_funcs = self._build_aggregate_functions(prefix)
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
         other_funcs = self._build_having_other_functions(prefix)
         return aggregate_funcs + columns + other_funcs
 
     def _build_having_after_operator(
-        self, scope: QueryScope, prefix: str
+        self, scope: QueryScope, prefix: str, statement: str = ""
     ) -> list[CompletionItem]:
         literals = self._build_having_literals(prefix)
         aggregate_funcs = self._build_aggregate_functions(prefix)
-        columns = self._build_where_columns(scope, prefix)
+        columns = self._build_where_columns(scope, prefix, statement)
         return literals + aggregate_funcs + columns
 
     @staticmethod
@@ -1327,8 +1460,17 @@ class SuggestionBuilder:
             processed_statement = left_statement[: -len(prefix)]
 
         suggestions = []
+        wildcard_table_match = re.search(r"(\w+)\.\*\s+$", processed_statement)
+        is_wildcard_select_item = bool(
+            wildcard_table_match or re.search(r"(?:^|\s)\*\s+$", processed_statement)
+        )
+
         match = re.search(r"(\w+)(?:\.(\w+))?\s+$", processed_statement)
-        table_name = match.group(1) if match and match.group(2) else None
+        table_name = None
+        if wildcard_table_match:
+            table_name = wildcard_table_match.group(1)
+        elif match and match.group(2):
+            table_name = match.group(1)
 
         if (
             table_name is None
@@ -1341,7 +1483,13 @@ class SuggestionBuilder:
         if table_name:
             suggestions.append(f"FROM {table_name}")
 
-        suggestions.extend(["AS", "FROM"])
+        if is_wildcard_select_item:
+            suggestions.append("FROM")
+        else:
+            suggestions.extend(["AS", "FROM"])
+
+        # Preserve order while removing duplicates.
+        suggestions = list(dict.fromkeys(suggestions))
 
         if prefix:
             prefix_upper = prefix.upper()

@@ -177,6 +177,30 @@
           "POWER"
         ]
       }
+    },
+    {
+      "case_id": "GROUP_007",
+      "title": "Qualified SELECT style propagates to GROUP BY columns",
+      "sql": "SELECT u.id, COUNT(*) FROM users u GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Qualified style in SELECT forces alias-qualified GROUP BY suggestions.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
     }
   ]
 }
