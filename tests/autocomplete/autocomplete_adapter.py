@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 from typing import Optional
@@ -273,6 +274,8 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
         suggestions = [item.name for item in completion_result.items]
         completion_prefix = completion_result.prefix
 
+    left_statement = statement[:relative_position]
+
     if sql_context.name == "DOT_COMPLETION":
         mode = "DOT"
     elif sql_context.name == "EMPTY":
@@ -290,7 +293,14 @@ def get_suggestions(request: AutocompleteRequest) -> AutocompleteResponse:
         "WHERE_AFTER_EXPRESSION",
         "HAVING_AFTER_EXPRESSION",
     }:
-        mode = "AFTER_EXPRESSION"
+        if sql_context.name == "WHERE_AFTER_EXPRESSION" and re.search(
+            r"\bIS(?:\s+NOT)?\s*$",
+            left_statement,
+            re.IGNORECASE,
+        ):
+            mode = "CONTEXT"
+        else:
+            mode = "AFTER_EXPRESSION"
     elif completion_prefix:
         mode = "PREFIX"
     else:
