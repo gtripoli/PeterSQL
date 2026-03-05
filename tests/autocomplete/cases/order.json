@@ -56,7 +56,9 @@
         "context": "ORDER_BY_CLAUSE",
         "prefix": "c",
         "suggestions": [
-          "created_at",
+          "customers.id",
+          "customers.name",
+          "customers.email",
           "COALESCE",
           "CONCAT",
           "COUNT"
@@ -71,7 +73,7 @@
       "current_table": null,
       "schema_variant": "small",
       "expected": {
-        "mode": "AFTER_ORDER_COLUMN",
+        "mode": "CONTEXT",
         "context": "ORDER_BY_AFTER_COLUMN",
         "prefix": null,
         "comment": "After column: sort direction keywords (ASC/DESC) and clause keywords (LIMIT, etc.). MUST NOT suggest columns, functions, or literals.",
@@ -182,7 +184,7 @@
           "p.id",
           "p.name",
           "i.id",
-          "i.quantity",
+          "i.item_name",
           "AVG",
           "COUNT"
         ],

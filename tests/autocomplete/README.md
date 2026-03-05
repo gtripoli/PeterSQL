@@ -120,7 +120,7 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 5. WHERE Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| WHERE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/where.json` | 11 | 0 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
+| WHERE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where.json` | 11 | 11 | 0 | 0 | `SELECT * FROM users WHERE \|` | Basic WHERE clause suggestions |
 | WHERE_SCOPED ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/where_scoped.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users u WHERE \|` | Scope restriction in WHERE |
 
 ### 6. GROUP BY Clause
@@ -136,12 +136,12 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 ### 8. ORDER BY Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| ORDER ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/order.json` | 7 | 0 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
+| ORDER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/order.json` | 7 | 7 | 0 | 0 | `SELECT * FROM users ORDER BY \|` | ORDER BY suggestions |
 
 ### 9. LIMIT Clause
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
 |------------|------|-------|---|---|---|---------------|-------------|
-| LIMIT ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/limit.json` | 3 | 0 | 0 | 0 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
+| LIMIT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/limit.json` | 3 | 3 | 0 | 0 | `SELECT * FROM users LIMIT \|` | LIMIT clause suggestions |
 
 ### 10. Advanced Features
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Example Query | Description |
@@ -166,10 +166,10 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
-- **Total Tests**: 1980 (180 base × 11 engine/version targets)
-- **✅ Passing**: 957 (87 base × 11 targets, 48%)
-- **❌ Failing**: 913 (remaining tests, 46%)
-- **⚠️ Expected Failures (xfail)**: 110 (10 base × 11 targets, 6%)
+- **Total Tests**: 2013 (183 base × 11 engine/version targets)
+- **✅ Passing**: 1177 (107 base × 11 targets, 58%)
+- **❌ Failing**: 726 (remaining tests, 36%)
+- **⚠️ Expected Failures (xfail)**: 110 (10 base × 11 targets, 5%)
 - **⚪ Not Implemented**: 0 (0%)
 
 ### Legend

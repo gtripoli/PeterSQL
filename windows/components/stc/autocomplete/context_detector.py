@@ -94,6 +94,8 @@ class ContextDetector:
 
         max_pos = max(limit_pos, offset_pos)
         if max_pos > select_pos and max_pos != -1:
+            if self._is_after_limit_number(left_text, limit_pos, prefix):
+                return SQLContext.AFTER_LIMIT_NUMBER
             return SQLContext.LIMIT_OFFSET_CLAUSE
 
         if having_pos > select_pos and having_pos != -1:
@@ -110,6 +112,8 @@ class ContextDetector:
 
         if order_by_pos > select_pos and order_by_pos != -1:
             if order_by_pos > max(where_pos, group_by_pos, having_pos, -1):
+                if self._is_after_order_by_column(left_text, order_by_pos, prefix):
+                    return SQLContext.ORDER_BY_AFTER_COLUMN
                 return SQLContext.ORDER_BY_CLAUSE
 
         if on_pos > select_pos and on_pos != -1:
@@ -555,6 +559,62 @@ class ContextDetector:
 
         after_order_by = upper[order_by_pos + 8 :].strip()
         return "LIMIT" not in after_order_by
+
+    def _is_after_limit_number(
+        self, left_text: str, limit_pos: int, prefix: str
+    ) -> bool:
+        if limit_pos == -1:
+            return False
+
+        after_limit = left_text[limit_pos + 5 :]
+        if not after_limit:
+            return False
+
+        stripped = after_limit.strip()
+        if not stripped:
+            return False
+
+        match = re.match(r"^\d+", stripped)
+        if match:
+            num_end = match.end()
+            after_num = stripped[num_end:]
+            if not after_num or after_num[0].isspace():
+                if prefix:
+                    return True
+                return after_num.strip() == ""
+        return False
+
+    def _is_after_order_by_column(
+        self, left_text: str, order_by_pos: int, prefix: str
+    ) -> bool:
+        if not prefix:
+            after_order_by = left_text[order_by_pos + 8 :]
+            if not after_order_by or not after_order_by[-1].isspace():
+                return False
+            after_stripped = after_order_by.strip()
+            if not after_stripped:
+                return False
+            if after_stripped.endswith(","):
+                return False
+            if after_stripped.upper().endswith(
+                ("ASC", "DESC", "NULLS FIRST", "NULLS LAST")
+            ):
+                return False
+            return True
+
+        after_order_by = left_text[order_by_pos + 8 :]
+        after_stripped = after_order_by.strip()
+        if not after_stripped:
+            return False
+
+        column_match = re.match(
+            r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?\s+([A-Za-z_][A-Za-z0-9_]*)?",
+            after_stripped,
+            re.IGNORECASE,
+        )
+        if column_match and column_match.group(1):
+            return True
+        return False
 
     def _is_after_group_by(self, text: str) -> bool:
         upper = text.upper()

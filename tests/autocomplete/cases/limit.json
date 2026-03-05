@@ -9,7 +9,7 @@
       "current_table": null,
       "schema_variant": "small",
       "expected": {
-        "mode": "NO_SUGGESTIONS",
+        "mode": "CONTEXT",
         "context": "LIMIT_OFFSET_CLAUSE",
         "prefix": null,
         "suggestions": []
@@ -23,7 +23,7 @@
       "current_table": null,
       "schema_variant": "small",
       "expected": {
-        "mode": "NO_SUGGESTIONS",
+        "mode": "CONTEXT",
         "context": "LIMIT_OFFSET_CLAUSE",
         "prefix": null,
         "suggestions": []

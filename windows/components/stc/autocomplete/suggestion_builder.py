@@ -192,7 +192,10 @@ class SuggestionBuilder:
             return self._build_where_after_operator(scope, prefix, statement)
 
         if context == SQLContext.ORDER_BY_CLAUSE:
-            return self._build_order_by(scope, prefix)
+            return self._build_order_by(scope, prefix, statement)
+
+        if context == SQLContext.ORDER_BY_AFTER_COLUMN:
+            return self._build_order_by_after_column(prefix)
 
         if context == SQLContext.GROUP_BY_CLAUSE:
             return self._build_group_by(scope, prefix, statement, cursor_pos)
@@ -208,6 +211,9 @@ class SuggestionBuilder:
 
         if context == SQLContext.LIMIT_OFFSET_CLAUSE:
             return []
+
+        if context == SQLContext.AFTER_LIMIT_NUMBER:
+            return self._build_after_limit_number(prefix)
 
         return self._build_keywords(prefix)
 
@@ -906,28 +912,106 @@ class SuggestionBuilder:
 
         return bool(re.search(r"\bIN\s*\([^)]*,\s*$", statement, re.IGNORECASE))
 
-    def _build_order_by(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
-        items = []
-        items.extend(
-            self._resolve_columns_in_scope(scope, prefix, SQLContext.ORDER_BY_CLAUSE)
-        )
-        items.extend(self._build_functions(prefix))
+    def _build_order_by(
+        self, scope: QueryScope, prefix: str, statement: str = ""
+    ) -> list[CompletionItem]:
+        is_after_comma = bool(re.search(r",\s*$", statement) if statement else False)
 
-        order_keywords = ["ASC", "DESC", "NULLS FIRST", "NULLS LAST"]
-        if prefix:
-            prefix_upper = prefix.upper()
-            order_keywords = [
-                kw for kw in order_keywords if kw.startswith(prefix_upper)
-            ]
+        columns = self._build_where_columns(scope, prefix)
 
-        items.extend(
-            [
-                CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
-                for kw in order_keywords
-            ]
-        )
+        items = list(columns)
+        items.extend(self._build_order_by_functions(prefix))
 
         return items
+
+    @staticmethod
+    def _build_order_by_after_column(prefix: str) -> list[CompletionItem]:
+        keywords = ["ASC", "DESC", "NULLS FIRST", "NULLS LAST", "LIMIT"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [kw for kw in keywords if kw.startswith(prefix_upper)]
+
+        return [
+            CompletionItem(name=kw, item_type=CompletionItemType.KEYWORD)
+            for kw in keywords
+        ]
+
+    def _build_order_by_functions(self, prefix: str) -> list[CompletionItem]:
+        functions = self._build_functions(prefix)
+        return [
+            function
+            for function in functions
+            if function.name not in self._order_by_excluded_functions
+        ]
+
+    _order_by_excluded_functions = {
+        "CURRENT_DATE",
+        "CURRENT_TIME",
+        "CURRENT_TIMESTAMP",
+        "PI",
+        "POW",
+        "POWER",
+    }
+
+    @staticmethod
+    def _exclude_order_by_existing_columns(
+        columns: list[CompletionItem], left_statement: str
+    ) -> list[CompletionItem]:
+        ordered_column_names = SuggestionBuilder._extract_order_by_column_names(
+            left_statement
+        )
+        if not ordered_column_names:
+            return columns
+
+        filtered = []
+        for column in columns:
+            column_name = column.name.lower()
+            base_name = (
+                column_name.split(".", 1)[1] if "." in column_name else column_name
+            )
+            if column_name in ordered_column_names or base_name in ordered_column_names:
+                continue
+            filtered.append(column)
+        return filtered
+
+    @staticmethod
+    def _extract_order_by_column_names(left_statement: str) -> set[str]:
+        if not (
+            match := re.search(
+                r"\bORDER\s+BY\s+(?P<clause>.+)$", left_statement, re.IGNORECASE
+            )
+        ):
+            return set()
+
+        clause = match.group("clause")
+        if not clause:
+            return set()
+
+        ordered_names: set[str] = set()
+        for raw_part in clause.split(","):
+            part = raw_part.strip()
+            if not part:
+                continue
+
+            part_clean = re.sub(
+                r"\s+(?:ASC|DESC|NULLS\s+(?:FIRST|LAST))?\s*$",
+                "",
+                part,
+                flags=re.IGNORECASE,
+            ).strip()
+
+            if token := re.match(
+                r"(?:(?P<table>[A-Za-z_][A-Za-z0-9_]*)\.)?(?P<column>[A-Za-z_][A-Za-z0-9_]*)$",
+                part_clean,
+                re.IGNORECASE,
+            ):
+                table_name = token.group("table")
+                column_name = token.group("column")
+                ordered_names.add(column_name.lower())
+                if table_name:
+                    ordered_names.add(f"{table_name.lower()}.{column_name.lower()}")
+
+        return ordered_names
 
     def _build_group_by(
         self,
@@ -1022,6 +1106,20 @@ class SuggestionBuilder:
     @staticmethod
     def _build_having_after_expression(prefix: str) -> list[CompletionItem]:
         keywords = ["AND", "OR", "NOT", "EXISTS", "ORDER BY", "LIMIT"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [
+                keyword for keyword in keywords if keyword.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=keyword, item_type=CompletionItemType.KEYWORD)
+            for keyword in keywords
+        ]
+
+    @staticmethod
+    def _build_after_limit_number(prefix: str) -> list[CompletionItem]:
+        keywords = ["OFFSET"]
         if prefix:
             prefix_upper = prefix.upper()
             keywords = [
