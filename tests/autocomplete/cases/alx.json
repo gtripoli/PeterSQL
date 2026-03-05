@@ -144,9 +144,7 @@
           "products.unit_price",
           "UNIX_TIMESTAMP",
           "UPPER",
-          "UUID",
-          "UPDATE",
-          "USING"
+          "UUID"
         ]
       }
     }

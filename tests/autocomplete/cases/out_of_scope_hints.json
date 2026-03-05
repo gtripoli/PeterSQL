@@ -12,26 +12,12 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "c",
-        "comment": "Current behavior includes DB-wide expansion and scope column matches for prefix 'c'.",
+        "comment": "Scope-first behavior: prefix suggestions from in-scope columns and matching functions only.",
         "suggestions": [
-          "customers.id",
-          "customers.name",
-          "customers.email",
-          "carts.id",
-          "carts.customer_id",
-          "carts.created_at",
-          "carts.cart_total",
-          "orders.created_at",
-          "users.created_at",
-          "payments.created_at",
+          "created_at",
           "COALESCE",
           "CONCAT",
-          "COUNT",
-          "CURRENT_DATE",
-          "CURRENT_TIME",
-          "CURRENT_TIMESTAMP",
-          "CREATE",
-          "CROSS JOIN"
+          "COUNT"
         ]
       }
     },
@@ -46,24 +32,12 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "comment": "Scope=[products]. Prefix 'u' matches NO scope columns (products has: id,name,price,unit_price,stock). Matches DB table 'users'. HINT MODE: functions first, then table hint, NO DB-wide columns.",
+        "comment": "Scope-first behavior: keep in-scope column matches plus prefix-matching functions; no out-of-scope table expansion.",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "user_sessions.id",
-          "user_sessions.user_id",
-          "user_sessions.session_token",
-          "user_sessions.expires_at",
-          "products.unit_price",
-          "orders.user_id",
+          "unit_price",
           "UNIX_TIMESTAMP",
           "UPPER",
-          "UUID",
-          "UPDATE",
-          "USING"
+          "UUID"
         ]
       }
     },
@@ -78,12 +52,10 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "t",
-        "comment": "Scope=[orders]. Prefix 't' matches scope column orders.total. No DB-wide table starts with 't'. No hint.",
+        "comment": "Prefix matches in-scope column and functions only.",
         "suggestions": [
-          "orders.total",
-          "TRIM",
-          "TRUE",
-          "TRUNCATE"
+          "total",
+          "TRIM"
         ]
       }
     },
@@ -98,9 +70,9 @@
         "mode": "PREFIX",
         "context": "WHERE_CLAUSE",
         "prefix": "c",
-        "comment": "WHERE is scope-restricted. No out-of-scope hints. Only scope columns + functions.",
+        "comment": "WHERE is scope-restricted: only in-scope columns and matching functions.",
         "suggestions": [
-          "orders.created_at",
+          "created_at",
           "COALESCE",
           "CONCAT",
           "COUNT",
@@ -121,24 +93,12 @@
         "mode": "PREFIX",
         "context": "SELECT_LIST",
         "prefix": "u",
-        "comment": "Prefix 'u' matches scope + DB-wide columns in current SELECT_LIST behavior.",
+        "comment": "Prefix matches in-scope column and matching functions; out-of-scope table hints are not shown.",
         "suggestions": [
-          "users.id",
-          "users.name",
-          "users.email",
-          "users.status",
-          "users.created_at",
-          "user_sessions.id",
-          "user_sessions.user_id",
-          "user_sessions.session_token",
-          "user_sessions.expires_at",
-          "orders.user_id",
-          "products.unit_price",
+          "user_id",
           "UNIX_TIMESTAMP",
           "UPPER",
-          "UUID",
-          "UPDATE",
-          "USING"
+          "UUID"
         ]
       }
     }

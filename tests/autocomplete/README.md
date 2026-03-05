@@ -159,15 +159,15 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/derived_tables_cte.json` | 10 | 0 | 0 | 10 | `WITH au AS (SELECT * FROM users) SELECT * FROM \|` | CTEs and derived tables |
 | MULTI_QUERY_SUPPORT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/multi_query_support.json` | 7 | 7 | 0 | 0 | `SELECT * FROM users; SELECT \|` | Multiple queries in editor |
 | MULTI_QUERY_EDGE_CASES ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/mq.json` | 4 | 4 | 0 | 0 | `SELECT * FROM users; SELECT * FROM orders WHERE \|;` | Multi-query lexical edge cases |
-| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/out_of_scope_hints.json` | 5 | 0 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
-| LEX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/lex.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
-| ALX ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/alx.json` | 6 | 0 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
-| LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-not_tested-lightgrey) | `cases/perf.json` | 2 | 0 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
+| OUT_OF_SCOPE_HINTS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/out_of_scope_hints.json` | 5 | 5 | 0 | 0 | `SELECT u\| FROM products` | Scoped SELECT prefix and out-of-scope expansions |
+| LEX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/lex.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE name LIKE '%\|'` | Lexical analysis |
+| ALX ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/alx.json` | 6 | 6 | 0 | 0 | `SELECT * FROM users AS u\|` | Advanced lexical |
+| LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | `SELECT * FROM users WHERE col_0\|` | Large schema prefix/scope guardrails |
 
 ### Summary Statistics
 - **Total Tests**: 1947 (177 base × 11 engine/version targets)
-- **✅ Passing**: 1727 (157 base × 11 targets, 89%)
-- **❌ Failing**: 99 (remaining tests, 5%)
+- **✅ Passing**: 1826 (166 base × 11 targets, 94%)
+- **❌ Failing**: 0 (remaining tests, 0%)
 - **⚠️ Expected Failures (xfail)**: 121 (11 base × 11 targets, 6%)
 - **⚪ Not Implemented**: 0 (0%)
 
