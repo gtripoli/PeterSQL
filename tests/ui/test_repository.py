@@ -131,7 +131,7 @@ class TestConnectionsRepository:
 
     def test_add_directory(self, repository):
         """Test adding a directory."""
-        directory = ConnectionDirectory(name="Production", children=[])
+        directory = ConnectionDirectory(id=-1, name="Production", children=[])
 
         repository.add_directory(directory)
 
@@ -142,7 +142,7 @@ class TestConnectionsRepository:
 
     def test_add_connection_to_directory(self, repository):
         """Test adding a connection inside a directory."""
-        directory = ConnectionDirectory(name="Development", children=[])
+        directory = ConnectionDirectory(id=-1, name="Development", children=[])
         repository.add_directory(directory)
 
         connection = Connection(
@@ -163,7 +163,7 @@ class TestConnectionsRepository:
 
     def test_delete_directory(self, repository):
         """Test deleting a directory."""
-        directory = ConnectionDirectory(name="To Delete", children=[])
+        directory = ConnectionDirectory(id=-1, name="To Delete", children=[])
         repository.add_directory(directory)
 
         assert len(repository.connections.get_value()) == 1

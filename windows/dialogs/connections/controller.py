@@ -64,15 +64,12 @@ class ConnectionsTreeModel(BaseDataViewTreeModel):
         return mapper[col]
 
     def SetValue(self, variant, item, col):
-        print("SetValue")
         node = self.ItemToObject(item)
         if isinstance(node, ConnectionDirectory):
             node.name = variant.GetText()
-            # self.repository.save_directory(node)
 
         if isinstance(node, Connection):
             node.name = variant.GetText()
-            # self.repository.save_connection(node)
 
         return True
 
@@ -113,7 +110,7 @@ class ConnectionsTreeController:
     def _on_item_editing_done(self, event):
         item = event.GetItem()
 
-        if not item.IsOk:
+        if not item.IsOk():
             return
 
         obj = self.model.ItemToObject(item)
@@ -196,6 +193,5 @@ class ConnectionsTreeController:
         if connection:
             item = self.model.ObjectToItem(connection)
             if not self.connections_tree_ctrl.IsSelected(item):
-                print("select")
                 self.connections_tree_ctrl.Select(item)
                 self.connections_tree_ctrl.EnsureVisible(item)

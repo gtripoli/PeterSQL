@@ -2,7 +2,7 @@ import dataclasses
 import enum
 
 from functools import lru_cache
-from typing import Union, Optional, Any, NamedTuple, List
+from typing import Any, NamedTuple, Optional, Union
 
 from icons import Icon, IconList
 
@@ -41,17 +41,23 @@ class ConnectionEngine(enum.Enum):
 
 @dataclasses.dataclass
 class ConnectionDirectory:
+    id: int
     name: str
-    children: List[Union["ConnectionDirectory", "Connection"]] = dataclasses.field(
+    children: list[Union["ConnectionDirectory", "Connection"]] = dataclasses.field(
         default_factory=list
     )
 
     def to_dict(self):
         return {
+            "id": self.id,
             "type": "directory",
             "name": self.name,
             "children": [child.to_dict() for child in self.children],
         }
+
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
 
 
 @dataclasses.dataclass(eq=False)
@@ -64,6 +70,11 @@ class Connection:
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
     comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None
+    parent: Optional["ConnectionDirectory"] = dataclasses.field(
+        default=None,
+        compare=False,
+        repr=False,
+    )
 
     def __eq__(self, other: Any):
         if not isinstance(other, Connection):
