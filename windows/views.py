@@ -57,19 +57,31 @@ class ConnectionsDialog ( wx.Dialog ):
         self.m_panel16.SetSizer( bSizer35 )
         self.m_panel16.Layout()
         bSizer35.Fit( self.m_panel16 )
-        self.m_menu5 = wx.Menu()
-        self.m_menuItem4 = wx.MenuItem( self.m_menu5, wx.ID_ANY, _(u"New directory"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu5.Append( self.m_menuItem4 )
+        self.connection_tree_menu = wx.Menu()
+        self.m_menuItem4 = wx.MenuItem( self.connection_tree_menu, wx.ID_ANY, _(u"New directory"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menuItem4.SetBitmap( wx.Bitmap( u"icons/16x16/folder.png", wx.BITMAP_TYPE_ANY ) )
+        self.connection_tree_menu.Append( self.m_menuItem4 )
 
-        self.m_menuItem5 = wx.MenuItem( self.m_menu5, wx.ID_ANY, _(u"New Session"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu5.Append( self.m_menuItem5 )
+        self.m_menuItem5 = wx.MenuItem( self.connection_tree_menu, wx.ID_ANY, _(u"New connection"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menuItem5.SetBitmap( wx.Bitmap( u"icons/16x16/server.png", wx.BITMAP_TYPE_ANY ) )
+        self.connection_tree_menu.Append( self.m_menuItem5 )
 
-        self.m_menu5.AppendSeparator()
+        self.connection_tree_menu.AppendSeparator()
 
-        self.m_menuItem10 = wx.MenuItem( self.m_menu5, wx.ID_ANY, _(u"Import"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu5.Append( self.m_menuItem10 )
+        self.m_menuItem18 = wx.MenuItem( self.connection_tree_menu, wx.ID_ANY, _(u"Rename"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menuItem18.SetBitmap( wx.Bitmap( u"icons/16x16/edit_marker.png", wx.BITMAP_TYPE_ANY ) )
+        self.connection_tree_menu.Append( self.m_menuItem18 )
+        self.m_menuItem18.Enable( False )
 
-        self.m_panel16.Bind( wx.EVT_RIGHT_DOWN, self.m_panel16OnContextMenu )
+        self.m_menuItem19 = wx.MenuItem( self.connection_tree_menu, wx.ID_ANY, _(u"Clone connection"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menuItem19.SetBitmap( wx.Bitmap( u"icons/16x16/page_copy_columns.png", wx.BITMAP_TYPE_ANY ) )
+        self.connection_tree_menu.Append( self.m_menuItem19 )
+        self.m_menuItem19.Enable( False )
+
+        self.m_menuItem21 = wx.MenuItem( self.connection_tree_menu, wx.ID_ANY, _(u"Delete"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menuItem21.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+        self.connection_tree_menu.Append( self.m_menuItem21 )
+
 
         self.m_panel17 = wx.Panel( self.m_splitter3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer36 = wx.BoxSizer( wx.VERTICAL )
@@ -220,7 +232,7 @@ class ConnectionsDialog ( wx.Dialog ):
 
         self.panel_connection.SetSizer( bSizer12 )
         self.panel_connection.Layout()
-        self.m_notebook4.AddPage( self.panel_connection, _(u"Settings"), True )
+        self.m_notebook4.AddPage( self.panel_connection, _(u"Settings"), False )
         self.panel_ssh_tunnel = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         self.panel_ssh_tunnel.Enable( False )
         self.panel_ssh_tunnel.Hide()
@@ -419,7 +431,7 @@ class ConnectionsDialog ( wx.Dialog ):
         self.panel_statistics.SetSizer( bSizer361 )
         self.panel_statistics.Layout()
         bSizer361.Fit( self.panel_statistics )
-        self.m_notebook4.AddPage( self.panel_statistics, _(u"Statistics"), False )
+        self.m_notebook4.AddPage( self.panel_statistics, _(u"Statistics"), True )
 
         bSizer36.Add( self.m_notebook4, 1, wx.ALL|wx.EXPAND, 5 )
 
@@ -440,6 +452,15 @@ class ConnectionsDialog ( wx.Dialog ):
         self.btn_create = wx.Button( self, wx.ID_ANY, _(u"Create"), wx.DefaultPosition, wx.DefaultSize, 0 )
 
         self.btn_create.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
+        self.m_menu12 = wx.Menu()
+        self.m_menuItem16 = wx.MenuItem( self.m_menu12, wx.ID_ANY, _(u"Create connection"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menu12.Append( self.m_menuItem16 )
+
+        self.m_menuItem17 = wx.MenuItem( self.m_menu12, wx.ID_ANY, _(u"Create directory"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menu12.Append( self.m_menuItem17 )
+
+        self.btn_create.Bind( wx.EVT_RIGHT_DOWN, self.btn_createOnContextMenu )
+
         bSizer301.Add( self.btn_create, 0, wx.ALL|wx.BOTTOM, 5 )
 
         self.btn_create_directory = wx.Button( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.BU_EXACTFIT|wx.BU_NOTEXT )
@@ -505,10 +526,12 @@ class ConnectionsDialog ( wx.Dialog ):
         # Connect Events
         self.Bind( wx.EVT_CLOSE, self.on_close )
         self.Bind( wx.EVT_MENU, self.on_new_directory, id = self.m_menuItem4.GetId() )
-        self.Bind( wx.EVT_MENU, self.on_new_session, id = self.m_menuItem5.GetId() )
-        self.Bind( wx.EVT_MENU, self.on_import, id = self.m_menuItem10.GetId() )
+        self.Bind( wx.EVT_MENU, self.on_new_connection, id = self.m_menuItem5.GetId() )
+        self.Bind( wx.EVT_MENU, self.on_rename, id = self.m_menuItem18.GetId() )
+        self.Bind( wx.EVT_MENU, self.on_clone_connection, id = self.m_menuItem19.GetId() )
+        self.Bind( wx.EVT_MENU, self.on_delete, id = self.m_menuItem21.GetId() )
         self.engine.Bind( wx.EVT_CHOICE, self.on_choice_engine )
-        self.btn_create.Bind( wx.EVT_BUTTON, self.on_create_session )
+        self.btn_create.Bind( wx.EVT_BUTTON, self.on_create )
         self.btn_create_directory.Bind( wx.EVT_BUTTON, self.on_create_directory )
         self.btn_delete.Bind( wx.EVT_BUTTON, self.on_delete )
         self.btn_save.Bind( wx.EVT_BUTTON, self.on_save )
@@ -526,23 +549,27 @@ class ConnectionsDialog ( wx.Dialog ):
     def on_new_directory( self, event ):
         event.Skip()
 
-    def on_new_session( self, event ):
+    def on_new_connection( self, event ):
         event.Skip()
 
-    def on_import( self, event ):
+    def on_rename( self, event ):
+        event.Skip()
+
+    def on_clone_connection( self, event ):
+        event.Skip()
+
+    def on_delete( self, event ):
         event.Skip()
 
     def on_choice_engine( self, event ):
         event.Skip()
 
-    def on_create_session( self, event ):
+    def on_create( self, event ):
         event.Skip()
 
     def on_create_directory( self, event ):
         event.Skip()
 
-    def on_delete( self, event ):
-        event.Skip()
 
     def on_save( self, event ):
         event.Skip()
@@ -557,8 +584,8 @@ class ConnectionsDialog ( wx.Dialog ):
         self.m_splitter3.SetSashPosition( 250 )
         self.m_splitter3.Unbind( wx.EVT_IDLE )
 
-    def m_panel16OnContextMenu( self, event ):
-        self.m_panel16.PopupMenu( self.m_menu5, event.GetPosition() )
+    def btn_createOnContextMenu( self, event ):
+        self.btn_create.PopupMenu( self.m_menu12, event.GetPosition() )
 
 
 ###########################################################################
@@ -2055,6 +2082,12 @@ class Trash ( wx.Panel ):
         bSizer129.Add( self.m_radioBtn11, 1, wx.ALL|wx.EXPAND, 5 )
 
         self.m_radioBtn21 = wx.RadioButton( self, wx.ID_ANY, _(u"MERGE"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_menu13 = wx.Menu()
+        self.m_menuItem10 = wx.MenuItem( self.m_menu13, wx.ID_ANY, _(u"Import"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menu13.Append( self.m_menuItem10 )
+
+        self.m_radioBtn21.Bind( wx.EVT_RIGHT_DOWN, self.m_radioBtn21OnContextMenu )
+
         bSizer129.Add( self.m_radioBtn21, 1, wx.ALL|wx.EXPAND, 5 )
 
         self.m_radioBtn31 = wx.RadioButton( self, wx.ID_ANY, _(u"TEMPTABLE"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -2086,6 +2119,9 @@ class Trash ( wx.Panel ):
         rad_view_constraintChoices = [ _(u"None"), _(u"LOCAL"), _(u"CASCADED"), _(u"CHECK OPTION"), _(u"READ ONLY") ]
         self.rad_view_constraint = wx.RadioBox( self, wx.ID_ANY, _(u"View constraint"), wx.DefaultPosition, wx.DefaultSize, rad_view_constraintChoices, 1, wx.RA_SPECIFY_COLS )
         self.rad_view_constraint.SetSelection( 0 )
+        self.m_menu15 = wx.Menu()
+        self.rad_view_constraint.Bind( wx.EVT_RIGHT_DOWN, self.rad_view_constraintOnContextMenu )
+
         bSizer129.Add( self.rad_view_constraint, 0, wx.ALL|wx.EXPAND, 5 )
 
         self.m_textCtrl10 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
@@ -2367,6 +2403,7 @@ class Trash ( wx.Panel ):
 
 
         # Connect Events
+        self.Bind( wx.EVT_MENU, self.on_import, id = self.m_menuItem10.GetId() )
         self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 
     def __del__( self ):
@@ -2374,8 +2411,17 @@ class Trash ( wx.Panel ):
 
 
     # Virtual event handlers, override them in your derived class
+    def on_import( self, event ):
+        event.Skip()
+
     def show_tree_ctrl_menu( self, event ):
         event.Skip()
+
+    def m_radioBtn21OnContextMenu( self, event ):
+        self.m_radioBtn21.PopupMenu( self.m_menu13, event.GetPosition() )
+
+    def rad_view_constraintOnContextMenu( self, event ):
+        self.rad_view_constraint.PopupMenu( self.m_menu15, event.GetPosition() )
 
     def tree_ctrl_sessionsOnContextMenu( self, event ):
         self.tree_ctrl_sessions.PopupMenu( self.m_menu12, event.GetPosition() )

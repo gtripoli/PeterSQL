@@ -2,7 +2,6 @@ import pytest
 
 
 class BaseColumnTests:
-    
     def test_column_add(self, session, database, create_users_table, datatype_class):
         table = create_users_table(database, session)
 
@@ -21,7 +20,7 @@ class BaseColumnTests:
 
         table.drop()
 
-    @pytest.mark.skip_sqlite
+    @pytest.mark.skip_engine("sqlite")
     def test_column_modify(self, session, database, create_users_table, datatype_class):
         table = create_users_table(database, session)
 
@@ -46,8 +45,11 @@ class BaseColumnTests:
             is_nullable=False,
             length=255,
         )
-        
-        assert email_col.modify(modified_column) is None or email_col.modify(modified_column) is True
+
+        assert (
+            email_col.modify(modified_column) is None
+            or email_col.modify(modified_column) is True
+        )
 
         table.columns.refresh()
         columns = table.columns.get_value()
@@ -56,7 +58,7 @@ class BaseColumnTests:
 
         table.drop()
 
-    @pytest.mark.skip_sqlite
+    @pytest.mark.skip_engine("sqlite")
     def test_column_drop(self, session, database, create_users_table, datatype_class):
         table = create_users_table(database, session)
 

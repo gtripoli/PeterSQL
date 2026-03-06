@@ -2,11 +2,15 @@ import dataclasses
 import enum
 
 from functools import lru_cache
-from typing import Union, Optional, Any, NamedTuple
+from typing import Union, Optional, Any, NamedTuple, List
 
 from icons import Icon, IconList
 
-from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
+from structures.configurations import (
+    CredentialsConfiguration,
+    SourceConfiguration,
+    SSHTunnelConfiguration,
+)
 
 
 class Engine(NamedTuple):
@@ -23,7 +27,7 @@ class ConnectionEngine(enum.Enum):
     ORACLE = Engine("Oracle", "oracle", IconList.ORACLE)
 
     @classmethod
-    def get_all(cls) -> list["ConnectionEngine"]:
+    def get_all(cls) -> list[Engine]:
         return [e.value for e in list(cls)]
 
     @classmethod
@@ -38,19 +42,22 @@ class ConnectionEngine(enum.Enum):
 @dataclasses.dataclass
 class ConnectionDirectory:
     name: str
-    children: List[Union['ConnectionDirectory', 'Connection']] = dataclasses.field(default_factory=list)
+    children: List[Union["ConnectionDirectory", "Connection"]] = dataclasses.field(
+        default_factory=list
+    )
 
     def to_dict(self):
         return {
-            'type': 'directory',
-            'name': self.name,
-            'children': [child.to_dict() for child in self.children]
+            "type": "directory",
+            "name": self.name,
+            "children": [child.to_dict() for child in self.children],
         }
 
 
 @dataclasses.dataclass(eq=False)
 class Connection:
     """Persistent configuration only. No runtime state."""
+
     id: int
     name: str
     engine: ConnectionEngine
@@ -76,18 +83,34 @@ class Connection:
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'type': 'connection',
-            'name': self.name,
-            'engine': self.engine.value.name if self.engine else None,
-            'configuration': self.configuration._asdict() if self.configuration else None,
-            'comments': self.comments,
-            'ssh_tunnel': self.ssh_tunnel._asdict() if self.ssh_tunnel else None
+            "id": self.id,
+            "type": "connection",
+            "name": self.name,
+            "engine": self.engine.value.name if self.engine else None,
+            "configuration": self.configuration._asdict()
+            if self.configuration
+            else None,
+            "comments": self.comments,
+            "ssh_tunnel": self.ssh_tunnel._asdict() if self.ssh_tunnel else None,
         }
 
     @property
     def is_valid(self):
-        return all([self.name, self.engine]) and all(self.configuration._asdict().values())
+        if not self.name or not self.engine or not self.configuration:
+            return False
+
+        configuration = self.configuration._asdict()
+        for key, value in configuration.items():
+            if isinstance(value, bool):
+                continue
+
+            if value is None:
+                return False
+
+            if isinstance(value, str) and value == "":
+                return False
+
+        return True
 
     @property
     def is_new(self):

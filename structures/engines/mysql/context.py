@@ -155,6 +155,10 @@ class MySQLContext(AbstractContext):
                     logger.error(f"Failed to connect to MySQL: {e}")
                     raise
 
+                logger.warning(
+                    "MySQL connection failed without TLS (%s). Retrying with TLS.",
+                    e,
+                )
                 logger.debug(
                     "Retrying MySQL connection with TLS preferred after auth failure"
                 )
@@ -172,6 +176,9 @@ class MySQLContext(AbstractContext):
                     self.connection.configuration = (
                         self.connection.configuration._replace(use_tls_enabled=True)
                     )
+                logger.info(
+                    "MySQL connection succeeded after enabling TLS automatically."
+                )
             except Exception as e:
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise

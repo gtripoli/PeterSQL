@@ -1,13 +1,17 @@
+import dataclasses
+
 from gettext import gettext as _
 from typing import Optional
 
 import wx
+import wx.dataview
 
 from helpers.loader import Loader
 from helpers.logger import logger
 
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
+from structures.configurations import CredentialsConfiguration, SourceConfiguration
 
 from windows.views import ConnectionsDialog
 
@@ -35,7 +39,7 @@ class ConnectionsManager(ConnectionsDialog):
             self.connections_tree_ctrl, self._repository
         )
         self.connections_tree_controller.on_item_activated = (
-            lambda connection: self.on_open(None)
+            lambda connection: self.on_connect(None)
         )
 
         self.connections_model = ConnectionModel()
@@ -64,18 +68,47 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_model.engine.subscribe(self._on_change_engine)
         self.connections_model.ssh_tunnel_enabled.subscribe(self._on_change_ssh_tunnel)
 
+        self._context_menu_item = None
         self._setup_event_handlers()
+        self._update_tree_menu_state()
+
+    def _update_tree_menu_state(self):
+        selected_connection = CURRENT_CONNECTION()
+        selected_directory = CURRENT_DIRECTORY()
+
+        if self._context_menu_item and self._context_menu_item.IsOk():
+            obj = self.connections_tree_controller.model.ItemToObject(
+                self._context_menu_item
+            )
+            if isinstance(obj, Connection):
+                selected_connection = obj
+                selected_directory = None
+            elif isinstance(obj, ConnectionDirectory):
+                selected_connection = None
+                selected_directory = obj
+
+        self.m_menuItem19.Enable(bool(selected_connection))
+        self.m_menuItem18.Enable(bool(selected_connection or selected_directory))
 
     def _on_current_directory(self, directory: Optional[ConnectionDirectory]):
         self.btn_delete.Enable(bool(directory))
         self.btn_create_directory.Enable(not bool(directory))
+        self._update_tree_menu_state()
 
     def _on_current_connection(self, connection: Optional[Connection]):
         self.btn_open.Enable(bool(connection and connection.is_valid))
         self.btn_test.Enable(bool(connection and connection.is_valid))
         self.btn_delete.Enable(bool(connection))
+        self._update_tree_menu_state()
 
     def _on_pending_connection(self, connection: Connection):
+        if connection is None:
+            self.btn_save.Enable(False)
+            current = CURRENT_CONNECTION()
+            self.btn_test.Enable(bool(current and current.is_valid))
+            self.btn_open.Enable(bool(current and current.is_valid))
+            return
+
         item = self.connections_tree_controller.model.ObjectToItem(connection)
         if item.IsOk():
             self.connections_tree_controller.model.ItemChanged(item)
@@ -86,8 +119,7 @@ class ConnectionsManager(ConnectionsDialog):
 
     def _on_connection_activated(self, connection: Connection):
         CURRENT_CONNECTION(connection)
-        # self._app.main_frame.show()
-        self.on_open(None)
+        self.on_connect(None)
 
     def _on_change_engine(self, value: str):
         connection_engine = ConnectionEngine.from_name(value)
@@ -118,22 +150,6 @@ class ConnectionsManager(ConnectionsDialog):
         self.panel_ssh_tunnel.Enable(enable)
         self.panel_ssh_tunnel.GetParent().Layout()
 
-    def _on_delete_connection(self, event):
-        connection = self.connections_tree_ctrl.get_selected_connection()
-        if connection:
-            if (
-                wx.MessageBox(
-                    _(
-                        f"Are you sure you want to delete connection '{connection.name}'?"
-                    ),
-                    "Confirm Delete",
-                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
-                )
-                == wx.YES
-            ):
-                self._repository.delete_item(connection)
-                self.connections_tree_ctrl.remove_connection(connection)
-
     def _on_search_changed(self, event):
         search_text = self.search_connection.GetValue()
         self.connections_tree_controller.do_filter_connections(search_text)
@@ -141,10 +157,79 @@ class ConnectionsManager(ConnectionsDialog):
     def _setup_event_handlers(self):
         self.Bind(wx.EVT_CLOSE, self.on_exit)
         self.search_connection.Bind(wx.EVT_TEXT, self._on_search_changed)
+        self.connections_tree_ctrl.Bind(
+            wx.dataview.EVT_DATAVIEW_ITEM_CONTEXT_MENU,
+            self._on_tree_item_context_menu,
+        )
 
         CURRENT_DIRECTORY.subscribe(self._on_current_directory)
         CURRENT_CONNECTION.subscribe(self._on_current_connection)
         PENDING_CONNECTION.subscribe(self._on_pending_connection)
+
+    def _on_tree_item_context_menu(self, event):
+        position = event.GetPosition()
+        if position == wx.DefaultPosition:
+            position = self.connections_tree_ctrl.ScreenToClient(wx.GetMousePosition())
+
+        if isinstance(position, tuple):
+            position = wx.Point(position[0], position[1])
+
+        self._show_tree_menu(position)
+
+    def _show_tree_menu(self, position: wx.Point):
+        if position.x < 0 or position.y < 0:
+            position = wx.Point(8, 8)
+
+        self._context_menu_item, _ = self.connections_tree_ctrl.HitTest(position)
+
+        self._update_tree_menu_state()
+        self.connections_tree_ctrl.PopupMenu(self.connection_tree_menu, position)
+        self._context_menu_item = None
+
+    def _get_action_item(self):
+        if self._context_menu_item is not None and self._context_menu_item.IsOk():
+            return self._context_menu_item
+
+        selected_item = self.connections_tree_ctrl.GetSelection()
+        if selected_item is not None and selected_item.IsOk():
+            return selected_item
+
+        return None
+
+    def _capture_expanded_directory_paths(self):
+        expanded_paths = set()
+
+        def _walk(nodes, parent_path=()):
+            for node in nodes:
+                if isinstance(node, ConnectionDirectory):
+                    path = parent_path + (node.name,)
+                    item = self.connections_tree_controller.model.ObjectToItem(node)
+                    if (
+                        item
+                        and item.IsOk()
+                        and self.connections_tree_ctrl.IsExpanded(item)
+                    ):
+                        expanded_paths.add(path)
+                    _walk(node.children, path)
+
+        _walk(self._repository.connections.get_value())
+        return expanded_paths
+
+    def _restore_expanded_directory_paths(self, expanded_paths):
+        if not expanded_paths:
+            return
+
+        def _walk(nodes, parent_path=()):
+            for node in nodes:
+                if isinstance(node, ConnectionDirectory):
+                    path = parent_path + (node.name,)
+                    if path in expanded_paths:
+                        item = self.connections_tree_controller.model.ObjectToItem(node)
+                        if item and item.IsOk():
+                            self.connections_tree_ctrl.Expand(item)
+                    _walk(node.children, path)
+
+        _walk(self._repository.connections.get_value())
 
     def do_open_session(self, session: Session):
         # CONNECTIONS_LIST.append(connection)
@@ -206,47 +291,226 @@ class ConnectionsManager(ConnectionsDialog):
         else:
             self._repository.save_connection(connection)
 
+        refreshed_connection = self._find_connection_by_id(connection.id)
+
         PENDING_CONNECTION(None)
 
-        item_new_connection = self.connections_tree_controller.model.ObjectToItem(
-            connection
-        )
+        if refreshed_connection is None:
+            refreshed_connection = connection
 
-        print("item_new_connection", item_new_connection)
+        CURRENT_CONNECTION(refreshed_connection)
 
-        self.connections_tree_ctrl.Select(item_new_connection)
-
-        if parent_item:
-            self.connections_tree_ctrl.Expand(parent_item)
-
-        CURRENT_CONNECTION(connection)
+        wx.CallAfter(self._select_connection_in_tree, refreshed_connection, parent_item)
 
         return True
 
-    def on_create_connection(self, event):
-        self.connections_manager_model.do_create_connection()
+    def _confirm_save_pending_changes(self) -> bool:
+        if PENDING_CONNECTION() is None:
+            return True
+
+        dialog = wx.MessageDialog(
+            None,
+            message=_(
+                "You have unsaved changes. Do you want to save them before continuing?"
+            ),
+            caption=_("Unsaved changes"),
+            style=wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION,
+        )
+        result = dialog.ShowModal()
+        dialog.Destroy()
+
+        if result == wx.ID_YES:
+            return bool(self.on_save(None))
+
+        if result == wx.ID_NO:
+            PENDING_CONNECTION(None)
+            return True
+
+        return False
+
+    def _get_selected_parent_directory(self) -> Optional[ConnectionDirectory]:
+        selected_item = self.connections_tree_ctrl.GetSelection()
+        if not selected_item.IsOk():
+            return None
+
+        selected_obj = self.connections_tree_controller.model.ItemToObject(
+            selected_item
+        )
+        if isinstance(selected_obj, ConnectionDirectory):
+            return selected_obj
+
+        if isinstance(selected_obj, Connection):
+            parent_item = self.connections_tree_controller.model.GetParent(
+                selected_item
+            )
+            if parent_item and parent_item.IsOk():
+                parent_obj = self.connections_tree_controller.model.ItemToObject(
+                    parent_item
+                )
+                if isinstance(parent_obj, ConnectionDirectory):
+                    return parent_obj
+
+        return None
+
+    def _create_connection(self):
+        if not self._confirm_save_pending_changes():
+            return
+
+        selected_engine_name = self.engine.GetStringSelection() or "MySQL"
+        engine = ConnectionEngine.from_name(selected_engine_name)
+        if engine == ConnectionEngine.POSTGRESQL:
+            port = 5432
+        elif engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
+            port = 3306
+        else:
+            port = 3306
+
+        if engine in [
+            ConnectionEngine.MYSQL,
+            ConnectionEngine.MARIADB,
+            ConnectionEngine.POSTGRESQL,
+        ]:
+            configuration = CredentialsConfiguration(
+                hostname="localhost",
+                username="root",
+                password="",
+                port=port,
+            )
+        else:
+            configuration = SourceConfiguration(filename="")
+
+        new_connection = Connection(
+            id=-1,
+            name=_("New connection"),
+            engine=engine,
+            configuration=configuration,
+            comments="",
+            ssh_tunnel=None,
+        )
+
+        parent = self._get_selected_parent_directory()
+        self._repository.add_connection(new_connection, parent)
+
+        refreshed_connection = self._find_connection_by_id(new_connection.id)
+        if refreshed_connection is None:
+            refreshed_connection = new_connection
+
+        CURRENT_CONNECTION(refreshed_connection)
+        PENDING_CONNECTION(None)
+        wx.CallAfter(self._select_connection_in_tree, refreshed_connection)
+        wx.CallAfter(self.on_rename, None)
+
+    def on_create(self, event):
+        self._create_connection()
+
+    def on_new_connection(self, event):
+        self._create_connection()
+
+    def _find_connection_by_id(self, connection_id: int) -> Optional[Connection]:
+        def _search(nodes):
+            for node in nodes:
+                if isinstance(node, ConnectionDirectory):
+                    found = _search(node.children)
+                    if found:
+                        return found
+                    continue
+
+                if isinstance(node, Connection) and node.id == connection_id:
+                    return node
+
+            return None
+
+        return _search(self._repository.connections.get_value())
+
+    def _expand_item_parents(self, item):
+        parent = self.connections_tree_controller.model.GetParent(item)
+        while parent and parent.IsOk():
+            self.connections_tree_ctrl.Expand(parent)
+            parent = self.connections_tree_controller.model.GetParent(parent)
+
+    def _select_connection_in_tree(
+        self,
+        connection: Connection,
+        parent_item=None,
+    ):
+        item = self.connections_tree_controller.model.ObjectToItem(connection)
+        if not item or not item.IsOk():
+            return
+
+        if parent_item and parent_item.IsOk():
+            self.connections_tree_ctrl.Expand(parent_item)
+
+        self._expand_item_parents(item)
+        self.connections_tree_ctrl.Select(item)
+        self.connections_tree_ctrl.EnsureVisible(item)
 
     def on_create_directory(self, event):
-        # Get selected directory
-        parent = None
-        selected_item = self.connections_tree_ctrl.GetSelection()
-        if selected_item.IsOk():
-            obj = self.connections_tree_controller.model.ItemToObject(selected_item)
-            if isinstance(obj, ConnectionDirectory):
-                return
+        if not self._confirm_save_pending_changes():
+            return
+
+        parent = self._get_selected_parent_directory()
         new_dir = ConnectionDirectory(name=_("New directory"))
         self._repository.add_directory(new_dir, parent)
-        # Select and edit
+
         item = self.connections_tree_controller.model.ObjectToItem(new_dir)
         if item.IsOk():
             self.connections_tree_ctrl.Select(item)
-            self.connections_tree_ctrl.EditItem(
-                item, self.connections_tree_ctrl.GetColumn(0)
-            )
-        # Expand parent
+            self.connections_tree_controller.edit_item(item)
+
         if parent:
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
             self.connections_tree_ctrl.Expand(parent_item)
+
+    def on_new_directory(self, event):
+        self.on_create_directory(event)
+
+    def _generate_clone_name(self, base_name: str) -> str:
+        existing_names = set()
+
+        def _collect(nodes):
+            for node in nodes:
+                if isinstance(node, ConnectionDirectory):
+                    _collect(node.children)
+                elif isinstance(node, Connection):
+                    existing_names.add(node.name)
+
+        _collect(self._repository.connections.get_value())
+
+        idx = 1
+        while True:
+            candidate = f"{base_name}(clone)({idx})"
+            if candidate not in existing_names:
+                return candidate
+            idx += 1
+
+    def on_clone_connection(self, event):
+        connection = CURRENT_CONNECTION()
+        if connection is None:
+            return
+
+        cloned_connection = dataclasses.replace(
+            connection,
+            id=-1,
+            name=self._generate_clone_name(connection.name),
+        )
+
+        parent = self._get_selected_parent_directory()
+        self._repository.add_connection(cloned_connection, parent)
+
+        refreshed_connection = self._find_connection_by_id(cloned_connection.id)
+        if refreshed_connection is None:
+            refreshed_connection = cloned_connection
+
+        CURRENT_CONNECTION(refreshed_connection)
+        PENDING_CONNECTION(None)
+        wx.CallAfter(self._select_connection_in_tree, refreshed_connection)
+
+    def on_rename(self, event):
+        selected_item = self._get_action_item()
+        if selected_item is None or not selected_item.IsOk():
+            return
+
+        self.connections_tree_controller.edit_item(selected_item)
 
     def verify_session(self, session: Session):
         with Loader.cursor_wait():
@@ -312,8 +576,8 @@ class ConnectionsManager(ConnectionsDialog):
     def on_delete_connection(self, connection: Connection):
         dialog = wx.MessageDialog(
             None,
-            message=_(f"Do you want delete the {_('connection')} {connection.name}?"),
-            caption=_(f"Confirm delete"),
+            message=_(f"Do you want to delete the connection '{connection.name}'?"),
+            caption=_("Confirm delete"),
             style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )
 
@@ -321,15 +585,14 @@ class ConnectionsManager(ConnectionsDialog):
             PENDING_CONNECTION(None)
             CURRENT_CONNECTION(None)
             self._repository.delete_connection(connection)
-            self._repository.load()
 
         dialog.Destroy()
 
     def on_delete_directory(self, directory: ConnectionDirectory):
         dialog = wx.MessageDialog(
             None,
-            message=_(f"Do you want delete the {_('directory')} {directory.name}?"),
-            caption=_(f"Confirm delete"),
+            message=_(f"Do you want to delete the directory '{directory.name}'?"),
+            caption=_("Confirm delete"),
             style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )
 
@@ -337,21 +600,23 @@ class ConnectionsManager(ConnectionsDialog):
             PENDING_CONNECTION(None)
             CURRENT_CONNECTION(None)
             self._repository.delete_directory(directory)
-            # self._repository.refresh()
 
         dialog.Destroy()
 
     def on_delete(self, *args):
-        selected_item = self.connections_tree_ctrl.GetSelection()
-        if not selected_item.IsOk():
+        selected_item = self._get_action_item()
+        if selected_item is None or not selected_item.IsOk():
             return
 
+        expanded_paths = self._capture_expanded_directory_paths()
         obj = self.connections_tree_controller.model.ItemToObject(selected_item)
 
         if isinstance(obj, Connection):
             self.on_delete_connection(obj)
         elif isinstance(obj, ConnectionDirectory):
             self.on_delete_directory(obj)
+
+        wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def on_exit(self, event):
         if not self._app.main_frame:

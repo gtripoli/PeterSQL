@@ -170,6 +170,10 @@ class MariaDBContext(AbstractContext):
                     logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                     raise
 
+                logger.warning(
+                    "MariaDB connection failed without TLS (%s). Retrying with TLS.",
+                    e,
+                )
                 logger.debug(
                     "Retrying MariaDB connection with TLS preferred after auth failure"
                 )
@@ -187,6 +191,9 @@ class MariaDBContext(AbstractContext):
                     self.connection.configuration = (
                         self.connection.configuration._replace(use_tls_enabled=True)
                     )
+                logger.info(
+                    "MariaDB connection succeeded after enabling TLS automatically."
+                )
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise

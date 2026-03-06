@@ -165,9 +165,24 @@ class ConnectionsRepository(
     def delete_directory(self, directory: ConnectionDirectory):
         self.connections.get_value()
 
-        self.connections.remove(directory)
+        def _find_and_delete(
+            nodes: list[Union[ConnectionDirectory, Connection]],
+            target: ConnectionDirectory,
+        ):
+            for idx, item in enumerate(nodes):
+                if isinstance(item, ConnectionDirectory):
+                    if item == target:
+                        del nodes[idx]
+                        return True
 
-        self._write()
+                    if _find_and_delete(item.children, target):
+                        return True
+
+            return False
+
+        if _find_and_delete(self.connections.get_value(), directory):
+            self._write()
+            self.connections.refresh()
 
     def delete_connection(self, connection: Connection) -> None:
         self.connections.get_value()

@@ -183,21 +183,31 @@ class ConnectionModel(AbstractModel):
             )
 
             if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled()):
+                ssh_username = (
+                    self.ssh_tunnel_username.get_value() or ""
+                ).strip() or None
+                remote_host = (
+                    self.ssh_tunnel_remote_hostname.get_value() or ""
+                ).strip() or None
+                remote_port = self.ssh_tunnel_remote_port.get_value() or None
+
+                if remote_host == db_hostname and remote_port == (
+                    self.port.get_value() or 3306
+                ):
+                    remote_host = None
+                    remote_port = None
+
                 pending_connection.ssh_tunnel = SSHTunnelConfiguration(
                     enabled=ssh_tunnel_enabled,
                     executable=self.ssh_tunnel_executable.get_value() or "ssh",
                     hostname=(self.ssh_tunnel_hostname.get_value() or "").strip(),
                     port=self.ssh_tunnel_port.get_value() or 22,
-                    username=(self.ssh_tunnel_username.get_value() or "").strip()
-                    or None,
+                    username=ssh_username,
                     password=self.ssh_tunnel_password.get_value(),
                     local_port=self.ssh_tunnel_local_port.get_value() or 0,
                     identity_file=self.ssh_tunnel_identity_file.get_value() or None,
-                    remote_host=(
-                        self.ssh_tunnel_remote_hostname.get_value() or ""
-                    ).strip()
-                    or None,
-                    remote_port=self.ssh_tunnel_remote_port.get_value() or None,
+                    remote_host=remote_host,
+                    remote_port=remote_port,
                 )
 
         elif connection_engine == ConnectionEngine.SQLITE:

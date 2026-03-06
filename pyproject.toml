@@ -32,6 +32,7 @@ dev = [
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (testcontainers, slow, deselect with '-m \"not integration\"')",
+    "skip_engine(*selectors): skip test for specific engines or variants (e.g. sqlite, oracle, mariadb:5)",
 ]
 addopts = "--cov=. --cov-report=term -v -n auto --dist=loadgroup"
 testpaths = ["tests"]
