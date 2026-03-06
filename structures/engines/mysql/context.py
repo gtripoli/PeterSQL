@@ -1,4 +1,5 @@
 import re
+import ssl
 from typing import Any, Optional
 
 import pymysql
@@ -120,6 +121,10 @@ class MySQLContext(AbstractContext):
         if self._connection is None:
             self.before_connect()
 
+            use_tls_enabled = bool(
+                getattr(self.connection.configuration, "use_tls_enabled", False)
+            )
+
             base_kwargs = dict(
                 host=self.host,
                 user=self.user,
@@ -128,15 +133,50 @@ class MySQLContext(AbstractContext):
                 cursorclass=pymysql.cursors.DictCursor,
                 **connect_kwargs,
             )
+            if use_tls_enabled:
+                base_kwargs["ssl"] = {
+                    "cert_reqs": ssl.CERT_NONE,
+                    "check_hostname": False,
+                }
+            logger.debug(
+                "MySQL connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                base_kwargs.get("host"),
+                base_kwargs.get("port"),
+                base_kwargs.get("user"),
+                use_tls_enabled,
+            )
 
             try:
                 self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
+            except pymysql.err.OperationalError as e:
+                should_retry_tls = bool(e.args and e.args[0] == 1045)
+                if not should_retry_tls or "ssl" in base_kwargs:
+                    logger.error(f"Failed to connect to MySQL: {e}")
+                    raise
+
+                logger.debug(
+                    "Retrying MySQL connection with TLS preferred after auth failure"
+                )
+                tls_kwargs = {
+                    **base_kwargs,
+                    "ssl": {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    },
+                }
+                self._connection = pymysql.connect(**tls_kwargs)
+                self._cursor = self._connection.cursor()
+
+                if hasattr(self.connection, "configuration"):
+                    self.connection.configuration = (
+                        self.connection.configuration._replace(use_tls_enabled=True)
+                    )
             except Exception as e:
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise
             else:
-                self.before_connect()
+                self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:
         self.execute(f"USE {database.quoted_name}")

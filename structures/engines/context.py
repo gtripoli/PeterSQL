@@ -61,29 +61,70 @@ class AbstractContext(abc.ABC):
         # SSH tunnel support via connection configuration
         if hasattr(self.connection, "ssh_tunnel") and self.connection.ssh_tunnel:
             ssh_config = self.connection.ssh_tunnel
+            if not ssh_config.is_enabled:
+                return
+
+            base_host = getattr(self, "_base_host", getattr(self, "host", "127.0.0.1"))
+            base_port = getattr(self, "_base_port", getattr(self, "port", 0))
+            self._base_host = base_host
+            self._base_port = base_port
+
+            remote_host = getattr(ssh_config, "remote_host", None) or getattr(
+                self, "_base_host", "127.0.0.1"
+            )
+            remote_port = int(
+                getattr(ssh_config, "remote_port", 0) or getattr(self, "_base_port", 0)
+            )
+            local_port = int(getattr(ssh_config, "local_port", 0) or 0)
+            logger.debug(
+                "Preparing DB SSH tunnel: connection=%s engine=%s base=%s:%s remote=%s:%s requested_local_port=%s",
+                getattr(self.connection, "name", None),
+                getattr(self.connection, "engine", None),
+                self._base_host,
+                self._base_port,
+                remote_host,
+                remote_port,
+                local_port,
+            )
             self._ssh_tunnel = SSHTunnel(
                 ssh_config.hostname,
                 int(ssh_config.port),
                 ssh_username=ssh_config.username,
                 ssh_password=ssh_config.password,
-                remote_port=self.port,
-                local_bind_address=(
-                    self.host,
-                    int(getattr(ssh_config, "local_port", 0)),
-                ),
+                remote_host=remote_host,
+                remote_port=remote_port,
+                local_bind_address=("127.0.0.1", local_port),
+                ssh_executable=getattr(ssh_config, "executable", "ssh"),
+                identity_file=getattr(ssh_config, "identity_file", None),
                 extra_args=ssh_config.extra_args,
             )
             self._ssh_tunnel.start()
 
+            self.host = "127.0.0.1"
             self.port = int(self._ssh_tunnel.local_port)
+            logger.debug(
+                "DB connection will use tunnel endpoint: %s:%s",
+                self.host,
+                self.port,
+            )
 
     def after_connect(self, *args, **kwargs):
         pass
 
     def before_disconnect(self, *args, **kwargs):
         if self._ssh_tunnel is not None:
+            logger.debug(
+                "Stopping DB SSH tunnel for connection=%s",
+                getattr(self.connection, "name", None),
+            )
             self._ssh_tunnel.stop()
             self._ssh_tunnel = None
+
+        if hasattr(self, "_base_host"):
+            self.host = self._base_host
+
+        if hasattr(self, "_base_port"):
+            self.port = self._base_port
 
     def after_disconnect(self):
         pass

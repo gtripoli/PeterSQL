@@ -1,4 +1,5 @@
 import re
+import ssl
 
 from typing import Any, Optional
 from gettext import gettext as _
@@ -118,6 +119,10 @@ class MariaDBContext(AbstractContext):
         if self._connection is None:
             self.before_connect()
 
+            use_tls_enabled = bool(
+                getattr(self.connection.configuration, "use_tls_enabled", False)
+            )
+
             try:
                 base_kwargs = dict(
                     host=self.host,
@@ -126,6 +131,18 @@ class MariaDBContext(AbstractContext):
                     cursorclass=pymysql.cursors.DictCursor,
                     port=self.port,
                     **connect_kwargs,
+                )
+                if use_tls_enabled:
+                    base_kwargs["ssl"] = {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    }
+                logger.debug(
+                    "MariaDB connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                    base_kwargs.get("host"),
+                    base_kwargs.get("port"),
+                    base_kwargs.get("user"),
+                    use_tls_enabled,
                 )
                 #
                 # # SSH tunnel support via connection configuration
@@ -147,6 +164,29 @@ class MariaDBContext(AbstractContext):
 
                 self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
+            except pymysql.err.OperationalError as e:
+                should_retry_tls = bool(e.args and e.args[0] == 1045)
+                if not should_retry_tls or "ssl" in base_kwargs:
+                    logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
+                    raise
+
+                logger.debug(
+                    "Retrying MariaDB connection with TLS preferred after auth failure"
+                )
+                tls_kwargs = {
+                    **base_kwargs,
+                    "ssl": {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    },
+                }
+                self._connection = pymysql.connect(**tls_kwargs)
+                self._cursor = self._connection.cursor()
+
+                if hasattr(self.connection, "configuration"):
+                    self.connection.configuration = (
+                        self.connection.configuration._replace(use_tls_enabled=True)
+                    )
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise

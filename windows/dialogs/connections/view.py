@@ -13,7 +13,12 @@ from windows.views import ConnectionsDialog
 
 from windows.main import CURRENT_SESSION, SESSIONS_LIST
 
-from windows.dialogs.connections import CURRENT_CONNECTION, CURRENT_DIRECTORY, PENDING_CONNECTION, ConnectionDirectory
+from windows.dialogs.connections import (
+    CURRENT_CONNECTION,
+    CURRENT_DIRECTORY,
+    PENDING_CONNECTION,
+    ConnectionDirectory,
+)
 from windows.dialogs.connections.model import ConnectionModel
 from windows.dialogs.connections.controller import ConnectionsTreeController
 from windows.dialogs.connections.repository import ConnectionsRepository
@@ -26,21 +31,34 @@ class ConnectionsManager(ConnectionsDialog):
         self._repository = ConnectionsRepository()
         self.engine.SetItems([e.name for e in ConnectionEngine.get_all()])
 
-        self.connections_tree_controller = ConnectionsTreeController(self.connections_tree_ctrl, self._repository)
-        self.connections_tree_controller.on_item_activated = lambda connection: self.on_open(None)
+        self.connections_tree_controller = ConnectionsTreeController(
+            self.connections_tree_ctrl, self._repository
+        )
+        self.connections_tree_controller.on_item_activated = (
+            lambda connection: self.on_open(None)
+        )
 
         self.connections_model = ConnectionModel()
         self.connections_model.bind_controls(
             name=self.name,
             engine=self.engine,
-            hostname=self.hostname, port=self.port,
-            username=self.username, password=self.password,
+            hostname=self.hostname,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            use_tls_enabled=self.use_tls_enabled,
             filename=self.filename,
             comments=self.comments,
-            ssh_tunnel_enabled=self.ssh_tunnel_enabled, ssh_tunnel_executable=self.ssh_tunnel_executable,
-            ssh_tunnel_hostname=self.ssh_tunnel_hostname, ssh_tunnel_port=self.ssh_tunnel_port,
-            ssh_tunnel_username=self.ssh_tunnel_username, ssh_tunnel_password=self.ssh_tunnel_password,
+            ssh_tunnel_enabled=self.ssh_tunnel_enabled,
+            ssh_tunnel_executable=self.ssh_tunnel_executable,
+            ssh_tunnel_hostname=self.ssh_tunnel_hostname,
+            ssh_tunnel_port=self.ssh_tunnel_port,
+            ssh_tunnel_username=self.ssh_tunnel_username,
+            ssh_tunnel_password=self.ssh_tunnel_password,
             ssh_tunnel_local_port=self.ssh_tunnel_local_port,
+            ssh_tunnel_identity_file=self.identity_file,
+            ssh_tunnel_remote_hostname=self.remote_hostname,
+            ssh_tunnel_remote_port=self.remote_port,
         )
 
         self.connections_model.engine.subscribe(self._on_change_engine)
@@ -74,8 +92,22 @@ class ConnectionsManager(ConnectionsDialog):
     def _on_change_engine(self, value: str):
         connection_engine = ConnectionEngine.from_name(value)
 
-        self.panel_credentials.Show(connection_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL])
-        self.panel_ssh_tunnel.Show(connection_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL])
+        self.panel_credentials.Show(
+            connection_engine
+            in [
+                ConnectionEngine.MYSQL,
+                ConnectionEngine.MARIADB,
+                ConnectionEngine.POSTGRESQL,
+            ]
+        )
+        self.panel_ssh_tunnel.Show(
+            connection_engine
+            in [
+                ConnectionEngine.MYSQL,
+                ConnectionEngine.MARIADB,
+                ConnectionEngine.POSTGRESQL,
+            ]
+        )
 
         self.panel_source.Show(connection_engine == ConnectionEngine.SQLITE)
 
@@ -89,8 +121,16 @@ class ConnectionsManager(ConnectionsDialog):
     def _on_delete_connection(self, event):
         connection = self.connections_tree_ctrl.get_selected_connection()
         if connection:
-            if wx.MessageBox(_(f"Are you sure you want to delete connection '{connection.name}'?"),
-                             "Confirm Delete", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION) == wx.YES:
+            if (
+                wx.MessageBox(
+                    _(
+                        f"Are you sure you want to delete connection '{connection.name}'?"
+                    ),
+                    "Confirm Delete",
+                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                )
+                == wx.YES
+            ):
                 self._repository.delete_item(connection)
                 self.connections_tree_ctrl.remove_connection(connection)
 
@@ -106,7 +146,7 @@ class ConnectionsManager(ConnectionsDialog):
         CURRENT_CONNECTION.subscribe(self._on_current_connection)
         PENDING_CONNECTION.subscribe(self._on_pending_connection)
 
-    def do_open_session(self, session : Session):
+    def do_open_session(self, session: Session):
         # CONNECTIONS_LIST.append(connection)
 
         SESSIONS_LIST.append(session)
@@ -123,16 +163,16 @@ class ConnectionsManager(ConnectionsDialog):
 
         session = Session(connection)
 
-        try :
+        try:
             self.verify_session(session)
-        except Exception as ex :
+        except Exception as ex:
             pass
-        else :
+        else:
             wx.MessageDialog(
                 None,
                 message=_("Connection established successfully"),
                 caption=_("Connection"),
-                style=wx.OK
+                style=wx.OK,
             ).ShowModal()
 
     def on_save(self, *args):
@@ -140,11 +180,12 @@ class ConnectionsManager(ConnectionsDialog):
         if not connection:
             return False
 
-        dialog = wx.MessageDialog(None,
-                                  message=_(f'Do you want save the connection {connection.name}?'),
-                                  caption=_("Confirm save"),
-                                  style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
-                                  )
+        dialog = wx.MessageDialog(
+            None,
+            message=_(f"Do you want save the connection {connection.name}?"),
+            caption=_("Confirm save"),
+            style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
+        )
 
         if dialog.ShowModal() != wx.ID_YES:
             return False
@@ -153,7 +194,9 @@ class ConnectionsManager(ConnectionsDialog):
         parent_item = None
         selected_item = self.connections_tree_ctrl.GetSelection()
         if selected_item.IsOk():
-            selected_obj = self.connections_tree_controller.model.ItemToObject(selected_item)
+            selected_obj = self.connections_tree_controller.model.ItemToObject(
+                selected_item
+            )
             if isinstance(selected_obj, ConnectionDirectory):
                 parent_obj = selected_obj
                 parent_item = selected_item
@@ -165,18 +208,18 @@ class ConnectionsManager(ConnectionsDialog):
 
         PENDING_CONNECTION(None)
 
+        item_new_connection = self.connections_tree_controller.model.ObjectToItem(
+            connection
+        )
 
-        item_new_connection = self.connections_tree_controller.model.ObjectToItem(connection)
-
-        print("item_new_connection",item_new_connection)
+        print("item_new_connection", item_new_connection)
 
         self.connections_tree_ctrl.Select(item_new_connection)
 
-        if parent_item :
+        if parent_item:
             self.connections_tree_ctrl.Expand(parent_item)
 
         CURRENT_CONNECTION(connection)
-
 
         return True
 
@@ -197,7 +240,9 @@ class ConnectionsManager(ConnectionsDialog):
         item = self.connections_tree_controller.model.ObjectToItem(new_dir)
         if item.IsOk():
             self.connections_tree_ctrl.Select(item)
-            self.connections_tree_ctrl.EditItem(item, self.connections_tree_ctrl.GetColumn(0))
+            self.connections_tree_ctrl.EditItem(
+                item, self.connections_tree_ctrl.GetColumn(0)
+            )
         # Expand parent
         if parent:
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
@@ -206,12 +251,45 @@ class ConnectionsManager(ConnectionsDialog):
     def verify_session(self, session: Session):
         with Loader.cursor_wait():
             try:
+                tls_was_enabled = bool(
+                    getattr(session.connection.configuration, "use_tls_enabled", False)
+                )
+
+                logger.debug(
+                    "Verifying session connection=%s engine=%s host=%s port=%s user=%s use_tls_enabled=%s",
+                    session.connection.name,
+                    session.connection.engine,
+                    getattr(session.connection.configuration, "hostname", None),
+                    getattr(session.connection.configuration, "port", None),
+                    getattr(session.connection.configuration, "username", None),
+                    tls_was_enabled,
+                )
                 session.connect(connect_timeout=10)
+
+                tls_is_enabled = bool(
+                    getattr(session.connection.configuration, "use_tls_enabled", False)
+                )
+                if not tls_was_enabled and tls_is_enabled:
+                    self.connections_model.use_tls_enabled(True)
+
+                    if not session.connection.is_new:
+                        self._repository.save_connection(session.connection)
+
+                    wx.MessageDialog(
+                        None,
+                        message=_(
+                            "This connection cannot work without TLS. TLS has been enabled automatically."
+                        ),
+                        caption=_("Connection"),
+                        style=wx.OK | wx.ICON_INFORMATION,
+                    ).ShowModal()
             except Exception as ex:
-                wx.MessageDialog(None,
-                                 message=_(f'Connection error:\n{str(ex)}'),
-                                 caption=_("Connection error"),
-                                 style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR).ShowModal()
+                wx.MessageDialog(
+                    None,
+                    message=_(f"Connection error:\n{str(ex)}"),
+                    caption=_("Connection error"),
+                    style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR,
+                ).ShowModal()
                 raise ConnectionError(ex)
 
     def on_connect(self, event):
@@ -232,11 +310,12 @@ class ConnectionsManager(ConnectionsDialog):
             self.do_open_session(session)
 
     def on_delete_connection(self, connection: Connection):
-        dialog = wx.MessageDialog(None,
-                                  message=_(f'Do you want delete the {_("connection")} {connection.name}?'),
-                                  caption=_(f"Confirm delete"),
-                                  style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
-                                  )
+        dialog = wx.MessageDialog(
+            None,
+            message=_(f"Do you want delete the {_('connection')} {connection.name}?"),
+            caption=_(f"Confirm delete"),
+            style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
+        )
 
         if dialog.ShowModal() == wx.ID_YES:
             PENDING_CONNECTION(None)
@@ -247,11 +326,12 @@ class ConnectionsManager(ConnectionsDialog):
         dialog.Destroy()
 
     def on_delete_directory(self, directory: ConnectionDirectory):
-        dialog = wx.MessageDialog(None,
-                                  message=_(f'Do you want delete the {_("directory")} {directory.name}?'),
-                                  caption=_(f"Confirm delete"),
-                                  style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION
-                                  )
+        dialog = wx.MessageDialog(
+            None,
+            message=_(f"Do you want delete the {_('directory')} {directory.name}?"),
+            caption=_(f"Confirm delete"),
+            style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
+        )
 
         if dialog.ShowModal() == wx.ID_YES:
             PENDING_CONNECTION(None)

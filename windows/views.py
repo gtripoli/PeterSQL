@@ -162,6 +162,9 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer116.Add( ( 156, 0), 0, wx.EXPAND, 5 )
 
+        self.use_tls_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use TLS"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer116.Add( self.use_tls_enabled, 0, wx.ALL, 5 )
+
         self.ssh_tunnel_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
 
@@ -250,6 +253,11 @@ class ConnectionsDialog ( wx.Dialog ):
         self.ssh_tunnel_port = wx.SpinCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 22 )
         bSizer12131.Add( self.ssh_tunnel_port, 0, wx.ALL, 5 )
 
+        self.m_bitmap11 = wx.StaticBitmap( self.panel_ssh_tunnel, wx.ID_ANY, wx.Bitmap( u"icons/16x16/information.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_bitmap11.SetToolTip( _(u"SSH host + port (the SSH server that forwards traffic to the DB)") )
+
+        bSizer12131.Add( self.m_bitmap11, 0, wx.ALL|wx.EXPAND, 5 )
+
 
         bSizer102.Add( bSizer12131, 0, wx.EXPAND, 5 )
 
@@ -293,6 +301,43 @@ class ConnectionsDialog ( wx.Dialog ):
 
 
         bSizer102.Add( bSizer1213211, 0, wx.EXPAND, 5 )
+
+        bSizer1213212 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText213212 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"Identity file"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText213212.Wrap( -1 )
+
+        bSizer1213212.Add( self.m_staticText213212, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.identity_file = wx.FilePickerCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.*"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_DEFAULT_STYLE|wx.FLP_FILE_MUST_EXIST )
+        bSizer1213212.Add( self.identity_file, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer102.Add( bSizer1213212, 0, wx.EXPAND, 5 )
+
+        self.m_staticline6 = wx.StaticLine( self.panel_ssh_tunnel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+        bSizer102.Add( self.m_staticline6, 0, wx.EXPAND | wx.ALL, 5 )
+
+        bSizer121311 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText21311 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"Remote host + port"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText21311.Wrap( -1 )
+
+        bSizer121311.Add( self.m_staticText21311, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.remote_hostname = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer121311.Add( self.remote_hostname, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.remote_port = wx.SpinCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 65536, 3306 )
+        bSizer121311.Add( self.remote_port, 0, wx.ALL, 5 )
+
+        self.m_bitmap1 = wx.StaticBitmap( self.panel_ssh_tunnel, wx.ID_ANY, wx.Bitmap( u"icons/16x16/information.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_bitmap1.SetToolTip( _(u"Remote host/port is the real DB target (defaults to DB Host/Port).") )
+
+        bSizer121311.Add( self.m_bitmap1, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        bSizer102.Add( bSizer121311, 0, wx.EXPAND, 5 )
 
 
         self.panel_ssh_tunnel.SetSizer( bSizer102 )
@@ -2053,6 +2098,9 @@ class Trash ( wx.Panel ):
 
         bSizer93.Add( self.notebook_sql_results, 1, wx.EXPAND | wx.ALL, 5 )
 
+        self.ssh_tunnel_password1 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
+        bSizer93.Add( self.ssh_tunnel_password1, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
 
         bSizer90.Add( bSizer93, 1, wx.EXPAND, 5 )
 
@@ -2307,6 +2355,9 @@ class Trash ( wx.Panel ):
 
 
         bSizer90.Add( bSizer86, 0, wx.EXPAND, 5 )
+
+        self.filename1 = wx.FilePickerCtrl( self, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.*"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_CHANGE_DIR|wx.FLP_DEFAULT_STYLE|wx.FLP_FILE_MUST_EXIST )
+        bSizer90.Add( self.filename1, 0, wx.ALL, 5 )
 
 
         self.SetSizer( bSizer90 )

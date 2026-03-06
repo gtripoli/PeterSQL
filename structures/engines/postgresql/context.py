@@ -105,6 +105,7 @@ class PostgreSQLContext(AbstractContext):
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
             try:
+                self.before_connect()
                 database = connect_kwargs.pop("database", "postgres")
 
                 base_kwargs = dict(
@@ -114,6 +115,13 @@ class PostgreSQLContext(AbstractContext):
                     database=database,
                     port=self.port,
                     **connect_kwargs,
+                )
+                logger.debug(
+                    "PostgreSQL connect target host=%s port=%s user=%s database=%s",
+                    base_kwargs.get("host"),
+                    base_kwargs.get("port"),
+                    base_kwargs.get("user"),
+                    base_kwargs.get("database"),
                 )
 
                 self._connection = psycopg2.connect(**base_kwargs)

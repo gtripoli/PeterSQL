@@ -19,7 +19,9 @@ from structures.connection import (
 CONNECTIONS_CONFIG_FILE = WORKDIR / "connections.yml"
 
 
-class ConnectionsRepository(YamlRepository[list[Union[ConnectionDirectory, Connection]]]):
+class ConnectionsRepository(
+    YamlRepository[list[Union[ConnectionDirectory, Connection]]]
+):
     def __init__(self, config_file: Optional[str] = None):
         super().__init__(Path(config_file or CONNECTIONS_CONFIG_FILE))
         self._id_counter = 0
@@ -43,52 +45,70 @@ class ConnectionsRepository(YamlRepository[list[Union[ConnectionDirectory, Conne
 
     def load(self) -> list[Union[ConnectionDirectory, Connection]]:
         data = self._read()
-        logger.debug(f"ConnectionsRepository.load: loading {len(data)} items from {self._config_file}")
+        logger.debug(
+            f"ConnectionsRepository.load: loading {len(data)} items from {self._config_file}"
+        )
         result = [self._item_from_dict(item) for item in data]
-        logger.debug(f"ConnectionsRepository.load: loaded {len(result)} connections/directories")
+        logger.debug(
+            f"ConnectionsRepository.load: loaded {len(result)} connections/directories"
+        )
         return result
 
-    def _item_from_dict(self, data: dict[str, Any], parent: Optional[ConnectionDirectory] = None) -> Union[ConnectionDirectory, Connection]:
-        if data.get('type') == 'directory':
-            directory = ConnectionDirectory(name=data['name'], children=[])
-            children = [self._item_from_dict(child_data, directory) for child_data in data.get('children', [])]
+    def _item_from_dict(
+        self, data: dict[str, Any], parent: Optional[ConnectionDirectory] = None
+    ) -> Union[ConnectionDirectory, Connection]:
+        if data.get("type") == "directory":
+            directory = ConnectionDirectory(name=data["name"], children=[])
+            children = [
+                self._item_from_dict(child_data, directory)
+                for child_data in data.get("children", [])
+            ]
             directory.children = children
             return directory
         else:
             return self._connection_from_dict(data)
 
     def _connection_from_dict(self, data: dict[str, Any]) -> Connection:
-        engine = ConnectionEngine.from_name(data.get('engine', ConnectionEngine.MYSQL.value.name))
+        engine = ConnectionEngine.from_name(
+            data.get("engine", ConnectionEngine.MYSQL.value.name)
+        )
 
-        configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]] = None
+        configuration: Optional[
+            Union[CredentialsConfiguration, SourceConfiguration]
+        ] = None
 
-        if data.get('configuration'):
-            config_data = data['configuration']
-            if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL]:
+        if data.get("configuration"):
+            config_data = data["configuration"]
+            if engine in [
+                ConnectionEngine.MYSQL,
+                ConnectionEngine.MARIADB,
+                ConnectionEngine.POSTGRESQL,
+            ]:
                 configuration = CredentialsConfiguration(**config_data)
             elif engine == ConnectionEngine.SQLITE:
                 configuration = SourceConfiguration(**config_data)
 
-        ssh_config = self._build_ssh_configuration(data.get('ssh_tunnel', {}))
+        ssh_config = self._build_ssh_configuration(data.get("ssh_tunnel", {}))
 
         if data.get("id") is not None:
             self._id_counter = max(self._id_counter, data["id"] + 1)
 
-        comments = data.get('comments')
+        comments = data.get("comments")
         if comments is None:
             comments = ""
 
         return Connection(
             id=data["id"],
-            name=data['name'],
+            name=data["name"],
             engine=engine,
             configuration=configuration,
             comments=comments,
             ssh_tunnel=ssh_config,
         )
 
-    def add_connection(self, connection: Connection, parent: Optional[ConnectionDirectory] = None) -> int:
-
+    def add_connection(
+        self, connection: Connection, parent: Optional[ConnectionDirectory] = None
+    ) -> int:
         self.connections.get_value()
 
         if connection.is_new:
@@ -128,7 +148,11 @@ class ConnectionsRepository(YamlRepository[list[Union[ConnectionDirectory, Conne
 
         self._write()
 
-    def add_directory(self, directory: ConnectionDirectory, parent: Optional[ConnectionDirectory] = None) -> None:
+    def add_directory(
+        self,
+        directory: ConnectionDirectory,
+        parent: Optional[ConnectionDirectory] = None,
+    ) -> None:
         self.connections.get_value()
 
         if parent:
@@ -162,19 +186,27 @@ class ConnectionsRepository(YamlRepository[list[Union[ConnectionDirectory, Conne
             self._write()
             self.connections.refresh()
 
-    def _build_ssh_configuration(self, data: dict[str, Any]) -> Optional[SSHTunnelConfiguration]:
+    def _build_ssh_configuration(
+        self, data: dict[str, Any]
+    ) -> Optional[SSHTunnelConfiguration]:
         if not data:
             return None
 
         try:
             return SSHTunnelConfiguration(
-                enabled=bool(data.get('enabled')),
-                executable=data.get('executable', 'ssh'),
-                hostname=data.get('hostname', ''),
-                port=int(data.get('port', 22)),
-                username=data.get('username', ''),
-                password=data.get('password', ''),
-                local_port=int(data.get('local_port', 0)),
+                enabled=bool(data.get("enabled")),
+                executable=data.get("executable", "ssh"),
+                hostname=data.get("hostname", ""),
+                port=int(data.get("port", 22)),
+                username=data.get("username", ""),
+                password=data.get("password", ""),
+                local_port=int(data.get("local_port", 0)),
+                remote_host=data.get("remote_host"),
+                remote_port=int(data["remote_port"])
+                if data.get("remote_port")
+                else None,
+                identity_file=data.get("identity_file"),
+                extra_args=data.get("extra_args"),
             )
         except (TypeError, ValueError):
             return None

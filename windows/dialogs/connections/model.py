@@ -4,7 +4,11 @@ from helpers.bindings import AbstractModel, wx_call_after_debounce
 from helpers.observables import Observable, CallbackEvent
 
 from structures.connection import Connection, ConnectionEngine
-from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
+from structures.configurations import (
+    CredentialsConfiguration,
+    SourceConfiguration,
+    SSHTunnelConfiguration,
+)
 
 from . import CURRENT_CONNECTION, PENDING_CONNECTION
 
@@ -16,6 +20,7 @@ class ConnectionModel(AbstractModel):
         self.hostname = Observable[str]()
         self.username = Observable[str]()
         self.password = Observable[str]()
+        self.use_tls_enabled = Observable[bool](initial=False)
         self.port = Observable[int](initial=3306)
         self.filename = Observable[str]()
         self.comments = Observable[str]("")
@@ -27,15 +32,33 @@ class ConnectionModel(AbstractModel):
         self.ssh_tunnel_username = Observable[str]()
         self.ssh_tunnel_password = Observable[str]()
         self.ssh_tunnel_local_port = Observable[int](initial=3307)
+        self.ssh_tunnel_identity_file = Observable[str]()
+        self.ssh_tunnel_remote_hostname = Observable[str]()
+        self.ssh_tunnel_remote_port = Observable[int](initial=3306)
 
         self.engine.subscribe(self._set_default_port)
 
         wx_call_after_debounce(
-            self.name, self.engine, self.hostname, self.username, self.password, self.port,
-            self.filename, self.comments,
-            self.ssh_tunnel_enabled, self.ssh_tunnel_executable, self.ssh_tunnel_hostname,
-            self.ssh_tunnel_port, self.ssh_tunnel_username, self.ssh_tunnel_password, self.ssh_tunnel_local_port,
-            callback=self._build
+            self.name,
+            self.engine,
+            self.hostname,
+            self.username,
+            self.password,
+            self.use_tls_enabled,
+            self.port,
+            self.filename,
+            self.comments,
+            self.ssh_tunnel_enabled,
+            self.ssh_tunnel_executable,
+            self.ssh_tunnel_hostname,
+            self.ssh_tunnel_port,
+            self.ssh_tunnel_username,
+            self.ssh_tunnel_password,
+            self.ssh_tunnel_local_port,
+            self.ssh_tunnel_identity_file,
+            self.ssh_tunnel_remote_hostname,
+            self.ssh_tunnel_remote_port,
+            callback=self._build,
         )
 
         CURRENT_CONNECTION.subscribe(self.clear, CallbackEvent.BEFORE_CHANGE)
@@ -52,12 +75,23 @@ class ConnectionModel(AbstractModel):
         defaults = {
             self.name: None,
             self.engine: ConnectionEngine.MYSQL.value.name,
-            self.hostname: None, self.username: None, self.password: None, self.port: 3306,
+            self.hostname: None,
+            self.username: None,
+            self.password: None,
+            self.use_tls_enabled: False,
+            self.port: 3306,
             self.filename: None,
             self.comments: None,
-            self.ssh_tunnel_enabled: False, self.ssh_tunnel_executable: "ssh", self.ssh_tunnel_hostname: None,
-            self.ssh_tunnel_port: 22, self.ssh_tunnel_username: None, self.ssh_tunnel_password: None,
+            self.ssh_tunnel_enabled: False,
+            self.ssh_tunnel_executable: "ssh",
+            self.ssh_tunnel_hostname: None,
+            self.ssh_tunnel_port: 22,
+            self.ssh_tunnel_username: None,
+            self.ssh_tunnel_password: None,
             self.ssh_tunnel_local_port: 3307,
+            self.ssh_tunnel_identity_file: None,
+            self.ssh_tunnel_remote_hostname: None,
+            self.ssh_tunnel_remote_port: 3306,
         }
 
         for observable, value in defaults.items():
@@ -78,6 +112,9 @@ class ConnectionModel(AbstractModel):
             self.hostname(connection.configuration.hostname)
             self.username(connection.configuration.username)
             self.password(connection.configuration.password)
+            self.use_tls_enabled(
+                getattr(connection.configuration, "use_tls_enabled", False)
+            )
             self.port(connection.configuration.port)
 
         elif isinstance(connection.configuration, SourceConfiguration):
@@ -91,6 +128,11 @@ class ConnectionModel(AbstractModel):
             self.ssh_tunnel_username(ssh_tunnel.username)
             self.ssh_tunnel_password(ssh_tunnel.password)
             self.ssh_tunnel_local_port(ssh_tunnel.local_port)
+            self.ssh_tunnel_identity_file(getattr(ssh_tunnel, "identity_file", None))
+            self.ssh_tunnel_remote_hostname(getattr(ssh_tunnel, "remote_host", None))
+            self.ssh_tunnel_remote_port(
+                getattr(ssh_tunnel, "remote_port", None) or self.port()
+            )
         else:
             self.ssh_tunnel_enabled(False)
 
@@ -100,11 +142,8 @@ class ConnectionModel(AbstractModel):
             name=self.name() or _("New connection"),
             engine=ConnectionEngine.MYSQL,
             configuration=CredentialsConfiguration(
-                hostname="localhost",
-                username="root",
-                password="",
-                port=3306
-            )
+                hostname="localhost", username="root", password="", port=3306
+            ),
         )
 
     def _build(self, *args):
@@ -115,7 +154,11 @@ class ConnectionModel(AbstractModel):
         pending_connection = PENDING_CONNECTION()
 
         if not pending_connection:
-            pending_connection = current_connection.copy() if current_connection else self._build_empty_connection()
+            pending_connection = (
+                current_connection.copy()
+                if current_connection
+                else self._build_empty_connection()
+            )
 
         connection_engine = ConnectionEngine.from_name(self.engine())
 
@@ -123,23 +166,38 @@ class ConnectionModel(AbstractModel):
         pending_connection.engine = connection_engine
         pending_connection.comments = self.comments()
 
-        if connection_engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL]:
+        if connection_engine in [
+            ConnectionEngine.MYSQL,
+            ConnectionEngine.MARIADB,
+            ConnectionEngine.POSTGRESQL,
+        ]:
+            db_password = self.password.get_value() or ""
+            db_hostname = (self.hostname.get_value() or "localhost").strip()
+            db_username = (self.username.get_value() or "root").strip()
             pending_connection.configuration = CredentialsConfiguration(
-                hostname=self.hostname.get_value() or "localhost",
-                username=self.username.get_value() or "root",
-                password=self.password.get_value() or "",
-                port=self.port.get_value() or 3306
+                hostname=db_hostname,
+                username=db_username,
+                password=db_password,
+                port=self.port.get_value() or 3306,
+                use_tls_enabled=bool(self.use_tls_enabled.get_value()),
             )
 
             if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled()):
                 pending_connection.ssh_tunnel = SSHTunnelConfiguration(
                     enabled=ssh_tunnel_enabled,
                     executable=self.ssh_tunnel_executable.get_value() or "ssh",
-                    hostname=self.ssh_tunnel_hostname.get_value() or "",
+                    hostname=(self.ssh_tunnel_hostname.get_value() or "").strip(),
                     port=self.ssh_tunnel_port.get_value() or 22,
-                    username=self.ssh_tunnel_username.get_value(),
+                    username=(self.ssh_tunnel_username.get_value() or "").strip()
+                    or None,
                     password=self.ssh_tunnel_password.get_value(),
-                    local_port=self.ssh_tunnel_local_port.get_value(),
+                    local_port=self.ssh_tunnel_local_port.get_value() or 0,
+                    identity_file=self.ssh_tunnel_identity_file.get_value() or None,
+                    remote_host=(
+                        self.ssh_tunnel_remote_hostname.get_value() or ""
+                    ).strip()
+                    or None,
+                    remote_port=self.ssh_tunnel_remote_port.get_value() or None,
                 )
 
         elif connection_engine == ConnectionEngine.SQLITE:
