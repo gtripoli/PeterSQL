@@ -109,6 +109,20 @@ class ConnectionsRepository(
         if comments is None:
             comments = ""
 
+        successful_connections = int(data.get("successful_connections", 0) or 0)
+        unsuccessful_connections = int(data.get("unsuccessful_connections", 0) or 0)
+        total_connection_attempts = int(data.get("total_connection_attempts", 0) or 0)
+
+        average_connection_time_ms = data.get("average_connection_time_ms")
+        if average_connection_time_ms is not None:
+            average_connection_time_ms = int(average_connection_time_ms)
+
+        most_recent_connection_duration_ms = data.get(
+            "most_recent_connection_duration_ms"
+        )
+        if most_recent_connection_duration_ms is not None:
+            most_recent_connection_duration_ms = int(most_recent_connection_duration_ms)
+
         return Connection(
             id=data["id"],
             name=data["name"],
@@ -117,6 +131,15 @@ class ConnectionsRepository(
             comments=comments,
             ssh_tunnel=ssh_config,
             parent=parent,
+            created_at=data.get("created_at"),
+            last_connection_at=data.get("last_connection_at"),
+            last_successful_connection_at=data.get("last_successful_connection_at"),
+            last_failure_reason=data.get("last_failure_reason"),
+            successful_connections=successful_connections,
+            unsuccessful_connections=unsuccessful_connections,
+            total_connection_attempts=total_connection_attempts,
+            average_connection_time_ms=average_connection_time_ms,
+            most_recent_connection_duration_ms=most_recent_connection_duration_ms,
         )
 
     def add_connection(

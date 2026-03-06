@@ -232,7 +232,7 @@ class ConnectionsDialog ( wx.Dialog ):
 
         self.panel_connection.SetSizer( bSizer12 )
         self.panel_connection.Layout()
-        self.m_notebook4.AddPage( self.panel_connection, _(u"Settings"), False )
+        self.m_notebook4.AddPage( self.panel_connection, _(u"Settings"), True )
         self.panel_ssh_tunnel = wx.Panel( self.m_notebook4, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         self.panel_ssh_tunnel.Enable( False )
         self.panel_ssh_tunnel.Hide()
@@ -402,13 +402,30 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer3711.Add( self.m_staticText1511, 0, wx.ALL, 5 )
 
-        self.successful_connections = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.successful_connections.Wrap( -1 )
+        self.successful_connected = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.successful_connected.Wrap( -1 )
 
-        bSizer3711.Add( self.successful_connections, 0, wx.ALL, 5 )
+        bSizer3711.Add( self.successful_connected, 0, wx.ALL, 5 )
 
 
         bSizer361.Add( bSizer3711, 0, wx.EXPAND, 5 )
+
+        bSizer371111 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText151111 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Last successful connection"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText151111.Wrap( -1 )
+
+        self.m_staticText151111.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer371111.Add( self.m_staticText151111, 0, wx.ALL, 5 )
+
+        self.last_successful_connection = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.last_successful_connection.Wrap( -1 )
+
+        bSizer371111.Add( self.last_successful_connection, 1, wx.ALL, 5 )
+
+
+        bSizer361.Add( bSizer371111, 0, wx.EXPAND, 5 )
 
         bSizer37111 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -427,11 +444,79 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer361.Add( bSizer37111, 0, wx.EXPAND, 5 )
 
+        bSizer371112 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText151112 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Last failure reason"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText151112.Wrap( -1 )
+
+        self.m_staticText151112.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer371112.Add( self.m_staticText151112, 0, wx.ALL, 5 )
+
+        self.last_failure_raison = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.last_failure_raison.Wrap( -1 )
+
+        bSizer371112.Add( self.last_failure_raison, 1, wx.ALL, 5 )
+
+
+        bSizer361.Add( bSizer371112, 0, wx.EXPAND, 5 )
+
+        bSizer3711121 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText1511121 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Total connection attempts"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText1511121.Wrap( -1 )
+
+        self.m_staticText1511121.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer3711121.Add( self.m_staticText1511121, 0, wx.ALL, 5 )
+
+        self.total_connection_attempts = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.total_connection_attempts.Wrap( -1 )
+
+        bSizer3711121.Add( self.total_connection_attempts, 1, wx.ALL, 5 )
+
+
+        bSizer361.Add( bSizer3711121, 0, wx.EXPAND, 5 )
+
+        bSizer37111211 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText15111211 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u" Average connection time (ms)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText15111211.Wrap( -1 )
+
+        self.m_staticText15111211.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer37111211.Add( self.m_staticText15111211, 0, wx.ALL, 5 )
+
+        self.average_connection_time = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.average_connection_time.Wrap( -1 )
+
+        bSizer37111211.Add( self.average_connection_time, 1, wx.ALL, 5 )
+
+
+        bSizer361.Add( bSizer37111211, 0, wx.EXPAND, 5 )
+
+        bSizer371112111 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText151112111 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u" Most recent connection duration"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText151112111.Wrap( -1 )
+
+        self.m_staticText151112111.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer371112111.Add( self.m_staticText151112111, 0, wx.ALL, 5 )
+
+        self.most_recent_connection_duration = wx.StaticText( self.panel_statistics, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.most_recent_connection_duration.Wrap( -1 )
+
+        bSizer371112111.Add( self.most_recent_connection_duration, 1, wx.ALL, 5 )
+
+
+        bSizer361.Add( bSizer371112111, 0, wx.EXPAND, 5 )
+
 
         self.panel_statistics.SetSizer( bSizer361 )
         self.panel_statistics.Layout()
         bSizer361.Fit( self.panel_statistics )
-        self.m_notebook4.AddPage( self.panel_statistics, _(u"Statistics"), True )
+        self.m_notebook4.AddPage( self.panel_statistics, _(u"Statistics"), False )
 
         bSizer36.Add( self.m_notebook4, 1, wx.ALL|wx.EXPAND, 5 )
 

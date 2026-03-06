@@ -1,7 +1,11 @@
 import pytest
 
 from structures.connection import Connection, ConnectionEngine
-from structures.configurations import CredentialsConfiguration, SourceConfiguration, SSHTunnelConfiguration
+from structures.configurations import (
+    CredentialsConfiguration,
+    SourceConfiguration,
+    SSHTunnelConfiguration,
+)
 
 
 class TestConnection:
@@ -136,6 +140,22 @@ class TestConnection:
         assert conn.ssh_tunnel is not None
         assert conn.ssh_tunnel.enabled is True
         assert conn.ssh_tunnel.hostname == "bastion.example.com"
+
+    def test_connection_is_valid_with_empty_password(self):
+        config = CredentialsConfiguration(
+            hostname="localhost",
+            username="root",
+            password="",
+            port=3306,
+        )
+        conn = Connection(
+            id=1,
+            name="Local",
+            engine=ConnectionEngine.MYSQL,
+            configuration=config,
+        )
+
+        assert conn.is_valid is True
 
 
 class TestConnectionEngine:

@@ -54,7 +54,7 @@ class ConnectionsTreeModel(BaseDataViewTreeModel):
                 0: wx.dataview.DataViewIconText(
                     node.name, wx.GetApp().icon_registry_16.get_bitmap(bitmap)
                 ),
-                1: "",
+                1: node.last_connection_at or "",
             }
         elif isinstance(node, ConnectionDirectory):
             mapper = {0: wx.dataview.DataViewIconText(node.name), 1: ""}
@@ -117,9 +117,13 @@ class ConnectionsTreeController:
 
         if isinstance(obj, ConnectionDirectory):
             self.repository.save_directory(obj)
+            CURRENT_DIRECTORY(obj)
 
         elif isinstance(obj, Connection):
             self.repository.save_connection(obj)
+            CURRENT_CONNECTION(obj)
+
+        self.model.ItemChanged(item)
 
     def _on_item_start_editing(self, event):
         if not self._allow_next_edit:

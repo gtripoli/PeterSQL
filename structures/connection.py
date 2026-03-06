@@ -75,6 +75,15 @@ class Connection:
         compare=False,
         repr=False,
     )
+    created_at: Optional[str] = None
+    last_connection_at: Optional[str] = None
+    last_successful_connection_at: Optional[str] = None
+    last_failure_reason: Optional[str] = None
+    successful_connections: int = 0
+    unsuccessful_connections: int = 0
+    total_connection_attempts: int = 0
+    average_connection_time_ms: Optional[int] = None
+    most_recent_connection_duration_ms: Optional[int] = None
 
     def __eq__(self, other: Any):
         if not isinstance(other, Connection):
@@ -103,6 +112,15 @@ class Connection:
             else None,
             "comments": self.comments,
             "ssh_tunnel": self.ssh_tunnel._asdict() if self.ssh_tunnel else None,
+            "created_at": self.created_at,
+            "last_connection_at": self.last_connection_at,
+            "last_successful_connection_at": self.last_successful_connection_at,
+            "last_failure_reason": self.last_failure_reason,
+            "successful_connections": self.successful_connections,
+            "unsuccessful_connections": self.unsuccessful_connections,
+            "total_connection_attempts": self.total_connection_attempts,
+            "average_connection_time_ms": self.average_connection_time_ms,
+            "most_recent_connection_duration_ms": self.most_recent_connection_duration_ms,
         }
 
     @property
@@ -113,6 +131,9 @@ class Connection:
         configuration = self.configuration._asdict()
         for key, value in configuration.items():
             if isinstance(value, bool):
+                continue
+
+            if key == "password":
                 continue
 
             if value is None:

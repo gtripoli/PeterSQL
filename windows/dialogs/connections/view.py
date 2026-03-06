@@ -1,5 +1,7 @@
 import dataclasses
+import time
 
+from datetime import datetime
 from gettext import gettext as _
 from typing import Optional
 
@@ -53,6 +55,15 @@ class ConnectionsManager(ConnectionsDialog):
             use_tls_enabled=self.use_tls_enabled,
             filename=self.filename,
             comments=self.comments,
+            created_at=self.created_at,
+            last_connection_at=self.last_connection_at,
+            successful_connected=self.successful_connected,
+            unsuccessful_connections=self.unsuccessful_connections,
+            last_successful_connection=self.last_successful_connection,
+            last_failure_raison=self.last_failure_raison,
+            total_connection_attempts=self.total_connection_attempts,
+            average_connection_time=self.average_connection_time,
+            most_recent_connection_duration=self.most_recent_connection_duration,
             ssh_tunnel_enabled=self.ssh_tunnel_enabled,
             ssh_tunnel_executable=self.ssh_tunnel_executable,
             ssh_tunnel_hostname=self.ssh_tunnel_hostname,
@@ -91,6 +102,65 @@ class ConnectionsManager(ConnectionsDialog):
         self.m_menuItem19.Enable(bool(selected_connection))
         self.m_menuItem18.Enable(bool(selected_connection or selected_directory))
 
+    def _current_timestamp(self) -> str:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def _record_connection_attempt(
+        self,
+        connection: Connection,
+        success: bool,
+        duration_ms: int,
+        failure_reason: Optional[str] = None,
+    ) -> None:
+        connection.total_connection_attempts += 1
+        connection.last_connection_at = self._current_timestamp()
+        connection.most_recent_connection_duration_ms = duration_ms
+
+        if success:
+            connection.successful_connections += 1
+            connection.last_successful_connection_at = connection.last_connection_at
+            connection.last_failure_reason = None
+        else:
+            connection.unsuccessful_connections += 1
+            connection.last_failure_reason = failure_reason or _("Unknown error")
+
+        if connection.total_connection_attempts > 0:
+            previous_total = connection.average_connection_time_ms or 0
+            attempt_count = connection.total_connection_attempts
+            connection.average_connection_time_ms = int(
+                ((previous_total * (attempt_count - 1)) + duration_ms) / attempt_count
+            )
+
+        if not connection.is_new:
+            self._repository.save_connection(connection)
+
+    def _sync_statistics_to_model(self, connection: Connection) -> None:
+        self.connections_model.created_at(connection.created_at or "")
+        self.connections_model.last_connection_at(connection.last_connection_at or "")
+        self.connections_model.successful_connected(
+            str(connection.successful_connections)
+        )
+        self.connections_model.unsuccessful_connections(
+            str(connection.unsuccessful_connections)
+        )
+        self.connections_model.last_successful_connection(
+            connection.last_successful_connection_at or ""
+        )
+        self.connections_model.last_failure_raison(connection.last_failure_reason or "")
+        self.connections_model.total_connection_attempts(
+            str(connection.total_connection_attempts)
+        )
+        self.connections_model.average_connection_time(
+            str(connection.average_connection_time_ms)
+            if connection.average_connection_time_ms is not None
+            else ""
+        )
+        self.connections_model.most_recent_connection_duration(
+            str(connection.most_recent_connection_duration_ms)
+            if connection.most_recent_connection_duration_ms is not None
+            else ""
+        )
+
     def _on_current_directory(self, directory: Optional[ConnectionDirectory]):
         self.btn_delete.Enable(bool(directory))
         self.btn_create_directory.Enable(not bool(directory))
@@ -107,6 +177,7 @@ class ConnectionsManager(ConnectionsDialog):
             self._pending_parent_directory_id = (
                 parent_directory.id if parent_directory else None
             )
+            self._sync_statistics_to_model(connection)
         self._update_tree_menu_state()
 
     def _on_pending_connection(self, connection: Connection):
@@ -284,6 +355,9 @@ class ConnectionsManager(ConnectionsDialog):
             return False
 
         expanded_paths = self._capture_expanded_directory_paths()
+
+        if not connection.created_at:
+            connection.created_at = self._current_timestamp()
 
         parent_obj = None
         parent_item = None
@@ -571,6 +645,8 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_tree_controller.edit_item(selected_item)
 
     def verify_session(self, session: Session):
+        started_at = time.perf_counter()
+
         with Loader.cursor_wait():
             try:
                 tls_was_enabled = bool(
@@ -605,7 +681,24 @@ class ConnectionsManager(ConnectionsDialog):
                         caption=_("Connection"),
                         style=wx.OK | wx.ICON_INFORMATION,
                     ).ShowModal()
+
+                duration_ms = int((time.perf_counter() - started_at) * 1000)
+                self._record_connection_attempt(
+                    session.connection,
+                    success=True,
+                    duration_ms=duration_ms,
+                )
+                self._sync_statistics_to_model(session.connection)
             except Exception as ex:
+                duration_ms = int((time.perf_counter() - started_at) * 1000)
+                self._record_connection_attempt(
+                    session.connection,
+                    success=False,
+                    duration_ms=duration_ms,
+                    failure_reason=str(ex),
+                )
+                self._sync_statistics_to_model(session.connection)
+
                 wx.MessageDialog(
                     None,
                     message=_(f"Connection error:\n{str(ex)}"),

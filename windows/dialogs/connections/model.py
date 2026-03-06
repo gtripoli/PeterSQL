@@ -25,6 +25,16 @@ class ConnectionModel(AbstractModel):
         self.filename = Observable[str]()
         self.comments = Observable[str]("")
 
+        self.created_at = Observable[str]("")
+        self.last_connection_at = Observable[str]("")
+        self.successful_connected = Observable[str]("0")
+        self.unsuccessful_connections = Observable[str]("0")
+        self.last_successful_connection = Observable[str]("")
+        self.last_failure_raison = Observable[str]("")
+        self.total_connection_attempts = Observable[str]("0")
+        self.average_connection_time = Observable[str]("")
+        self.most_recent_connection_duration = Observable[str]("")
+
         self.ssh_tunnel_enabled = Observable[bool](initial=False)
         self.ssh_tunnel_executable = Observable[str](initial="ssh")
         self.ssh_tunnel_hostname = Observable[str]()
@@ -48,6 +58,15 @@ class ConnectionModel(AbstractModel):
             self.port,
             self.filename,
             self.comments,
+            self.created_at,
+            self.last_connection_at,
+            self.successful_connected,
+            self.unsuccessful_connections,
+            self.last_successful_connection,
+            self.last_failure_raison,
+            self.total_connection_attempts,
+            self.average_connection_time,
+            self.most_recent_connection_duration,
             self.ssh_tunnel_enabled,
             self.ssh_tunnel_executable,
             self.ssh_tunnel_hostname,
@@ -82,6 +101,15 @@ class ConnectionModel(AbstractModel):
             self.port: 3306,
             self.filename: None,
             self.comments: None,
+            self.created_at: "",
+            self.last_connection_at: "",
+            self.successful_connected: "0",
+            self.unsuccessful_connections: "0",
+            self.last_successful_connection: "",
+            self.last_failure_raison: "",
+            self.total_connection_attempts: "0",
+            self.average_connection_time: "",
+            self.most_recent_connection_duration: "",
             self.ssh_tunnel_enabled: False,
             self.ssh_tunnel_executable: "ssh",
             self.ssh_tunnel_hostname: None,
@@ -107,6 +135,23 @@ class ConnectionModel(AbstractModel):
             self.engine(connection.engine.value.name)
 
         self.comments(connection.comments)
+        self.created_at(connection.created_at or "")
+        self.last_connection_at(connection.last_connection_at or "")
+        self.successful_connected(str(connection.successful_connections))
+        self.unsuccessful_connections(str(connection.unsuccessful_connections))
+        self.last_successful_connection(connection.last_successful_connection_at or "")
+        self.last_failure_raison(connection.last_failure_reason or "")
+        self.total_connection_attempts(str(connection.total_connection_attempts))
+        self.average_connection_time(
+            str(connection.average_connection_time_ms)
+            if connection.average_connection_time_ms is not None
+            else ""
+        )
+        self.most_recent_connection_duration(
+            str(connection.most_recent_connection_duration_ms)
+            if connection.most_recent_connection_duration_ms is not None
+            else ""
+        )
 
         if isinstance(connection.configuration, CredentialsConfiguration):
             self.hostname(connection.configuration.hostname)
