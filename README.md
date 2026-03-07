@@ -31,6 +31,19 @@ Features may be incomplete or change without notice.
 
 Use at your own risk and **do not rely on this project in production environments** yet.
 
+For a detailed status snapshot, see:
+
+- [PROJECT_STATUS.md](PROJECT_STATUS.md)
+- [ROADMAP.md](ROADMAP.md)
+
+### Recent updates
+
+- PostgreSQL engine now includes **Function** and **Procedure** classes with CRUD-style operations.
+- Check constraint support was added for **MySQL**, **MariaDB**, and **PostgreSQL** engine layers.
+- Connection manager now tracks **persistent connection statistics** (attempts, success/failure, timing).
+- Empty database passwords are now accepted for local setups.
+- MySQL/MariaDB connections can auto-retry by enabling TLS when required by the server.
+
 ---
 
 ## 🧭 Why PeterSQL?
@@ -114,7 +127,7 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 
 ### Setup

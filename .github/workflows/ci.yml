@@ -5,9 +5,11 @@ permissions:
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - "**"
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
 
 env:
   PYTHON_VERSION: "3.14"
@@ -18,6 +20,7 @@ env:
 
 jobs:
   test:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/nightly')
     runs-on: ubuntu-latest
 
     steps:
@@ -26,13 +29,13 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          version: "latest"
+          version: latest
           enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ env.PYTHON_VERSION }}"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install wx build deps
         run: |
@@ -74,7 +77,21 @@ jobs:
       - name: Export requirements from uv.lock (include dev extra)
         run: uv export --format requirements-txt --locked --no-hashes --extra dev -o requirements.lock.txt
 
-      - name: Populate wheelhouse from lock (build/download wheels)
+      - name: Check wheelhouse status
+        id: wheelhouse_check
+        run: |
+          mkdir -p "${WHEEL_CACHE_DIR}"
+
+          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+            echo "wxPython wheel found in cache, skipping wheel build"
+            echo "needs_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "wxPython wheel missing, wheelhouse build required"
+            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build wheelhouse from lock
+        if: steps.wheelhouse_check.outputs.needs_build == 'true'
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
           python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
@@ -82,21 +99,111 @@ jobs:
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
 
-      - name: Install dependencies
-        run: uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
-
-      - name: Run tests
+      - name: Install dependencies from wheelhouse (fallback on build)
         run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
-            echo "Running branch tests (--all)"
-            xvfb-run -a ./scripts/runtest.sh --all
+          if uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-build; then
+            echo "Dependencies installed from wheelhouse without builds"
           else
-            echo "Running main tests (--update)"
-            xvfb-run -a ./scripts/runtest.sh --update
+            echo "Wheel-only install failed, falling back to normal uv sync"
+            uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
           fi
 
+      - name: Run tests (--all)
+        run: xvfb-run -a ./scripts/runtest.sh --all
+
+  update:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/nightly'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: latest
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install wx build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config gettext \
+            libgtk-3-dev libglib2.0-dev \
+            libjpeg-dev libpng-dev libtiff-dev libtiff6 \
+            libnotify-dev libsm-dev \
+            libsdl2-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libglu1-mesa-dev freeglut3-dev \
+            libx11-dev libxext-dev libxinerama-dev libxi-dev libxrandr-dev \
+            libxss-dev libxtst-dev xvfb
+
+          if ! sudo apt-get install -y libwebkit2gtk-4.0-dev; then
+            sudo apt-get install -y libwebkit2gtk-4.1-dev
+          fi
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Cache wheelhouse
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WHEEL_CACHE_DIR }}
+          key: wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Initialize venv UV
+        run: uv venv
+
+      - name: Export requirements from uv.lock (include dev extra)
+        run: uv export --format requirements-txt --locked --no-hashes --extra dev -o requirements.lock.txt
+
+      - name: Check wheelhouse status
+        id: wheelhouse_check
+        run: |
+          mkdir -p "${WHEEL_CACHE_DIR}"
+
+          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+            echo "wxPython wheel found in cache, skipping wheel build"
+            echo "needs_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "wxPython wheel missing, wheelhouse build required"
+            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build wheelhouse from lock
+        if: steps.wheelhouse_check.outputs.needs_build == 'true'
+        run: |
+          mkdir -p "${WHEEL_CACHE_DIR}"
+          python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+
+      - name: Upgrade build tooling
+        run: uv pip install -U pip setuptools wheel
+
+      - name: Install dependencies from wheelhouse (fallback on build)
+        run: |
+          if uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-build; then
+            echo "Dependencies installed from wheelhouse without builds"
+          else
+            echo "Wheel-only install failed, falling back to normal uv sync"
+            uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
+          fi
+
+      - name: Run tests and update README (--update)
+        run: xvfb-run -a ./scripts/runtest.sh --update
+
       - name: Commit and push updated README
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -104,8 +211,60 @@ jobs:
           git add README.md
 
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "No README changes to commit"
           else
             git commit -m "chore: update badges [skip ci]"
             git push
+          fi
+
+      - name: Build (placeholder)
+        run: echo "Build scripts are not ready yet."
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build (placeholder)
+        run: echo "Build scripts are not ready yet."
+
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          version=$(python -c "import tomllib; from pathlib import Path; data = tomllib.loads(Path('pyproject.toml').read_text()); project = data.get('project', {}); version = project.get('version', '').strip(); print(version) if version else (_ for _ in ()).throw(SystemExit('Missing project.version in pyproject.toml'))")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v${VERSION}"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists"
+          else
+            git tag "$tag"
+            git push origin "$tag"
+          fi
+
+      - name: Create published release with autogenerated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v${VERSION}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"
+          else
+            gh release create "$tag" --generate-notes --title "$tag"
           fi
