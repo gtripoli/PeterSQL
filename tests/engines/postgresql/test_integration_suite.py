@@ -112,6 +112,9 @@ class TestPostgreSQLFunction(BaseFunctionTests):
     def get_function_returns(self) -> str:
         return "integer"
 
+    def get_updated_function_statement(self) -> str:
+        return "RETURN x + 2;"
+
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("postgresql")
@@ -122,6 +125,9 @@ class TestPostgreSQLProcedure(BaseProcedureTests):
     
     def get_procedure_parameters(self) -> str:
         return ""
+
+    def get_updated_procedure_statement(self) -> str:
+        return "RAISE NOTICE 'Updated from procedure';"
 
 
 @pytest.mark.integration

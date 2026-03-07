@@ -150,3 +150,28 @@ class Connection:
 
     def has_enabled_tunnel(self) -> bool:
         return bool(self.ssh_tunnel and self.ssh_tunnel.is_enabled)
+
+    def record_connection_attempt(
+        self,
+        timestamp: str,
+        success: bool,
+        duration_ms: int,
+        failure_reason: Optional[str] = None,
+    ) -> None:
+        self.total_connection_attempts += 1
+        self.last_connection_at = timestamp
+        self.most_recent_connection_duration_ms = duration_ms
+
+        if success:
+            self.successful_connections += 1
+            self.last_successful_connection_at = timestamp
+            self.last_failure_reason = None
+        else:
+            self.unsuccessful_connections += 1
+            self.last_failure_reason = failure_reason
+
+        previous_average = self.average_connection_time_ms or 0
+        total_attempts = self.total_connection_attempts
+        self.average_connection_time_ms = int(
+            ((previous_average * (total_attempts - 1)) + duration_ms) / total_attempts
+        )

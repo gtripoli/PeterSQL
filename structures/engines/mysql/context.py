@@ -183,7 +183,8 @@ class MySQLContext(AbstractContext):
             except Exception as e:
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise
-            else:
+
+            if self._cursor is not None:
                 self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:

@@ -112,24 +112,13 @@ class ConnectionsManager(ConnectionsDialog):
         duration_ms: int,
         failure_reason: Optional[str] = None,
     ) -> None:
-        connection.total_connection_attempts += 1
-        connection.last_connection_at = self._current_timestamp()
-        connection.most_recent_connection_duration_ms = duration_ms
-
-        if success:
-            connection.successful_connections += 1
-            connection.last_successful_connection_at = connection.last_connection_at
-            connection.last_failure_reason = None
-        else:
-            connection.unsuccessful_connections += 1
-            connection.last_failure_reason = failure_reason or _("Unknown error")
-
-        if connection.total_connection_attempts > 0:
-            previous_total = connection.average_connection_time_ms or 0
-            attempt_count = connection.total_connection_attempts
-            connection.average_connection_time_ms = int(
-                ((previous_total * (attempt_count - 1)) + duration_ms) / attempt_count
-            )
+        reason = failure_reason if success else failure_reason or _("Unknown error")
+        connection.record_connection_attempt(
+            timestamp=self._current_timestamp(),
+            success=success,
+            duration_ms=duration_ms,
+            failure_reason=reason,
+        )
 
         if not connection.is_new:
             self._repository.save_connection(connection)

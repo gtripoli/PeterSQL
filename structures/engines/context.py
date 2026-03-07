@@ -55,7 +55,8 @@ class AbstractContext(abc.ABC):
         self.databases = ObservableLazyList(self.get_databases)
 
     def __del__(self):
-        self.disconnect()
+        with contextlib.suppress(Exception):
+            self.disconnect()
 
     def before_connect(self, *args, **kwargs):
         # SSH tunnel support via connection configuration
@@ -509,11 +510,15 @@ class AbstractContext(abc.ABC):
         self.before_disconnect()
 
         if self._cursor is not None:
-            self._cursor.close()
+            close_cursor = getattr(self._cursor, "close", None)
+            if callable(close_cursor):
+                close_cursor()
             self._cursor = None
 
         if self._connection is not None:
-            self._connection.close()
+            close_connection = getattr(self._connection, "close", None)
+            if callable(close_connection):
+                close_connection()
             self._connection = None
 
     @contextlib.contextmanager

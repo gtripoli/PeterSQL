@@ -32,11 +32,13 @@ This roadmap reflects the current project state and separates:
 
 - [x] **PostgreSQL Function engine implementation** (PARTIAL)
   - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
-  - **Next:** validate behavior across supported PostgreSQL variants.
+  - **Status:** integration coverage for create/alter/drop is now in place across supported PostgreSQL variants.
+  - **Next:** long-run/manual workflow validation + broader regression checks.
 
 - [x] **PostgreSQL Procedure engine implementation** (PARTIAL)
   - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
-  - **Next:** validate create/alter/drop and introspection consistency.
+  - **Status:** integration coverage for create/alter/drop is now in place across supported PostgreSQL variants.
+  - **Next:** long-run/manual workflow validation + introspection consistency checks.
 
 - [x] **Check constraint implementations for MySQL/MariaDB/PostgreSQL** (PARTIAL)
   - **Files:**
@@ -51,7 +53,8 @@ This roadmap reflects the current project state and separates:
     - `structures/connection.py`
     - `windows/dialogs/connections/model.py`
     - `windows/dialogs/connections/view.py`
-  - **Next:** long-run behavioral validation.
+  - **Validation status:** unit tests now cover connection statistics updates, MySQL/MariaDB TLS retry behavior, and SSH tunnel context lifecycle contracts.
+  - **Next:** unblock and run SSH testcontainers integration validation (currently skipped) + long-run behavioral validation.
 
 ---
 
@@ -125,8 +128,10 @@ Before moving a PARTIAL item to DONE:
 ### Recent Highlights
 
 - PostgreSQL Function and Procedure engine classes added.
+- PostgreSQL Function/Procedure integration tests now include ALTER coverage (create/alter/drop).
 - Check constraint support added for MySQL, MariaDB, PostgreSQL.
 - Connection statistics and TLS auto-retry behavior added in connection manager.
+- SSH tunnel unit contract tests added for context lifecycle and process stop behavior.
 - CI workflow split into test/nightly-update/release lanes.
 
 ---

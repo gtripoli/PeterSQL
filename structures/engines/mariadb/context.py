@@ -198,7 +198,8 @@ class MariaDBContext(AbstractContext):
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
-            else:
+
+            if self._cursor is not None:
                 self.after_connect()
 
     def disconnect(self) -> None:

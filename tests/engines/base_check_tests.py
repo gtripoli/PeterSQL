@@ -96,4 +96,8 @@ class BaseCheckTests:
         check.expression = "age >= 18"
         assert check.alter() is True
 
+        table.checks.refresh()
+        checks = table.checks.get_value()
+        assert any(c.name == "age_check" for c in checks)
+
         table.drop()

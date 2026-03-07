@@ -20,7 +20,7 @@ env:
 
 jobs:
   test:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/nightly')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
 
     steps:
@@ -112,7 +112,7 @@ jobs:
         run: xvfb-run -a ./scripts/runtest.sh --all
 
   update:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/nightly'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
     steps:
@@ -221,7 +221,7 @@ jobs:
         run: echo "Build scripts are not ready yet."
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
     steps:
