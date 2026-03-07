@@ -1,14 +1,65 @@
-# Code Style Guidelines (v1.4)
+# Code Style Guidelines (v1.5)
 
 These rules define the expected coding style for this project.
-They apply to all contributors, including humans, AI-assisted tools, and automated systems.
-They are mandatory unless explicitly stated otherwise.
+
+They apply to all contributors:
+
+- human developers
+- AI-assisted tools
+- coding agents
+- automated systems
+
+These rules are **mandatory** unless explicitly stated otherwise.
+
+If a requested change conflicts with these rules, the change must **stop** and clarification must be requested.
+
+---
+
+## Core Rules (Quick Reference)
+
+The following rules are the most critical and must always be respected:
+
+1. All code, comments, documentation, commit messages, and user-facing text MUST be written in English.
+2. Python typing rules MUST be respected (PEP 585 generics; `Optional[T]`, not `T | None`).
+3. Import ordering and grouping rules MUST be followed exactly.
+4. Functions and methods MUST NOT exceed 50 lines.
+5. Code changes MUST avoid modifying unrelated code.
+6. Naming MUST remain explicit and descriptive (no aggressive abbreviations).
+7. Code MUST remain mypy-friendly whenever possible.
+
+When generating or modifying code, tools and agents MUST consult this file before producing changes.
+
+---
+
+## Mandatory Rules
+
+The following rules are strict and MUST NOT be violated:
+
+- English must always be used for code and documentation.
+- `typing.Optional[T]` MUST be used instead of `T | None`.
+- `from __future__ import annotations` MUST NOT be used.
+- Import ordering rules MUST be respected exactly.
+- Functions MUST NOT exceed the maximum size limit.
+
+---
+
+## Usage by AI Tools
+
+AI-assisted tools and coding agents MUST read this file before generating or modifying code.
+
+If a requested change conflicts with these rules, the tool MUST:
+
+1. stop the modification
+2. explain the conflict
+3. request clarification
+
+Agents MUST prioritize deterministic rules over stylistic interpretation.
 
 ---
 
 ## Design Principles
 
-#### These principles explain why the rules exist. They protect consistency over time.
+These principles explain why the rules exist. They protect consistency over time.
 
 - Determinism over preference  
   A rule must always produce the same result. Subjective rules lead to debates and inconsistency.
@@ -476,6 +527,8 @@ def get_dialect() -> str:
     return connection.engine.value.dialect
 ```
 
+If exact ordering cannot be determined automatically, prefer consistency with the surrounding file.
+
 ---
 
 ## 7. Variable Definition Order
@@ -586,8 +639,8 @@ class Example:
 
 ## 10. Walrus Operator ( := )
 
-- Always try to use the walrus operator when it improves clarity and avoids redundant calls.
-- Do NOT use it if it reduces readability.
+- The walrus operator MAY be used when it improves clarity and avoids redundant calls.
+- It MUST NOT be used when it makes the control flow harder to read.
 
 #### Good examples
 
