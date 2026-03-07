@@ -1,0 +1,164 @@
+{
+  "group": "ALIAS_PREFIX_DISAMBIGUATION",
+  "cases": [
+    {
+      "case_id": "ALIAS_DISAMBIG_001",
+      "title": "WHERE: alias exact-match with valid c* suggestions",
+      "sql": "SELECT * FROM customers c WHERE c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "c",
+        "alias_exact_match": "c",
+        "comment": "Prefix 'c' exactly matches alias 'c'. Alias-prefix mode activated in schema order.",
+        "suggestions": [
+          "c.id",
+          "c.name",
+          "c.email",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_003",
+      "title": "WHERE: CURRENT_TABLE overridden by alias exact-match (pm)",
+      "sql": "SELECT * FROM payments pm WHERE pm|",
+      "dialect": "generic",
+      "current_table": "payments",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "pm",
+        "alias_exact_match": "pm",
+        "comment": "Alias-exact-match overrides CURRENT_TABLE priority. Prefix is 'pm': only pm.* columns are valid matches; no function fallback.",
+        "suggestions": [
+          "pm.id",
+          "pm.order_id",
+          "pm.amount",
+          "pm.method",
+          "pm.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_004",
+      "title": "WHERE: deduplication for us alias (no fallback)",
+      "sql": "SELECT * FROM user_sessions us WHERE us|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "us",
+        "alias_exact_match": "us",
+        "comment": "Alias-prefix mode. Prefix is 'us': only us.* columns in schema order, no duplicates and no function fallback.",
+        "suggestions": [
+          "us.id",
+          "us.user_id",
+          "us.session_token",
+          "us.expires_at"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_005",
+      "title": "SELECT_LIST: alias exact-match with strict i-prefix",
+      "sql": "SELECT i| FROM items i",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "i",
+        "alias_exact_match": "i",
+        "comment": "SELECT_LIST with alias-exact-match. Prefix is 'i': only i.* columns in schema order; no extra fallback suggestions.",
+        "suggestions": [
+          "i.*",
+          "i.id",
+          "i.item_name",
+          "i.stock",
+          "i.price",
+          "IF",
+          "IFNULL"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_006",
+      "title": "JOIN_ON: alias exact-match with valid c* scalar functions",
+      "sql": "SELECT * FROM customers c JOIN payments pm ON c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON",
+        "prefix": "c",
+        "alias_exact_match": "c",
+        "comment": "JOIN_ON with alias-exact-match. Prefix 'c' allows c.* columns first, then syntactically valid c* scalar functions.",
+        "suggestions": [
+          "c.id",
+          "c.name",
+          "c.email",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_007",
+      "title": "WHERE: alias exact-match in multi-scope context",
+      "sql": "SELECT * FROM products p JOIN inventory inv ON p.id = inv.product_id WHERE p|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "p",
+        "alias_exact_match": "p",
+        "comment": "Multi-scope [products as p, inventory as inv]. Alias-exact-match for 'p'. Only p.* columns in schema order, no products.* duplicates.",
+        "suggestions": [
+          "p.id",
+          "p.name",
+          "p.price",
+          "p.unit_price",
+          "p.stock",
+          "PI",
+          "POW",
+          "POWER"
+        ]
+      }
+    },
+    {
+      "case_id": "ALIAS_DISAMBIG_008",
+      "title": "WHERE: startswith mismatch keeps generic prefix mode",
+      "sql": "SELECT * FROM carts ca WHERE cas|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "cas",
+        "comment": "Prefix 'cas' does NOT match alias 'ca' or any scope column/function in current behavior.",
+        "suggestions": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "group": "LARGE_SCHEMA_GUARDRAILS",
+  "cases": [
+    {
+      "case_id": "GUARDRAIL_001",
+      "title": "Big schema WHERE without prefix keeps suggestions scope-safe",
+      "sql": "SELECT * FROM users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "big",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "guardrail_expected": true,
+        "suggestions": [
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "GUARDRAIL_002",
+      "title": "Big schema WHERE prefix does not leak out-of-scope db-wide columns",
+      "sql": "SELECT * FROM users WHERE col_0|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "big",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "col_0",
+        "suggestions": []
+      }
+    }
+  ]
+}

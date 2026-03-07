@@ -1,6 +1,8 @@
 import pytest
 
 
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLContext:
     """Tests for PostgreSQL context - focus on reading database structures."""
 
@@ -35,14 +37,14 @@ class TestPostgreSQLContext:
         assert uptime is not None
         assert uptime >= 0
 
-    def test_context_build_sql_safe_name(self, postgresql_session):
-        """Test building SQL safe names uses IDENTIFIER_QUOTE."""
+    def test_context_quote_identifier(self, postgresql_session):
+        """Test building SQL safe names uses IDENTIFIER_QUOTE_CHAR."""
         ctx = postgresql_session.context
-        quote = ctx.IDENTIFIER_QUOTE
+        quote = ctx.IDENTIFIER_QUOTE_CHAR
 
         assert quote == '"'
-        assert ctx.build_sql_safe_name("normal") == "normal"
-        assert ctx.build_sql_safe_name("with space") == f'{quote}with space{quote}'
+        assert ctx.quote_identifier("normal") == "normal"
+        assert ctx.quote_identifier("with space") == f'{quote}with space{quote}'
 
     def test_context_databases_list(self, postgresql_session):
         """Test reading databases list from server."""

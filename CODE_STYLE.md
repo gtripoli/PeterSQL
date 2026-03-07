@@ -1,4 +1,4 @@
-# Code Style Guidelines (v1.2)
+# Code Style Guidelines (v1.4)
 
 These rules define the expected coding style for this project.
 They apply to all contributors, including humans, AI-assisted tools, and automated systems.
@@ -27,7 +27,21 @@ They are mandatory unless explicitly stated otherwise.
 
 ---
 
-## 1. Comments
+## 1. Language
+
+- All code, comments, documentation, commit messages, and free-form text MUST be written in English.
+- This includes:
+    - Comments in code
+    - Docstrings
+    - Documentation files (README, guides, etc.)
+    - Commit messages
+    - Variable and function names
+    - Error messages and user-facing text
+- No exceptions are allowed.
+
+---
+
+## 2. Comments
 
 - Comments MUST be written in English.
 - Comments MUST be concise and non-verbose.
@@ -49,7 +63,15 @@ They are mandatory unless explicitly stated otherwise.
 
 ---
 
-## 2. Naming Conventions
+## 3. Commit Messages
+
+- Commit messages MUST be concise and non-verbose.
+- They serve as a brief summary of changes. Detailed explanations belong in the merge request description.
+- The merge request description MUST be comprehensive and well-written.
+
+---
+
+## 4. Naming Conventions
 
 - Variable, attribute, class, function, and parameter names MUST be descriptive.
 - Names MUST NOT be aggressively shortened.
@@ -82,7 +104,7 @@ self.par = par
 
 ---
 
-## 3. Python Typing
+## 5. Python Typing
 
 This project targets Python 3.14 and uses PEP 585 generics for standard collections.
 
@@ -174,7 +196,7 @@ if TYPE_CHECKING:
     from pkg.heavy import HeavyType  # TYPE_CHECKING: unavoidable circular import
 ```
 
-## 4. Import Rules
+## 6. Import Rules
 
 ### Submodules vs symbols (`from ... import ...`)
 
@@ -384,7 +406,7 @@ When importing multiple symbols from the same module:
     - each line MUST import as many symbols as possible
     - keep the same import group ordering rules
 
-### Good examples
+#### Good examples
 
 ```python
 from windows.components.stc.detectors import detect_syntax_id, is_base64, is_csv
@@ -397,7 +419,7 @@ from .detectors import is_regex, is_sql, is_xml
 from .detectors import is_base64, is_csv, is_html
 ```
 
-### Bad examples
+#### Bad examples
 
 ```python
 from windows.components.stc.detectors import is_html
@@ -417,9 +439,46 @@ from .detectors import (
 )
 ```
 
+### Lazy Imports
+
+- Lazy imports (imports inside functions or methods) MUST NOT be used.
+- Lazy imports are allowed ONLY as a last resort when:
+    - There is an unavoidable circular import that cannot be resolved by refactoring
+    - The performance gain is critical and measurable (e.g., avoiding expensive module initialization)
+- When lazy imports are used, they MUST include a clear inline comment explaining why they are necessary.
+
+#### Good examples
+
+```python
+from windows.main import CURRENT_CONNECTION
+
+
+def get_dialect() -> str:
+    connection = CURRENT_CONNECTION.get_value()
+    return connection.engine.value.dialect
+```
+
+#### Bad examples
+
+```python
+def get_dialect() -> str:
+    from windows.main import CURRENT_CONNECTION  # Lazy import without justification
+    connection = CURRENT_CONNECTION.get_value()
+    return connection.engine.value.dialect
+```
+
+#### Allowed (last resort)
+
+```python
+def get_dialect() -> str:
+    from windows.main import CURRENT_CONNECTION  # Lazy import: unavoidable circular dependency
+    connection = CURRENT_CONNECTION.get_value()
+    return connection.engine.value.dialect
+```
+
 ---
 
-## 5. Variable Definition Order
+## 7. Variable Definition Order
 
 When defining multiple variables in sequence, variables MUST be ordered by increasing number of characters in the
 variable name (shorter names first).
@@ -445,7 +504,7 @@ pos = self._editor.GetCurrentPos()
 
 ---
 
-## 6. Python Classes
+## 8. Python Classes
 
 ### Naming
 
@@ -518,19 +577,19 @@ class Example:
 
 ---
 
-## 7. Function and Method Size
+## 9. Function and Method Size
 
 - A function/method MUST be at most 50 lines.
 - If it exceeds 50 lines, it MUST be split into smaller functions/methods with clear names.
 
 ---
 
-## 8. Walrus Operator ( := )
+## 10. Walrus Operator ( := )
 
 - Always try to use the walrus operator when it improves clarity and avoids redundant calls.
 - Do NOT use it if it reduces readability.
 
-### Good examples
+#### Good examples
 
 ```python
 if (user := get_user()) is not None:
@@ -540,7 +599,7 @@ while (line := file.readline()):
     handle_line(line)
 ```
 
-### Bad examples
+#### Bad examples
 
 ```python
 user = get_user()
@@ -550,7 +609,7 @@ if user is not None:
 
 ---
 
-## 9. Mypy & Static Analysis
+## 11. Mypy & Static Analysis
 
 - Code MUST be mypy-friendly.
 - Do NOT silence errors with `# type: ignore` unless there is no reasonable alternative.

@@ -1,0 +1,92 @@
+{
+  "group": "JOIN_AFTER_TABLE",
+  "cases": [
+    {
+      "case_id": "JOIN_AFTER_TABLE_001",
+      "title": "USING keyword suggested after JOIN table name",
+      "sql": "SELECT * FROM products p JOIN items i |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "ON",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_AFTER_TABLE_002",
+      "title": "After JOIN table without alias: AS, ON, USING suggested",
+      "sql": "SELECT * FROM products JOIN orders |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "AS",
+          "ON",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_AFTER_TABLE_003",
+      "title": "After LEFT JOIN table with alias: ON, USING (no AS)",
+      "sql": "SELECT * FROM items i LEFT JOIN customers c |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "ON",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_AFTER_TABLE_004",
+      "title": "After INNER JOIN table without alias: AS, ON, USING",
+      "sql": "SELECT * FROM orders INNER JOIN products |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "AS",
+          "ON",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_AFTER_TABLE_005",
+      "title": "After JOIN alias + prefix suggests ON",
+      "sql": "SELECT u.id FROM users u JOIN orders O|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_CLAUSE",
+        "prefix": "O",
+        "comment": "When JOIN table alias is complete and user types O, continue with ON keyword.",
+        "suggestions": [
+          "ON"
+        ]
+      }
+    }
+  ]
+}

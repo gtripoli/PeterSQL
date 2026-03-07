@@ -1,0 +1,139 @@
+{
+  "group": "JOIN",
+  "cases": [
+    {
+      "case_id": "JOIN_001",
+      "title": "JOIN without prefix suggests tables",
+      "sql": "SELECT * FROM products JOIN |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_002",
+      "title": "JOIN with prefix filters tables",
+      "sql": "SELECT * FROM products JOIN o|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_CLAUSE",
+        "prefix": "o",
+        "suggestions": [
+          "orders",
+          "orders_archive"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_003",
+      "title": "JOIN after table + space suggests AS/ON/USING",
+      "sql": "SELECT * FROM products JOIN items |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_JOIN_TABLE",
+        "context": "JOIN_AFTER_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "AS",
+          "ON",
+          "USING"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_004",
+      "title": "JOIN_CLAUSE - Tables without alias NOT suggested again",
+      "sql": "SELECT * FROM products JOIN items ON products.id=items.product_id JOIN |",
+      "dialect": "generic",
+      "current_table": "products",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "comment": "products and items have NO aliases, so they CANNOT be suggested again (self-join requires aliases). CURRENT_TABLE=products also excluded.",
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "orders",
+          "orders_archive",
+          "payments",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_005",
+      "title": "KILLER: JOIN with CURRENT_TABLE already present (no alias) - NOT suggested again",
+      "sql": "SELECT * FROM orders JOIN |",
+      "dialect": "generic",
+      "current_table": "orders",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "comment": "KILLER test: orders has NO alias, so it CANNOT be suggested again (self-join requires aliases). CURRENT_TABLE=orders also excluded.",
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders_archive",
+          "payments",
+          "products",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "JOIN_006",
+      "title": "JOIN_CLAUSE - Table WITH alias CAN be suggested again (self-join allowed)",
+      "sql": "SELECT * FROM products p JOIN |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "JOIN_CLAUSE",
+        "prefix": null,
+        "comment": "products has alias 'p', so it CAN be suggested again for self-join (e.g., FROM products p JOIN products p2).",
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "users",
+          "user_sessions"
+        ]
+      }
+    }
+  ]
+}

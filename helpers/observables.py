@@ -2,6 +2,7 @@ import copy
 import enum
 import inspect
 import weakref
+from threading import Timer
 
 from typing import Callable, TypeVar, Generic, Any, SupportsIndex, Union, Optional, cast, Self, Hashable
 
@@ -406,19 +407,14 @@ class ObservableObject(Observable):
 
 
 def debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):
-    waiting = False
+    timer: Optional[Timer] = None
 
     def _debounced(*args, **kwargs):
-        nonlocal waiting
-        if not waiting:
-            waiting = True
-
-            def call_and_reset():
-                nonlocal waiting
-                callback(*args, **kwargs)
-                waiting = False
-
-            wx.CallAfter(call_and_reset)
+        nonlocal timer
+        if timer:
+            timer.cancel()
+        timer = Timer(wait_time, callback, args, kwargs)
+        timer.start()
 
     for obs in observables:
         setattr(obs, '_debounce_callback', _debounced)

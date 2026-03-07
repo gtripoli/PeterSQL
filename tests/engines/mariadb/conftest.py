@@ -6,13 +6,55 @@ from testcontainers.mysql import MySqlContainer
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import CredentialsConfiguration
+from structures.engines.mariadb.database import MariaDBTable
+from structures.engines.mariadb.datatype import MariaDBDataType
+from structures.engines.mariadb.indextype import MariaDBIndexType
 
 MARIADB_VERSIONS: list[str] = [
-    "mariadb:latest",
-    "mariadb:11.8",
-    "mariadb:10.11",
-    "mariadb:5.5",
+    "mariadb:12",
+    "mariadb:11",
+    "mariadb:10",
+    "mariadb:5",
 ]
+
+
+def create_users_table_mariadb(mariadb_database, mariadb_session) -> MariaDBTable:
+    ctx = mariadb_session.context
+    ctx.set_database(mariadb_database)
+
+    table = ctx.build_empty_table(mariadb_database, name="users", engine="InnoDB", collation_name="utf8mb4_general_ci")
+
+    id_column = ctx.build_empty_column(
+        table,
+        MariaDBDataType.INT,
+        name="id",
+        is_auto_increment=True,
+        is_nullable=False,
+        length=11,
+    )
+
+    name_column = ctx.build_empty_column(
+        table,
+        MariaDBDataType.VARCHAR,
+        name="name",
+        is_nullable=False,
+        length=255,
+    )
+
+    table.columns.append(id_column)
+    table.columns.append(name_column)
+
+    primary_index = ctx.build_empty_index(
+        table,
+        MariaDBIndexType.PRIMARY,
+        ["id"],
+        name="PRIMARY",
+    )
+    table.indexes.append(primary_index)
+
+    table.create()
+    mariadb_database.tables.refresh()
+    return next(t for t in mariadb_database.tables.get_value() if t.name == "users")
 
 
 def pytest_generate_tests(metafunc):
@@ -21,13 +63,15 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="module")
-def mariadb_container(mariadb_version):
-    with MySqlContainer(mariadb_version, name=f"petersql_test_{mariadb_version.replace(":", "_")}",
+def mariadb_container(mariadb_version, worker_id):
+    container = MySqlContainer(mariadb_version, name=f"petersql_test_{worker_id}_{mariadb_version.replace(":", "_")}",
                         mem_limit="768m",
                         memswap_limit="1g",
                         nano_cpus=1_000_000_000,
                         shm_size="256m",
-                        ) as container:
+                        )
+    
+    with container:
         yield container
 
 
@@ -63,3 +107,34 @@ def mariadb_database(mariadb_session):
     for table in database.tables.get_value():
         mariadb_session.context.execute(f"DROP TABLE IF EXISTS `testdb`.`{table.name}`")
     mariadb_session.context.execute("SET FOREIGN_KEY_CHECKS = 1")
+
+
+# Unified fixtures for base test suites
+@pytest.fixture
+def session(mariadb_session):
+    """Alias for mariadb_session to match base test suite parameter names."""
+    return mariadb_session
+
+
+@pytest.fixture
+def database(mariadb_database):
+    """Alias for mariadb_database to match base test suite parameter names."""
+    return mariadb_database
+
+
+@pytest.fixture
+def create_users_table():
+    """Provide the create_users_table helper function."""
+    return create_users_table_mariadb
+
+
+@pytest.fixture
+def datatype_class():
+    """Provide the engine-specific datatype class."""
+    return MariaDBDataType
+
+
+@pytest.fixture
+def indextype_class():
+    """Provide the engine-specific indextype class."""
+    return MariaDBIndexType

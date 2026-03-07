@@ -1,0 +1,137 @@
+{
+  "vocab": {
+    "primary_keywords": [
+      "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER",
+      "TRUNCATE", "SHOW", "DESCRIBE", "EXPLAIN", "WITH", "REPLACE", "MERGE"
+    ],
+    "keywords_all": [
+      "ALTER", "AND", "AS", "ASC", "BETWEEN", "CREATE", "CROSS JOIN",
+      "DELETE", "DESC",
+      "DESCRIBE", "DROP", "EXISTS", "EXPLAIN", "FALSE", "FROM", "FULL JOIN",
+      "GROUP BY", "HAVING", "IN", "INNER JOIN", "INSERT", "IS NOT NULL",
+      "IS NULL", "JOIN", "LEFT JOIN", "LIKE", "LIMIT", "MERGE", "NOT", "NULL",
+      "NULLS FIRST", "NULLS LAST", "OFFSET", "ON", "OR", "ORDER BY", "REPLACE",
+      "RIGHT JOIN", "SELECT", "SHOW", "TRUE", "TRUNCATE", "UPDATE", "USING",
+      "WHERE", "WITH"
+    ],
+    "literals": [
+      "NULL", "TRUE", "FALSE", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP"
+    ],
+    "functions_all": [
+      "AVG", "COALESCE", "CONCAT", "COUNT", "DATE", "GROUP_CONCAT", "IF", "IFNULL",
+      "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "LENGTH", "LOWER", "MAX", "MIN", "MONTH", "NOW", "NULLIF", "ROW_NUMBER",
+      "PI", "POW", "POWER", "SUBSTR", "SUM", "TRIM", "UNIX_TIMESTAMP", "UPPER", "UUID", "YEAR"
+    ],
+    "aggregate_functions": [
+      "AVG", "COUNT", "GROUP_CONCAT", "MAX", "MIN", "SUM"
+    ]
+  },
+  "schema_small": {
+    "tables": [
+      {
+        "name": "users",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "email", "type": "VARCHAR"},
+          {"name": "status", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "orders",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "user_id", "type": "INTEGER"},
+          {"name": "total", "type": "DECIMAL"},
+          {"name": "status", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ],
+        "foreign_keys": [
+          {
+            "name": "fk_orders_user_id",
+            "columns": ["user_id"],
+            "reference_table": "users",
+            "reference_columns": ["id"]
+          }
+        ]
+      },
+      {
+        "name": "products",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "price", "type": "DECIMAL"},
+          {"name": "unit_price", "type": "DECIMAL"},
+          {"name": "stock", "type": "INTEGER"}
+        ]
+      },
+      {
+        "name": "customers",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "name", "type": "VARCHAR"},
+          {"name": "email", "type": "VARCHAR"}
+        ]
+      },
+      {
+        "name": "payments",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "order_id", "type": "INTEGER"},
+          {"name": "amount", "type": "DECIMAL"},
+          {"name": "method", "type": "VARCHAR"},
+          {"name": "created_at", "type": "TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "user_sessions",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "user_id", "type": "INTEGER"},
+          {"name": "session_token", "type": "VARCHAR"},
+          {"name": "expires_at", "type": "TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "items",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "item_name", "type": "VARCHAR"},
+          {"name": "stock", "type": "INTEGER"},
+          {"name": "price", "type": "DECIMAL"}
+        ]
+      },
+      {
+        "name": "carts",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "customer_id", "type": "INTEGER"},
+          {"name": "created_at", "type": "TIMESTAMP"},
+          {"name": "cart_total", "type": "DECIMAL"}
+        ]
+      },
+      {
+        "name": "orders_archive",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "order_id", "type": "INTEGER"},
+          {"name": "archived_at", "type": "TIMESTAMP"},
+          {"name": "original_total", "type": "DECIMAL"}
+        ]
+      },
+      {
+        "name": "inventory",
+        "columns": [
+          {"name": "id", "type": "INTEGER"},
+          {"name": "product_id", "type": "INTEGER"},
+          {"name": "quantity", "type": "INTEGER"},
+          {"name": "warehouse_location", "type": "VARCHAR"}
+        ]
+      }
+    ]
+  },
+  "schema_big": {
+    "tables": []
+  }
+}

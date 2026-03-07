@@ -14,7 +14,7 @@ repos:
     hooks:
       - id: runtest
         name: run tests and update badges
-        entry: bash ./scripts/runtest.sh
+        entry: bash ./scripts/runtest-local.sh
         language: system
         pass_filenames: false
         always_run: true

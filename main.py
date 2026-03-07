@@ -6,38 +6,43 @@ from pathlib import Path
 
 import wx
 
-import settings
-
+from constants import WORKDIR
 from icons import IconRegistry
 
 from helpers.loader import Loader
 from helpers.logger import logger
 from helpers.observables import ObservableObject
 
-from windows.components.stc.styles import apply_stc_theme
+from windows.dialogs.settings.repository import SettingsRepository
+
+from windows.components.stc.styles import apply_stc_theme, set_theme_loader
 from windows.components.stc.themes import ThemeManager
 from windows.components.stc.registry import SyntaxRegistry
 from windows.components.stc.profiles import BASE64, CSV, HTML, JSON, MARKDOWN, REGEX, SQL, TEXT, XML, YAML
-
-WORKDIR = Path(os.path.abspath(os.path.dirname(__file__)))
+from windows.components.stc.theme_loader import ThemeLoader
 
 
 class PeterSQL(wx.App):
     locale: wx.Locale = wx.Locale()
 
-    settings: ObservableObject = settings.load(WORKDIR.joinpath("settings.yml"))
+    settings_repository = SettingsRepository(WORKDIR / "settings.yml")
+    settings: ObservableObject = settings_repository.load()
 
     main_frame: wx.Frame = None
 
     icon_registry_16: IconRegistry
 
     syntax_registry: SyntaxRegistry
+    
+    theme_loader: ThemeLoader
 
     def OnInit(self) -> bool:
         Loader.loading.subscribe(self._on_loading_change)
 
-        self.icon_registry_16 = IconRegistry(os.path.join(WORKDIR, "icons"), 16)
+        self.icon_registry_16 = IconRegistry(WORKDIR / "icons", 16)
 
+        self._init_theme_loader()
+        
         self.theme_manager = ThemeManager(apply_function=apply_stc_theme)
         self.syntax_registry = SyntaxRegistry([JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT])
 
@@ -46,6 +51,17 @@ class PeterSQL(wx.App):
         self.open_session_manager()
 
         return True
+    
+    def _init_theme_loader(self) -> None:
+        theme_name = self.settings.get_value("theme", "current") or "petersql"
+        self.theme_loader = ThemeLoader(WORKDIR / "themes")
+        try:
+            self.theme_loader.load_theme(theme_name)
+            set_theme_loader(self.theme_loader)
+        except FileNotFoundError:
+            logger.warning(f"Theme '{theme_name}' not found, using default colors")
+        except Exception as ex:
+            logger.error(f"Error loading theme: {ex}", exc_info=True)
 
     def _init_locale(self):
         _locale = self.settings.get_value("locale")
@@ -72,17 +88,17 @@ class PeterSQL(wx.App):
         locale.setlocale(locale.LC_ALL, _locale)
 
     def open_session_manager(self) -> None:
-        from windows.connections.manager import ConnectionsManager
+        from windows.dialogs.connections.view import ConnectionsManager
 
         self.connection_manager = ConnectionsManager(None)
         self.connection_manager.SetIcon(
-            wx.Icon(os.path.join(WORKDIR, "icons", "petersql.ico"))
+            wx.Icon(str(WORKDIR / "icons" / "petersql.ico"))
         )
         self.connection_manager.Show()
 
     def open_main_frame(self) -> None:
         try:
-            from windows.main.main_frame import MainFrameController
+            from windows.main.controller import MainFrameController
 
             self.main_frame = MainFrameController()
             size = wx.Size(
@@ -98,7 +114,7 @@ class PeterSQL(wx.App):
             self.main_frame.SetPosition(position)
             self.main_frame.Layout()
             self.main_frame.SetIcon(
-                wx.Icon(os.path.join(WORKDIR, "icons", "petersql.ico"))
+                wx.Icon(str(WORKDIR / "icons" / "petersql.ico"))
             )
             self.main_frame.Show()
 

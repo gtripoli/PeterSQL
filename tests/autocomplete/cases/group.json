@@ -1,0 +1,206 @@
+{
+  "group": "GROUP",
+  "cases": [
+    {
+      "case_id": "GROUP_001",
+      "title": "GROUP BY without prefix suggests columns + functions",
+      "sql": "SELECT COUNT(*) FROM products GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_002",
+      "title": "GROUP BY after comma suggests more group keys",
+      "sql": "SELECT COUNT(*) FROM items GROUP BY item_name, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "comment": "MUST NOT suggest item_name (already present in GROUP BY).",
+        "suggestions": [
+          "id",
+          "stock",
+          "price",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_003",
+      "title": "GROUP_BY with scope - no DB-wide columns",
+      "sql": "SELECT * FROM items GROUP BY s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Scope=[items]. Only scope column items.stock. DB-wide excluded.",
+        "suggestions": [
+          "stock",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_004",
+      "title": "GROUP_BY with CURRENT_TABLE not in scope - CURRENT_TABLE ignored",
+      "sql": "SELECT * FROM orders GROUP BY s|",
+      "dialect": "generic",
+      "current_table": "users",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Scope=[orders]. CURRENT_TABLE=users not in scope. Only scope column orders.status.",
+        "suggestions": [
+          "status",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_005",
+      "title": "GROUP BY with two FROM tables and prefix uses qualified column matches",
+      "sql": "SELECT * FROM orders, products GROUP BY s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "s",
+        "comment": "Multiple tables in scope: column-name matches must be qualified.",
+        "suggestions": [
+          "orders.status",
+          "products.stock",
+          "SUBSTR",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_006",
+      "title": "GROUP BY with two FROM tables and no prefix suggests qualified scope columns",
+      "sql": "SELECT * FROM orders, products GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Multiple tables in scope: columns are qualified with table name.",
+        "suggestions_contains": [
+          "orders.id",
+          "orders.status",
+          "products.id",
+          "products.stock",
+          "AVG",
+          "COUNT",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "status",
+          "stock",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "PI",
+          "POW",
+          "POWER"
+        ]
+      }
+    },
+    {
+      "case_id": "GROUP_007",
+      "title": "Qualified SELECT style propagates to GROUP BY columns",
+      "sql": "SELECT u.id, COUNT(*) FROM users u GROUP BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Qualified style in SELECT forces alias-qualified GROUP BY suggestions.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    }
+  ]
+}

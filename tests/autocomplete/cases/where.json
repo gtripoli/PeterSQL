@@ -1,0 +1,400 @@
+{
+  "group": "WHERE",
+  "cases": [
+    {
+      "case_id": "WHERE_001",
+      "title": "WHERE without prefix suggests columns + functions",
+      "sql": "SELECT * FROM products WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_002",
+      "title": "WHERE alias exact match suggests alias columns + matching functions",
+      "sql": "SELECT * FROM orders o WHERE o|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "o",
+        "alias_exact_match": "o",
+        "suggestions": [
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_003",
+      "title": "WHERE after operator suggests literals + columns + functions",
+      "sql": "SELECT * FROM items WHERE quantity = |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_OPERATOR",
+        "context": "WHERE_AFTER_OPERATOR",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "id",
+          "item_name",
+          "stock",
+          "price",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_004",
+      "title": "WHERE after expression suggests logical/expression keywords + clauses",
+      "sql": "SELECT * FROM users WHERE id = 1 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_EXPRESSION",
+        "context": "WHERE_AFTER_EXPRESSION",
+        "prefix": null,
+        "suggestions": [
+          "AND",
+          "OR",
+          "GROUP BY",
+          "HAVING",
+          "LIMIT",
+          "ORDER BY"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_005",
+      "title": "WHERE with JOIN scope includes both tables and uses aliases",
+      "sql": "SELECT * FROM products p JOIN items i ON p.id=i.product_id WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "p.id",
+          "p.name",
+          "p.price",
+          "p.unit_price",
+          "p.stock",
+          "i.id",
+          "i.item_name",
+          "i.stock",
+          "i.price",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_006",
+      "title": "WHERE generic prefix with scope restriction - no DB-wide columns",
+      "sql": "SELECT * FROM orders WHERE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "u",
+        "comment": "Scope-restricted: single table in scope, so column-name match is unqualified (user_id). DB-wide columns excluded.",
+        "suggestions": [
+          "user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_007",
+      "title": "WHERE with = operator: do NOT suggest left column",
+      "sql": "SELECT * FROM products WHERE products.id = ",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_OPERATOR",
+        "context": "WHERE_AFTER_OPERATOR",
+        "prefix": null,
+        "comment": "products.id is on left of =, should suggest literals, then other columns + functions.",
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_008",
+      "title": "WHERE with prefix: normal behavior (no filtering)",
+      "sql": "SELECT * FROM products WHERE products.id = p",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "p",
+        "comment": "With prefix, no left-column filtering applied. Normal prefix matching includes columns + functions.",
+        "suggestions": [
+          "price",
+          "products.price",
+          "products.id",
+          "products.name",
+          "products.unit_price",
+          "products.stock",
+          "PI",
+          "POW",
+          "POWER"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_009",
+      "title": "WHERE IN clause after comma suggests literals",
+      "sql": "SELECT * FROM products WHERE id IN (1, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "Comma in IN clause = next value. Suggest literals from vocab, NOT columns or aggregate functions.",
+        "suggestions_contains": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ],
+        "suggestions_not_contains": [
+          "products.id",
+          "products.name",
+          "COUNT",
+          "SUM"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_011",
+      "title": "After IS keyword suggests NULL, NOT NULL, TRUE, FALSE",
+      "sql": "SELECT * FROM products WHERE status IS |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_AFTER_EXPRESSION",
+        "prefix": null,
+        "comment": "After IS, suggest NULL, NOT NULL, TRUE, FALSE (not IS NULL/IS NOT NULL to avoid IS IS NULL).",
+        "suggestions": [
+          "NULL",
+          "NOT NULL",
+          "TRUE",
+          "FALSE"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_012",
+      "title": "Qualified SELECT style propagates to WHERE suggestions",
+      "sql": "SELECT users.id FROM users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "When SELECT already uses qualified columns, WHERE suggestions stay qualified for consistency.",
+        "suggestions_contains": [
+          "users.id",
+          "users.name",
+          "users.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    },
+    {
+      "case_id": "WHERE_013",
+      "title": "Alias in scope forces qualified WHERE suggestions",
+      "sql": "SELECT * FROM users u WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_CLAUSE",
+        "prefix": null,
+        "comment": "When table has alias, WHERE columns must stay alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    }
+  ]
+}

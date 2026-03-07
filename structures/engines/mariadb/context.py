@@ -1,4 +1,5 @@
 import re
+import ssl
 
 from typing import Any, Optional
 from gettext import gettext as _
@@ -7,13 +8,28 @@ import pymysql
 
 from helpers.logger import logger
 from structures.connection import Connection
-from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.mariadb import MAP_COLUMN_FIELDS
-from structures.engines.database import SQLDatabase, SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLTrigger
+from structures.engines.database import (
+    SQLDatabase,
+    SQLTable,
+    SQLColumn,
+    SQLIndex,
+    SQLForeignKey,
+    SQLTrigger,
+)
 from structures.engines.datatype import SQLDataType
-from structures.engines.mariadb.database import MariaDBTable, MariaDBColumn, MariaDBIndex, MariaDBForeignKey, MariaDBRecord, MariaDBView, MariaDBTrigger, MariaDBDatabase
+from structures.engines.mariadb.database import (
+    MariaDBTable,
+    MariaDBColumn,
+    MariaDBIndex,
+    MariaDBForeignKey,
+    MariaDBRecord,
+    MariaDBView,
+    MariaDBTrigger,
+    MariaDBDatabase,
+)
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
 
@@ -24,7 +40,8 @@ class MariaDBContext(AbstractContext):
     DATATYPE = MariaDBDataType
     INDEXTYPE = MariaDBIndexType
 
-    IDENTIFIER_QUOTE = "`"
+    IDENTIFIER_QUOTE_CHAR = "`"
+    DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -32,79 +49,80 @@ class MariaDBContext(AbstractContext):
         self.host = connection.configuration.hostname
         self.user = connection.configuration.username
         self.password = connection.configuration.password
-        # self.database = session.configuration.database
-        self.port = getattr(connection.configuration, 'port', 3306)
-        self._ssh_tunnel = None
+        self.port = getattr(connection.configuration, "port", 3306)
 
-    def _on_connect(self, *args, **kwargs):
-        super()._on_connect(*args, **kwargs)
+    def after_connect(self, *args, **kwargs):
+        super().after_connect(*args, **kwargs)
+
         self.execute("""
             SELECT COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLLATIONS
             WHERE CHARACTER_SET_NAME IS NOT NULL
             ORDER BY CHARACTER_SET_NAME, COLLATION_NAME;
         """)
         for row in self.fetchall():
-            self.COLLATIONS[row['COLLATION_NAME']] = row['CHARACTER_SET_NAME']
+            self.COLLATIONS[row["COLLATION_NAME"]] = row["CHARACTER_SET_NAME"]
 
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        try:
-            self.execute("""
-                SELECT WORD FROM information_schema.KEYWORDS
-                ORDER BY WORD;
-            """)
-            self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
-        except Exception:
-            self.KEYWORDS = ()
-
-        try:
-            self.execute("""
-                SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
-                ORDER BY FUNCTION;
-            """)
-            builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
-        except Exception:
-            builtin_functions = ()
+        server_version = self.get_server_version()
+        self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
+            "mariadb", server_version
+        )
 
         self.execute("""
             SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
             WHERE ROUTINE_TYPE = 'FUNCTION'
             ORDER BY ROUTINE_NAME;
         """)
-        user_functions = tuple(row["ROUTINE_NAME"] for row in self.fetchall())
+        user_functions = tuple(row["ROUTINE_NAME"].upper() for row in self.fetchall())
 
-        self.FUNCTIONS = builtin_functions + user_functions
+        self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
     def _parse_type(self, column_type: str):
         types = MariaDBDataType.get_all()
-        type_set = [x.lower() for type in types if type.has_set for x in ([type.name] + type.alias)]
-        type_length = [x.lower() for type in types if type.has_length for x in ([type.name] + type.alias)]
+        type_set = [
+            x.lower()
+            for type in types
+            if type.has_set
+            for x in ([type.name] + type.alias)
+        ]
+        type_length = [
+            x.lower()
+            for type in types
+            if type.has_length
+            for x in ([type.name] + type.alias)
+        ]
 
-        if match := re.search(fr"^({'|'.join(type_set)})\((.*)\)$", column_type):
+        if match := re.search(rf"^({'|'.join(type_set)})\((.*)\)$", column_type):
             return dict(
                 name=match.group(1).upper(),
-                set=[value.strip("'") for value in match.group(2).split(",")]
+                set=[value.strip("'") for value in match.group(2).split(",")],
             )
-        elif match := re.search(fr"^({'|'.join(type_length)})\((.*)\)$", column_type):
-            return dict(
-                name=match.group(1).upper(),
-                length=int(match.group(2))
-            )
+        elif match := re.search(rf"^({'|'.join(type_length)})\((.*)\)$", column_type):
+            return dict(name=match.group(1).upper(), length=int(match.group(2)))
 
-        elif match := re.search(r'(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?', column_type):
+        elif match := re.search(
+            r"(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?", column_type
+        ):
             return dict(
                 name=match.group(1).upper(),
                 precision=int(match.group(2)),
                 scale=int(match.group(3)) if match.group(3) else None,
                 is_unsigned=bool(match.group(4)),
-                is_zerofill=bool(match.group(5))
+                is_zerofill=bool(match.group(5)),
             )
 
         return dict()
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
+            self.before_connect()
+
+            use_tls_enabled = bool(
+                getattr(self.connection.configuration, "use_tls_enabled", False)
+            )
+
             try:
                 base_kwargs = dict(
                     host=self.host,
@@ -112,32 +130,75 @@ class MariaDBContext(AbstractContext):
                     password=self.password,
                     cursorclass=pymysql.cursors.DictCursor,
                     port=self.port,
-                    **connect_kwargs
+                    **connect_kwargs,
                 )
-
-                # SSH tunnel support via connection configuration
-                if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
-                    ssh_config = self.connection.ssh_tunnel
-                    self._ssh_tunnel = SSHTunnel(
-                        ssh_config.hostname, int(ssh_config.port),
-                        ssh_username=ssh_config.username,
-                        ssh_password=ssh_config.password,
-                        remote_port=self.port,
-                        local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0)))
-                    )
-                    self._ssh_tunnel.start()
-                    base_kwargs.update(
-                        host=self.host,
-                        port=self._ssh_tunnel.local_port,
-                    )
+                if use_tls_enabled:
+                    base_kwargs["ssl"] = {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    }
+                logger.debug(
+                    "MariaDB connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                    base_kwargs.get("host"),
+                    base_kwargs.get("port"),
+                    base_kwargs.get("user"),
+                    use_tls_enabled,
+                )
+                #
+                # # SSH tunnel support via connection configuration
+                # if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
+                #     ssh_config = self.connection.ssh_tunnel
+                #     self._ssh_tunnel = SSHTunnel(
+                #         ssh_config.hostname, int(ssh_config.port),
+                #         ssh_username=ssh_config.username,
+                #         ssh_password=ssh_config.password,
+                #         remote_port=self.port,
+                #         local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0))),
+                #         extra_args=ssh_config.extra_args
+                #     )
+                #     self._ssh_tunnel.start()
+                #     base_kwargs.update(
+                #         host=self.host,
+                #         port=self._ssh_tunnel.local_port,
+                #     )
 
                 self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
+            except pymysql.err.OperationalError as e:
+                should_retry_tls = bool(e.args and e.args[0] == 1045)
+                if not should_retry_tls or "ssl" in base_kwargs:
+                    logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
+                    raise
+
+                logger.warning(
+                    "MariaDB connection failed without TLS (%s). Retrying with TLS.",
+                    e,
+                )
+                logger.debug(
+                    "Retrying MariaDB connection with TLS preferred after auth failure"
+                )
+                tls_kwargs = {
+                    **base_kwargs,
+                    "ssl": {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    },
+                }
+                self._connection = pymysql.connect(**tls_kwargs)
+                self._cursor = self._connection.cursor()
+
+                if hasattr(self.connection, "configuration"):
+                    self.connection.configuration = (
+                        self.connection.configuration._replace(use_tls_enabled=True)
+                    )
+                logger.info(
+                    "MariaDB connection succeeded after enabling TLS automatically."
+                )
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
             else:
-                self._on_connect()
+                self.after_connect()
 
     def disconnect(self) -> None:
         """Disconnect from database and stop SSH tunnel if active."""
@@ -163,6 +224,9 @@ class MariaDBContext(AbstractContext):
         self._cursor = None
         self._connection = None
 
+    def set_database(self, database: SQLDatabase) -> None:
+        self.execute(f"USE {database.quoted_name}")
+
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")
         version = self.cursor.fetchone()
@@ -171,7 +235,7 @@ class MariaDBContext(AbstractContext):
     def get_server_uptime(self) -> Optional[int]:
         self.execute("SHOW STATUS LIKE 'Uptime'")
         result = self.fetchone()
-        return int(result['Value']) if result else None
+        return int(result["Value"]) if result else None
 
     def get_databases(self) -> list[SQLDatabase]:
         self.execute("""
@@ -186,41 +250,59 @@ class MariaDBContext(AbstractContext):
                 """)
         results = []
         for i, row in enumerate(self.fetchall()):
-            results.append(MariaDBDatabase(
-                id=i,
-                name=row["database_name"],
-                default_collation=row["default_collation"],
-                total_bytes=float(row["total_bytes"]),
-                context=self,
-                get_tables_handler=self.get_tables,
-                get_views_handler=self.get_views,
-                get_triggers_handler=self.get_triggers,
-            ))
+            results.append(
+                MariaDBDatabase(
+                    id=i,
+                    name=row["database_name"],
+                    default_collation=row["default_collation"],
+                    total_bytes=float(row["total_bytes"]),
+                    context=self,
+                    get_tables_handler=self.get_tables,
+                    get_views_handler=self.get_views,
+                    get_triggers_handler=self.get_triggers,
+                )
+            )
         return results
 
     def get_views(self, database: SQLDatabase):
         results: list[MariaDBView] = []
-        self.execute(f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME")
+        self.execute(
+            f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME"
+        )
         for i, result in enumerate(self.fetchall()):
-            results.append(MariaDBView(
-                id=i,
-                name=result['TABLE_NAME'],
-                database=database,
-                sql=result['VIEW_DEFINITION']
-            ))
+            results.append(
+                MariaDBView(
+                    id=i,
+                    name=result["TABLE_NAME"],
+                    database=database,
+                    statement=result["VIEW_DEFINITION"],
+                )
+            )
 
         return results
 
+    def get_definers(self) -> list[str]:
+        self.execute("""
+            SELECT DISTINCT CONCAT(User, '@', Host) as definer
+            FROM mysql.user
+            ORDER BY definer
+        """)
+        return [row["definer"] for row in self.fetchall()]
+
     def get_triggers(self, database: SQLDatabase) -> list[MariaDBTrigger]:
         results: list[MariaDBTrigger] = []
-        self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
+        self.execute(
+            f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME"
+        )
         for i, result in enumerate(self.fetchall()):
-            results.append(MariaDBTrigger(
-                id=i,
-                name=result['TRIGGER_NAME'],
-                database=database,
-                sql=result['ACTION_STATEMENT']
-            ))
+            results.append(
+                MariaDBTrigger(
+                    id=i,
+                    name=result["TRIGGER_NAME"],
+                    database=database,
+                    statement=result["ACTION_STATEMENT"],
+                )
+            )
 
         return results
 
@@ -241,17 +323,18 @@ class MariaDBContext(AbstractContext):
             results.append(
                 MariaDBTable(
                     id=i,
-                    name=row['TABLE_NAME'],
+                    name=row["TABLE_NAME"],
                     database=database,
-                    engine=row['ENGINE'],
-                    collation_name=row['TABLE_COLLATION'],
-                    auto_increment=int(row['AUTO_INCREMENT'] or 0),
-                    total_bytes=row['total_bytes'],
+                    engine=row["ENGINE"],
+                    collation_name=row["TABLE_COLLATION"],
+                    auto_increment=int(row["AUTO_INCREMENT"] or 0),
+                    total_bytes=row["total_bytes"],
                     total_rows=row["TABLE_ROWS"],
-                    created_at=row['CREATE_TIME'],
-                    updated_at=row['UPDATE_TIME'],
+                    created_at=row["CREATE_TIME"],
+                    updated_at=row["UPDATE_TIME"],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
+                    get_checks_handler=self.get_checks,
                     get_foreign_keys_handler=self.get_foreign_keys,
                     get_records_handler=self.get_records,
                 )
@@ -275,26 +358,26 @@ class MariaDBContext(AbstractContext):
         """)
 
         for i, row in enumerate(self.cursor.fetchall()):
-            is_auto_increment = 'auto_increment' in (row['EXTRA'] or '').lower()
-            is_nullable = row['IS_NULLABLE'] == 'YES'
-            parse_type = self._parse_type(row['COLUMN_TYPE'])
-            datatype = MariaDBDataType.get_by_name(row['DATA_TYPE'])
+            is_auto_increment = "auto_increment" in (row["EXTRA"] or "").lower()
+            is_nullable = row["IS_NULLABLE"] == "YES"
+            parse_type = self._parse_type(row["COLUMN_TYPE"])
+            datatype = MariaDBDataType.get_by_name(row["DATA_TYPE"])
 
             results.append(
                 MariaDBColumn(
                     id=i,
-                    name=row['COLUMN_NAME'],
+                    name=row["COLUMN_NAME"],
                     datatype=datatype,
                     is_nullable=is_nullable,
                     table=table,
-                    server_default=row['COLUMN_DEFAULT'],
+                    server_default=row["COLUMN_DEFAULT"],
                     is_auto_increment=is_auto_increment,
-                    length=parse_type.get('length'),
-                    numeric_precision=parse_type.get('precision'),
-                    numeric_scale=parse_type.get('scale'),
-                    set=parse_type.get('set'),
-                    is_unsigned=parse_type.get('is_unsigned', False),
-                    is_zerofill=parse_type.get('is_zerofill', False),
+                    length=parse_type.get("length"),
+                    numeric_precision=parse_type.get("precision"),
+                    numeric_scale=parse_type.get("scale"),
+                    set=parse_type.get("set"),
+                    is_unsigned=parse_type.get("is_unsigned", False),
+                    is_zerofill=parse_type.get("is_zerofill", False),
                 )
             )
 
@@ -317,7 +400,7 @@ class MariaDBContext(AbstractContext):
             WHERE TABLE_SCHEMA = '{table.database.name}' AND TABLE_NAME = '{table.name}' AND CONSTRAINT_NAME = 'PRIMARY'
             ORDER BY ORDINAL_POSITION
         """)
-        pk_columns = [row['COLUMN_NAME'] for row in self.cursor.fetchall()]
+        pk_columns = [row["COLUMN_NAME"] for row in self.cursor.fetchall()]
         if pk_columns:
             results.append(
                 MariaDBIndex(
@@ -338,20 +421,62 @@ class MariaDBContext(AbstractContext):
         """)
         index_data = {}
         for row in self.cursor.fetchall():
-            idx_name = row['INDEX_NAME']
+            idx_name = row["INDEX_NAME"]
             if idx_name not in index_data:
-                index_data[idx_name] = {'columns': [], 'unique': not row['NON_UNIQUE']}
-            index_data[idx_name]['columns'].append(row['COLUMN_NAME'])
+                index_data[idx_name] = {"columns": [], "unique": not row["NON_UNIQUE"]}
+            index_data[idx_name]["columns"].append(row["COLUMN_NAME"])
 
         for i, (idx_name, data) in enumerate(index_data.items(), start=1):
-            idx_type = MariaDBIndexType.UNIQUE if data['unique'] else MariaDBIndexType.INDEX
+            idx_type = (
+                MariaDBIndexType.UNIQUE if data["unique"] else MariaDBIndexType.INDEX
+            )
             results.append(
                 MariaDBIndex(
                     id=i,
                     name=idx_name,
                     type=idx_type,
-                    columns=data['columns'],
+                    columns=data["columns"],
                     table=table,
+                )
+            )
+
+        return results
+
+    def get_checks(self, table: MariaDBTable) -> list[MariaDBCheck]:
+        from structures.engines.mariadb.database import MariaDBCheck
+
+        if table is None or table.is_new:
+            return []
+
+        try:
+            query = f"""
+                SELECT 
+                    cc.CONSTRAINT_NAME,
+                    cc.CHECK_CLAUSE
+                FROM information_schema.CHECK_CONSTRAINTS cc
+                JOIN information_schema.TABLE_CONSTRAINTS tc 
+                    ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA 
+                    AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+                WHERE tc.TABLE_SCHEMA = '{table.database.name}'
+                AND tc.TABLE_NAME = '{table.name}'
+                AND tc.CONSTRAINT_TYPE = 'CHECK'
+                ORDER BY cc.CONSTRAINT_NAME
+            """
+
+            self.execute(query)
+            rows = self.fetchall()
+        except Exception:
+            # Older MariaDB versions don't have CHECK_CONSTRAINTS table
+            rows = []
+
+        results = []
+        for i, row in enumerate(rows):
+            results.append(
+                MariaDBCheck(
+                    id=i,
+                    name=row["CONSTRAINT_NAME"],
+                    table=table,
+                    expression=row["CHECK_CLAUSE"],
                 )
             )
 
@@ -382,29 +507,45 @@ class MariaDBContext(AbstractContext):
         """)
         foreign_keys = []
         for i, row in enumerate(self.cursor.fetchall()):
-            foreign_keys.append(MariaDBForeignKey(
-                id=i,
-                name=row['CONSTRAINT_NAME'],
-                columns=row["COLUMNS_NAME"].split(","),
-                table=table,
-                reference_table=row['REFERENCED_TABLE_NAME'],
-                reference_columns=row["REFERENCED_COLUMNS"].split(","),
-                on_update=row['UPDATE_RULE'],
-                on_delete=row['DELETE_RULE'],
-            ))
+            foreign_keys.append(
+                MariaDBForeignKey(
+                    id=i,
+                    name=row["CONSTRAINT_NAME"],
+                    columns=row["COLUMNS_NAME"].split(","),
+                    table=table,
+                    reference_table=row["REFERENCED_TABLE_NAME"],
+                    reference_columns=row["REFERENCED_COLUMNS"].split(","),
+                    on_update=row["UPDATE_RULE"],
+                    on_delete=row["DELETE_RULE"],
+                )
+            )
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MariaDBRecord]:
+    def get_records(
+        self,
+        table: SQLTable,
+        /,
+        *,
+        filters: Optional[str] = None,
+        limit: int = 1000,
+        offset: int = 0,
+        orders: Optional[str] = None,
+    ) -> list[MariaDBRecord]:
         results = []
-        for i, record in enumerate(super().get_records(table, filters=filters, limit=limit, offset=offset, orders=orders), start=offset):
-            results.append(
-                MariaDBRecord(id=i, table=table, values=dict(record))
-            )
+        for i, record in enumerate(
+            super().get_records(
+                table, filters=filters, limit=limit, offset=offset, orders=orders
+            ),
+            start=offset,
+        ):
+            results.append(MariaDBRecord(id=i, table=table, values=dict(record)))
 
         return results
 
-    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTable:
+    def build_empty_table(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MariaDBTable:
         id = MariaDBContext.get_temporary_id(database.tables)
 
         if name is None:
@@ -419,26 +560,38 @@ class MariaDBContext(AbstractContext):
             database=database,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
+            get_checks_handler=self.get_checks,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
             **default_values,
         ).copy()
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> MariaDBColumn:
+    def build_empty_column(
+        self,
+        table: SQLTable,
+        datatype: SQLDataType,
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MariaDBColumn:
         id = MariaDBContext.get_temporary_id(table.columns)
 
         if name is None:
             name = _(f"Column{str(id * -1):03}")
 
         return MariaDBColumn(
-            id=id,
-            name=name,
-            table=table,
-            datatype=datatype,
-            **default_values
+            id=id, name=name, table=table, datatype=datatype, **default_values
         )
 
-    def build_empty_index(self, table: MariaDBTable, indextype: MariaDBIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBIndex:
+    def build_empty_index(
+        self,
+        table: MariaDBTable,
+        indextype: MariaDBIndexType,
+        columns: list[str],
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MariaDBIndex:
         id = MariaDBContext.get_temporary_id(table.indexes)
 
         if name is None:
@@ -452,31 +605,64 @@ class MariaDBContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, table: MariaDBTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> MariaDBForeignKey:
+    def build_empty_check(
+        self,
+        table: MariaDBTable,
+        /,
+        name: Optional[str] = None,
+        expression: Optional[str] = None,
+        **default_values,
+    ) -> MariaDBCheck:
+        from structures.engines.mariadb.database import MariaDBCheck
+
+        id = MariaDBContext.get_temporary_id(table.checks)
+
+        if name is None:
+            name = f"check_{abs(id)}"
+
+        return MariaDBCheck(
+            id=id, name=name, table=table, expression=expression or "", **default_values
+        )
+
+    def build_empty_foreign_key(
+        self,
+        table: MariaDBTable,
+        columns: list[str],
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MariaDBForeignKey:
         id = MariaDBContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
             name = _(f"ForeignKey{str(id * -1):03}")
+
+        reference_table = default_values.get("reference_table", "")
+        reference_columns = default_values.get("reference_columns", [])
 
         return MariaDBForeignKey(
             id=id,
             name=name,
             table=table,
             columns=columns,
-            reference_table="",
-            reference_columns=[],
-            on_update="",
-            on_delete=""
+            reference_table=reference_table,
+            reference_columns=reference_columns,
+            on_update=default_values.get("on_update", ""),
+            on_delete=default_values.get("on_delete", ""),
         )
 
-    def build_empty_record(self, table: MariaDBTable, /, *, values: dict[str, Any]) -> MariaDBRecord:
+    def build_empty_record(
+        self, table: MariaDBTable, /, *, values: dict[str, Any]
+    ) -> MariaDBRecord:
         return MariaDBRecord(
             id=MariaDBContext.get_temporary_id(table.records),
             table=table,
-            values=values
+            values=values,
         )
 
-    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBView:
+    def build_empty_view(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MariaDBView:
         id = MariaDBContext.get_temporary_id(database.views)
 
         if name is None:
@@ -486,10 +672,37 @@ class MariaDBContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
-    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MariaDBTrigger:
+    def build_empty_function(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> "MariaDBFunction":
+        from structures.engines.mariadb.database import MariaDBFunction
+
+        id = MariaDBContext.get_temporary_id(database.functions)
+
+        if name is None:
+            name = f"function_{id}"
+
+        return MariaDBFunction(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            returns=default_values.get("returns", "INT"),
+            deterministic=default_values.get("deterministic", False),
+            statement=default_values.get("statement", ""),
+        )
+
+    def build_empty_procedure(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ):
+        raise NotImplementedError("MariaDB Procedure not implemented yet")
+
+    def build_empty_trigger(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MariaDBTrigger:
         id = MariaDBContext.get_temporary_id(database.triggers)
 
         if name is None:
@@ -499,5 +712,5 @@ class MariaDBContext(AbstractContext):
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

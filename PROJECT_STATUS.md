@@ -1,44 +1,40 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-02-11  
-> **Version:** Based on code inspection
+> **Last Updated:** 2026-03-07  
+> **Validation Policy:** new engine features are marked **PARTIAL** until broader integration validation is complete.
 
 ---
 
 ## 1. Executive Summary
 
-### ✅ What is Solid and Complete
+### ✅ Solid and Stable Areas
 
 | Area | Status |
 |------|--------|
-| **SQLite Engine** | Most mature. Full CRUD for Table, Column, Index, Foreign Key, Record, View, Trigger. Check constraints supported. |
-| **MySQL/MariaDB Engines** | Strong parity. Full CRUD for Table, Column, Index, Foreign Key, Record, View, Trigger, Function. |
-| **Connection Management** | SSH tunnel support (MySQL, MariaDB, PostgreSQL), session lifecycle, multi-database navigation. |
-| **UI Explorer** | Tree navigation for databases, tables, views, triggers, procedures, functions, events. |
-| **Table Editor** | Column editor, index editor, foreign key editor with full CRUD. |
-| **Record Editor** | Insert, update, delete, duplicate records with filtering support. |
-| **SQL Autocomplete** | Keywords, functions, table/column names. |
-| **SSH Tunnel Testing** | Comprehensive test coverage for MySQL, MariaDB, and PostgreSQL SSH tunnel functionality. |
+| **SQLite Engine** | Most mature path with complete day-to-day table/record workflows. |
+| **MySQL/MariaDB Core** | Strong parity for tables, columns, indexes, foreign keys, records, views, triggers, functions. |
+| **UI Core Editors** | Table, columns, indexes, foreign keys, records, and view editor are operational. |
+| **Explorer Navigation** | Databases, tables, views, triggers, procedures, functions, and events are visible in tree explorer. |
+| **SSH Tunnel Support** | Implemented for MySQL, MariaDB, and PostgreSQL. |
 
-### ⚠️ Partially Implemented (Risky)
+### 🟡 Partial / Under Validation
 
-| Area | Issue |
-|------|-------|
-| **PostgreSQL Engine** | Schema support incomplete. No Function class. |
-| **Procedure/Event UI** | Explorer shows them but no editor panels exist. |
+| Area | Current State |
+|------|---------------|
+| **PostgreSQL Function** | Class + CRUD methods exist, context introspection exists, still considered under validation. |
+| **PostgreSQL Procedure** | Class + CRUD methods exist, context introspection exists, still considered under validation. |
+| **Check Constraints (MySQL/MariaDB/PostgreSQL)** | Engine classes and introspection exist, cross-version validation still needed. |
+| **Connection Reliability Features** | Persistent connection statistics, empty DB password support, and TLS auto-retry are implemented and need longer real-world validation. |
 
-### ❌ Completely Missing
+### ❌ Missing / Not Implemented
 
 | Area | Notes |
 |------|-------|
-| **Schema/Namespace Management** | PostgreSQL schemas visible but no CRUD. |
-| **User/Role Management** | Not implemented for any engine. |
-| **Privileges/Grants** | Not implemented. |
-| **Sequences** | Not implemented (PostgreSQL). |
-| **Materialized Views** | Not implemented. |
-| **Partitioning** | Not implemented. |
-| **Import/Export/Dump** | Not implemented. |
-| **Database Create/Drop** | Not implemented in UI. |
+| **Function/Procedure UI Editors** | Explorer lists objects, but dedicated create/edit UI is still missing. |
+| **Database Create/Drop UI** | No complete create/drop workflow across engines. |
+| **Schema/Sequence Management** | PostgreSQL schema/sequence CRUD is not available. |
+| **User/Role/Grants** | Not implemented for any engine. |
+| **Import/Export** | Dump/restore and structured data import/export not implemented. |
 
 ---
 
@@ -48,267 +44,131 @@
 
 | Symbol | Meaning |
 |--------|---------|
-| ✅ DONE | Fully implemented and tested |
-| 🟡 PARTIAL | Implemented but incomplete or has issues |
+| ✅ DONE | Implemented and validated in current project scope |
+| 🟡 PARTIAL | Implemented but still under validation / known risk |
 | ❌ NOT IMPL | Not implemented |
-| ➖ N/A | Not applicable to this engine |
+| ➖ N/A | Not applicable |
 
 ---
 
 ### 2.1 SQLite
 
-| Object Type | Create | Read | Update | Delete | Notes | Evidence |
-|-------------|--------|------|--------|--------|-------|----------|
-| **Database** | ➖ | ✅ | ➖ | ➖ | Single file = single DB | `SQLiteContext.get_databases()` |
-| **Table** | ✅ | ✅ | ✅ | ✅ | Full recreate strategy for ALTER | `SQLiteTable.create/alter/drop()` |
-| **Column** | ✅ | ✅ | ✅ | ✅ | Via table recreate | `SQLiteColumn.add/modify/rename/drop()` |
-| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY handled in table | `SQLiteIndex.create/drop/modify()` |
-| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Inline or table constraint | `SQLiteTable.raw_create()` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Table-level constraints | `SQLiteForeignKey` (passive) |
-| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via CREATE UNIQUE INDEX | `SQLiteIndex` |
-| **Check Constraint** | ✅ | ✅ | 🟡 | 🟡 | Read works, modify via recreate | `SQLiteCheck`, `get_checks()` |
-| **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `SQLiteColumn.server_default` |
-| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `SQLiteView` |
-| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `SQLiteTrigger` |
-| **Function** | ➖ | ➖ | ➖ | ➖ | SQLite has no stored functions | — |
-| **Procedure** | ➖ | ➖ | ➖ | ➖ | SQLite has no procedures | — |
-| **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `SQLiteRecord.insert/update/delete()` |
-| **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Static list | `COLLATIONS` in `__init__.py` |
+| Object | Create | Read | Update | Delete | Notes |
+|--------|--------|------|--------|--------|-------|
+| Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Most mature engine path. |
+| View / Trigger | ✅ | ✅ | ✅ | ✅ | Fully available in engine layer. |
+| Check Constraint | ✅ | ✅ | 🟡 | 🟡 | Modify path depends on recreate strategy. |
+| Function / Procedure | ➖ | ➖ | ➖ | ➖ | Not applicable to SQLite. |
 
 ---
 
 ### 2.2 MySQL
 
-| Object Type | Create | Read | Update | Delete | Notes | Evidence |
-|-------------|--------|------|--------|--------|-------|----------|
-| **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `MySQLContext.get_databases()` |
-| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLTable` |
-| **Column** | ✅ | ✅ | ✅ | ✅ | ADD/MODIFY/RENAME/DROP | `MySQLColumn` |
-| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX | `MySQLIndex` |
-| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.PRIMARY` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLForeignKey` |
-| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MySQLIndexType.UNIQUE` |
-| **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MySQLColumn.server_default` |
-| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLView` |
-| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MySQLTrigger` |
-| **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MySQLFunction` |
-| **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
-| **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MySQLRecord` |
-| **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
-| **Engine** | ✅ | ✅ | ✅ | ➖ | InnoDB, MyISAM, etc. | `MySQLTable.alter_engine()` |
+| Object | Create | Read | Update | Delete | Notes |
+|--------|--------|------|--------|--------|-------|
+| Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Stable core workflow. |
+| View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
+| Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MySQLCheck` + `get_checks()`), validation ongoing. |
+| Procedure | ❌ | ❌ | ❌ | ❌ | `build_empty_procedure` still not implemented. |
+| Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
 
 ---
 
 ### 2.3 MariaDB
 
-| Object Type | Create | Read | Update | Delete | Notes | Evidence |
-|-------------|--------|------|--------|--------|-------|----------|
-| **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `MariaDBContext.get_databases()` |
-| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `MariaDBTable` |
-| **Column** | ✅ | ✅ | ✅ | ✅ | ADD/MODIFY/CHANGE/DROP | `MariaDBColumn` |
-| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX | `MariaDBIndex` |
-| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `MariaDBIndexType.PRIMARY` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `MariaDBForeignKey` |
-| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `MariaDBIndexType.UNIQUE` |
-| **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Default** | ✅ | ✅ | ✅ | ✅ | Column attribute | `MariaDBColumn.server_default` |
-| **View** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MariaDBView` |
-| **Trigger** | ✅ | ✅ | ✅ | ✅ | `alter()` implemented | `MariaDBTrigger` |
-| **Function** | ✅ | ✅ | ✅ | ✅ | Full support | `MariaDBFunction` |
-| **Procedure** | ❌ | ❌ | ❌ | ❌ | Class exists but empty | `SQLProcedure` base only |
-| **Records** | ✅ | ✅ | ✅ | ✅ | Full DML | `MariaDBRecord` |
-| **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
-| **Engine** | ✅ | ✅ | ✅ | ➖ | InnoDB, Aria, etc. | `MariaDBTable.alter_engine()` |
+| Object | Create | Read | Update | Delete | Notes |
+|--------|--------|------|--------|--------|-------|
+| Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Stable core workflow. |
+| View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
+| Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MariaDBCheck` + `get_checks()`), validation ongoing. |
+| Procedure | ❌ | ❌ | ❌ | ❌ | `build_empty_procedure` still not implemented. |
+| Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
 
 ---
 
 ### 2.4 PostgreSQL
 
-| Object Type | Create | Read | Update | Delete | Notes | Evidence |
-|-------------|--------|------|--------|--------|-------|----------|
-| **Database** | ❌ | ✅ | ❌ | ❌ | Read-only listing | `PostgreSQLContext.get_databases()` |
-| **Schema** | ❌ | 🟡 | ❌ | ❌ | Read via table.schema | `PostgreSQLTable.schema` |
-| **Table** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLTable` |
-| **Column** | ✅ | ✅ | ✅ | ✅ | Via table alter | `PostgreSQLColumn` (passive) |
-| **Index** | ✅ | ✅ | ✅ | ✅ | PRIMARY, UNIQUE, INDEX, BTREE, etc. | `PostgreSQLIndex` |
-| **Primary Key** | ✅ | ✅ | ✅ | ✅ | Via index | `PostgreSQLIndexType.PRIMARY` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLForeignKey` |
-| **Unique Constraint** | ✅ | ✅ | ✅ | ✅ | Via index | `PostgreSQLIndexType.UNIQUE` |
-| **Check Constraint** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Default** | ✅ | ✅ | 🟡 | 🟡 | Column attribute | `PostgreSQLColumn.server_default` |
-| **View** | ✅ | 🟡 | ✅ | ✅ | `alter()` implemented | `PostgreSQLView` |
-| **Trigger** | ✅ | ✅ | ✅ | ✅ | Full support | `PostgreSQLTrigger` |
-| **Function** | ❌ | ❌ | ❌ | ❌ | Class not implemented | — |
-| **Procedure** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Sequence** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
-| **Records** | ✅ | ✅ | ✅ | ✅ | Uses parameterized queries | `PostgreSQLRecord` |
-| **Transactions** | ✅ | ➖ | ➖ | ➖ | Context manager | `AbstractContext.transaction()` |
-| **Collation** | ✅ | ✅ | ➖ | ➖ | Dynamic from server | `_on_connect()` |
-| **Custom Types/Enum** | ❌ | ✅ | ❌ | ❌ | Read-only introspection | `_load_custom_types()` |
-| **Extension** | ❌ | ❌ | ❌ | ❌ | Not implemented | — |
+| Object | Create | Read | Update | Delete | Notes |
+|--------|--------|------|--------|--------|-------|
+| Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Core operations available. |
+| View / Trigger | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
+| Function | 🟡 | 🟡 | 🟡 | 🟡 | `PostgreSQLFunction` implemented, still under validation. |
+| Procedure | 🟡 | 🟡 | 🟡 | 🟡 | `PostgreSQLProcedure` implemented, still under validation. |
+| Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`PostgreSQLCheck` + `get_checks()`), validation ongoing. |
+| Schema / Sequence | ❌ | 🟡 | ❌ | ❌ | Basic schema visibility exists; no CRUD layer yet. |
 
 ---
 
 ## 3. UI Capability Matrix
 
-| Object Type | Explorer | Create UI | Read/List UI | Update UI | Delete UI | Notes |
-|-------------|----------|-----------|--------------|-----------|-----------|-------|
-| **Connection** | ✅ | ✅ | ✅ | ✅ | ✅ | `ConnectionsManager` |
-| **Database** | ✅ | ❌ | ✅ | ❌ | ❌ | List only |
-| **Table** | ✅ | ✅ | ✅ | ✅ | ✅ | Full editor | 
-| **Column** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableColumnsController` |
-| **Index** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableIndexController` |
-| **Foreign Key** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableForeignKeyController` |
-| **Check Constraint** | ✅ | 🟡 | ✅ | 🟡 | 🟡 | `TableCheckController` (SQLite only) |
-| **View** | ✅ | ❌ | ✅ | ❌ | ✅ | List + delete only |
-| **Trigger** | ✅ | ❌ | ✅ | ❌ | ❌ | List only |
-| **Function** | ✅ | ❌ | ❌ | ❌ | ❌ | Explorer shows, no editor |
-| **Procedure** | ✅ | ❌ | ❌ | ❌ | ❌ | Explorer shows, no editor |
-| **Event** | ✅ | ❌ | ❌ | ❌ | ❌ | Explorer shows, no editor |
-| **Records** | ✅ | ✅ | ✅ | ✅ | ✅ | `TableRecordsController` |
-| **SQL Query** | ✅ | ✅ | ✅ | ➖ | ➖ | Query editor with autocomplete |
-
-### UI Feature Support
-
-| Feature | Status | Evidence |
-|---------|--------|----------|
-| **Tree Explorer** | ✅ DONE | `TreeExplorerController` |
-| **Table Editor** | ✅ DONE | `EditTableModel`, notebook tabs |
-| **Column Editor** | ✅ DONE | `TableColumnsController` |
-| **Index Editor** | ✅ DONE | `TableIndexController` |
-| **Foreign Key Editor** | ✅ DONE | `TableForeignKeyController` |
-| **Check Editor** | 🟡 PARTIAL | `TableCheckController` (SQLite) |
-| **Record Editor** | ✅ DONE | `TableRecordsController` |
-| **SQL Autocomplete** | ✅ DONE | `SQLAutoCompleteController` |
-| **Query Log** | ✅ DONE | `sql_query_logs` StyledTextCtrl |
-| **DDL Preview** | ✅ DONE | `sql_create_table` with sqlglot |
-| **Theme Support** | ✅ DONE | `ThemeManager`, system color change |
-| **View Editor** | ❌ NOT IMPL | Panel exists but no create/edit |
-| **Trigger Editor** | ❌ NOT IMPL | Panel exists but no create/edit |
-| **Function Editor** | ❌ NOT IMPL | No panel |
-| **Procedure Editor** | ❌ NOT IMPL | No panel |
+| Object Type | Explorer | Create UI | Edit UI | Delete UI | Notes |
+|-------------|----------|-----------|---------|-----------|-------|
+| Connection | ✅ | ✅ | ✅ | ✅ | Includes connection statistics and TLS state handling. |
+| Database | ✅ | ❌ | ❌ | ❌ | Read/list only. |
+| Table / Column / Index / Foreign Key | ✅ | ✅ | ✅ | ✅ | Main table editor workflow complete. |
+| Check Constraint | ✅ | 🟡 | 🟡 | 🟡 | `TableCheckController` exists; broader multi-engine UX validation pending. |
+| View | ✅ | ✅ | ✅ | ✅ | Dedicated view editor is available. |
+| Trigger | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated trigger editor panel yet. |
+| Function | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated editor yet. |
+| Procedure | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated editor yet. |
+| Event | ✅ | ❌ | ❌ | ❌ | Explorer only. |
+| Records | ✅ | ✅ | ✅ | ✅ | Insert/update/delete/duplicate in table records tab. |
 
 ---
 
-## 4. Cross-Cutting Gaps
+## 4. Cross-Cutting Notes
 
-### Features Blocked by Missing Introspection
+### Recently Added
 
-| Feature | Blocked By |
-|---------|------------|
-| PostgreSQL Function UI | No `PostgreSQLFunction` class |
-| Check Constraint UI (MySQL/MariaDB) | No `get_checks()` implementation |
-| Sequence management | No `SQLSequence` class |
-| Schema management | No `SQLSchema` class |
+- Persistent connection statistics in connection model and dialog.
+- Empty database password accepted in connection validation.
+- Automatic TLS retry path for MySQL/MariaDB when server requires TLS.
+- CI workflow split into `test`, `update` (nightly), and `release` jobs.
 
-### Engine Inconsistencies
+### Main Remaining Risks
 
-| Issue | Engines Affected |
-|-------|------------------|
-| Check constraints | MySQL, MariaDB, PostgreSQL missing |
-
-### UI Features Waiting on Engine Support
-
-| UI Feature | Waiting On |
-|------------|------------|
-| View create/edit dialog | UI implementation needed |
-| Trigger create/edit dialog | UI implementation needed |
-| Function editor | PostgreSQL `PostgreSQLFunction` class |
-| Database create/drop | All engines need `create_database()` |
+- Newly implemented PostgreSQL Function/Procedure paths need broader integration validation.
+- Check constraints across MySQL/MariaDB/PostgreSQL need more cross-version coverage.
+- UI parity lags engine parity for Trigger/Function/Procedure editors.
 
 ---
 
-## 5. Actionable Backlog
+## 5. Actionable Backlog (High Signal)
 
-### Priority 1: Critical Fixes
+### Priority A — Validate Newly Implemented Features
 
-| Item | Object | Operation | Engine(s) | What's Missing |
-|------|--------|-----------|-----------|----------------|
-| 1.1 | Function | All | PostgreSQL | `PostgreSQLFunction` class missing |
+1. PostgreSQL Function integration validation (all supported PG variants).
+2. PostgreSQL Procedure integration validation (all supported PG variants).
+3. Check constraints validation matrix for MySQL, MariaDB, PostgreSQL.
+4. Connection statistics + TLS auto-retry robustness checks.
 
-### Priority 2: Engine Parity
+### Priority B — Close Engine Gaps
 
-| Item | Object | Operation | Engine(s) | What's Missing |
-|------|--------|-----------|-----------|----------------|
-| 2.1 | Check Constraint | CRUD | MySQL, MariaDB, PostgreSQL | `get_checks()`, `SQLCheck` subclass |
-| 2.2 | Procedure | CRUD | All | Only base class exists |
-| 2.3 | SSH Tunnel | Connect | MariaDB, PostgreSQL | Only MySQL has it |
+1. MySQL Procedure implementation.
+2. MariaDB Procedure implementation.
+3. Database create/drop methods in engine contexts.
 
-### Priority 3: UI Completeness
+### Priority C — UI Completeness
 
-| Item | Object | Operation | What's Missing |
-|------|--------|-----------|----------------|
-| 3.1 | View | Create/Edit | Dialog and controller |
-| 3.2 | Trigger | Create/Edit | Dialog and controller |
-| 3.3 | Function | All | Panel, dialog, controller |
-| 3.4 | Procedure | All | Panel, dialog, controller |
-| 3.5 | Database | Create/Drop | Dialog and engine methods |
+1. Trigger create/edit UI.
+2. Function create/edit UI.
+3. Procedure create/edit UI.
 
-### Priority 4: New Features
+### Priority D — Future Platform Features
 
-| Item | Object | Operation | What's Missing |
-|------|--------|-----------|----------------|
-| 4.1 | Schema | CRUD | `SQLSchema` class, PostgreSQL support |
-| 4.2 | Sequence | CRUD | `SQLSequence` class, PostgreSQL support |
-| 4.3 | User/Role | CRUD | `SQLUser`, `SQLRole` classes |
-| 4.4 | Privileges | CRUD | `SQLGrant` class |
-| 4.5 | Import/Export | Execute | Dump/restore functionality |
+1. PostgreSQL schema CRUD.
+2. PostgreSQL sequence CRUD.
+3. User/role/grants management.
+4. Import/export workflows.
 
 ---
 
 ## 6. Definition of DONE
 
-A CRUD capability is considered **DONE** when:
+A capability is treated as **DONE** only when:
 
-- [ ] **Engine Layer**
-  - [ ] Dataclass exists with all required fields
-  - [ ] `create()` method implemented and tested
-  - [ ] `read()`/`get_*()` method returns correct data
-  - [ ] `update()`/`alter()` method handles all field changes
-  - [ ] `delete()`/`drop()` method works correctly
-  - [ ] Integration test passes with real database
-
-- [ ] **UI Layer**
-  - [ ] Object appears in Explorer tree
-  - [ ] Create dialog/panel exists and is functional
-  - [ ] Edit dialog/panel exists and is functional
-  - [ ] Delete confirmation and action works
-  - [ ] Changes reflect immediately in Explorer
-
-- [ ] **Cross-Cutting**
-  - [ ] Error handling with user-friendly messages
-  - [ ] Transaction support where applicable
-  - [ ] No regressions in existing tests
-  - [ ] Code follows `CODE_STYLE.md`
-
----
-
-## Appendix: File Reference
-
-### Engine Layer Files
-
-| Engine | Context | Database | Builder | DataType | IndexType |
-|--------|---------|----------|---------|----------|-----------|
-| SQLite | `sqlite/context.py` | `sqlite/database.py` | `sqlite/builder.py` | `sqlite/datatype.py` | `sqlite/indextype.py` |
-| MySQL | `mysql/context.py` | `mysql/database.py` | `mysql/builder.py` | `mysql/datatype.py` | `mysql/indextype.py` |
-| MariaDB | `mariadb/context.py` | `mariadb/database.py` | `mariadb/builder.py` | `mariadb/datatype.py` | `mariadb/indextype.py` |
-| PostgreSQL | `postgresql/context.py` | `postgresql/database.py` | `postgresql/builder.py` | `postgresql/datatype.py` | `postgresql/indextype.py` |
-
-### UI Layer Files
-
-| Component | File |
-|-----------|------|
-| Main Frame | `windows/main/main_frame.py` |
-| Explorer | `windows/main/explorer.py` |
-| Column Editor | `windows/main/column.py` |
-| Index Editor | `windows/main/index.py` |
-| Foreign Key Editor | `windows/main/foreign_key.py` |
-| Check Editor | `windows/main/check.py` |
-| Record Editor | `windows/main/records.py` |
-| Table Model | `windows/main/table.py` |
-| Database List | `windows/main/database.py` |
-| Connection Manager | `windows/connections/manager.py` |
+- Engine methods are implemented (`create/read/update/delete` where applicable).
+- Integration tests pass on target engine versions.
+- UI workflow exists (if feature is user-facing in explorer).
+- No known regression in existing suites.
+- Documentation is updated (`README`, `PROJECT_STATUS`, `ROADMAP`).

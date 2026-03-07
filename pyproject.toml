@@ -2,32 +2,44 @@
 name = "petersql"
 version = "0.1.0"
 description = "graphical client for database management"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "babel",
-    "oracledb",
-    "psutil",
-    "psycopg2-binary",
-    "pymysql",
-    "pyyaml",
-    "requests",
-    "sqlglot",
-    "wxpython",
+    "babel>=2.18.0",
+    "oracledb>=3.4.2",
+    "psutil>=7.2.2",
+    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.1.2",
+    "pyyaml>=6.0.3",
+    "sqlglot>=29.0.1",
+    "wxpython>=4.2.5",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy",
-    "pre-commit",
-    "pytest",
-    "pytest-cov",
-    "pytest-mock",
-    "types-pymysql",
-    "types-pyyaml",
-    "types-wxpython",
-    "testcontainers"
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-xdist>=3.8.0",
+    "testcontainers>=4.14.1",
+    "types-pymysql>=1.1.0.20251220",
+    "types-pyyaml>=6.0.12.20250915",
+    "types-wxpython>=0.9.7",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (testcontainers, slow, deselect with '-m \"not integration\"')",
+    "skip_engine(*selectors): skip test for specific engines or variants (e.g. sqlite, oracle, mariadb:5)",
+]
+addopts = "--cov=. --cov-report=term -v -n auto --dist=loadgroup"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+cache_dir = ".cache/pytest"
 
 [tool.pyright]
 typeCheckingMode = "standard"

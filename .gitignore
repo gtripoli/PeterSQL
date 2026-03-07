@@ -5,3 +5,15 @@ __pycache__/
 *.log
 *.yml
  .coverage
+# Backup files
+*.bak
+*.bkp
+*.backup
+
+# Unready assets
+petersql_hat.xcf
+petersql_hat.png
+PeterSQL.png
+
+# Unready build scripts
+scripts/build/nix/

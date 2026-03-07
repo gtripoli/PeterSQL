@@ -223,7 +223,7 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
         AbstractBaseDataModel.__init__(self, column_count)
         wx.dataview.DataViewIndexListModel.__init__(self)
 
-    def _load(self, data: List[Any]):
+    def _load(self, data: list[Any]):
         self.clear()
         AbstractBaseDataModel.load(self, data)
 

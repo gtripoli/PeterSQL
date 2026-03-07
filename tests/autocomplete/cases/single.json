@@ -1,0 +1,101 @@
+{
+  "group": "SINGLE",
+  "cases": [
+    {
+      "case_id": "SINGLE_001",
+      "title": "SINGLE_TOKEN keyword completion for SEL|",
+      "sql": "SEL|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "SEL",
+        "suggestions": [
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "case_id": "SINGLE_002",
+      "title": "SINGLE_TOKEN keyword completion for INS|",
+      "sql": "INS|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "INS",
+        "suggestions": [
+          "INSERT"
+        ]
+      }
+    },
+    {
+      "case_id": "SINGLE_003",
+      "title": "SINGLE_TOKEN keyword completion for UPD|",
+      "sql": "UPD|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "UPD",
+        "suggestions": [
+          "UPDATE"
+        ]
+      }
+    },
+    {
+      "case_id": "SINGLE_004",
+      "title": "SINGLE_TOKEN keyword completion for DELE|",
+      "sql": "DELE|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "DELE",
+        "suggestions": [
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "case_id": "SINGLE_005",
+      "title": "SINGLE_TOKEN keyword completion for CRE|",
+      "sql": "CRE|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "CRE",
+        "suggestions": [
+          "CREATE"
+        ]
+      }
+    },
+    {
+      "case_id": "SINGLE_006",
+      "title": "SINGLE_TOKEN keyword completion for WIT|",
+      "sql": "WIT|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SINGLE_TOKEN",
+        "prefix": "WIT",
+        "suggestions": [
+          "WITH"
+        ]
+      }
+    }
+  ]
+}

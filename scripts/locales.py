@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from constants import Language
+
 APP_NAME = "petersql"
-LANGUAGES = ["fr_FR", "it_IT", "es_ES", "en_US", "de_DE"]
+LANGUAGES = Language.get_codes()
 
 BASE_DIR = Path(__file__).parent
 LOCALE_DIR = BASE_DIR.joinpath("locale")

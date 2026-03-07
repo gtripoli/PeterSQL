@@ -4,6 +4,7 @@ import enum
 from typing import Optional, Union, Any, TypeAlias, Callable
 
 import wx
+import wx.stc
 
 from helpers.observables import Observable, CallbackEvent
 
@@ -11,7 +12,10 @@ CONTROL_BIND_LABEL: TypeAlias = wx.StaticText
 CONTROL_BIND_VALUE: TypeAlias = Union[wx.TextCtrl, wx.SpinCtrl, wx.CheckBox]
 CONTROL_BIND_PATH: TypeAlias = Union[wx.FilePickerCtrl, wx.DirPickerCtrl]
 CONTROL_BIND_SELECTION: TypeAlias = wx.Choice
-CONTROLS: TypeAlias = Union[CONTROL_BIND_LABEL, CONTROL_BIND_VALUE, CONTROL_BIND_PATH, CONTROL_BIND_SELECTION]
+CONTROL_BIND_COMBO: TypeAlias = wx.ComboBox
+CONTROL_BIND_STC: TypeAlias = wx.stc.StyledTextCtrl
+CONTROL_BIND_RADIO_GROUP: TypeAlias = list[wx.RadioButton]
+CONTROLS: TypeAlias = Union[CONTROL_BIND_LABEL, CONTROL_BIND_VALUE, CONTROL_BIND_PATH, CONTROL_BIND_SELECTION, CONTROL_BIND_COMBO, CONTROL_BIND_STC, CONTROL_BIND_RADIO_GROUP]
 
 
 class AbstractBindControl(abc.ABC):
@@ -77,6 +81,7 @@ class BindValueControl(AbstractBindControl):
             event = wx.EVT_SPINCTRL
         elif isinstance(control, wx.CheckBox):
             event = wx.EVT_CHECKBOX
+
         super().__init__(control, observable, event=event)
 
     def clear(self) -> None:
@@ -151,6 +156,67 @@ class BindPathControl(AbstractBindControl):
         self.control.SetPath(str(value))
 
 
+class BindComboControl(AbstractBindControl):
+    def __init__(self, control: CONTROL_BIND_COMBO, observable: Observable):
+        super().__init__(control, observable, event=wx.EVT_TEXT)
+
+    def clear(self) -> None:
+        self.control.SetValue(self.initial if self.initial is not None else "")
+
+    def get(self) -> str:
+        return self.control.GetValue()
+
+    def set(self, value: Any) -> None:
+        self.control.SetValue(str(value))
+
+
+class BindStyledTextControl(AbstractBindControl):
+    def __init__(self, control: CONTROL_BIND_STC, observable: Observable):
+        super().__init__(control, observable, event=wx.stc.EVT_STC_CHANGE)
+
+    def clear(self) -> None:
+        self.control.SetText(self.initial if self.initial is not None else "")
+
+    def get(self) -> str:
+        return self.control.GetText()
+
+    def set(self, value: Any) -> None:
+        self.control.SetText(str(value))
+
+
+class BindRadioGroupControl(AbstractBindControl):
+    def __init__(self, radios: CONTROL_BIND_RADIO_GROUP, observable: Observable):
+        self.radios = radios
+        self.control = radios[0] if radios else None
+        self.initial = self.get()
+        self.observable = observable
+
+        self.observable.subscribe(self._set_value, CallbackEvent.AFTER_CHANGE)
+
+        for radio in self.radios:
+            radio.Bind(wx.EVT_RADIOBUTTON, self.handle_control_event)
+
+        if (value := self.observable.get_value()) is not None:
+            self.set(value)
+
+    def clear(self) -> None:
+        if self.radios:
+            self.radios[0].SetValue(True)
+
+    def get(self) -> Optional[str]:
+        for radio in self.radios:
+            if radio.GetValue():
+                return radio.GetLabel()
+        return None
+
+    def set(self, value: Any) -> None:
+        value_str = str(value).upper()
+        for radio in self.radios:
+            if radio.GetLabel().upper() == value_str:
+                radio.SetValue(True)
+                return
+
+
 class AbstractMetaModel(abc.ABCMeta):
     def __init__(cls, name, bases, attrs):
         super().__init__(name, bases, attrs)
@@ -171,6 +237,12 @@ class AbstractModel(metaclass=AbstractMetaModel):
             BindPathControl(control, observable)
         elif isinstance(control, wx.Choice):
             BindSelectionControl(control, observable)
+        elif isinstance(control, wx.ComboBox):
+            BindComboControl(control, observable)
+        elif isinstance(control, wx.stc.StyledTextCtrl):
+            BindStyledTextControl(control, observable)
+        elif isinstance(control, list) and control and isinstance(control[0], wx.RadioButton):
+            BindRadioGroupControl(control, observable)
 
         self.observables.append(observable)
 
@@ -186,3 +258,23 @@ class AbstractModel(metaclass=AbstractMetaModel):
     def subscribe(self, callback: Callable):
         for observable in self.observables:
             observable.subscribe(callback)
+
+
+def wx_call_after_debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):
+    waiting = False
+
+    def _debounced(*args, **kwargs):
+        nonlocal waiting
+        if not waiting:
+            waiting = True
+
+            def call_and_reset():
+                nonlocal waiting
+                callback(*args, **kwargs)
+                waiting = False
+
+            wx.CallAfter(call_and_reset)
+
+    for obs in observables:
+        setattr(obs, '_debounce_callback', _debounced)
+        obs.subscribe(_debounced)

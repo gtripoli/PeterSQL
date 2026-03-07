@@ -5,7 +5,7 @@ from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLFunction, SQLDatabase
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLFunction, SQLDatabase, SQLCheck
 
 from structures.engines.mariadb.indextype import MariaDBIndexType
 from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBIndexBuilder
@@ -26,7 +26,7 @@ class MariaDBTable(SQLTable):
         columns_and_indexes = columns + indexes
 
         return f"""
-            CREATE TABLE {self.database.sql_safe_name}.{self.sql_safe_name} (
+            CREATE TABLE {self.fully_qualified_name} (
                 {', '.join(columns_and_indexes)}
             )
             COLLATE='{self.collation_name}'
@@ -34,8 +34,8 @@ class MariaDBTable(SQLTable):
             """
 
     def alter_auto_increment(self, auto_increment: int):
-        sql = f"ALTER TABLE {self.database.sql_safe_name}.{self.sql_safe_name} AUTO_INCREMENT {auto_increment};"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE {self.fully_qualified_name} AUTO_INCREMENT {auto_increment};"
+        self.database.context.execute(statement)
 
         return True
 
@@ -43,24 +43,24 @@ class MariaDBTable(SQLTable):
         charset = ""
         if convert:
             charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[collation_name]}"
-        return self.database.context.execute(f"""ALTER TABLE {self.database.sql_safe_name}.{self.sql_safe_name} {charset} COLLATE {collation_name};""")
+        return self.database.context.execute(f"""ALTER TABLE {self.fully_qualified_name} {charset} COLLATE {collation_name};""")
 
     def alter_engine(self, engine: str):
-        sql = f"ALTER TABLE {self.database.sql_safe_name}.{self.sql_safe_name} ENGINE {engine};"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE {self.fully_qualified_name} ENGINE {engine};"
+        self.database.context.execute(statement)
 
         return True
 
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f"ALTER TABLE {self.database.sql_safe_name}.{table.sql_safe_name} RENAME TO `{new_name}`;"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE {table.fully_qualified_name} RENAME TO `{new_name}`;"
+        self.database.context.execute(statement)
 
         return True
 
     def truncate(self):
         try:
             with self.database.context.transaction() as context:
-                context.execute(f"TRUNCATE TABLE {self.database.sql_safe_name}.{self.sql_safe_name};")
+                context.execute(f"TRUNCATE TABLE {self.fully_qualified_name};")
 
         except Exception as ex:
             logger.error(ex, exc_info=True)
@@ -139,7 +139,22 @@ class MariaDBTable(SQLTable):
         return True
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TABLE {self.database.sql_safe_name}.{self.sql_safe_name}")
+        return self.database.context.execute(f"DROP TABLE {self.fully_qualified_name}")
+
+
+@dataclasses.dataclass(eq=False)
+class MariaDBCheck(SQLCheck):
+    def create(self) -> bool:
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} ADD CONSTRAINT {self.quoted_name} CHECK ({self.expression})"
+        return self.table.database.context.execute(statement)
+
+    def drop(self) -> bool:
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} DROP CONSTRAINT {self.quoted_name}"
+        return self.table.database.context.execute(statement)
+
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
 
 
 @dataclasses.dataclass(eq=False)
@@ -152,49 +167,49 @@ class MariaDBColumn(SQLColumn):
     after_index: Optional[int] = None
 
     def add(self) -> bool:
-        sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD COLUMN {MariaDBColumnBuilder(self)}"
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} ADD COLUMN {MariaDBColumnBuilder(self)}"
         if self.after_index:
             if self.after_index == 0:
-                sql += " FIRST"
+                statement += " FIRST"
             else:
-                sql += f" AFTER {self.table.columns.get_value()[self.after_index].sql_safe_name}"
+                statement += f" AFTER {self.table.columns.get_value()[self.after_index - 1].quoted_name}"
 
-        return self.table.database.context.execute(sql)
+        return self.table.database.context.execute(statement)
 
     def modify(self, current: Self, after: Optional[SQLColumn] = None):
-        sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} MODIFY COLUMN {MariaDBColumnBuilder(current)}"
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} MODIFY COLUMN {MariaDBColumnBuilder(current)}"
         if after is not None:
             if after.id == -1:
-                sql += " FIRST"
+                statement += " FIRST"
             else:
-                sql += f" AFTER {after.sql_safe_name}"
+                statement += f" AFTER {after.quoted_name}"
 
-        self.table.database.context.execute(sql)
+        self.table.database.context.execute(statement)
 
     def change(self, current: Self):
-        sql = f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} CHANGE {self.sql_safe_name} {MariaDBColumnBuilder(current)}"
-        self.table.database.context.execute(sql)
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} CHANGE {self.quoted_name} {MariaDBColumnBuilder(current)}"
+        self.table.database.context.execute(statement)
 
     def rename(self, new_name: str) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} RENAME COLUMN {self.sql_safe_name} TO `{new_name}`")
+        return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} RENAME COLUMN {self.quoted_name} TO `{new_name}`")
 
     def drop(self) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} DROP COLUMN {self.sql_safe_name}")
+        return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
 
 
 @dataclasses.dataclass(eq=False)
 class MariaDBIndex(SQLIndex):
     def create(self) -> bool:
         if self.type == MariaDBIndexType.PRIMARY:
-            return self.table.database.context.execute(f"""ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD PRIMARY KEY ({", ".join(self.columns)})""")
+            return self.table.database.context.execute(f"""ALTER TABLE {self.table.fully_qualified_name} ADD PRIMARY KEY ({", ".join(self.columns)})""")
 
-        return self.table.database.context.execute(f"""ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD {self.type.name} {self.sql_safe_name} ({", ".join(self.columns)})""")
+        return self.table.database.context.execute(f"""ALTER TABLE {self.table.fully_qualified_name} ADD {self.type.name} {self.quoted_name} ({", ".join(self.columns)})""")
 
     def drop(self) -> bool:
         if self.type == MariaDBIndexType.PRIMARY:
-            return self.table.database.context.execute(f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} DROP PRIMARY KEY")
+            return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} DROP PRIMARY KEY")
 
-        return self.table.database.context.execute(f"DROP INDEX {self.sql_safe_name} ON {self.table.database.sql_safe_name}.{self.table.sql_safe_name}")
+        return self.table.database.context.execute(f"DROP INDEX {self.quoted_name} ON {self.table.fully_qualified_name}")
 
     def modify(self, new: Self):
         self.drop()
@@ -206,7 +221,7 @@ class MariaDBIndex(SQLIndex):
 class MariaDBForeignKey(SQLForeignKey):
     def create(self) -> bool:
         query = [
-            f"ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ADD CONSTRAINT {self.sql_safe_name}",
+            f"ALTER TABLE {self.table.fully_qualified_name} ADD CONSTRAINT {self.quoted_name}",
             f"FOREIGN KEY({', '.join(self.columns)})",
             f"REFERENCES `{self.reference_table}`({', '.join(self.reference_columns)})",
         ]
@@ -221,7 +236,7 @@ class MariaDBForeignKey(SQLForeignKey):
 
     def drop(self) -> bool:
         return self.table.database.context.execute(f"""
-            ALTER TABLE {self.table.database.sql_safe_name}.{self.table.sql_safe_name}
+            ALTER TABLE {self.table.fully_qualified_name}
             DROP FOREIGN KEY `{self.name}`
         """)
 
@@ -251,14 +266,14 @@ class MariaDBRecord(SQLRecord):
         if not columns_values:
             assert False, "No columns values"
 
-        return f"""INSERT INTO {self.table.database.sql_safe_name}.{self.table.sql_safe_name} ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
+        return f"""INSERT INTO {self.table.fully_qualified_name} ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
     def raw_update_record(self) -> Optional[str]:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        sql_select = f"SELECT * FROM {self.table.database.sql_safe_name}.{self.table.sql_safe_name} WHERE {identifier_conditions}"
+        sql_select = f"SELECT * FROM {self.table.fully_qualified_name} WHERE {identifier_conditions}"
         self.table.database.context.execute(sql_select)
 
         if not (existing_record := self.table.database.context.fetchone()):
@@ -283,14 +298,14 @@ class MariaDBRecord(SQLRecord):
 
         set_clause = ", ".join(changed_columns)
 
-        return f"UPDATE {self.table.database.sql_safe_name}.{self.table.sql_safe_name} SET {set_clause} WHERE {identifier_conditions}"
+        return f"UPDATE {self.table.fully_qualified_name} SET {set_clause} WHERE {identifier_conditions}"
 
     def raw_delete_record(self) -> str:
         identifier_columns = self._get_identifier_columns()
 
         identifier_conditions = " AND ".join([f"""`{identifier_name}` = {identifier_value}""" for identifier_name, identifier_value in identifier_columns.items()])
 
-        return f"DELETE FROM {self.table.database.sql_safe_name}.{self.table.sql_safe_name} WHERE {identifier_conditions}"
+        return f"DELETE FROM {self.table.fully_qualified_name} WHERE {identifier_conditions}"
 
     # RECORDS
     def insert(self) -> bool:
@@ -317,21 +332,24 @@ class MariaDBRecord(SQLRecord):
 
 class MariaDBView(SQLView):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP VIEW IF EXISTS `{self.name}`")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
-        return self.database.context.execute(f"CREATE OR REPLACE VIEW `{self.name}` AS {self.sql}")
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(f"CREATE OR REPLACE VIEW {self.fully_qualified_name} AS {self.statement}")
 
 
 class MariaDBTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER `{self.name}` {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.drop()
@@ -343,22 +361,22 @@ class MariaDBFunction(SQLFunction):
     parameters: str = ""
     returns: str = ""
     deterministic: bool = False
-    sql: str = ""
+    statement: str = ""
 
     def create(self) -> bool:
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
         query = f"""
-            CREATE FUNCTION `{self.name}`({self.parameters})
+            CREATE FUNCTION {self.fully_qualified_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
             BEGIN
-                {self.sql};
+                {self.statement};
             END
         """
         return self.database.context.execute(query)
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP FUNCTION IF EXISTS `{self.name}`")
+        return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.drop()

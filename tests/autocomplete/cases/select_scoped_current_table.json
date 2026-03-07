@@ -1,0 +1,72 @@
+{
+  "group": "SELECT_SCOPED_CURRENT_TABLE",
+  "cases": [
+    {
+      "case_id": "SCOPED_CURRENT_TABLE_001",
+      "title": "Single table scope - prefix matches no scope columns, only functions",
+      "sql": "SELECT p| FROM orders",
+      "dialect": "generic",
+      "current_table": "products",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "p",
+        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=products not in scope (ignored). Prefix 'p' matches only out-of-scope tables, so show table hints.",
+        "suggestions": [
+          "PI",
+          "POW",
+          "POWER",
+          "products (+ Add via FROM/JOIN)",
+          "payments (+ Add via FROM/JOIN)"
+        ]
+      }
+    },
+    {
+      "case_id": "SCOPED_CURRENT_TABLE_002",
+      "title": "Single table scope - prefix matches BOTH column name AND table name",
+      "sql": "SELECT p| FROM products",
+      "dialect": "generic",
+      "current_table": "orders",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "p",
+        "comment": "Scope=[products]. Single table. CURRENT_TABLE=orders not in scope (ignored). Prefix 'p' returns unqualified match first, then qualified match, then remaining qualified columns in schema order.",
+        "suggestions": [
+          "products.*",
+          "price",
+          "products.price",
+          "products.id",
+          "products.name",
+          "products.unit_price",
+          "products.stock",
+          "PI",
+          "POW",
+          "POWER"
+        ]
+      }
+    },
+    {
+      "case_id": "SCOPED_CURRENT_TABLE_004",
+      "title": "Single table scope - prefix matches ONLY column name (not table name)",
+      "sql": "SELECT u| FROM orders",
+      "dialect": "generic",
+      "current_table": "items",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Scope=[orders]. Single table. CURRENT_TABLE=items not in scope (ignored). Prefix 'u' matches only unqualified column 'user_id', then matching functions.",
+        "suggestions": [
+          "user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    }
+  ]
+}

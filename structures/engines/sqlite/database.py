@@ -1,3 +1,4 @@
+import re
 import dataclasses
 from typing import Self, Optional, Dict
 
@@ -20,14 +21,14 @@ class SQLiteDatabase(SQLDatabase):
 @dataclasses.dataclass(eq=False)
 class SQLiteTable(SQLTable):
     def set_auto_increment(self, auto_increment):
-        sql = f"UPDATE sqlite_sequence SET seq = {auto_increment} WHERE name = '{self.name}';"
-        self.database.context.execute(sql)
+        statement = f"UPDATE sqlite_sequence SET seq = {auto_increment} WHERE name = '{self.name}';"
+        self.database.context.execute(statement)
 
         return True
 
     def rename(self, table: Self, new_name: str) -> bool:
-        sql = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
-        self.database.context.execute(sql)
+        statement = f"ALTER TABLE `{table.name}` RENAME TO `{new_name}`;"
+        self.database.context.execute(statement)
 
         return True
 
@@ -42,6 +43,11 @@ class SQLiteTable(SQLTable):
             logger.error(ex, exc_info=True)
 
         return True
+
+    # @property
+    # def fully_qualified_name(self):
+    #     # SQLite doesn't need database prefix for table references
+    #     return self.quoted_name
 
     def raw_create(self) -> str:
         # PeterSQL schema emission policy (SQLite):
@@ -269,22 +275,32 @@ class SQLiteTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteCheck(SQLCheck):
-    # name: Optional[str] = None
-    pass
+    def create(self) -> bool:
+        # SQLite doesn't support ADD CONSTRAINT for CHECK after table creation
+        # CHECK constraints must be defined inline during CREATE TABLE
+        raise NotImplementedError("SQLite does not support adding CHECK constraints after table creation")
+
+    def drop(self) -> bool:
+        # SQLite doesn't support DROP CONSTRAINT
+        raise NotImplementedError("SQLite does not support dropping CHECK constraints")
+
+    def alter(self) -> bool:
+        # SQLite doesn't support ALTER CONSTRAINT
+        raise NotImplementedError("SQLite does not support altering CHECK constraints")
 
 
 @dataclasses.dataclass(eq=False)
 class SQLiteColumn(SQLColumn):
     def add(self) -> bool:
-        sql = f"ALTER TABLE {self.table.sql_safe_name} ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} ADD COLUMN {str(SQLiteColumnBuilder(self, exclude=['primary_key', 'auto_increment']))}"
 
-        return self.table.database.context.execute(sql)
+        return self.table.database.context.execute(statement)
 
     def rename(self, new_name: str) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {self.table.sql_safe_name} RENAME COLUMN {self.sql_safe_name} TO `{new_name}`")
+        return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} RENAME COLUMN {self.quoted_name} TO `{new_name}`")
 
     def modify(self):
-        sql_safe_new_name = self.table.database.context.build_sql_safe_name(f"_{self.table.name}_{self.generate_uuid()}")
+        sql_safe_new_name = self.table.database.context.quote_identifier(f"_{self.table.name}_{self.generate_uuid()}")
 
         for i, c in enumerate(self.table.columns):
             if c.name == self.name:
@@ -296,16 +312,20 @@ class SQLiteColumn(SQLColumn):
 
             self.table.create()
 
-            transaction.execute(f"INSERT INTO {self.table.sql_safe_name} SELECT * FROM {sql_safe_new_name};")
+            transaction.execute(f"INSERT INTO {self.table.fully_qualified_name} SELECT * FROM {sql_safe_new_name};")
 
             transaction.execute(f"DROP TABLE {sql_safe_new_name};")
 
     def drop(self, table: SQLTable, column: SQLColumn) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {table.sql_safe_name} DROP COLUMN {self.sql_safe_name}")
+        return self.table.database.context.execute(f"ALTER TABLE {table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
 
 
 @dataclasses.dataclass(eq=False)
 class SQLiteIndex(SQLIndex):
+    @property
+    def fully_qualified_name(self):
+        return self.table.database.context.qualify(self.table.database.name, self.name)
+
     def create(self) -> bool:
         if self.type == SQLiteIndexType.PRIMARY:
             return False  # PRIMARY is handled in table creation
@@ -315,14 +335,14 @@ class SQLiteIndex(SQLIndex):
 
         unique_index = "UNIQUE INDEX" if self.type == SQLiteIndexType.UNIQUE else "INDEX"
 
-        build_sql_safe_name = self.table.database.context.build_sql_safe_name
+        quote_identifier = self.table.database.context.quote_identifier
 
-        columns_clause = ", ".join([build_sql_safe_name(column) for column in self.columns])
+        columns_clause = ", ".join([quote_identifier(column) for column in self.columns])
         where_clause = f" WHERE {self.condition}" if self.condition else ""
 
         statement = (
-            f"CREATE {unique_index} IF NOT EXISTS {self.sql_safe_name} "
-            f"ON {self.table.sql_safe_name}({columns_clause}){where_clause} "
+            f"CREATE {unique_index} IF NOT EXISTS {self.fully_qualified_name} "
+            f"ON {self.table.name}({columns_clause}){where_clause} "
         )
 
         return self.table.database.context.execute(statement)
@@ -334,8 +354,10 @@ class SQLiteIndex(SQLIndex):
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
             return False  # sqlite_ UNIQUE is handled in table creation
 
+
+        print(f"DROP INDEX IF EXISTS {self.fully_qualified_name}")
         return self.table.database.context.execute(
-            f"DROP INDEX IF EXISTS {self.sql_safe_name}"
+            f"DROP INDEX IF EXISTS {self.fully_qualified_name}"
         )
 
     def modify(self, new_index: Self):
@@ -441,23 +463,29 @@ class SQLiteRecord(SQLRecord):
 
 
 class SQLiteView(SQLView):
+    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str):
+        match = re.search(r'CREATE\s+VIEW\s+.*?\s+AS\s+(.*)', statement, re.IGNORECASE | re.DOTALL)
+        if match:
+            statement = match.group(1).strip()
+
+        super().__init__(id=id, name=name, database=database, statement=statement)
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.name} AS {self.sql}")
+        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP VIEW IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
-        self.drop()
-        return self.create()
+        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}")
 
 
 class SQLiteTrigger(SQLTrigger):
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.name} {self.sql}")
+        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.fully_qualified_name} {self.statement}")
 
     def drop(self) -> bool:
-        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.name}")
+        return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")
 
     def alter(self) -> bool:
         self.drop()

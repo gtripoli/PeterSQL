@@ -1,0 +1,23 @@
+{
+  "group": "FROM_JOIN_CLAUSE_CURRENT_TABLE",
+  "cases": [
+    {
+      "case_id": "FROM_CURR_002",
+      "title": "FROM with prefix - CURRENT_TABLE filtered by prefix",
+      "sql": "SELECT * FROM p|",
+      "dialect": "generic",
+      "current_table": "products",
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "p",
+        "comment": "CURRENT_TABLE=products matches prefix 'p'.",
+        "suggestions": [
+          "payments",
+          "products"
+        ]
+      }
+    }
+  ]
+}

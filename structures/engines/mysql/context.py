@@ -1,4 +1,5 @@
 import re
+import ssl
 from typing import Any, Optional
 
 import pymysql
@@ -9,11 +10,26 @@ from helpers.logger import logger
 from structures.connection import Connection
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
-from structures.engines.database import SQLColumn, SQLDatabase, SQLForeignKey, SQLIndex, SQLTable
+from structures.engines.database import (
+    SQLColumn,
+    SQLDatabase,
+    SQLForeignKey,
+    SQLIndex,
+    SQLTable,
+)
 from structures.engines.datatype import SQLDataType
 
 from structures.engines.mysql import MAP_COLUMN_FIELDS
-from structures.engines.mysql.database import MySQLColumn, MySQLDatabase, MySQLForeignKey, MySQLIndex, MySQLRecord, MySQLTable, MySQLTrigger, MySQLView
+from structures.engines.mysql.database import (
+    MySQLColumn,
+    MySQLDatabase,
+    MySQLForeignKey,
+    MySQLIndex,
+    MySQLRecord,
+    MySQLTable,
+    MySQLTrigger,
+    MySQLView,
+)
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
 
@@ -26,7 +42,8 @@ class MySQLContext(AbstractContext):
     DATATYPE = MySQLDataType
     INDEXTYPE = MySQLIndexType
 
-    IDENTIFIER_QUOTE = "`"
+    IDENTIFIER_QUOTE_CHAR = "`"
+    DEFAULT_STATEMENT_SEPARATOR = ";"
 
     def __init__(self, connection: Connection):
         super().__init__(connection)
@@ -37,8 +54,8 @@ class MySQLContext(AbstractContext):
         # self.database = session.configuration.database
         self.port = getattr(connection.configuration, "port", 3306)
 
-    def _on_connect(self, *args, **kwargs):
-        super()._on_connect(*args, **kwargs)
+    def after_connect(self, *args, **kwargs):
+        super().after_connect(*args, **kwargs)
         self.execute("""
             SELECT COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLLATIONS
             WHERE CHARACTER_SET_NAME IS NOT NULL
@@ -50,97 +67,126 @@ class MySQLContext(AbstractContext):
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        try:
-            self.execute("""
-                SELECT WORD FROM information_schema.KEYWORDS
-                WHERE RESERVED = 1
-                ORDER BY WORD;
-            """)
-            self.KEYWORDS = tuple(row["WORD"] for row in self.fetchall())
-        except Exception:
-            self.KEYWORDS = ()
-
-        try:
-            self.execute("""
-                SELECT FUNCTION FROM information_schema.SQL_FUNCTIONS
-                ORDER BY FUNCTION;
-            """)
-            builtin_functions = tuple(row["FUNCTION"] for row in self.fetchall())
-        except Exception:
-            builtin_functions = ()
+        server_version = self.get_server_version()
+        self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
+            "mysql", server_version
+        )
 
         self.execute("""
             SELECT DISTINCT ROUTINE_NAME FROM information_schema.ROUTINES
             WHERE ROUTINE_TYPE = 'FUNCTION'
             ORDER BY ROUTINE_NAME;
         """)
-        user_functions = tuple(row["ROUTINE_NAME"] for row in self.fetchall())
+        user_functions = tuple(row["ROUTINE_NAME"].upper() for row in self.fetchall())
 
-        self.FUNCTIONS = builtin_functions + user_functions
+        self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
     def _parse_type(self, column_type: str):
         types = MySQLDataType.get_all()
-        type_set = [x.lower() for type in types if type.has_set for x in ([type.name] + type.alias)]
-        type_length = [x.lower() for type in types if type.has_length for x in ([type.name] + type.alias)]
+        type_set = [
+            x.lower()
+            for type in types
+            if type.has_set
+            for x in ([type.name] + type.alias)
+        ]
+        type_length = [
+            x.lower()
+            for type in types
+            if type.has_length
+            for x in ([type.name] + type.alias)
+        ]
 
-        if match := re.search(fr"^({'|'.join(type_set)})\((.*)\)$", column_type):
+        if match := re.search(rf"^({'|'.join(type_set)})\((.*)\)$", column_type):
             return dict(
                 name=match.group(1).upper(),
-                set=[value.strip("'") for value in match.group(2).split(",")]
+                set=[value.strip("'") for value in match.group(2).split(",")],
             )
-        if match := re.search(fr"^({'|'.join(type_length)})\((.*)\)$", column_type):
-            return dict(
-                name=match.group(1).upper(),
-                length=int(match.group(2))
-            )
+        if match := re.search(rf"^({'|'.join(type_length)})\((.*)\)$", column_type):
+            return dict(name=match.group(1).upper(), length=int(match.group(2)))
 
-        if match := re.search(r"(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?", column_type):
+        if match := re.search(
+            r"(\w+)\s*\((\d+)(?:,\s*(\d+))?\)(\s*unsigned)?(\s*zerofill)?", column_type
+        ):
             return dict(
                 name=match.group(1).upper(),
                 precision=int(match.group(2)),
                 scale=int(match.group(3)) if match.group(3) else None,
                 is_unsigned=bool(match.group(4)),
-                is_zerofill=bool(match.group(5))
+                is_zerofill=bool(match.group(5)),
             )
 
         return dict()
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
+            self.before_connect()
+
+            use_tls_enabled = bool(
+                getattr(self.connection.configuration, "use_tls_enabled", False)
+            )
+
             base_kwargs = dict(
                 host=self.host,
                 user=self.user,
                 password=self.password,
                 port=self.port,
-                cursorclass=pymysql.cursors.DictCursor
+                cursorclass=pymysql.cursors.DictCursor,
+                **connect_kwargs,
+            )
+            if use_tls_enabled:
+                base_kwargs["ssl"] = {
+                    "cert_reqs": ssl.CERT_NONE,
+                    "check_hostname": False,
+                }
+            logger.debug(
+                "MySQL connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                base_kwargs.get("host"),
+                base_kwargs.get("port"),
+                base_kwargs.get("user"),
+                use_tls_enabled,
             )
 
             try:
-                # SSH tunnel support via connection configuration
-                if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
-                    ssh_config = self.connection.ssh_tunnel
-                    self._ssh_tunnel = SSHTunnel(
-                        ssh_config.hostname, int(ssh_config.port),
-                        ssh_username=ssh_config.username,
-                        ssh_password=ssh_config.password,
-                        remote_port=self.port,
-                        local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0)))
-                    )
-                    self._ssh_tunnel.start()
-                    base_kwargs.update(
-                        host=self.host,
-                        port=self._ssh_tunnel.local_port,
-                    )
-
-                self._connection = pymysql.connect(**{
-                    **base_kwargs,
-                    **connect_kwargs
-                })
+                self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
-                self._on_connect()
+            except pymysql.err.OperationalError as e:
+                should_retry_tls = bool(e.args and e.args[0] == 1045)
+                if not should_retry_tls or "ssl" in base_kwargs:
+                    logger.error(f"Failed to connect to MySQL: {e}")
+                    raise
+
+                logger.warning(
+                    "MySQL connection failed without TLS (%s). Retrying with TLS.",
+                    e,
+                )
+                logger.debug(
+                    "Retrying MySQL connection with TLS preferred after auth failure"
+                )
+                tls_kwargs = {
+                    **base_kwargs,
+                    "ssl": {
+                        "cert_reqs": ssl.CERT_NONE,
+                        "check_hostname": False,
+                    },
+                }
+                self._connection = pymysql.connect(**tls_kwargs)
+                self._cursor = self._connection.cursor()
+
+                if hasattr(self.connection, "configuration"):
+                    self.connection.configuration = (
+                        self.connection.configuration._replace(use_tls_enabled=True)
+                    )
+                logger.info(
+                    "MySQL connection succeeded after enabling TLS automatically."
+                )
             except Exception as e:
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise
+            else:
+                self.after_connect()
+
+    def set_database(self, database: SQLDatabase) -> None:
+        self.execute(f"USE {database.quoted_name}")
 
     def get_server_version(self) -> str:
         self.execute("SELECT VERSION() as version")
@@ -174,41 +220,59 @@ class MySQLContext(AbstractContext):
         """)
         results = []
         for i, row in enumerate(self.fetchall()):
-            results.append(MySQLDatabase(
-                id=i,
-                name=row["database_name"],
-                default_collation=row["default_collation"],
-                total_bytes=float(row["total_bytes"]),
-                context=self,
-                get_tables_handler=self.get_tables,
-                get_views_handler=self.get_views,
-                get_triggers_handler=self.get_triggers,
-            ))
+            results.append(
+                MySQLDatabase(
+                    id=i,
+                    name=row["database_name"],
+                    default_collation=row["default_collation"],
+                    total_bytes=float(row["total_bytes"]),
+                    context=self,
+                    get_tables_handler=self.get_tables,
+                    get_views_handler=self.get_views,
+                    get_triggers_handler=self.get_triggers,
+                )
+            )
         return results
 
     def get_views(self, database: SQLDatabase):
         results: list[MySQLView] = []
-        self.execute(f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME")
+        self.execute(
+            f"SELECT TABLE_NAME, VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '{database.name}' ORDER BY TABLE_NAME"
+        )
         for i, result in enumerate(self.fetchall()):
-            results.append(MySQLView(
-                id=i,
-                name=result["TABLE_NAME"],
-                database=database,
-                sql=result["VIEW_DEFINITION"]
-            ))
+            results.append(
+                MySQLView(
+                    id=i,
+                    name=result["TABLE_NAME"],
+                    database=database,
+                    statement=result["VIEW_DEFINITION"] or "",
+                )
+            )
 
         return results
 
+    def get_definers(self) -> list[str]:
+        self.execute("""
+            SELECT DISTINCT CONCAT(User, '@', Host) as definer
+            FROM mysql.user
+            ORDER BY definer
+        """)
+        return [row["definer"] for row in self.fetchall()]
+
     def get_triggers(self, database: SQLDatabase) -> list[MySQLTrigger]:
         results: list[MySQLTrigger] = []
-        self.execute(f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME")
+        self.execute(
+            f"SELECT TRIGGER_NAME, ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = '{database.name}' ORDER BY TRIGGER_NAME"
+        )
         for i, result in enumerate(self.fetchall()):
-            results.append(MySQLTrigger(
-                id=i,
-                name=result["TRIGGER_NAME"],
-                database=database,
-                sql=result["ACTION_STATEMENT"]
-            ))
+            results.append(
+                MySQLTrigger(
+                    id=i,
+                    name=result["TRIGGER_NAME"],
+                    database=database,
+                    statement=result["ACTION_STATEMENT"],
+                )
+            )
 
         return results
 
@@ -240,6 +304,7 @@ class MySQLContext(AbstractContext):
                     total_rows=row["TABLE_ROWS"],
                     get_columns_handler=self.get_columns,
                     get_indexes_handler=self.get_indexes,
+                    get_checks_handler=self.get_checks,
                     get_foreign_keys_handler=self.get_foreign_keys,
                     get_records_handler=self.get_records,
                 )
@@ -347,6 +412,42 @@ class MySQLContext(AbstractContext):
 
         return results
 
+    def get_checks(self, table: MySQLTable) -> list[MySQLCheck]:
+        from structures.engines.mysql.database import MySQLCheck
+
+        if table is None or table.is_new:
+            return []
+
+        query = f"""
+            SELECT 
+                cc.CONSTRAINT_NAME,
+                cc.CHECK_CLAUSE
+            FROM information_schema.CHECK_CONSTRAINTS cc
+            JOIN information_schema.TABLE_CONSTRAINTS tc 
+                ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA 
+                AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+            WHERE tc.TABLE_SCHEMA = '{table.database.name}'
+            AND tc.TABLE_NAME = '{table.name}'
+            AND tc.CONSTRAINT_TYPE = 'CHECK'
+            ORDER BY cc.CONSTRAINT_NAME
+        """
+
+        self.execute(query)
+        rows = self.fetchall()
+
+        results = []
+        for i, row in enumerate(rows):
+            results.append(
+                MySQLCheck(
+                    id=i,
+                    name=row["CONSTRAINT_NAME"],
+                    table=table,
+                    expression=row["CHECK_CLAUSE"],
+                )
+            )
+
+        return results
+
     def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
         if table is None or table.is_new:
             return []
@@ -370,20 +471,31 @@ class MySQLContext(AbstractContext):
         """)
         foreign_keys = []
         for i, row in enumerate(self.cursor.fetchall()):
-            foreign_keys.append(MySQLForeignKey(
-                id=i,
-                name=row["CONSTRAINT_NAME"],
-                columns=row["COLUMNS_NAMES"].split(","),
-                table=table,
-                reference_table=row["REFERENCED_TABLE_NAME"],
-                reference_columns=row["REFERENCED_COLUMNS"].split(","),
-                on_update=row["UPDATE_RULE"],
-                on_delete=row["DELETE_RULE"],
-            ))
+            foreign_keys.append(
+                MySQLForeignKey(
+                    id=i,
+                    name=row["CONSTRAINT_NAME"],
+                    columns=row["COLUMNS_NAMES"].split(","),
+                    table=table,
+                    reference_table=row["REFERENCED_TABLE_NAME"],
+                    reference_columns=row["REFERENCED_COLUMNS"].split(","),
+                    on_update=row["UPDATE_RULE"],
+                    on_delete=row["DELETE_RULE"],
+                )
+            )
 
         return foreign_keys
 
-    def get_records(self, table: SQLTable, /, *, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None) -> list[MySQLRecord]:
+    def get_records(
+        self,
+        table: SQLTable,
+        /,
+        *,
+        filters: Optional[str] = None,
+        limit: int = 1000,
+        offset: int = 0,
+        orders: Optional[str] = None,
+    ) -> list[MySQLRecord]:
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
             return []
@@ -398,13 +510,13 @@ class MySQLContext(AbstractContext):
 
         results = []
         for i, record in enumerate(self.cursor.fetchall(), start=offset):
-            results.append(
-                MySQLRecord(id=i, table=table, values=dict(record))
-            )
+            results.append(MySQLRecord(id=i, table=table, values=dict(record)))
         logger.debug(f"get records for table={table.name}")
         return results
 
-    def build_empty_table(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTable:
+    def build_empty_table(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MySQLTable:
         id = MySQLContext.get_temporary_id(database.tables)
 
         if name is None:
@@ -419,26 +531,38 @@ class MySQLContext(AbstractContext):
             database=database,
             get_indexes_handler=self.get_indexes,
             get_columns_handler=self.get_columns,
+            get_checks_handler=self.get_checks,
             get_foreign_keys_handler=self.get_foreign_keys,
             get_records_handler=self.get_records,
             **default_values,
         ).copy()
 
-    def build_empty_column(self, table: SQLTable, datatype: SQLDataType, /, name: Optional[str] = None, **default_values) -> MySQLColumn:
+    def build_empty_column(
+        self,
+        table: SQLTable,
+        datatype: SQLDataType,
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MySQLColumn:
         id = MySQLContext.get_temporary_id(table.columns)
 
         if name is None:
             name = _(f"Column{str(id * -1):03}")
 
         return MySQLColumn(
-            id=id,
-            name=name,
-            table=table,
-            datatype=datatype,
-            **default_values
+            id=id, name=name, table=table, datatype=datatype, **default_values
         )
 
-    def build_empty_index(self, table: MySQLTable, indextype: MySQLIndexType, columns: list[str], /, name: Optional[str] = None, **default_values) -> MySQLIndex:
+    def build_empty_index(
+        self,
+        table: MySQLTable,
+        indextype: MySQLIndexType,
+        columns: list[str],
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MySQLIndex:
         id = MySQLContext.get_temporary_id(table.indexes)
 
         if name is None:
@@ -452,31 +576,62 @@ class MySQLContext(AbstractContext):
             table=table,
         )
 
-    def build_empty_foreign_key(self, table: MySQLTable, columns: list[str], /, name: Optional[str] = None, **default_values) -> MySQLForeignKey:
+    def build_empty_check(
+        self,
+        table: MySQLTable,
+        /,
+        name: Optional[str] = None,
+        expression: Optional[str] = None,
+        **default_values,
+    ) -> MySQLCheck:
+        from structures.engines.mysql.database import MySQLCheck
+
+        id = MySQLContext.get_temporary_id(table.checks)
+
+        if name is None:
+            name = f"check_{abs(id)}"
+
+        return MySQLCheck(
+            id=id, name=name, table=table, expression=expression or "", **default_values
+        )
+
+    def build_empty_foreign_key(
+        self,
+        table: MySQLTable,
+        columns: list[str],
+        /,
+        name: Optional[str] = None,
+        **default_values,
+    ) -> MySQLForeignKey:
         id = MySQLContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
             name = _(f"ForeignKey{str(id * -1):03}")
+
+        reference_table = default_values.get("reference_table", "")
+        reference_columns = default_values.get("reference_columns", [])
 
         return MySQLForeignKey(
             id=id,
             name=name,
             table=table,
             columns=columns,
-            reference_table="",
-            reference_columns=[],
-            on_update="",
-            on_delete=""
+            reference_table=reference_table,
+            reference_columns=reference_columns,
+            on_update=default_values.get("on_update", ""),
+            on_delete=default_values.get("on_delete", ""),
         )
 
-    def build_empty_record(self, table: MySQLTable, /, *, values: dict[str, Any]) -> MySQLRecord:
+    def build_empty_record(
+        self, table: MySQLTable, /, *, values: dict[str, Any]
+    ) -> MySQLRecord:
         return MySQLRecord(
-            id=MySQLContext.get_temporary_id(table.records),
-            table=table,
-            values=values
+            id=MySQLContext.get_temporary_id(table.records), table=table, values=values
         )
 
-    def build_empty_view(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLView:
+    def build_empty_view(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MySQLView:
         id = MySQLContext.get_temporary_id(database.views)
 
         if name is None:
@@ -486,18 +641,45 @@ class MySQLContext(AbstractContext):
             id=id,
             name=name,
             database=database,
+            statement=default_values.get("statement", ""),
+        )
+
+    def build_empty_function(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> "MySQLFunction":
+        from structures.engines.mysql.database import MySQLFunction
+
+        id = MySQLContext.get_temporary_id(database.functions)
+
+        if name is None:
+            name = f"function_{id}"
+
+        return MySQLFunction(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            returns=default_values.get("returns", "INT"),
+            deterministic=default_values.get("deterministic", False),
             sql=default_values.get("sql", ""),
         )
 
-    def build_empty_trigger(self, database: SQLDatabase, /, name: Optional[str] = None, **default_values) -> MySQLTrigger:
+    def build_empty_procedure(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ):
+        raise NotImplementedError("MySQL Procedure not implemented yet")
+
+    def build_empty_trigger(
+        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+    ) -> MySQLTrigger:
         id = MySQLContext.get_temporary_id(database.triggers)
 
         if name is None:
-            name = _(f"Trigger{str(id * -1):03}")
+            name = f"trigger_{id}"
 
         return MySQLTrigger(
             id=id,
             name=name,
             database=database,
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )

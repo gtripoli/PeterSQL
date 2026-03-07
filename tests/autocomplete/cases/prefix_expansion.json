@@ -1,0 +1,137 @@
+{
+  "group": "PREFIX_EXPANSION",
+  "cases": [
+    {
+      "case_id": "PREFIX_EXP_001",
+      "title": "WHERE single-table: prefix matches BOTH columns and table name",
+      "sql": "SELECT * FROM items WHERE i|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "i",
+        "comment": "Rule BOTH-match (single table): unqualified column-name matches, then qualified versions, then table expansion remaining columns, then functions.",
+        "suggestions": [
+          "id",
+          "item_name",
+          "items.id",
+          "items.item_name",
+          "items.stock",
+          "items.price",
+          "IF",
+          "IFNULL"
+        ]
+      }
+    },
+    {
+      "case_id": "PREFIX_EXP_002",
+      "title": "WHERE single-table: prefix matches ONLY table name",
+      "sql": "SELECT * FROM products WHERE prod|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "prod",
+        "comment": "Table-name expansion only: all products.* columns qualified in schema order. No function starts with 'prod'.",
+        "suggestions": [
+          "products.id",
+          "products.name",
+          "products.price",
+          "products.unit_price",
+          "products.stock"
+        ]
+      }
+    },
+    {
+      "case_id": "PREFIX_EXP_003",
+      "title": "JOIN_ON generic prefix without aliases",
+      "sql": "SELECT * FROM users JOIN orders ON u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "JOIN_ON",
+        "prefix": "u",
+        "comment": "Prefix-matching JOIN_ON includes FK complete-condition hints first, then scoped columns and functions.",
+        "suggestions": [
+          "users.id = orders.user_id",
+          "users.id",
+          "users.name",
+          "users.email",
+          "users.status",
+          "users.created_at",
+          "orders.user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "PREFIX_EXP_004",
+      "title": "GROUP_BY single-table BOTH-match with different schema",
+      "sql": "SELECT COUNT(*) FROM carts GROUP BY c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "GROUP_BY_CLAUSE",
+        "prefix": "c",
+        "comment": "BOTH-match ordering in GROUP BY with single table carts.",
+        "suggestions": [
+          "customer_id",
+          "created_at",
+          "cart_total",
+          "carts.customer_id",
+          "carts.created_at",
+          "carts.cart_total",
+          "carts.id",
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    },
+    {
+      "case_id": "PREFIX_EXP_005",
+      "title": "HAVING: aggregate-first ordering with prefix",
+      "sql": "SELECT method, COUNT(*) FROM payments GROUP BY method HAVING m|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "m",
+        "comment": "HAVING with prefix: aggregate functions first, then columns, then non-aggregate functions.",
+        "suggestions": [
+          "MAX",
+          "MIN",
+          "method",
+          "MONTH"
+        ]
+      }
+    },
+    {
+      "case_id": "PREFIX_EXP_006",
+      "title": "WHERE with alias mismatch: no invalid table-name qualification",
+      "sql": "SELECT * FROM user_sessions us WHERE user_s|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "user_s",
+        "comment": "Alias is 'us'. Prefix does not exactly match alias and no scoped column/function starts with 'user_s'. Must return empty.",
+        "suggestions": []
+      }
+    }
+  ]
+}

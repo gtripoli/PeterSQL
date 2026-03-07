@@ -32,11 +32,12 @@ class IconList:
     FUNCTION = Icon("function", "lightning.png")
     EVENT = Icon("event", "calendar_view_day.png")
 
-    # Engines
-    SQLITE = Icon("engine_sqlite", "server-sqlite.png")
-    MYSQL = Icon("engine_mysql", "server-mysql.png")
-    MARIADB = Icon("engine_mariadb", "server-mariadb.png")
-    POSTGRESQL = Icon("engine_postgresql", "server-postgresql.png")
+    # Servers
+    SQLITE = Icon("server_sqlite", "server-sqlite.png")
+    MYSQL = Icon("server_mysql", "server-mysql.png")
+    MARIADB = Icon("server_mariadb", "server-mariadb.png")
+    POSTGRESQL = Icon("server_postgresql", "server-postgresql.png")
+    ORACLE = Icon("server_oracle", "server-oracle.png")
 
     # Keys
     KEY_PRIMARY = Icon("key_primary", "key_primary.png")
@@ -61,8 +62,8 @@ class IconRegistry:
         self.base_path = base_path
         self._imagelist = wx.ImageList(size, size)
 
-        self._idx_cache: Dict[Hashable, int] = {}
-        self._bmp_cache: Dict[Hashable, wx.Bitmap] = {}
+        self._idx_cache: dict[Hashable, int] = {}
+        self._bmp_cache: dict[Hashable, wx.Bitmap] = {}
 
     @property
     def imagelist(self) -> wx.ImageList:
@@ -91,7 +92,7 @@ class IconRegistry:
         return img.ConvertToBitmap()
 
     @staticmethod
-    def _key(*icons: "Icon") -> Tuple[Hashable, ...]:
+    def _key(*icons: "Icon") -> tuple[Hashable, ...]:
         # single -> (id,), combo -> (id1, id2, ...)
         return tuple(icon.id for icon in icons)
 
@@ -115,7 +116,7 @@ class IconRegistry:
             return bmp
 
         # combo: ensure single bitmaps exist (and are cached with (id,))
-        parts: List[wx.Bitmap] = []
+        parts: list[wx.Bitmap] = []
         for icon in icons:
             part = self.get_bitmap(icon)  # caches (id,)
             if part and part.IsOk():

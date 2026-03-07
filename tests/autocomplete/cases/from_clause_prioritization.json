@@ -1,0 +1,57 @@
+{
+  "group": "FROM_CLAUSE_PRIORITIZATION",
+  "cases": [
+    {
+      "case_id": "FROM_PRIO_001",
+      "title": "FROM clause without prefix: only referenced tables from qualified SELECT columns",
+      "sql": "SELECT products.id FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "products is referenced in SELECT (qualified column), so only referenced tables are suggested",
+        "suggestions": [
+          "products"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_PRIO_002",
+      "title": "FROM clause with prefix: only referenced tables are considered",
+      "sql": "SELECT orders.total FROM o|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "o",
+        "comment": "orders matches prefix 'o' and is referenced in SELECT, so only referenced tables are suggested",
+        "suggestions": [
+          "orders"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_PRIO_003",
+      "title": "FROM clause: multiple referenced tables preserve left-to-right SELECT order",
+      "sql": "SELECT items.id, products.name FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "comment": "Both items and products are referenced in SELECT, so only those tables are suggested in reference order",
+        "suggestions": [
+          "items",
+          "products"
+        ]
+      }
+    }
+  ]
+}

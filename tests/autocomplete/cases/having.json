@@ -1,0 +1,160 @@
+{
+  "group": "HAVING",
+  "cases": [
+    {
+      "case_id": "HAVING_001",
+      "title": "HAVING without prefix: aggregates first then columns then other functions",
+      "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status HAVING |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "HAVING_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "AVG",
+          "COUNT",
+          "GROUP_CONCAT",
+          "MAX",
+          "MIN",
+          "SUM",
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at",
+          "COALESCE",
+          "CONCAT",
+          "DATE",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_002",
+      "title": "HAVING with prefix prioritizes aggregate functions matching prefix",
+      "sql": "SELECT item_name, COUNT(*) FROM items GROUP BY item_name HAVING c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "c",
+        "suggestions": [
+          "COUNT",
+          "COALESCE",
+          "CONCAT"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_003",
+      "title": "HAVING after operator: NULL/TRUE/FALSE + aggregates + columns",
+      "sql": "SELECT status, COUNT(*) FROM products GROUP BY status HAVING COUNT(*) > |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_OPERATOR",
+        "context": "HAVING_AFTER_OPERATOR",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "AVG",
+          "COUNT",
+          "GROUP_CONCAT",
+          "MAX",
+          "MIN",
+          "SUM",
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_004",
+      "title": "HAVING after expression suggests logical + clauses",
+      "sql": "SELECT email, COUNT(*) FROM customers GROUP BY email HAVING COUNT(*) > 10 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "AFTER_EXPRESSION",
+        "context": "HAVING_AFTER_EXPRESSION",
+        "prefix": null,
+        "suggestions": [
+          "AND",
+          "OR",
+          "NOT",
+          "EXISTS",
+          "ORDER BY",
+          "LIMIT"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_005",
+      "title": "HAVING with scope restriction - no DB-wide columns",
+      "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status HAVING u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "HAVING_CLAUSE",
+        "prefix": "u",
+        "comment": "Scope=[orders]. DB-wide excluded. Aggregate functions alphabetically, then columns, then other functions.",
+        "suggestions": [
+          "user_id",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "HAVING_006",
+      "title": "Qualified SELECT style propagates to HAVING columns",
+      "sql": "SELECT u.id, COUNT(*) FROM users u GROUP BY u.id HAVING |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "HAVING_CLAUSE",
+        "prefix": null,
+        "comment": "With qualified SELECT/GROUP style, HAVING column suggestions remain alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    }
+  ]
+}

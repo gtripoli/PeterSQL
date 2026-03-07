@@ -1,5 +1,5 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-50%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-54%25-brightgreen)
 
 ![SQLite](https://img.shields.io/badge/SQLite-tested-lightgrey)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-lightgrey)
@@ -12,11 +12,15 @@
   <img src="petersql_large.png" alt="PeterSQL"/>
 </p>
 
-> Heidi's (silly?) friend — a wxPython-based reinterpretation of HeidiSQL
+> Inspired by HeidiSQL — reimagined in pure Python.
 
 **PeterSQL** is a graphical client for database management, inspired by the
 excellent [HeidiSQL](https://www.heidisql.com/), but written entirely in **Python**
-using **wxPython**, with a focus on portability and native look & feel.
+using **wxPython**, with a focus on portability, extensibility, and native look & feel.
+
+PeterSQL is **not a clone and not a port** of HeidiSQL.
+It shares the same spirit — clarity, speed, practicality — but follows its own
+path as a Python-native project.
 
 ---
 
@@ -27,28 +31,59 @@ Features may be incomplete or change without notice.
 
 Use at your own risk and **do not rely on this project in production environments** yet.
 
+For a detailed status snapshot, see:
+
+- [PROJECT_STATUS.md](PROJECT_STATUS.md)
+- [ROADMAP.md](ROADMAP.md)
+
+### Recent updates
+
+- PostgreSQL engine now includes **Function** and **Procedure** classes with CRUD-style operations.
+- Check constraint support was added for **MySQL**, **MariaDB**, and **PostgreSQL** engine layers.
+- Connection manager now tracks **persistent connection statistics** (attempts, success/failure, timing).
+- Empty database passwords are now accepted for local setups.
+- MySQL/MariaDB connections can auto-retry by enabling TLS when required by the server.
+
 ---
 
 ## 🧭 Why PeterSQL?
 
-Over the years, I have used **HeidiSQL** as my primary tool for working with
+For years, I have used **HeidiSQL** as my primary tool for working with
 MySQL, MariaDB, SQLite, and other databases.
-It is a tool I deeply appreciate: **streamlined**, **intuitive**, and
-**powerful**.
+It is streamlined, intuitive, and powerful.
 
-Rather than trying to compete with HeidiSQL, PeterSQL started as a personal
-challenge: to recreate the same *spirit* in a **pure Python** application.
+PeterSQL started as a personal challenge:
+to recreate that same *spirit* in a **pure Python** application.
 
-PeterSQL is not a 1:1 port.
-It is a Python-first reinterpretation, built with different goals in mind.
+But PeterSQL is not meant to be a 1:1 replacement.
+
+Where HeidiSQL is Delphi-based and Windows-centric,
+PeterSQL is:
 
 - 🐍 **Written entirely in Python**
-- 🧩 **Built entirely in Python to enable easy modification and extension**
-- 🎯 **Focused on simplicity and clarity**, inspired by HeidiSQL
+- 🧩 **Easily modifiable and extensible**
+- 🌍 **Cross-platform**
+- 🎯 **Focused on clarity and simplicity**
 - 🆓 **Free and open source**
 
-PeterSQL exists for developers who love HeidiSQL’s approach, but want a tool
-that feels native to the Python ecosystem.
+PeterSQL aims to feel natural for developers who live in the Python ecosystem
+and appreciate lightweight, practical tools.
+
+---
+
+## 🔭 Vision
+
+PeterSQL is evolving beyond a simple SQL client.
+
+Planned directions include:
+
+- 🧠 Smarter, scope-aware SQL autocomplete
+- 📊 Visual schema / diagram viewer (inspired by tools like MySQL Workbench)
+- 🔌 Extensible architecture for future tooling
+- 🐍 Better integration with Python-based workflows
+
+The goal is not to replicate existing tools,
+but to build a Python-native SQL workbench with its own identity.
 
 ---
 
@@ -56,7 +91,33 @@ that feels native to the Python ecosystem.
 
 - [Python 3.14+](https://www.python.org/)
 - [wxPython 4.2.5](https://wxpython.org/) - native cross-platform interface
-- [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - for the construction of the interface
+- [wxFormBuilder 4.2.1](https://github.com/wxFormBuilder/wxFormBuilder) - UI construction
+
+---
+
+## 🌍 Available Languages
+
+PeterSQL supports the following languages:
+
+- 🇺🇸 **English** (en_US)
+- 🇮🇹 **Italiano** (it_IT)
+- 🇫🇷 **Français** (fr_FR)
+- 🇪🇸 **Español** (es_ES)
+- 🇩🇪 **Deutsch** (de_DE)
+
+You can change the language in the application settings (Settings → General → Language).
+
+---
+
+## 🧪 Test Coverage
+
+PeterSQL has **comprehensive integration tests** across all supported database engines covering Tables, Records, Columns, Indexes, Foreign Keys, Triggers, Views, and SSH tunnels.
+
+- 🏗️ **Granular base class architecture** - zero code duplication
+- 🐛 **Bug detection** - tests have found multiple API inconsistencies
+- ✅ **Full CRUD coverage** for core database objects
+
+For detailed test coverage matrix, statistics, architecture, and running instructions, see **[tests/README.md](tests/README.md)**.
 
 ---
 
@@ -66,7 +127,7 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 
 ### Setup
@@ -75,7 +136,6 @@ PeterSQL uses [uv](https://github.com/astral-sh/uv) for fast and reliable depend
    ```bash
    git clone https://github.com/gtripoli/petersql.git
    cd petersql
-   ```
 
 2. Install dependencies (including dev tools for testing):
    ```bash
@@ -107,7 +167,7 @@ If `uv sync` fails because no compatible wxPython wheel is available for your pl
 This forces a source build and usually unblocks the setup.
 
 ```bash
-uv pip install -U --reinstall wxPython==4.2.4 --no-binary wxPython
+uv pip install -U --reinstall wxPython==4.2.5 --no-binary wxPython
 ```
 
 ###### Once the build finishes, rerun `uv sync` so the refreshed environment picks up the manually installed wxPython.

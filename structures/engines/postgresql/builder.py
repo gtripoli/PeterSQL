@@ -61,29 +61,43 @@ class PostgreSQLColumnBuilder(AbstractColumnBuilder):
 
 
 class PostgreSQLIndexBuilder(AbstractIndexBuilder):
-    TEMPLATE = ["%(type)s", "%(name)s", "ON", "%(table)s", "(%(columns)s)"]
+    # Different templates for inline (CREATE TABLE) vs standalone (CREATE INDEX)
+    INLINE_TEMPLATE = ["%(type)s", "(%(columns)s)"]  # For PRIMARY KEY inside CREATE TABLE
+    STANDALONE_TEMPLATE = ["%(type)s", "%(name)s", "ON", "%(table)s", "(%(columns)s)"]  # For CREATE INDEX
 
-    def __init__(self, index: 'PostgreSQLIndex', exclude: Optional[list[str]] = None):
+    def __init__(self, index: 'PostgreSQLIndex', exclude: Optional[list[str]] = None, inline: bool = False):
+        self.inline = inline  # True when building for CREATE TABLE, False for standalone CREATE INDEX
         super().__init__(index, exclude)
+        
+        # Use appropriate template based on context
+        if self.inline and self.index.type.name == "PRIMARY":
+            self.TEMPLATE = self.INLINE_TEMPLATE
+        else:
+            self.TEMPLATE = self.STANDALONE_TEMPLATE
+        
+        # Add table to parts dictionary for standalone template
+        self.parts['table'] = self.table
 
     @property
     def type(self):
         if self.index.type.name == "PRIMARY":
-            return "ALTER TABLE ADD CONSTRAINT PRIMARY KEY"
+            return "PRIMARY KEY" if self.inline else "ALTER TABLE ADD CONSTRAINT PRIMARY KEY"
         elif self.index.type.name == "UNIQUE INDEX":
-            return "CREATE UNIQUE INDEX"
+            return "UNIQUE" if self.inline else "CREATE UNIQUE INDEX"
         else:
             return f"CREATE INDEX"
 
     @property
     def name(self):
         if self.index.type.name == "PRIMARY":
-            return f'"{self.index.name}"'
+            return f'"{self.index.name}"' if not self.inline else ''
         return f'"{self.index.name}"' if self.index.name else ''
 
     @property
     def table(self):
-        return f'"{self.index.table.database.name}"."{self.index.table.name}"'
+        # Use schema if available, otherwise use database name
+        schema_or_db = self.index.table.schema if hasattr(self.index.table, 'schema') and self.index.table.schema else self.index.table.database.name
+        return f'"{schema_or_db}"."{self.index.table.name}"'
 
     @property
     def columns(self):

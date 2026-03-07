@@ -1,0 +1,245 @@
+{
+  "group": "ORDER",
+  "cases": [
+    {
+      "case_id": "ORDER_001",
+      "title": "ORDER BY without prefix: columns, functions, then sort keywords",
+      "sql": "SELECT * FROM products ORDER BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "price",
+          "unit_price",
+          "stock",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_002",
+      "title": "ORDER BY with prefix filters columns/functions/keywords",
+      "sql": "SELECT * FROM customers ORDER BY c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": "c",
+        "suggestions": [
+          "customers.id",
+          "customers.name",
+          "customers.email",
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_003",
+      "title": "ORDER BY after column + space suggests sort direction keywords and clause keywords",
+      "sql": "SELECT * FROM items ORDER BY stock |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_AFTER_COLUMN",
+        "prefix": null,
+        "comment": "After column: sort direction keywords (ASC/DESC) and clause keywords (LIMIT, etc.). MUST NOT suggest columns, functions, or literals.",
+        "suggestions_contains": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST",
+          "LIMIT"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "stock",
+          "item_name",
+          "COUNT",
+          "SUM",
+          "NULL",
+          "CURRENT_DATE"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_004",
+      "title": "ORDER BY after comma suggests more sort keys",
+      "sql": "SELECT * FROM orders ORDER BY created_at DESC, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "After comma: suggest columns and functions for next sort key. MUST NOT suggest ASC/DESC (no column specified yet) or literals.",
+        "suggestions_contains": [
+          "id",
+          "user_id",
+          "total",
+          "status",
+          "created_at",
+          "AVG",
+          "COUNT",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_005",
+      "title": "ORDER BY scope includes join table columns (aliases)",
+      "sql": "SELECT * FROM users u JOIN orders o ON u.id=o.user_id ORDER BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "ORDER BY without column: suggest columns and functions. MUST NOT suggest ASC/DESC (no column specified yet) or literals.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at",
+          "AVG",
+          "COUNT",
+          "SUM"
+        ],
+        "suggestions_not_contains": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_006",
+      "title": "ORDER_BY after comma in JOIN with aliases",
+      "sql": "SELECT * FROM products p JOIN items i ON p.id=i.product_id ORDER BY p.name, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Comma = next-item rules. Scope columns + functions. MUST NOT suggest ASC/DESC or literals.",
+        "suggestions_contains": [
+          "p.id",
+          "p.name",
+          "i.id",
+          "i.item_name",
+          "AVG",
+          "COUNT"
+        ],
+        "suggestions_not_contains": [
+          "ASC",
+          "DESC",
+          "NULLS FIRST",
+          "NULLS LAST",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_007",
+      "title": "ORDER BY after column with prefix filters sort keywords",
+      "sql": "SELECT * FROM users ORDER BY created_at D|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "ORDER_BY_AFTER_COLUMN",
+        "prefix": "D",
+        "comment": "After a complete ORDER BY column, prefix filtering should target sort-direction keywords only.",
+        "suggestions": [
+          "DESC"
+        ]
+      }
+    },
+    {
+      "case_id": "ORDER_008",
+      "title": "Qualified SELECT style propagates to ORDER BY columns",
+      "sql": "SELECT u.id FROM users u ORDER BY |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "ORDER_BY_CLAUSE",
+        "prefix": null,
+        "comment": "Once query style is qualified, ORDER BY columns stay alias-qualified.",
+        "suggestions_contains": [
+          "u.id",
+          "u.name",
+          "u.email"
+        ],
+        "suggestions_not_contains": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    }
+  ]
+}

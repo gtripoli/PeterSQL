@@ -12,13 +12,12 @@ from structures.connection import ConnectionEngine
 from structures.engines.database import SQLColumn, SQLTable, SQLIndex
 from structures.engines.datatype import DataTypeCategory
 from structures.engines.indextype import SQLIndexType, StandardIndexType
-from windows.components import BaseDataViewCtrl
 
+from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
 
-from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE
-from windows.main.table import NEW_TABLE
+from windows.state import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, NEW_TABLE
 
 
 class _SQLiteTableColumnsDataViewCtrl:
@@ -330,18 +329,21 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
 class TableRecordsDataViewCtrl(BaseDataViewCtrl):
     on_record_insert: Callable[[...], Optional[bool]]
     on_record_delete: Callable[[...], Optional[bool]]
-    make_advanced_dialog: Callable[[wx.Window, str], 'AdvancedCellEditorDialog']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         CURRENT_TABLE.subscribe(self._load_table)
 
+    def make_advanced_dialog(self, parent, value: str):
+        from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
+        return AdvancedCellEditorController(parent, value)
+
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:
             if column.name in foreign_key.columns:
-                session = CURRENT_SESSION()
-                database = CURRENT_DATABASE()
+                session = CURRENT_SESSION.get_value()
+                database = CURRENT_DATABASE.get_value()
 
                 records = []
                 references = []
@@ -444,6 +446,10 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
             width = max_w + 24
             width = max(60, min(width, 360))  # max 360 evita colonne infinite
             col.SetWidth(width)
+
+
+class QueryEditorResultsDataViewCtrl(TableRecordsDataViewCtrl):
+    pass
 
 
 class DatabaseTablesDataViewCtrl(BaseDataViewCtrl):

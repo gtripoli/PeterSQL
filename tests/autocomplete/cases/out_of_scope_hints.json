@@ -1,0 +1,86 @@
+{
+  "group": "OUT_OF_SCOPE_HINTS",
+  "cases": [
+    {
+      "case_id": "HINT_001",
+      "title": "SELECT_LIST scoped prefix includes scope matches and DB-wide expansion",
+      "sql": "SELECT c| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "c",
+        "comment": "Scope-first behavior: prefix suggestions from in-scope columns and matching functions only.",
+        "suggestions": [
+          "created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_002",
+      "title": "KILLER: Out-of-scope hint when prefix matches NO scope columns, only DB table",
+      "sql": "SELECT u| FROM products",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "u",
+        "comment": "Scope-first behavior: keep in-scope column matches plus prefix-matching functions; no out-of-scope table expansion.",
+        "suggestions": [
+          "unit_price",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_003",
+      "title": "No out-of-scope hint when prefix matches scope columns",
+      "sql": "SELECT t| FROM orders",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "SELECT_LIST",
+        "prefix": "t",
+        "comment": "Prefix matches in-scope column and functions only.",
+        "suggestions": [
+          "total",
+          "TRIM"
+        ]
+      }
+    },
+    {
+      "case_id": "HINT_004",
+      "title": "No out-of-scope hint in WHERE context",
+      "sql": "SELECT * FROM orders WHERE c|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "c",
+        "comment": "WHERE is scope-restricted: only in-scope columns and matching functions.",
+        "suggestions": [
+          "created_at",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "group": "EMPTY",
+  "cases": [
+    {
+      "case_id": "EMPTY_001",
+      "title": "Empty editor shows primary keywords",
+      "sql": "|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "EMPTY",
+        "context": "EMPTY",
+        "prefix": null,
+        "suggestions": [
+          "ALTER",
+          "CREATE",
+          "DELETE",
+          "DESCRIBE",
+          "DROP",
+          "EXPLAIN",
+          "INSERT",
+          "MERGE",
+          "REPLACE",
+          "SELECT",
+          "SHOW",
+          "TRUNCATE",
+          "UPDATE",
+          "WITH"
+        ]
+      }
+    }
+  ]
+}
