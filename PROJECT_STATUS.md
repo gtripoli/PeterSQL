@@ -21,6 +21,8 @@
 
 | Area | Current State |
 |------|---------------|
+| **MySQL Procedure** | Class + CRUD methods exist, context introspection exists, integration tests added, broader validation still ongoing. |
+| **MariaDB Procedure** | Class + CRUD methods exist, context introspection exists, integration tests added, broader validation still ongoing. |
 | **PostgreSQL Function** | Class + CRUD methods exist, context introspection exists, still considered under validation. |
 | **PostgreSQL Procedure** | Class + CRUD methods exist, context introspection exists, still considered under validation. |
 | **Check Constraints (MySQL/MariaDB/PostgreSQL)** | Engine classes and introspection exist, cross-version validation still needed. |
@@ -69,7 +71,7 @@
 | Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Stable core workflow. |
 | View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
 | Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MySQLCheck` + `get_checks()`), validation ongoing. |
-| Procedure | ❌ | ❌ | ❌ | ❌ | `build_empty_procedure` still not implemented. |
+| Procedure | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MySQLProcedure` + `get_procedures()`), broader validation ongoing. |
 | Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
 
 ---
@@ -81,7 +83,7 @@
 | Table / Column / Index / FK / Record | ✅ | ✅ | ✅ | ✅ | Stable core workflow. |
 | View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
 | Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MariaDBCheck` + `get_checks()`), validation ongoing. |
-| Procedure | ❌ | ❌ | ❌ | ❌ | `build_empty_procedure` still not implemented. |
+| Procedure | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MariaDBProcedure` + `get_procedures()`), broader validation ongoing. |
 | Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
 
 ---
@@ -144,9 +146,7 @@
 
 ### Priority B — Close Engine Gaps
 
-1. MySQL Procedure implementation.
-2. MariaDB Procedure implementation.
-3. Database create/drop methods in engine contexts.
+1. Database create/drop methods in engine contexts.
 
 ### Priority C — UI Completeness
 

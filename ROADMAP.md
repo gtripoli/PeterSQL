@@ -57,13 +57,13 @@ This roadmap reflects the current project state and separates:
 
 ## 🟡 P1 - Engine Gaps
 
-- [ ] **MySQL Procedure implementation**
-  - **Current blocker:** `build_empty_procedure` not implemented in MySQL context.
-  - **Files:** `structures/engines/mysql/context.py`, `structures/engines/mysql/database.py`
+- [x] **MySQL Procedure implementation** (PARTIAL)
+  - **Status:** Engine CRUD + introspection implemented, integration tests added.
+  - **Files:** `structures/engines/mysql/context.py`, `structures/engines/mysql/database.py`, `tests/engines/mysql/test_integration_suite.py`, `tests/engines/base_procedure_tests.py`
 
-- [ ] **MariaDB Procedure implementation**
-  - **Current blocker:** `build_empty_procedure` not implemented in MariaDB context.
-  - **Files:** `structures/engines/mariadb/context.py`, `structures/engines/mariadb/database.py`
+- [x] **MariaDB Procedure implementation** (PARTIAL)
+  - **Status:** Engine CRUD + introspection implemented, integration tests added.
+  - **Files:** `structures/engines/mariadb/context.py`, `structures/engines/mariadb/database.py`, `tests/engines/mariadb/test_integration_suite.py`, `tests/engines/base_procedure_tests.py`
 
 - [ ] **Database create/drop API parity**
   - **Current state:** list/read available, lifecycle operations missing in contexts.
@@ -118,7 +118,7 @@ Before moving a PARTIAL item to DONE:
 ### Current Status
 
 - **P0 implemented (partial):** 4/4
-- **P1 gaps closed:** 0/3
+- **P1 gaps closed:** 2/3
 - **P2 UI tasks complete:** 1/5
 - **P3 advanced tasks complete:** 0/6
 

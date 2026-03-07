@@ -8,6 +8,7 @@ from tests.engines.base_column_tests import BaseColumnTests
 from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
+from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests, BaseViewDefinerTests
 
@@ -54,6 +55,17 @@ class TestMariaDBForeignKey(BaseForeignKeyTests):
 @pytest.mark.xdist_group("mariadb")
 class TestMariaDBCheck(BaseCheckTests):
     pass
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBProcedure(BaseProcedureTests):
+
+    def get_procedure_statement(self) -> str:
+        return "SELECT 1"
+
+    def get_updated_procedure_statement(self) -> str:
+        return "SELECT 2"
 
 
 @pytest.mark.integration

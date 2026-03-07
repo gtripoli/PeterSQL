@@ -12,6 +12,7 @@ from structures.engines.database import (
     SQLForeignKey,
     SQLFunction,
     SQLIndex,
+    SQLProcedure,
     SQLRecord,
     SQLTable,
     SQLTrigger,
@@ -374,6 +375,41 @@ class MySQLFunction(SQLFunction):
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
+
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
+
+
+@dataclasses.dataclass(eq=False)
+class MySQLProcedure(SQLProcedure):
+    parameters: str = ""
+    statement: str = ""
+
+    @staticmethod
+    def _render_body(statement: str) -> str:
+        body = statement.strip()
+        if body.endswith(";"):
+            return body
+
+        return f"{body};"
+
+    def create(self) -> bool:
+        body = self._render_body(self.statement)
+        query = f"""
+            CREATE PROCEDURE {self.fully_qualified_name}({self.parameters})
+            BEGIN
+                {body}
+            END
+        """
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(query)
+
+    def drop(self) -> bool:
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(
+            f"DROP PROCEDURE IF EXISTS {self.fully_qualified_name}"
+        )
 
     def alter(self) -> bool:
         self.drop()

@@ -5,7 +5,7 @@ from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLFunction, SQLDatabase, SQLCheck
+from structures.engines.database import SQLTable, SQLCheck, SQLColumn, SQLIndex, SQLView, SQLRecord, SQLTrigger, SQLFunction, SQLDatabase, SQLForeignKey, SQLProcedure
 
 from structures.engines.mariadb.indextype import MariaDBIndexType
 from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBIndexBuilder
@@ -377,6 +377,41 @@ class MariaDBFunction(SQLFunction):
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
+
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
+
+
+@dataclasses.dataclass(eq=False)
+class MariaDBProcedure(SQLProcedure):
+    parameters: str = ""
+    statement: str = ""
+
+    @staticmethod
+    def _render_body(statement: str) -> str:
+        body = statement.strip()
+        if body.endswith(";"):
+            return body
+
+        return f"{body};"
+
+    def create(self) -> bool:
+        body = self._render_body(self.statement)
+        query = f"""
+            CREATE PROCEDURE {self.fully_qualified_name}({self.parameters})
+            BEGIN
+                {body}
+            END
+        """
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(query)
+
+    def drop(self) -> bool:
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(
+            f"DROP PROCEDURE IF EXISTS {self.fully_qualified_name}"
+        )
 
     def alter(self) -> bool:
         self.drop()
