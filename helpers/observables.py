@@ -2,11 +2,10 @@ import copy
 import enum
 import inspect
 import weakref
+
 from threading import Timer
 
 from typing import Callable, TypeVar, Generic, Any, SupportsIndex, Union, Optional, cast, Self, Hashable
-
-import wx
 
 from helpers.logger import logger
 
@@ -365,7 +364,7 @@ class ObservableLazyList(ObservableList[T]):
 
 
 class ObservableObject(Observable):
-    def _get_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex]):
+    def _get_in_ref(self, ref: Union[dict, list, Any], key: Union[str, SupportsIndex]):
         if isinstance(ref, dict):
             return ref.get(key)
         elif isinstance(ref, list):
@@ -373,7 +372,7 @@ class ObservableObject(Observable):
         else:
             return getattr(ref, str(key), None)
 
-    def _set_in_ref(self, ref: Union[Dict, List, Any], key: Union[str, SupportsIndex], value: Any):
+    def _set_in_ref(self, ref: Union[dict, list, Any], key: Union[str, SupportsIndex], value: Any):
         if isinstance(ref, dict):
             ref[key] = value
         elif isinstance(ref, list):

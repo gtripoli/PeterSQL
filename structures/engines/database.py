@@ -76,6 +76,10 @@ class SQLDatabase(abc.ABC):
             if getattr(self, observable_lazy_list_name, None) != (observable_lazy_list := getattr(original_database, observable_lazy_list_name, None)):
                 observable_lazy_list.refresh()
 
+    @abc.abstractmethod
+    def apply(self) -> bool:
+        raise NotImplementedError
+
 
 @dataclasses.dataclass(eq=False)
 class SQLTable(abc.ABC):

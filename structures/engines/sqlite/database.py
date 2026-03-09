@@ -15,7 +15,8 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 
 @dataclasses.dataclass
 class SQLiteDatabase(SQLDatabase):
-    pass
+    def apply(self) -> bool:
+        return False
 
 
 @dataclasses.dataclass(eq=False)

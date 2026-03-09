@@ -13,7 +13,29 @@ from structures.engines.postgresql.builder import PostgreSQLColumnBuilder, Postg
 
 @dataclasses.dataclass
 class PostgreSQLDatabase(SQLDatabase):
-    pass
+    tablespace: Optional[str] = None
+    connection_limit: Optional[int] = None
+
+    def apply(self) -> bool:
+        statements: list[str] = []
+
+        if self.tablespace:
+            statements.append(
+                f"ALTER DATABASE {self.context.quote_identifier(self.name)} SET TABLESPACE {self.context.quote_identifier(self.tablespace)}"
+            )
+
+        if self.connection_limit is not None:
+            statements.append(
+                f"ALTER DATABASE {self.context.quote_identifier(self.name)} CONNECTION LIMIT {int(self.connection_limit)}"
+            )
+
+        if not statements:
+            return False
+
+        for statement in statements:
+            self.context.execute(statement)
+
+        return True
 
 
 @dataclasses.dataclass(eq=False)

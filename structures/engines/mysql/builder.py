@@ -7,7 +7,7 @@ from structures.engines.database import SQLColumn
 class MySQLColumnBuilder(AbstractColumnBuilder):
     TEMPLATE = ["%(name)s", "%(datatype)s", "%(unsigned)s", "%(zerofill)s",
                 "%(collate)s", "%(nullable)s", "%(default)s", "%(auto_increment)s",
-                "%(unique)s", "%(primary_key)s", "%(comment)s", "%(check)s",
+                "%(unique)s", "%(comment)s", "%(check)s",
                 # TODO: COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT} - STORAGE {DISK|MEMORY}]
                 # "%(format)s","%(storage)s",
                 "%(generated)s"]
@@ -51,7 +51,7 @@ class MySQLColumnBuilder(AbstractColumnBuilder):
 class MySQLIndexBuilder(AbstractIndexBuilder):
     TEMPLATE = ["%(type)s", "%(name)s", "(%(columns)s)"]
 
-    def __init__(self, index: 'MariaDBIndex', exclude: Optional[List[str]] = None):
+    def __init__(self, index: 'MariaDBIndex', exclude: Optional[list[str]] = None):
         super().__init__(index, exclude)
 
     @property

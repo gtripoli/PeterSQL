@@ -25,6 +25,28 @@ from structures.engines.mysql.indextype import MySQLIndexType
 @dataclasses.dataclass
 class MySQLDatabase(SQLDatabase):
     default_collation: str = None
+    character_set: Optional[str] = None
+    encryption: Optional[str] = None
+
+    def apply(self) -> bool:
+        clauses: list[str] = []
+
+        if self.character_set:
+            clauses.append(f"CHARACTER SET {self.context.quote_identifier(self.character_set)}")
+
+        if self.default_collation:
+            clauses.append(f"COLLATE {self.context.quote_identifier(self.default_collation)}")
+
+        if self.encryption:
+            clauses.append(f"ENCRYPTION = '{str(self.encryption).upper()}'")
+
+        if not clauses:
+            return False
+
+        self.context.execute(
+            f"ALTER DATABASE {self.context.quote_identifier(self.name)} {' '.join(clauses)}"
+        )
+        return True
 
 
 
