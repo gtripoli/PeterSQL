@@ -15,7 +15,10 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 
 @dataclasses.dataclass
 class SQLiteDatabase(SQLDatabase):
-    def apply(self) -> bool:
+    def create(self) -> bool:
+        return False
+
+    def alter(self) -> bool:
         return False
 
 

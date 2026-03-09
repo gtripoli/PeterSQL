@@ -76,8 +76,22 @@ class SQLDatabase(abc.ABC):
             if getattr(self, observable_lazy_list_name, None) != (observable_lazy_list := getattr(original_database, observable_lazy_list_name, None)):
                 observable_lazy_list.refresh()
 
+    @property
+    def is_new(self) -> bool:
+        return self.id <= -1
+
+    def save(self) -> bool:
+        if self.is_new:
+            return self.create()
+
+        return self.alter()
+
     @abc.abstractmethod
-    def apply(self) -> bool:
+    def create(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self) -> bool:
         raise NotImplementedError
 
 

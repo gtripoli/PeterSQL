@@ -340,7 +340,7 @@ class MainFrameController(MainFrameView):
             return
 
         try:
-            database.apply()
+            database.save()
             session.context.databases.refresh()
 
             database = next(

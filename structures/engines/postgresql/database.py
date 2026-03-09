@@ -16,7 +16,10 @@ class PostgreSQLDatabase(SQLDatabase):
     tablespace: Optional[str] = None
     connection_limit: Optional[int] = None
 
-    def apply(self) -> bool:
+    def create(self) -> bool:
+        return False
+
+    def alter(self) -> bool:
         statements: list[str] = []
 
         if self.tablespace:

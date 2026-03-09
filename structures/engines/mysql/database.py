@@ -28,7 +28,10 @@ class MySQLDatabase(SQLDatabase):
     character_set: Optional[str] = None
     encryption: Optional[str] = None
 
-    def apply(self) -> bool:
+    def create(self) -> bool:
+        return False
+
+    def alter(self) -> bool:
         clauses: list[str] = []
 
         if self.character_set:
