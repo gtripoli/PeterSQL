@@ -221,7 +221,8 @@ jobs:
         run: echo "Build scripts are not ready yet."
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
+    # Temporarily disabled: release flow is not ready yet.
+    if: false
     runs-on: ubuntu-latest
 
     steps:
