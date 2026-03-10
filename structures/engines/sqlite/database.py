@@ -1,6 +1,6 @@
 import re
 import dataclasses
-from typing import Self, Optional, Dict
+from typing import Self, Optional
 
 from helpers.logger import logger
 
@@ -101,7 +101,7 @@ class SQLiteTable(SQLTable):
         constraints = []
         primary_keys = []
         unique_indexes = []
-        columns_definitions: Dict[str, str] = {}
+        columns_definitions: dict[str, str] = {}
 
         for index in self.indexes:
             if index.type == SQLiteIndexType.PRIMARY:

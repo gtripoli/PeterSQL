@@ -101,6 +101,14 @@ jobs:
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
 
+      - name: Preinstall wxPython from wheelhouse
+        run: |
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
+            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
+          else
+            echo "No wxPython wheel found in wheelhouse"
+          fi
+
       - name: Install dependencies from wheelhouse (fallback on build)
         run: |
           if uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-build; then
@@ -193,6 +201,14 @@ jobs:
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
+
+      - name: Preinstall wxPython from wheelhouse
+        run: |
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
+            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
+          else
+            echo "No wxPython wheel found in wheelhouse"
+          fi
 
       - name: Install dependencies from wheelhouse (fallback on build)
         run: |

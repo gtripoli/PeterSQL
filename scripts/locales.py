@@ -8,13 +8,12 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from constants import Language
+from constants import WORKDIR, Language
 
 APP_NAME = "petersql"
 LANGUAGES = Language.get_codes()
 
-BASE_DIR = Path(__file__).parent
-LOCALE_DIR = BASE_DIR.joinpath("locale")
+LOCALE_DIR = WORKDIR.joinpath("locale")
 POT_FILE = LOCALE_DIR.joinpath(f"{APP_NAME}.pot")
 
 def run(cmd):

@@ -105,7 +105,7 @@ class BaseDataViewTreeModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         AbstractBaseDataModel.__init__(self, column_count)
         wx.dataview.PyDataViewModel.__init__(self)
 
-    def _load(self, data: List[Any]):
+    def _load(self, data: list[Any]):
         self.clear()
         AbstractBaseDataModel.load(self, data)
         self.Cleared()
