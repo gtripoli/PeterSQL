@@ -2,6 +2,7 @@ name: CI
 
 permissions:
   contents: write
+  actions: write
 
 on:
   push:
@@ -82,7 +83,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
 
-          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
             echo "wxPython wheel found in cache, skipping wheel build"
             echo "needs_build=false" >> "$GITHUB_OUTPUT"
           else
@@ -95,6 +96,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
           python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
@@ -109,7 +111,7 @@ jobs:
           fi
 
       - name: Run tests (--all)
-        run: xvfb-run -a ./scripts/runtest.py --all
+        run: xvfb-run -a uv run ./scripts/runtest.py --all
 
   update:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
@@ -174,7 +176,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
 
-          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
             echo "wxPython wheel found in cache, skipping wheel build"
             echo "needs_build=false" >> "$GITHUB_OUTPUT"
           else
@@ -187,6 +189,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
           python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
@@ -201,7 +204,7 @@ jobs:
           fi
 
       - name: Run tests and update README (--update)
-        run: xvfb-run -a ./scripts/runtest.py --update
+        run: xvfb-run -a uv run ./scripts/runtest.py --update
 
       - name: Commit and push updated README
         run: |

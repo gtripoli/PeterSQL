@@ -31,6 +31,9 @@ from windows.dialogs.connections.repository import ConnectionsRepository
 
 
 class ConnectionsManager(ConnectionsDialog):
+    _SETTINGS_SECTION = "connections_dialog"
+    _SETTINGS_EXPANDED_DIRECTORIES = "expanded_directories"
+
     def __init__(self, parent):
         super().__init__(parent)
         self._app = wx.GetApp()
@@ -83,6 +86,7 @@ class ConnectionsManager(ConnectionsDialog):
         self._pending_parent_directory_id = None
         self._setup_event_handlers()
         self._update_tree_menu_state()
+        wx.CallAfter(self._restore_expanded_directory_paths_from_settings)
 
     def _update_tree_menu_state(self):
         selected_connection = CURRENT_CONNECTION()
@@ -229,10 +233,74 @@ class ConnectionsManager(ConnectionsDialog):
             wx.dataview.EVT_DATAVIEW_ITEM_CONTEXT_MENU,
             self._on_tree_item_context_menu,
         )
+        self.connections_tree_ctrl.Bind(
+            wx.dataview.EVT_DATAVIEW_ITEM_EXPANDED,
+            self._on_tree_expansion_changed,
+        )
+        self.connections_tree_ctrl.Bind(
+            wx.dataview.EVT_DATAVIEW_ITEM_COLLAPSED,
+            self._on_tree_expansion_changed,
+        )
 
         CURRENT_DIRECTORY.subscribe(self._on_current_directory)
         CURRENT_CONNECTION.subscribe(self._on_current_connection)
         PENDING_CONNECTION.subscribe(self._on_pending_connection)
+
+    @staticmethod
+    def _serialize_expanded_directory_paths(paths) -> list[list[int]]:
+        serialized_paths = []
+        for path in sorted(paths):
+            if not path:
+                continue
+
+            if not all(isinstance(node_id, int) for node_id in path):
+                continue
+
+            serialized_paths.append([int(node_id) for node_id in path])
+
+        return serialized_paths
+
+    @staticmethod
+    def _deserialize_expanded_directory_paths(raw_paths) -> set[tuple[int, ...]]:
+        if not isinstance(raw_paths, list):
+            return set()
+
+        deserialized_paths = set()
+        for raw_path in raw_paths:
+            if not isinstance(raw_path, list) or not raw_path:
+                continue
+
+            if not all(isinstance(node_id, int) for node_id in raw_path):
+                continue
+
+            deserialized_paths.add(tuple(int(node_id) for node_id in raw_path))
+
+        return deserialized_paths
+
+    def _save_expanded_directory_paths_to_settings(self) -> None:
+        expanded_paths = self._capture_expanded_directory_paths()
+        serialized_paths = self._serialize_expanded_directory_paths(expanded_paths)
+
+        if self._app.settings.get_value(self._SETTINGS_SECTION) is None:
+            self._app.settings.set_value(self._SETTINGS_SECTION, value={})
+
+        self._app.settings.set_value(
+            self._SETTINGS_SECTION,
+            self._SETTINGS_EXPANDED_DIRECTORIES,
+            value=serialized_paths,
+        )
+
+    def _restore_expanded_directory_paths_from_settings(self) -> None:
+        raw_paths = self._app.settings.get_value(
+            self._SETTINGS_SECTION,
+            self._SETTINGS_EXPANDED_DIRECTORIES,
+        )
+        expanded_paths = self._deserialize_expanded_directory_paths(raw_paths)
+        self._restore_expanded_directory_paths(expanded_paths)
+
+    def _on_tree_expansion_changed(self, event) -> None:
+        self._save_expanded_directory_paths_to_settings()
+        event.Skip()
 
     def _on_tree_item_context_menu(self, event):
         position = event.GetPosition()
@@ -760,6 +828,8 @@ class ConnectionsManager(ConnectionsDialog):
         wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def on_exit(self, event):
+        self._save_expanded_directory_paths_to_settings()
+
         if not self._app.main_frame:
             self._app.do_exit(event)
         else:
