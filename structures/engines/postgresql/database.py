@@ -16,8 +16,24 @@ class PostgreSQLDatabase(SQLDatabase):
     tablespace: Optional[str] = None
     connection_limit: Optional[int] = None
 
+    def _build_create_database_clauses(self) -> list[str]:
+        clauses: list[str] = []
+
+        if self.tablespace:
+            clauses.append(f"TABLESPACE {self.context.quote_identifier(self.tablespace)}")
+
+        if self.connection_limit is not None:
+            clauses.append(f"CONNECTION LIMIT {int(self.connection_limit)}")
+
+        return clauses
+
     def create(self) -> bool:
-        return False
+        clauses = self._build_create_database_clauses()
+        query = f"CREATE DATABASE {self.context.quote_identifier(self.name)}"
+        if clauses:
+            query += f" {' '.join(clauses)}"
+
+        return self.context.execute(query)
 
     def alter(self) -> bool:
         statements: list[str] = []
@@ -39,6 +55,10 @@ class PostgreSQLDatabase(SQLDatabase):
             self.context.execute(statement)
 
         return True
+
+    def drop(self) -> bool:
+        query = f"DROP DATABASE {self.context.quote_identifier(self.name)}"
+        return self.context.execute(query)
 
 
 @dataclasses.dataclass(eq=False)
@@ -242,8 +262,17 @@ class PostgreSQLColumn(SQLColumn):
 
 @dataclasses.dataclass(eq=False)
 class PostgreSQLIndex(SQLIndex):
+    def raw_create(self) -> str:
+        if self.type.name == "PRIMARY":
+            return ""
+
+        return str(PostgreSQLIndexBuilder(self, inline=False))
+
     def create(self) -> bool:
-        statement = str(PostgreSQLIndexBuilder(self, inline=False))
+        statement = self.raw_create()
+        if not statement:
+            return True
+
         return self.table.database.context.execute(statement)
 
     def drop(self) -> bool:
@@ -373,9 +402,11 @@ class PostgreSQLView(SQLView):
     def fully_qualified_name(self):
         return self.database.context.qualify('public', self.name)
     
+    def raw_create(self) -> str:
+        return f'CREATE VIEW {self.fully_qualified_name} AS {self.statement};'
+
     def create(self) -> bool:
-        statement = f'CREATE VIEW {self.fully_qualified_name} AS {self.statement};'
-        return self.database.context.execute(statement)
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         statement = f'DROP VIEW IF EXISTS {self.fully_qualified_name};'
@@ -398,8 +429,8 @@ class PostgreSQLFunction(SQLFunction):
     def fully_qualified_name(self):
         return self.database.context.qualify('public', self.name)
     
-    def create(self) -> bool:
-        create_statement = f"""
+    def raw_create(self) -> str:
+        return f"""
             CREATE OR REPLACE FUNCTION {self.fully_qualified_name}({self.parameters})
             RETURNS {self.returns}
             LANGUAGE {self.language}
@@ -410,7 +441,9 @@ class PostgreSQLFunction(SQLFunction):
             END;
             $$;
         """
-        return self.database.context.execute(create_statement)
+
+    def create(self) -> bool:
+        return self.database.context.execute(self.raw_create())
     
     def drop(self) -> bool:
         statement = f'DROP FUNCTION IF EXISTS {self.fully_qualified_name}({self.parameters});'
@@ -431,8 +464,8 @@ class PostgreSQLProcedure(SQLProcedure):
     def fully_qualified_name(self):
         return self.database.context.qualify('public', self.name)
     
-    def create(self) -> bool:
-        create_statement = f"""
+    def raw_create(self) -> str:
+        return f"""
             CREATE OR REPLACE PROCEDURE {self.fully_qualified_name}({self.parameters})
             LANGUAGE {self.language}
             AS $$
@@ -441,7 +474,9 @@ class PostgreSQLProcedure(SQLProcedure):
             END;
             $$;
         """
-        return self.database.context.execute(create_statement)
+
+    def create(self) -> bool:
+        return self.database.context.execute(self.raw_create())
     
     def drop(self) -> bool:
         statement = f'DROP PROCEDURE IF EXISTS {self.fully_qualified_name}({self.parameters});'
@@ -454,8 +489,11 @@ class PostgreSQLProcedure(SQLProcedure):
 
 @dataclasses.dataclass
 class PostgreSQLTrigger(SQLTrigger):
+    def raw_create(self) -> str:
+        return self.statement
+
     def create(self) -> bool:
-        return self.database.context.execute(self.statement)
+        return self.database.context.execute(self.raw_create())
 
     def alter(self) -> bool:
         self.drop()

@@ -386,6 +386,65 @@ class MainFrameController(MainFrameView):
             logger.error(str(ex), exc_info=True)
             wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
 
+    def on_delete_database(self, event: wx.Event):
+        database = CURRENT_DATABASE.get_value()
+        session = CURRENT_SESSION.get_value()
+
+        if database is None or session is None:
+            return
+
+        choice = wx.MessageDialog(
+            None,
+            message=_(
+                "Do you want to create a dump before dropping database '{database_name}'?\n\n"
+                "Dump is not implemented yet.\n"
+                "- Yes: open dump flow (coming soon, no drop).\n"
+                "- No: drop the database now."
+            ).format(database_name=database.name),
+            caption=_("Delete database"),
+            style=wx.YES_NO | wx.CANCEL | wx.CANCEL_DEFAULT | wx.ICON_WARNING,
+        ).ShowModal()
+
+        if choice == wx.ID_YES:
+            wx.MessageBox(
+                _("Dump is not implemented yet. No action has been performed."),
+                _("Dump not available"),
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
+
+        if choice != wx.ID_NO:
+            return
+
+        try:
+            dropped = database.drop()
+
+            if not dropped:
+                wx.MessageBox(
+                    _("Database deletion is not supported by this engine."),
+                    _("Delete database"),
+                    wx.OK | wx.ICON_WARNING,
+                )
+                return
+
+            session.context.databases.refresh()
+
+            CURRENT_DATABASE.set_value(None)
+            next_database = next(iter(session.context.databases.get_value()), None)
+            if next_database is not None:
+                CURRENT_DATABASE.set_value(next_database)
+                session.context.set_database(next_database)
+
+            wx.MessageBox(
+                _("Database deleted successfully"),
+                _("Success"),
+                wx.OK | wx.ICON_INFORMATION,
+            )
+
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
+
     # VIEW
     def _on_current_view(self, current: SQLView):
         self.toggle_panel(current)

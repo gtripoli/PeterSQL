@@ -11,6 +11,7 @@ import pytest
 from structures.engines.postgresql.datatype import PostgreSQLDataType
 from structures.engines.postgresql.indextype import PostgreSQLIndexType
 
+from tests.engines.base_database_tests import BaseDatabaseCreateAlterTests
 from tests.engines.base_table_tests import BaseTableTests
 from tests.engines.base_record_tests import BaseRecordTests
 from tests.engines.base_column_tests import BaseColumnTests
@@ -136,3 +137,16 @@ class TestPostgreSQLViewIsNew(BaseViewIsNewTests):
     
     def get_simple_view_statement(self) -> str:
         return "SELECT 1 as id"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLDatabase(BaseDatabaseCreateAlterTests):
+
+    def get_alter_options(self) -> dict[str, int]:
+        return {
+            "connection_limit": 50,
+        }
+
+    def requires_autocommit_for_database_ddl(self) -> bool:
+        return True

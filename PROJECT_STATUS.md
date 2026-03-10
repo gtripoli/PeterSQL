@@ -1,6 +1,6 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-03-07  
+> **Last Updated:** 2026-03-10  
 > **Validation Policy:** new engine features are marked **PARTIAL** until broader integration validation is complete.
 
 ---
@@ -27,6 +27,8 @@
 | **PostgreSQL Procedure** | Class + CRUD methods exist, context introspection exists, integration tests now cover create/alter/drop across supported PG versions; broader validation still ongoing. |
 | **Check Constraints (MySQL/MariaDB/PostgreSQL)** | Engine classes and introspection exist, cross-version validation still needed. |
 | **Connection Reliability Features** | Persistent connection statistics, empty DB password support, and TLS auto-retry are implemented and need longer real-world validation. |
+| **SQL Dump / Backup** | `SQLDatabase.dump()` produces object-driven `.sql` dumps (schema + records); restore/import workflow is still missing. |
+| **Database Lifecycle (Create/Drop)** | Engine database objects expose lifecycle methods, but context/UI workflow parity is still incomplete. |
 
 ### ❌ Missing / Not Implemented
 
@@ -36,7 +38,6 @@
 | **Database Create/Drop UI** | No complete create/drop workflow across engines. |
 | **Schema/Sequence Management** | PostgreSQL schema/sequence CRUD is not available. |
 | **User/Role/Grants** | Not implemented for any engine. |
-| **Import/Export** | Dump/restore and structured data import/export not implemented. |
 
 ---
 
@@ -72,7 +73,7 @@
 | View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
 | Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MySQLCheck` + `get_checks()`), validation ongoing. |
 | Procedure | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MySQLProcedure` + `get_procedures()`), broader validation ongoing. |
-| Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
+| Database Create/Drop | 🟡 | ✅ | 🟡 | 🟡 | Engine object lifecycle methods exist; context/UI wiring still partial. |
 
 ---
 
@@ -84,7 +85,7 @@
 | View / Trigger / Function | ✅ | ✅ | ✅ | ✅ | Implemented in engine layer. |
 | Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MariaDBCheck` + `get_checks()`), validation ongoing. |
 | Procedure | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`MariaDBProcedure` + `get_procedures()`), broader validation ongoing. |
-| Database Create/Drop | ❌ | ✅ | ❌ | ❌ | Read-only listing in context. |
+| Database Create/Drop | 🟡 | ✅ | 🟡 | 🟡 | Engine object lifecycle methods exist; context/UI wiring still partial. |
 
 ---
 
@@ -97,6 +98,7 @@
 | Function | 🟡 | 🟡 | 🟡 | 🟡 | `PostgreSQLFunction` implemented, still under validation. |
 | Procedure | 🟡 | 🟡 | 🟡 | 🟡 | `PostgreSQLProcedure` implemented, still under validation. |
 | Check Constraint | 🟡 | 🟡 | 🟡 | 🟡 | Implemented (`PostgreSQLCheck` + `get_checks()`), validation ongoing. |
+| Database Create/Drop | 🟡 | ✅ | 🟡 | 🟡 | Engine object lifecycle methods exist; context/UI wiring still partial. |
 | Schema / Sequence | ❌ | 🟡 | ❌ | ❌ | Basic schema visibility exists; no CRUD layer yet. |
 
 ---
@@ -126,12 +128,14 @@
 - Empty database password accepted in connection validation.
 - Automatic TLS retry path for MySQL/MariaDB when server requires TLS.
 - Unit reliability coverage for MySQL/MariaDB TLS auto-retry and SSH tunnel lifecycle contracts.
+- SQL dump/backup pipeline is now object-driven via `SQLDatabase.dump()` + per-object `raw_create()`.
 - CI workflow split into `test`, `update` (nightly), and `release` jobs.
 
 ### Main Remaining Risks
 
 - PostgreSQL Function/Procedure now have integration coverage for create/alter/drop, but still need broader long-run/manual validation.
 - Check constraints across MySQL/MariaDB/PostgreSQL need more cross-version coverage.
+- SQL dump/backup still needs broader cross-engine manual restore validation.
 - SSH tunnel integration validation with testcontainers remains blocked (existing SSH integration suites are still skipped).
 - UI parity lags engine parity for Trigger/Function/Procedure editors.
 
@@ -147,7 +151,7 @@
 
 ### Priority B — Close Engine Gaps
 
-1. Database create/drop methods in engine contexts.
+1. Complete context/UI wiring for database lifecycle (create/drop) across engines.
 
 ### Priority C — UI Completeness
 
@@ -160,7 +164,7 @@
 1. PostgreSQL schema CRUD.
 2. PostgreSQL sequence CRUD.
 3. User/role/grants management.
-4. Import/export workflows.
+4. Restore and structured import/export workflows.
 
 ---
 

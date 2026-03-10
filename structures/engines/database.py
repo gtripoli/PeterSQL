@@ -13,6 +13,7 @@ from helpers.observables import ObservableLazyList
 
 from structures.engines.datatype import SQLDataType
 from structures.engines.indextype import SQLIndexType
+from structures.engines.dump import create_database_dump
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
@@ -93,6 +94,23 @@ class SQLDatabase(abc.ABC):
     @abc.abstractmethod
     def alter(self) -> bool:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        raise NotImplementedError
+
+    def dump(
+        self,
+        /,
+        *,
+        include_schema: bool = True,
+        include_records: bool = True,
+    ) -> str:
+        return create_database_dump(
+            self,
+            include_schema=include_schema,
+            include_records=include_records,
+        )
 
 
 @dataclasses.dataclass(eq=False)
@@ -213,9 +231,8 @@ class SQLTable(abc.ABC):
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
 
-    @abc.abstractmethod
     def raw_create(self) -> str:
-        raise NotImplementedError
+        raise NotImplementedError(f"{self.__class__.__name__}.raw_create() is not implemented")
 
     def get_identifier_indexes(self) -> list['SQLIndex']:
         identifier_indexes = []
@@ -490,6 +507,9 @@ class SQLIndex(abc.ABC):
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         return cls(**field_values)
 
+    def raw_create(self) -> str:
+        raise NotImplementedError(f"{self.__class__.__name__}.raw_create() is not implemented")
+
 
 @dataclasses.dataclass(eq=False)
 class SQLForeignKey(abc.ABC):
@@ -695,6 +715,10 @@ class SQLView(abc.ABC):
     def alter(self) -> bool:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def raw_create(self) -> str:
+        raise NotImplementedError
+
 
 @dataclasses.dataclass(eq=False)
 class SQLTrigger(abc.ABC):
@@ -744,6 +768,10 @@ class SQLTrigger(abc.ABC):
     def alter(self) -> bool:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def raw_create(self) -> str:
+        raise NotImplementedError
+
 
 @dataclasses.dataclass(eq=False)
 class SQLProcedure(abc.ABC):
@@ -790,6 +818,10 @@ class SQLProcedure(abc.ABC):
     def alter(self) -> bool:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def raw_create(self) -> str:
+        raise NotImplementedError
+
 
 @dataclasses.dataclass(eq=False)
 class SQLFunction(abc.ABC):
@@ -834,6 +866,10 @@ class SQLFunction(abc.ABC):
 
     @abc.abstractmethod
     def alter(self) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def raw_create(self) -> str:
         raise NotImplementedError
 
 

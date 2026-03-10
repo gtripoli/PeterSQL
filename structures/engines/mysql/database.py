@@ -28,10 +28,7 @@ class MySQLDatabase(SQLDatabase):
     character_set: Optional[str] = None
     encryption: Optional[str] = None
 
-    def create(self) -> bool:
-        return False
-
-    def alter(self) -> bool:
+    def _build_database_clauses(self) -> list[str]:
         clauses: list[str] = []
 
         if self.character_set:
@@ -43,6 +40,19 @@ class MySQLDatabase(SQLDatabase):
         if self.encryption:
             clauses.append(f"ENCRYPTION = '{str(self.encryption).upper()}'")
 
+        return clauses
+
+    def create(self) -> bool:
+        clauses = self._build_database_clauses()
+        query = f"CREATE DATABASE {self.context.quote_identifier(self.name)}"
+        if clauses:
+            query += f" {' '.join(clauses)}"
+
+        return self.context.execute(query)
+
+    def alter(self) -> bool:
+        clauses = self._build_database_clauses()
+
         if not clauses:
             return False
 
@@ -50,6 +60,10 @@ class MySQLDatabase(SQLDatabase):
             f"ALTER DATABASE {self.context.quote_identifier(self.name)} {' '.join(clauses)}"
         )
         return True
+
+    def drop(self) -> bool:
+        query = f"DROP DATABASE {self.context.quote_identifier(self.name)}"
+        return self.context.execute(query)
 
 
 
@@ -222,6 +236,9 @@ class MySQLColumn(SQLColumn):
 
 @dataclasses.dataclass(eq=False)
 class MySQLIndex(SQLIndex):
+    def raw_create(self) -> str:
+        return str(MySQLIndexBuilder(self))
+
     def create(self) -> bool:
         if self.type == MySQLIndexType.PRIMARY:
             return self.table.database.context.execute(f"""ALTER TABLE `{self.table.database.name}`.`{self.table.name}` ADD PRIMARY KEY ({", ".join(self.columns)})""")
@@ -354,9 +371,12 @@ class MySQLRecord(SQLRecord):
 
 
 class MySQLView(SQLView):
+    def raw_create(self) -> str:
+        return f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}"
+
     def create(self) -> bool:
         self.database.context.set_database(self.database)
-        return self.database.context.execute(f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         self.database.context.set_database(self.database)
@@ -368,8 +388,20 @@ class MySQLView(SQLView):
 
 
 class MySQLTrigger(SQLTrigger):
+    def _show_create_trigger(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE TRIGGER {self.quoted_name}")
+        row = context.fetchone()
+        return row.get("SQL Original Statement", "") if row else ""
+
+    def raw_create(self) -> str:
+        if self.statement.strip().upper().startswith(("BEFORE", "AFTER")):
+            return f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}"
+
+        return self._show_create_trigger()
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")
@@ -386,9 +418,21 @@ class MySQLFunction(SQLFunction):
     deterministic: bool = False
     sql: str = ""
 
+    def _show_create_function(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE FUNCTION {self.fully_qualified_name}")
+        row = context.fetchone()
+        return row.get("Create Function", "") if row else ""
+
     def create(self) -> bool:
+        return self.database.context.execute(self.raw_create())
+
+    def raw_create(self) -> str:
+        if not self.sql.strip() or not self.returns.strip():
+            return self._show_create_function()
+
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
-        query = f"""
+        return f"""
             CREATE FUNCTION {self.fully_qualified_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
@@ -396,7 +440,6 @@ class MySQLFunction(SQLFunction):
                 {self.sql};
             END
         """
-        return self.database.context.execute(query)
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
@@ -419,16 +462,27 @@ class MySQLProcedure(SQLProcedure):
 
         return f"{body};"
 
+    def _show_create_procedure(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE PROCEDURE {self.fully_qualified_name}")
+        row = context.fetchone()
+        return row.get("Create Procedure", "") if row else ""
+
     def create(self) -> bool:
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(self.raw_create())
+
+    def raw_create(self) -> str:
+        if not self.statement.strip():
+            return self._show_create_procedure()
+
         body = self._render_body(self.statement)
-        query = f"""
+        return f"""
             CREATE PROCEDURE {self.fully_qualified_name}({self.parameters})
             BEGIN
                 {body}
             END
         """
-        self.database.context.set_database(self.database)
-        return self.database.context.execute(query)
 
     def drop(self) -> bool:
         self.database.context.set_database(self.database)

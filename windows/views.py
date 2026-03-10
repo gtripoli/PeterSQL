@@ -1328,7 +1328,10 @@ class MainFrameView ( wx.Frame ):
         self.btn_cancel_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer138.Add( self.btn_cancel_database, 0, wx.ALL, 5 )
 
-        self.btn_apply_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_delete_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer138.Add( self.btn_delete_database, 0, wx.ALL, 5 )
+
+        self.btn_apply_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer138.Add( self.btn_apply_database, 0, wx.ALL, 5 )
 
 
@@ -2361,6 +2364,7 @@ class MainFrameView ( wx.Frame ):
         self.btn_clone_table.Bind( wx.EVT_BUTTON, self.on_clone_table )
         self.btn_delete_table1.Bind( wx.EVT_BUTTON, self.on_delete_table )
         self.btn_cancel_database.Bind( wx.EVT_BUTTON, self.on_cancel_database )
+        self.btn_delete_database.Bind( wx.EVT_BUTTON, self.on_delete_database )
         self.btn_apply_database.Bind( wx.EVT_BUTTON, self.on_apply_database )
         self.btn_delete_index.Bind( wx.EVT_BUTTON, self.on_delete_index )
         self.btn_clear_index.Bind( wx.EVT_BUTTON, self.on_clear_index )
@@ -2418,6 +2422,9 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def on_cancel_database( self, event ):
+        event.Skip()
+
+    def on_delete_database( self, event ):
         event.Skip()
 
     def on_apply_database( self, event ):

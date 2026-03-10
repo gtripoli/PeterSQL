@@ -2,6 +2,7 @@ import pytest
 from structures.engines.mariadb.datatype import MariaDBDataType
 from structures.engines.mariadb.indextype import MariaDBIndexType
 
+from tests.engines.base_database_tests import BaseDatabaseCreateAlterTests
 from tests.engines.base_table_tests import BaseTableTests
 from tests.engines.base_record_tests import BaseRecordTests
 from tests.engines.base_column_tests import BaseColumnTests
@@ -102,3 +103,20 @@ class TestMariaDBViewIsNew(BaseViewIsNewTests):
 @pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewDefiner(BaseViewDefinerTests):
     pass
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBDatabase(BaseDatabaseCreateAlterTests):
+
+    def get_create_options(self) -> dict[str, str]:
+        return {
+            "character_set": "utf8mb4",
+            "default_collation": "utf8mb4_general_ci",
+        }
+
+    def get_alter_options(self) -> dict[str, str]:
+        return {
+            "character_set": "utf8mb4",
+            "default_collation": "utf8mb4_general_ci",
+        }
