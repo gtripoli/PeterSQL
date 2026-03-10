@@ -21,37 +21,37 @@ msgstr ""
 #: helpers/__init__.py:16
 msgctxt "unit"
 msgid "B"
-msgstr ""
+msgstr "B"
 
 #: helpers/__init__.py:17
 msgctxt "unit"
 msgid "KB"
-msgstr ""
+msgstr "KB"
 
 #: helpers/__init__.py:18
 msgctxt "unit"
 msgid "MB"
-msgstr ""
+msgstr "MB"
 
 #: helpers/__init__.py:19
 msgctxt "unit"
 msgid "GB"
-msgstr ""
+msgstr "GB"
 
 #: helpers/__init__.py:20
 msgctxt "unit"
 msgid "TB"
-msgstr ""
+msgstr "TB"
 
 #: structures/ssh_tunnel.py:166
 msgid "OpenSSH client not found."
-msgstr ""
+msgstr "OpenSSH client not found."
 
 #: windows/dialogs/connections/view.py:395
 #: windows/dialogs/connections/view.py:738 windows/main/controller.py:296
 #: windows/views.py:33
 msgid "Connection"
-msgstr ""
+msgstr "Connection"
 
 #: windows/components/dataview.py:113 windows/components/dataview.py:225
 #: windows/components/dataview.py:238 windows/components/dataview.py:253
@@ -63,135 +63,135 @@ msgstr ""
 #: windows/views.py:2738 windows/views.py:2742 windows/views.py:2936
 #: windows/views.py:3137
 msgid "Name"
-msgstr ""
+msgstr "Name"
 
 #: windows/views.py:48 windows/views.py:381
 msgid "Last connection"
-msgstr ""
+msgstr "Last connection"
 
 #: windows/dialogs/connections/view.py:631 windows/views.py:61
 msgid "New directory"
-msgstr ""
+msgstr "New directory"
 
 #: windows/dialogs/connections/model.py:187
 #: windows/dialogs/connections/view.py:591 windows/views.py:65
 msgid "New connection"
-msgstr ""
+msgstr "New connection"
 
 #: windows/views.py:71
 msgid "Rename"
-msgstr ""
+msgstr "Rename"
 
 #: windows/views.py:76
 msgid "Clone connection"
-msgstr ""
+msgstr "Clone connection"
 
 #: windows/views.py:81 windows/views.py:556 windows/views.py:1290
 #: windows/views.py:1331 windows/views.py:1706 windows/views.py:1738
 #: windows/views.py:1997 windows/views.py:3273 windows/views.py:3305
 msgid "Delete"
-msgstr ""
+msgstr "Delete"
 
 #: windows/views.py:111 windows/views.py:1311 windows/views.py:1468
 #: windows/views.py:2747 windows/views.py:3192
 msgid "Engine"
-msgstr ""
+msgstr "Engine"
 
 #: windows/views.py:132
 msgid "Host + port"
-msgstr ""
+msgstr "Host + port"
 
 #: windows/views.py:148
 msgid "Username"
-msgstr ""
+msgstr "Username"
 
 #: windows/views.py:161 windows/views.py:1100
 msgid "Password"
-msgstr ""
+msgstr "Password"
 
 #: windows/views.py:177
 msgid "Use TLS"
-msgstr ""
+msgstr "Use TLS"
 
 #: windows/views.py:180
 msgid "Use SSH tunnel"
-msgstr ""
+msgstr "Use SSH tunnel"
 
 #: windows/views.py:202 windows/views.py:2668
 msgid "Filename"
-msgstr ""
+msgstr "Filename"
 
 #: windows/views.py:207 windows/views.py:324 windows/views.py:2673
 #: windows/views.py:2856
 msgid "Select a file"
-msgstr ""
+msgstr "Select a file"
 
 #: windows/views.py:207 windows/views.py:324 windows/views.py:2856
 msgid "*.*"
-msgstr ""
+msgstr "*.*"
 
 #: windows/components/dataview.py:70 windows/components/dataview.py:92
 #: windows/views.py:221 windows/views.py:1313 windows/views.py:1426
 #: windows/views.py:2748 windows/views.py:3034 windows/views.py:3150
 msgid "Comments"
-msgstr ""
+msgstr "Comments"
 
 #: windows/main/controller.py:219 windows/views.py:235 windows/views.py:683
 #: windows/views.py:837
 msgid "Settings"
-msgstr ""
+msgstr "Settings"
 
 #: windows/views.py:244
 msgid "SSH executable"
-msgstr ""
+msgstr "SSH executable"
 
 #: windows/views.py:249
 msgid "ssh"
-msgstr ""
+msgstr "ssh"
 
 #: windows/views.py:257
 msgid "SSH host + port"
-msgstr ""
+msgstr "SSH host + port"
 
 #: windows/views.py:269
 msgid "SSH host + port (the SSH server that forwards traffic to the DB)"
-msgstr ""
+msgstr "SSH host + port (the SSH server that forwards traffic to the DB)"
 
 #: windows/views.py:278
 msgid "SSH username"
-msgstr ""
+msgstr "SSH username"
 
 #: windows/views.py:291
 msgid "SSH password"
-msgstr ""
+msgstr "SSH password"
 
 #: windows/views.py:304
 msgid "Local port"
-msgstr ""
+msgstr "Local port"
 
 #: windows/views.py:310
 msgid "if the value is set to 0, the first available port will be used"
-msgstr ""
+msgstr "if the value is set to 0, the first available port will be used"
 
 #: windows/views.py:319
 msgid "Identity file"
-msgstr ""
+msgstr "Identity file"
 
 #: windows/views.py:335
 msgid "Remote host + port"
-msgstr ""
+msgstr "Remote host + port"
 
 #: windows/views.py:347
 msgid "Remote host/port is the real DB target (defaults to DB Host/Port)."
-msgstr ""
+msgstr "Remote host/port is the real DB target (defaults to DB Host/Port)."
 
 #: windows/views.py:358
 msgid "SSH Tunnel"
-msgstr ""
+msgstr "SSH Tunnel"
 
 #: windows/views.py:364 windows/views.py:1309 windows/views.py:2745
 msgid "Created at"
-msgstr ""
+msgstr "Created at"
 
 #: windows/views.py:398
 msgid "Successful connections"

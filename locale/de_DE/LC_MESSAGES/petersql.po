@@ -113,7 +113,7 @@ msgstr "Passwort"
 
 #: windows/views.py:177
 msgid "Use TLS"
-msgstr ""
+msgstr "TLS verwenden"
 
 #: windows/views.py:180
 msgid "Use SSH tunnel"
@@ -158,7 +158,7 @@ msgstr "SSH-Host + Port"
 
 #: windows/views.py:269
 msgid "SSH host + port (the SSH server that forwards traffic to the DB)"
-msgstr ""
+msgstr "SSH-Host + Port (der SSH-Server, der den Verkehr zur DB weiterleitet)"
 
 #: windows/views.py:278
 msgid "SSH username"
@@ -178,7 +178,7 @@ msgstr "wenn der Wert auf 0 gesetzt ist, wird der erste verfügbare Port verwend
 
 #: windows/views.py:319
 msgid "Identity file"
-msgstr ""
+msgstr "Identitätsdatei"
 
 #: windows/views.py:335
 #, fuzzy
@@ -187,7 +187,7 @@ msgstr "Host + Port"
 
 #: windows/views.py:347
 msgid "Remote host/port is the real DB target (defaults to DB Host/Port)."
-msgstr ""
+msgstr "Remote-Host/Port ist das eigentliche DB-Ziel (standardmäßig DB-Host/Port)."
 
 #: windows/views.py:358
 msgid "SSH Tunnel"
