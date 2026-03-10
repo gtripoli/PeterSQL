@@ -1,6 +1,6 @@
 import re
 import dataclasses
-from typing import Self, Optional, Dict
+from typing import Self, Optional
 
 from helpers.logger import logger
 
@@ -15,7 +15,14 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 
 @dataclasses.dataclass
 class SQLiteDatabase(SQLDatabase):
-    pass
+    def create(self) -> bool:
+        return False
+
+    def alter(self) -> bool:
+        return False
+
+    def drop(self) -> bool:
+        return False
 
 
 @dataclasses.dataclass(eq=False)
@@ -94,7 +101,7 @@ class SQLiteTable(SQLTable):
         constraints = []
         primary_keys = []
         unique_indexes = []
-        columns_definitions: Dict[str, str] = {}
+        columns_definitions: dict[str, str] = {}
 
         for index in self.indexes:
             if index.type == SQLiteIndexType.PRIMARY:
@@ -326,24 +333,26 @@ class SQLiteIndex(SQLIndex):
     def fully_qualified_name(self):
         return self.table.database.context.qualify(self.table.database.name, self.name)
 
-    def create(self) -> bool:
+    def raw_create(self) -> str:
         if self.type == SQLiteIndexType.PRIMARY:
-            return False  # PRIMARY is handled in table creation
+            return ""
 
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # CONSTRAINT UNIQUE is handled in table creation
+            return ""
 
         unique_index = "UNIQUE INDEX" if self.type == SQLiteIndexType.UNIQUE else "INDEX"
-
         quote_identifier = self.table.database.context.quote_identifier
-
         columns_clause = ", ".join([quote_identifier(column) for column in self.columns])
         where_clause = f" WHERE {self.condition}" if self.condition else ""
-
-        statement = (
+        return (
             f"CREATE {unique_index} IF NOT EXISTS {self.fully_qualified_name} "
-            f"ON {self.table.name}({columns_clause}){where_clause} "
+            f"ON {self.table.name}({columns_clause}){where_clause}"
         )
+
+    def create(self) -> bool:
+        statement = self.raw_create()
+        if not statement:
+            return False
 
         return self.table.database.context.execute(statement)
 
@@ -470,8 +479,11 @@ class SQLiteView(SQLView):
 
         super().__init__(id=id, name=name, database=database, statement=statement)
 
+    def raw_create(self) -> str:
+        return f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}"
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP VIEW IF EXISTS {self.fully_qualified_name}")
@@ -481,8 +493,11 @@ class SQLiteView(SQLView):
 
 
 class SQLiteTrigger(SQLTrigger):
+    def raw_create(self) -> str:
+        return f"CREATE TRIGGER IF NOT EXISTS {self.fully_qualified_name} {self.statement}"
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER IF NOT EXISTS {self.fully_qualified_name} {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")

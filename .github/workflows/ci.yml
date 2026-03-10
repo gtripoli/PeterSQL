@@ -2,6 +2,7 @@ name: CI
 
 permissions:
   contents: write
+  actions: write
 
 on:
   push:
@@ -20,7 +21,7 @@ env:
 
 jobs:
   test:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/nightly')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
 
     steps:
@@ -63,6 +64,14 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
       - name: Cache wheelhouse
         uses: actions/cache@v4
         with:
@@ -82,7 +91,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
 
-          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
             echo "wxPython wheel found in cache, skipping wheel build"
             echo "needs_build=false" >> "$GITHUB_OUTPUT"
           else
@@ -95,9 +104,18 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
           python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
+
+      - name: Preinstall wxPython from wheelhouse
+        run: |
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
+            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
+          else
+            echo "No wxPython wheel found in wheelhouse"
+          fi
 
       - name: Install dependencies from wheelhouse (fallback on build)
         run: |
@@ -109,10 +127,10 @@ jobs:
           fi
 
       - name: Run tests (--all)
-        run: xvfb-run -a ./scripts/runtest.sh --all
+        run: xvfb-run -a uv run ./scripts/runtest.py --all
 
   update:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/nightly'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
     steps:
@@ -155,6 +173,14 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
       - name: Cache wheelhouse
         uses: actions/cache@v4
         with:
@@ -174,7 +200,7 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
 
-          if ls "${WHEEL_CACHE_DIR}"/wxPython*.whl >/dev/null 2>&1; then
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
             echo "wxPython wheel found in cache, skipping wheel build"
             echo "needs_build=false" >> "$GITHUB_OUTPUT"
           else
@@ -187,9 +213,18 @@ jobs:
         run: |
           mkdir -p "${WHEEL_CACHE_DIR}"
           python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
+          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
 
       - name: Upgrade build tooling
         run: uv pip install -U pip setuptools wheel
+
+      - name: Preinstall wxPython from wheelhouse
+        run: |
+          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
+            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
+          else
+            echo "No wxPython wheel found in wheelhouse"
+          fi
 
       - name: Install dependencies from wheelhouse (fallback on build)
         run: |
@@ -201,7 +236,7 @@ jobs:
           fi
 
       - name: Run tests and update README (--update)
-        run: xvfb-run -a ./scripts/runtest.sh --update
+        run: xvfb-run -a uv run ./scripts/runtest.py --update
 
       - name: Commit and push updated README
         run: |
@@ -221,7 +256,8 @@ jobs:
         run: echo "Build scripts are not ready yet."
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Temporarily disabled: release flow is not ready yet.
+    if: false
     runs-on: ubuntu-latest
 
     steps:

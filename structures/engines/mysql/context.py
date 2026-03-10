@@ -25,6 +25,7 @@ from structures.engines.mysql.database import (
     MySQLDatabase,
     MySQLForeignKey,
     MySQLIndex,
+    MySQLProcedure,
     MySQLRecord,
     MySQLTable,
     MySQLTrigger,
@@ -182,7 +183,8 @@ class MySQLContext(AbstractContext):
             except Exception as e:
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise
-            else:
+
+            if self._cursor is not None:
                 self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:
@@ -228,10 +230,34 @@ class MySQLContext(AbstractContext):
                     total_bytes=float(row["total_bytes"]),
                     context=self,
                     get_tables_handler=self.get_tables,
+                    get_procedures_handler=self.get_procedures,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
             )
+        return results
+
+    def get_procedures(self, database: SQLDatabase) -> list[MySQLProcedure]:
+        results: list[MySQLProcedure] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'PROCEDURE'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MySQLProcedure(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    statement="",
+                )
+            )
+
         return results
 
     def get_views(self, database: SQLDatabase):
@@ -412,7 +438,7 @@ class MySQLContext(AbstractContext):
 
         return results
 
-    def get_checks(self, table: MySQLTable) -> list[MySQLCheck]:
+    def get_checks(self, table: MySQLTable) -> list["MySQLCheck"]:
         from structures.engines.mysql.database import MySQLCheck
 
         if table is None or table.is_new:
@@ -583,7 +609,7 @@ class MySQLContext(AbstractContext):
         name: Optional[str] = None,
         expression: Optional[str] = None,
         **default_values,
-    ) -> MySQLCheck:
+    ) -> "MySQLCheck":
         from structures.engines.mysql.database import MySQLCheck
 
         id = MySQLContext.get_temporary_id(table.checks)
@@ -666,8 +692,19 @@ class MySQLContext(AbstractContext):
 
     def build_empty_procedure(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
-    ):
-        raise NotImplementedError("MySQL Procedure not implemented yet")
+    ) -> MySQLProcedure:
+        id = MySQLContext.get_temporary_id(database.procedures)
+
+        if name is None:
+            name = f"procedure_{id}"
+
+        return MySQLProcedure(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            statement=default_values.get("statement", ""),
+        )
 
     def build_empty_trigger(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values

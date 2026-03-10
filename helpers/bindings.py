@@ -110,7 +110,7 @@ class BindValueControl(AbstractBindControl):
 
 
 class BindSelectionControl(AbstractBindControl):
-    def __init__(self, control: CONTROL_BIND_SELECTION, observable: Observable, initial: Optional[List[str]] = None):
+    def __init__(self, control: CONTROL_BIND_SELECTION, observable: Observable, initial: Optional[list[str]] = None):
         super().__init__(control, observable, event=wx.EVT_CHOICE)
         if initial is not None:
             self.control.Set(initial)
@@ -226,7 +226,7 @@ class AbstractMetaModel(abc.ABCMeta):
 
 
 class AbstractModel(metaclass=AbstractMetaModel):
-    observables: List[Observable] = []
+    observables: list[Observable] = []
 
     def bind_control(self, control: CONTROLS, observable: Observable):
         if isinstance(control, wx.StaticText):
@@ -246,7 +246,7 @@ class AbstractModel(metaclass=AbstractMetaModel):
 
         self.observables.append(observable)
 
-    def bind_controls(self, **controls: Union[CONTROLS, Tuple[CONTROLS, Dict]]):
+    def bind_controls(self, **controls: Union[CONTROLS, tuple[CONTROLS, dict]]):
         for name, ctrl in controls.items():
             if hasattr(self, name) and isinstance(getattr(self, name), Observable):
                 observable = getattr(self, name)

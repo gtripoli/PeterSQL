@@ -1,3 +1,5 @@
+import pathlib
+
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.configurations import SourceConfiguration
@@ -105,3 +107,24 @@ class TestSQLiteContext:
         assert ctx.quote_identifier("normal") == "normal"
         # Names with spaces are quoted using IDENTIFIER_QUOTE_CHAR
         assert ctx.quote_identifier("with space") == f'{quote}with space{quote}'
+
+    def test_database_dump(self, sqlite_session):
+        ctx = sqlite_session.context
+        database = ctx.get_databases()[0]
+
+        with ctx.transaction() as transaction:
+            transaction.execute("CREATE TABLE dump_users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+            transaction.execute("INSERT INTO dump_users (id, name) VALUES (1, 'Alice')")
+
+        dump_path = pathlib.Path(database.dump())
+        content = dump_path.read_text(encoding="utf-8")
+
+        assert dump_path.exists()
+        assert "This backup was created by PeterSQL" in content
+        assert "-- Create database" in content
+        assert "-- Create tables" in content
+        assert "-- Insert records" in content
+        assert "CREATE TABLE" in content
+        assert "INSERT INTO" in content
+
+        dump_path.unlink(missing_ok=True)

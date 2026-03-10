@@ -34,34 +34,24 @@ class AbstractBaseDataModel():
         self._column_count = column_count
 
     def load(self, data: list[Any]):
-        logger.debug(f"{self.__class__.__name__}.load: {data[:50]}")
-
         if data:
             self._data = data.copy()
 
     def filter(self, data: list[Any]):
-        logger.debug(f"{self.__class__.__name__}.filter: {data[:50]}")
-
         if data:
             self._data = data.copy()
 
     def append(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}.append: {data}")
-
         self._data.append(data)
 
         return len(self._data) - 1
 
     def insert(self, data: Any, index: int) -> int:
-        logger.debug(f"{self.__class__.__name__}._insert: {index} {data} ")
-
         self._data.insert(index, data)
 
         return index
 
     def replace(self, data: Any, index: int) -> int:
-        logger.debug(f"{self.__class__.__name__}.replace: index={index} {data}")
-
         index = self._data.index(data)
 
         self._data.remove(data)
@@ -70,15 +60,11 @@ class AbstractBaseDataModel():
         return index
 
     def move(self, data: Any, current: int, future: int) -> (int, int):
-        logger.debug(f"{self.__class__.__name__}.move: {data} current={current} future={future}")
-
         self._data[current], self._data[future] = self._data[future], self._data[current]
 
         return current, future
 
     def remove(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}.remove: {data}")
-
         index = self._data.index(data)
 
         self._data.remove(data)
@@ -86,8 +72,6 @@ class AbstractBaseDataModel():
         return index
 
     def pop(self, data: Any) -> int:
-        logger.debug(f"{self.__class__.__name__}.pop: {data}")
-
         index = self._data.index(data)
 
         self._data.pop(index)
@@ -121,7 +105,7 @@ class BaseDataViewTreeModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         AbstractBaseDataModel.__init__(self, column_count)
         wx.dataview.PyDataViewModel.__init__(self)
 
-    def _load(self, data: List[Any]):
+    def _load(self, data: list[Any]):
         self.clear()
         AbstractBaseDataModel.load(self, data)
         self.Cleared()

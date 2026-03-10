@@ -2,12 +2,14 @@ import pytest
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
 
+from tests.engines.base_database_tests import BaseDatabaseCreateAlterTests
 from tests.engines.base_table_tests import BaseTableTests
 from tests.engines.base_record_tests import BaseRecordTests
 from tests.engines.base_column_tests import BaseColumnTests
 from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
+from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests, BaseViewDefinerTests
 
@@ -58,6 +60,17 @@ class TestMySQLCheck(BaseCheckTests):
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("mysql")
+class TestMySQLProcedure(BaseProcedureTests):
+
+    def get_procedure_statement(self) -> str:
+        return "SELECT 1"
+
+    def get_updated_procedure_statement(self) -> str:
+        return "SELECT 2"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLTrigger(BaseTriggerTests):
 
     def get_trigger_statement(self, db_name: str, table_name: str) -> str:
@@ -90,3 +103,20 @@ class TestMySQLViewIsNew(BaseViewIsNewTests):
 @pytest.mark.xdist_group("mysql")
 class TestMySQLViewDefiner(BaseViewDefinerTests):
     pass
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLDatabase(BaseDatabaseCreateAlterTests):
+
+    def get_create_options(self) -> dict[str, str]:
+        return {
+            "character_set": "utf8mb4",
+            "default_collation": "utf8mb4_general_ci",
+        }
+
+    def get_alter_options(self) -> dict[str, str]:
+        return {
+            "character_set": "utf8mb4",
+            "default_collation": "utf8mb4_general_ci",
+        }

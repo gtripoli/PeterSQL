@@ -5,7 +5,7 @@ from helpers.logger import logger
 
 from structures.helpers import merge_original_current
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLFunction, SQLDatabase, SQLCheck
+from structures.engines.database import SQLTable, SQLCheck, SQLColumn, SQLIndex, SQLView, SQLRecord, SQLTrigger, SQLFunction, SQLDatabase, SQLForeignKey, SQLProcedure
 
 from structures.engines.mariadb.indextype import MariaDBIndexType
 from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBIndexBuilder
@@ -14,6 +14,45 @@ from structures.engines.mariadb.builder import MariaDBColumnBuilder, MariaDBInde
 @dataclasses.dataclass
 class MariaDBDatabase(SQLDatabase):
     default_collation: str = None
+    character_set: Optional[str] = None
+    encryption: Optional[str] = None
+
+    def _build_database_clauses(self) -> list[str]:
+        clauses: list[str] = []
+
+        if self.character_set:
+            clauses.append(f"CHARACTER SET {self.context.quote_identifier(self.character_set)}")
+
+        if self.default_collation:
+            clauses.append(f"COLLATE {self.context.quote_identifier(self.default_collation)}")
+
+        if self.encryption:
+            clauses.append(f"ENCRYPTION = '{str(self.encryption).upper()}'")
+
+        return clauses
+
+    def create(self) -> bool:
+        clauses = self._build_database_clauses()
+        query = f"CREATE DATABASE {self.context.quote_identifier(self.name)}"
+        if clauses:
+            query += f" {' '.join(clauses)}"
+
+        return self.context.execute(query)
+
+    def alter(self) -> bool:
+        clauses = self._build_database_clauses()
+
+        if not clauses:
+            return False
+
+        self.context.execute(
+            f"ALTER DATABASE {self.context.quote_identifier(self.name)} {' '.join(clauses)}"
+        )
+        return True
+
+    def drop(self) -> bool:
+        query = f"DROP DATABASE {self.context.quote_identifier(self.name)}"
+        return self.context.execute(query)
 
 
 @dataclasses.dataclass(eq=False)
@@ -199,6 +238,9 @@ class MariaDBColumn(SQLColumn):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBIndex(SQLIndex):
+    def raw_create(self) -> str:
+        return str(MariaDBIndexBuilder(self))
+
     def create(self) -> bool:
         if self.type == MariaDBIndexType.PRIMARY:
             return self.table.database.context.execute(f"""ALTER TABLE {self.table.fully_qualified_name} ADD PRIMARY KEY ({", ".join(self.columns)})""")
@@ -331,9 +373,12 @@ class MariaDBRecord(SQLRecord):
 
 
 class MariaDBView(SQLView):
+    def raw_create(self) -> str:
+        return f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}"
+
     def create(self) -> bool:
         self.database.context.set_database(self.database)
-        return self.database.context.execute(f"CREATE VIEW {self.fully_qualified_name} AS {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         self.database.context.set_database(self.database)
@@ -345,8 +390,20 @@ class MariaDBView(SQLView):
 
 
 class MariaDBTrigger(SQLTrigger):
+    def _show_create_trigger(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE TRIGGER {self.quoted_name}")
+        row = context.fetchone()
+        return row.get("SQL Original Statement", "") if row else ""
+
+    def raw_create(self) -> str:
+        if self.statement.strip().upper().startswith(("BEFORE", "AFTER")):
+            return f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}"
+
+        return self._show_create_trigger()
+
     def create(self) -> bool:
-        return self.database.context.execute(f"CREATE TRIGGER {self.fully_qualified_name} {self.statement}")
+        return self.database.context.execute(self.raw_create())
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP TRIGGER IF EXISTS {self.fully_qualified_name}")
@@ -363,9 +420,21 @@ class MariaDBFunction(SQLFunction):
     deterministic: bool = False
     statement: str = ""
 
+    def _show_create_function(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE FUNCTION {self.fully_qualified_name}")
+        row = context.fetchone()
+        return row.get("Create Function", "") if row else ""
+
     def create(self) -> bool:
+        return self.database.context.execute(self.raw_create())
+
+    def raw_create(self) -> str:
+        if not self.statement.strip() or not self.returns.strip():
+            return self._show_create_function()
+
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
-        query = f"""
+        return f"""
             CREATE FUNCTION {self.fully_qualified_name}({self.parameters})
             RETURNS {self.returns}
             {deterministic}
@@ -373,10 +442,55 @@ class MariaDBFunction(SQLFunction):
                 {self.statement};
             END
         """
-        return self.database.context.execute(query)
 
     def drop(self) -> bool:
         return self.database.context.execute(f"DROP FUNCTION IF EXISTS {self.fully_qualified_name}")
+
+    def alter(self) -> bool:
+        self.drop()
+        return self.create()
+
+
+@dataclasses.dataclass(eq=False)
+class MariaDBProcedure(SQLProcedure):
+    parameters: str = ""
+    statement: str = ""
+
+    @staticmethod
+    def _render_body(statement: str) -> str:
+        body = statement.strip()
+        if body.endswith(";"):
+            return body
+
+        return f"{body};"
+
+    def _show_create_procedure(self) -> str:
+        context = self.database.context
+        context.execute(f"SHOW CREATE PROCEDURE {self.fully_qualified_name}")
+        row = context.fetchone()
+        return row.get("Create Procedure", "") if row else ""
+
+    def create(self) -> bool:
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(self.raw_create())
+
+    def raw_create(self) -> str:
+        if not self.statement.strip():
+            return self._show_create_procedure()
+
+        body = self._render_body(self.statement)
+        return f"""
+            CREATE PROCEDURE {self.fully_qualified_name}({self.parameters})
+            BEGIN
+                {body}
+            END
+        """
+
+    def drop(self) -> bool:
+        self.database.context.set_database(self.database)
+        return self.database.context.execute(
+            f"DROP PROCEDURE IF EXISTS {self.fully_qualified_name}"
+        )
 
     def alter(self) -> bool:
         self.drop()

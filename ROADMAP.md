@@ -1,6 +1,6 @@
 # PeterSQL — Development Roadmap
 
-> **Last Updated:** 2026-03-07  
+> **Last Updated:** 2026-03-10  
 > **Status Rule:** newly implemented features are tracked as **PARTIAL** until validated across supported versions.
 
 ---
@@ -32,11 +32,13 @@ This roadmap reflects the current project state and separates:
 
 - [x] **PostgreSQL Function engine implementation** (PARTIAL)
   - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
-  - **Next:** validate behavior across supported PostgreSQL variants.
+  - **Status:** integration coverage for create/alter/drop is now in place across supported PostgreSQL variants.
+  - **Next:** long-run/manual workflow validation + broader regression checks.
 
 - [x] **PostgreSQL Procedure engine implementation** (PARTIAL)
   - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
-  - **Next:** validate create/alter/drop and introspection consistency.
+  - **Status:** integration coverage for create/alter/drop is now in place across supported PostgreSQL variants.
+  - **Next:** long-run/manual workflow validation + introspection consistency checks.
 
 - [x] **Check constraint implementations for MySQL/MariaDB/PostgreSQL** (PARTIAL)
   - **Files:**
@@ -51,22 +53,35 @@ This roadmap reflects the current project state and separates:
     - `structures/connection.py`
     - `windows/dialogs/connections/model.py`
     - `windows/dialogs/connections/view.py`
-  - **Next:** long-run behavioral validation.
+  - **Validation status:** unit tests now cover connection statistics updates, MySQL/MariaDB TLS retry behavior, and SSH tunnel context lifecycle contracts.
+  - **Next:** unblock and run SSH testcontainers integration validation (currently skipped) + long-run behavioral validation.
+
+- [x] **SQL dump/backup object-driven flow** (PARTIAL)
+  - **Scope:** `SQLDatabase.dump()` now generates SQL dump files through domain objects (`raw_create()`), with ordered schema + records sections.
+  - **Files:**
+    - `structures/engines/database.py`
+    - `structures/engines/dump.py`
+    - `structures/engines/mysql/database.py`
+    - `structures/engines/mariadb/database.py`
+    - `structures/engines/postgresql/database.py`
+    - `structures/engines/sqlite/database.py`
+  - **Validation status:** unit suite is green in serial and xdist runs.
+  - **Next:** cross-engine manual restore/import verification from produced dumps.
 
 ---
 
 ## 🟡 P1 - Engine Gaps
 
-- [ ] **MySQL Procedure implementation**
-  - **Current blocker:** `build_empty_procedure` not implemented in MySQL context.
-  - **Files:** `structures/engines/mysql/context.py`, `structures/engines/mysql/database.py`
+- [x] **MySQL Procedure implementation** (PARTIAL)
+  - **Status:** Engine CRUD + introspection implemented, integration tests added.
+  - **Files:** `structures/engines/mysql/context.py`, `structures/engines/mysql/database.py`, `tests/engines/mysql/test_integration_suite.py`, `tests/engines/base_procedure_tests.py`
 
-- [ ] **MariaDB Procedure implementation**
-  - **Current blocker:** `build_empty_procedure` not implemented in MariaDB context.
-  - **Files:** `structures/engines/mariadb/context.py`, `structures/engines/mariadb/database.py`
+- [x] **MariaDB Procedure implementation** (PARTIAL)
+  - **Status:** Engine CRUD + introspection implemented, integration tests added.
+  - **Files:** `structures/engines/mariadb/context.py`, `structures/engines/mariadb/database.py`, `tests/engines/mariadb/test_integration_suite.py`, `tests/engines/base_procedure_tests.py`
 
-- [ ] **Database create/drop API parity**
-  - **Current state:** list/read available, lifecycle operations missing in contexts.
+- [ ] **Database lifecycle parity (context + UI wiring)**
+  - **Current state:** engine database objects expose create/alter/drop, but context/UI workflow remains read/list oriented.
   - **Files:** `structures/engines/*/context.py`
 
 ---
@@ -97,7 +112,7 @@ This roadmap reflects the current project state and separates:
 - [ ] PostgreSQL sequence CRUD
 - [ ] User/role management
 - [ ] Privileges/grants management
-- [ ] Import/export workflows (dump/restore + structured data)
+- [ ] Restore + structured import/export workflows
 - [ ] PostgreSQL advanced objects (materialized views, partitioning, extensions)
 
 ---
@@ -117,16 +132,19 @@ Before moving a PARTIAL item to DONE:
 
 ### Current Status
 
-- **P0 implemented (partial):** 4/4
-- **P1 gaps closed:** 0/3
+- **P0 implemented (partial):** 5/5
+- **P1 gaps closed:** 2/3
 - **P2 UI tasks complete:** 1/5
 - **P3 advanced tasks complete:** 0/6
 
 ### Recent Highlights
 
 - PostgreSQL Function and Procedure engine classes added.
+- PostgreSQL Function/Procedure integration tests now include ALTER coverage (create/alter/drop).
 - Check constraint support added for MySQL, MariaDB, PostgreSQL.
 - Connection statistics and TLS auto-retry behavior added in connection manager.
+- SQL dump/backup pipeline refactored to object-driven generation (`SQLDatabase.dump()` + `raw_create()`).
+- SSH tunnel unit contract tests added for context lifecycle and process stop behavior.
 - CI workflow split into test/nightly-update/release lanes.
 
 ---

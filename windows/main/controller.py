@@ -36,6 +36,7 @@ from windows.main.tabs.check import TableCheckController
 from windows.main.tabs.column import TableColumnsController
 from windows.main.tabs.records import TableRecordsController
 from windows.main.tabs.database import ListDatabaseTable
+from windows.main.tabs.database_options import DatabaseOptionsController
 from windows.main.tabs.explorer import TreeExplorerController
 from windows.main.tabs.foreign_key import TableForeignKeyController
 from windows.main.tabs.view import ViewEditorController
@@ -59,6 +60,7 @@ class MainFrameController(MainFrameView):
         )
 
         self.list_database_tables = ListDatabaseTable(self.list_ctrl_database_tables)
+        self.controller_database_options = DatabaseOptionsController(self)
 
         self.controller_tree_connections = TreeExplorerController(self.tree_ctrl_explorer)
         self.controller_tree_connections.on_cancel_table = self.on_cancel_table
@@ -280,10 +282,10 @@ class MainFrameController(MainFrameView):
 
     def on_page_chaged(self, event):
         if int(event.Selection) == 5:
-            if table := CURRENT_TABLE():
+            if table := CURRENT_TABLE.get_value():
                 table.load_records()
 
-                self.controller_list_table_records.load_model()
+                # self.controller_list_table_records.load_model()
 
     def _on_current_session(self, session: Session):
         from structures.session import Session
@@ -329,6 +331,119 @@ class MainFrameController(MainFrameView):
 
         if (session := CURRENT_SESSION.get_value()) and session.engine in [ConnectionEngine.SQLITE]:
             self.table_collation.Enable(False)
+
+    def on_apply_database(self, event: wx.Event):
+        database = CURRENT_DATABASE.get_value()
+        session = CURRENT_SESSION.get_value()
+
+        if database is None or session is None:
+            return
+
+        try:
+            database.save()
+            session.context.databases.refresh()
+
+            database = next(
+                (d for d in session.context.databases.get_value() if d.id == database.id),
+                None,
+            )
+
+            if database is not None:
+                CURRENT_DATABASE.set_value(None).set_value(database)
+                session.context.set_database(database)
+
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
+
+    def on_cancel_database(self, event: wx.Event):
+        database = CURRENT_DATABASE.get_value()
+        session = CURRENT_SESSION.get_value()
+
+        if database is None or session is None:
+            return
+
+        if wx.MessageDialog(
+            None,
+            message=_(f"Do you want discard the change to {database.name}?"),
+            style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
+        ).ShowModal() != wx.ID_YES:
+            return
+
+        try:
+            session.context.databases.refresh()
+
+            database = next(
+                (d for d in session.context.databases.get_value() if d.id == database.id),
+                None,
+            )
+
+            if database is not None:
+                CURRENT_DATABASE.set_value(None).set_value(database)
+                session.context.set_database(database)
+
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
+
+    def on_delete_database(self, event: wx.Event):
+        database = CURRENT_DATABASE.get_value()
+        session = CURRENT_SESSION.get_value()
+
+        if database is None or session is None:
+            return
+
+        choice = wx.MessageDialog(
+            None,
+            message=_(
+                "Do you want to create a dump before dropping database '{database_name}'?\n\n"
+                "Dump is not implemented yet.\n"
+                "- Yes: open dump flow (coming soon, no drop).\n"
+                "- No: drop the database now."
+            ).format(database_name=database.name),
+            caption=_("Delete database"),
+            style=wx.YES_NO | wx.CANCEL | wx.CANCEL_DEFAULT | wx.ICON_WARNING,
+        ).ShowModal()
+
+        if choice == wx.ID_YES:
+            wx.MessageBox(
+                _("Dump is not implemented yet. No action has been performed."),
+                _("Dump not available"),
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
+
+        if choice != wx.ID_NO:
+            return
+
+        try:
+            dropped = database.drop()
+
+            if not dropped:
+                wx.MessageBox(
+                    _("Database deletion is not supported by this engine."),
+                    _("Delete database"),
+                    wx.OK | wx.ICON_WARNING,
+                )
+                return
+
+            session.context.databases.refresh()
+
+            CURRENT_DATABASE.set_value(None)
+            next_database = next(iter(session.context.databases.get_value()), None)
+            if next_database is not None:
+                CURRENT_DATABASE.set_value(next_database)
+                session.context.set_database(next_database)
+
+            wx.MessageBox(
+                _("Database deleted successfully"),
+                _("Success"),
+                wx.OK | wx.ICON_INFORMATION,
+            )
+
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), "Error", wx.OK | wx.ICON_ERROR).ShowModal()
 
     # VIEW
     def _on_current_view(self, current: SQLView):
@@ -595,7 +710,7 @@ class MainFrameController(MainFrameView):
             filters = (self.sql_query_filters.GetSelectedText() or self.sql_query_filters.GetText()).strip()
             table.load_records(filters)
 
-            self.controller_list_table_records.load_model()
+            # self.controller_list_table_records.load_model()
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()

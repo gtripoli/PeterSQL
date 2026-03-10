@@ -36,12 +36,12 @@ class SQLDataType:
     name: str
     category: DataTypeCategory
 
-    alias: List[str] = dataclasses.field(default_factory=list)
+    alias: list[str] = dataclasses.field(default_factory=list)
     max_size: Optional[int] = None
 
     format: Optional[DataTypeFormat] = dataclasses.field(default=None)
 
-    default_set: List[str] = dataclasses.field(default_factory=list)
+    default_set: list[str] = dataclasses.field(default_factory=list)
     default_length: int = 50  # for the text
     default_precision: int = 10  # for the integer/boolean
     default_scale: int = 5  # for the real
@@ -56,7 +56,7 @@ class SQLDataType:
     has_zerofill: bool = dataclasses.field(default=False)  # for the integer and real
     has_unsigned: bool = dataclasses.field(default=False)  # for the integer and real
 
-    set: List[str] = dataclasses.field(default_factory=list)
+    set: list[str] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
         if self.has_set is None:
@@ -105,7 +105,7 @@ class StandardDataType():
 
     @classmethod
     @functools.lru_cache(maxsize=1)
-    def get_all(cls) -> List[SQLDataType]:
+    def get_all(cls) -> list[SQLDataType]:
         types = [
             getattr(cls, name)
             for name in dir(cls)

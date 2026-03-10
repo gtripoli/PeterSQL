@@ -1,6 +1,5 @@
 import pytest
 
-
 from testcontainers.mysql import MySqlContainer
 
 from structures.session import Session
@@ -64,13 +63,15 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="module")
 def mariadb_container(mariadb_version, worker_id):
-    container = MySqlContainer(mariadb_version, name=f"petersql_test_{worker_id}_{mariadb_version.replace(":", "_")}",
-                        mem_limit="768m",
-                        memswap_limit="1g",
-                        nano_cpus=1_000_000_000,
-                        shm_size="256m",
-                        )
-    
+    container = MySqlContainer(
+        mariadb_version,
+        name=f"petersql_test_{worker_id}_{mariadb_version.replace(':', '_')}",
+        mem_limit="768m",
+        memswap_limit="1g",
+        nano_cpus=1_000_000_000,
+        shm_size="256m",
+    )
+
     with container:
         yield container
 

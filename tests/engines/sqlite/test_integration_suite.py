@@ -2,6 +2,7 @@ import pytest
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
+from tests.engines.base_database_tests import BaseDatabaseUnsupportedTests
 from tests.engines.base_table_tests import BaseTableTests
 from tests.engines.base_record_tests import BaseRecordTests
 from tests.engines.base_column_tests import BaseColumnTests
@@ -76,3 +77,8 @@ class TestSQLiteViewIsNew(BaseViewIsNewTests):
     
     def get_simple_view_statement(self) -> str:
         return "SELECT * FROM users"
+
+
+@pytest.mark.integration
+class TestSQLiteDatabase(BaseDatabaseUnsupportedTests):
+    pass

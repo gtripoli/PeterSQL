@@ -25,6 +25,7 @@ from structures.engines.mariadb.database import (
     MariaDBColumn,
     MariaDBIndex,
     MariaDBForeignKey,
+    MariaDBProcedure,
     MariaDBRecord,
     MariaDBView,
     MariaDBTrigger,
@@ -197,7 +198,8 @@ class MariaDBContext(AbstractContext):
             except Exception as e:
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
-            else:
+
+            if self._cursor is not None:
                 self.after_connect()
 
     def disconnect(self) -> None:
@@ -258,10 +260,34 @@ class MariaDBContext(AbstractContext):
                     total_bytes=float(row["total_bytes"]),
                     context=self,
                     get_tables_handler=self.get_tables,
+                    get_procedures_handler=self.get_procedures,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
             )
+        return results
+
+    def get_procedures(self, database: SQLDatabase) -> list[MariaDBProcedure]:
+        results: list[MariaDBProcedure] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'PROCEDURE'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MariaDBProcedure(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    statement="",
+                )
+            )
+
         return results
 
     def get_views(self, database: SQLDatabase):
@@ -442,7 +468,7 @@ class MariaDBContext(AbstractContext):
 
         return results
 
-    def get_checks(self, table: MariaDBTable) -> list[MariaDBCheck]:
+    def get_checks(self, table: MariaDBTable) -> list["MariaDBCheck"]:
         from structures.engines.mariadb.database import MariaDBCheck
 
         if table is None or table.is_new:
@@ -612,7 +638,7 @@ class MariaDBContext(AbstractContext):
         name: Optional[str] = None,
         expression: Optional[str] = None,
         **default_values,
-    ) -> MariaDBCheck:
+    ) -> "MariaDBCheck":
         from structures.engines.mariadb.database import MariaDBCheck
 
         id = MariaDBContext.get_temporary_id(table.checks)
@@ -697,8 +723,19 @@ class MariaDBContext(AbstractContext):
 
     def build_empty_procedure(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
-    ):
-        raise NotImplementedError("MariaDB Procedure not implemented yet")
+    ) -> MariaDBProcedure:
+        id = MariaDBContext.get_temporary_id(database.procedures)
+
+        if name is None:
+            name = f"procedure_{id}"
+
+        return MariaDBProcedure(
+            id=id,
+            name=name,
+            database=database,
+            parameters=default_values.get("parameters", ""),
+            statement=default_values.get("statement", ""),
+        )
 
     def build_empty_trigger(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values

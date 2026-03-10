@@ -7,10 +7,11 @@ With --update: runs ALL tests (unit + integration) and updates README badges
 """
 
 import argparse
-import subprocess
 import os
 import re
+import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 # Add project root to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,6 +21,111 @@ from structures.connection import ConnectionEngine
 README = "README.md"
 TESTS_DIR = "tests/engines"
 RESULTS_FILE = "/tmp/pytest_results.txt"
+JUNIT_FILE = "/tmp/pytest_results.xml"
+
+SUITE_BADGES_START = "<!-- SUITE_BADGES_START -->"
+SUITE_BADGES_END = "<!-- SUITE_BADGES_END -->"
+
+SUITE_ORDER = [
+    "autocomplete",
+    "core",
+    "ui",
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "sqlite",
+]
+
+
+def _build_suite_badges_table(suite_stats: dict[str, dict[str, int]]) -> str:
+    lines = [
+        SUITE_BADGES_START,
+        "### Suite status (passed / skipped)",
+        "",
+        "| Suite | Passed | Skipped |",
+        "|-------|--------|---------|",
+    ]
+
+    for suite_name in SUITE_ORDER:
+        passed = suite_stats[suite_name]["passed"]
+        skipped = suite_stats[suite_name]["skipped"]
+        passed_badge = f"![passed](https://img.shields.io/badge/passed-{passed}-brightgreen)"
+        skipped_badge = f"![skipped](https://img.shields.io/badge/skipped-{skipped}-lightgrey)"
+        lines.append(f"| {suite_name} | {passed_badge} | {skipped_badge} |")
+
+    lines += ["", SUITE_BADGES_END]
+    return "\n".join(lines)
+
+
+def _extract_suite_name(case_node: ET.Element) -> str:
+    file_path = case_node.attrib.get("file", "")
+    class_name = case_node.attrib.get("classname", "")
+    source = file_path or class_name.replace(".", "/")
+
+    mapping = [
+        ("tests/autocomplete/", "autocomplete"),
+        ("tests/core/", "core"),
+        ("tests/ui/", "ui"),
+        ("tests/engines/mysql/", "mysql"),
+        ("tests/engines/mariadb/", "mariadb"),
+        ("tests/engines/postgresql/", "postgresql"),
+        ("tests/engines/sqlite/", "sqlite"),
+    ]
+
+    for prefix, suite_name in mapping:
+        if source.startswith(prefix):
+            return suite_name
+
+    return ""
+
+
+def _load_suite_stats(junit_file: str) -> dict[str, dict[str, int]]:
+    stats = {
+        suite_name: {"passed": 0, "skipped": 0}
+        for suite_name in SUITE_ORDER
+    }
+
+    if not os.path.exists(junit_file):
+        return stats
+
+    try:
+        tree = ET.parse(junit_file)
+    except ET.ParseError:
+        return stats
+
+    root = tree.getroot()
+    for case in root.findall(".//testcase"):
+        suite_name = _extract_suite_name(case)
+        if not suite_name:
+            continue
+
+        if case.find("skipped") is not None:
+            stats[suite_name]["skipped"] += 1
+            continue
+
+        if case.find("failure") is not None or case.find("error") is not None:
+            continue
+
+        stats[suite_name]["passed"] += 1
+
+    return stats
+
+
+def _update_suite_badges_block(content: str, suite_stats: dict[str, dict[str, int]]) -> str:
+    replacement = _build_suite_badges_table(suite_stats)
+    block_pattern = re.compile(
+        rf"{re.escape(SUITE_BADGES_START)}.*?{re.escape(SUITE_BADGES_END)}",
+        re.DOTALL,
+    )
+
+    if block_pattern.search(content):
+        return block_pattern.sub(replacement, content)
+
+    anchor = "For detailed test coverage matrix, statistics, and architecture, see **[tests/README.md](tests/README.md)**."
+    if anchor in content:
+        return content.replace(anchor, f"{anchor}\n\n{replacement}")
+
+    return f"{content}\n\n{replacement}\n"
 
 
 def get_engine_color(engine, results_content):
@@ -95,6 +201,10 @@ def update_badges():
     match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', results_content)
     coverage = match.group(1) if match else "0"
 
+    tests_total_match = re.search(r'\[(\d+)\s+items\]', results_content)
+    tests_total = tests_total_match.group(1) if tests_total_match else "unknown"
+    suite_stats = _load_suite_stats(JUNIT_FILE)
+
     print(f"\nCoverage: {coverage}%")
     print("\nAnalyzing results for badge updates...")
 
@@ -113,6 +223,26 @@ def update_badges():
             if coverage:
                 content = re.sub(r'coverage-\d+%', f'coverage-{coverage}%', content)
                 print(f"  Coverage badge updated: {coverage}%")
+
+            # Update total tests badge
+            content = re.sub(
+                r'!\[Tests\]\(https://img\.shields\.io/badge/tests-[^\)]*\)',
+                f'![Tests](https://img.shields.io/badge/tests-{tests_total}-blue)',
+                content,
+            )
+
+            if "![Tests](https://img.shields.io/badge/tests-" not in content:
+                content = re.sub(
+                    r'(!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[^\)]*\))',
+                    rf'\1\n![Tests](https://img.shields.io/badge/tests-{tests_total}-blue)',
+                    content,
+                    count=1,
+                )
+
+            print(f"  Tests badge updated: {tests_total}")
+
+            content = _update_suite_badges_block(content, suite_stats)
+            print("  Suite matrix badges updated")
 
             # Update engine badges
 
@@ -138,6 +268,11 @@ def update_badges():
     except OSError:
         pass
 
+    try:
+        os.remove(JUNIT_FILE)
+    except OSError:
+        pass
+
 
 def main():
     parser = argparse.ArgumentParser(description='Unified test runner')
@@ -160,7 +295,15 @@ def main():
         try:
             with open(RESULTS_FILE, 'w') as f:
                 process = subprocess.Popen(
-                    ['uv', 'run', 'pytest', 'tests/', '--tb=no'],
+                    [
+                        'uv',
+                        'run',
+                        'pytest',
+                        'tests/',
+                        '--tb=no',
+                        '--junitxml',
+                        JUNIT_FILE,
+                    ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True
