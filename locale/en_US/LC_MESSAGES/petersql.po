@@ -1,3 +1,23 @@
+# English (en_US) translations for PeterSQL.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PeterSQL project.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PeterSQL 0.1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-03-10 18:23+0100\n"
+"PO-Revision-Date: 2026-03-10 18:21+0000\n"
+"Last-Translator: \n"
+"Language: en_US\n"
+"Language-Team: en_US <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
 #: helpers/__init__.py:16
 msgctxt "unit"
 msgid "B"
@@ -1045,4 +1065,43 @@ msgstr ""
 #, python-brace-format
 msgid "Error deleting view: {}"
 msgstr ""
+
+#~ msgid "Created at:"
+#~ msgstr ""
+
+#~ msgid "Last connection:"
+#~ msgstr ""
+
+#~ msgid "Successful connections:"
+#~ msgstr ""
+
+#~ msgid "Unsuccessful connections:"
+#~ msgstr ""
+
+#~ msgid "Session Manager"
+#~ msgstr ""
+
+#~ msgid "Session name"
+#~ msgstr ""
+
+#~ msgid "Connection type"
+#~ msgstr ""
+
+#~ msgid "Open"
+#~ msgstr ""
+
+#~ msgid "Open session manager"
+#~ msgstr ""
+
+#~ msgid "Foreign Key"
+#~ msgstr ""
+
+#~ msgid "New Session"
+#~ msgstr ""
+
+#~ msgid "connection"
+#~ msgstr ""
+
+#~ msgid "directory"
+#~ msgstr ""
 
