@@ -30,7 +30,7 @@ _ = gettext.gettext
 class ConnectionsDialog ( wx.Dialog ):
 
     def __init__( self, parent ):
-        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Connection"), pos = wx.DefaultPosition, size = wx.Size( 800,600 ), style = wx.DEFAULT_DIALOG_STYLE|wx.DIALOG_NO_PARENT|wx.RESIZE_BORDER )
+        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Connection"), pos = wx.DefaultPosition, size = wx.Size( 900,768 ), style = wx.DEFAULT_DIALOG_STYLE|wx.DIALOG_NO_PARENT|wx.RESIZE_BORDER )
 
         self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
@@ -169,22 +169,53 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer103.Add( bSizer1221, 0, wx.EXPAND, 5 )
 
+        bSizer159 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText84 = wx.StaticText( self.panel_credentials, wx.ID_ANY, _(u"Connection timeout"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText84.Wrap( -1 )
+
+        self.m_staticText84.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer159.Add( self.m_staticText84, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+
+        self.connection_timeout = wx.SpinCtrl( self.panel_credentials, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 60, 10 )
+        bSizer159.Add( self.connection_timeout, 1, wx.ALL, 5 )
+
+
+        bSizer103.Add( bSizer159, 1, wx.EXPAND, 5 )
+
         bSizer116 = wx.BoxSizer( wx.HORIZONTAL )
 
 
         bSizer116.Add( ( 156, 0), 0, wx.EXPAND, 5 )
 
-        self.use_tls_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use TLS"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer116.Add( self.use_tls_enabled, 0, wx.ALL, 5 )
-
-        self.ssh_tunnel_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer116.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
+        self.use_tls = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use TLS"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer116.Add( self.use_tls, 0, wx.ALL, 5 )
 
 
         bSizer103.Add( bSizer116, 0, wx.EXPAND, 5 )
 
-        self.m_staticline5 = wx.StaticLine( self.panel_credentials, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-        bSizer103.Add( self.m_staticline5, 0, wx.EXPAND | wx.ALL, 5 )
+        bSizer163 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer163.Add( ( 156, 0), 0, wx.EXPAND, 5 )
+
+        self.ssh_tunnel_enabled = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Use SSH tunnel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer163.Add( self.ssh_tunnel_enabled, 0, wx.ALL, 5 )
+
+
+        bSizer103.Add( bSizer163, 0, wx.EXPAND, 5 )
+
+        bSizer164 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer164.Add( ( 156, 0), 0, wx.EXPAND, 5 )
+
+        self.compressed_protocol = wx.CheckBox( self.panel_credentials, wx.ID_ANY, _(u"Compressed client/server protocol"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer164.Add( self.compressed_protocol, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer103.Add( bSizer164, 0, wx.EXPAND, 5 )
 
 
         self.panel_credentials.SetSizer( bSizer103 )
@@ -215,6 +246,9 @@ class ConnectionsDialog ( wx.Dialog ):
         self.panel_source.Layout()
         bSizer105.Fit( self.panel_source )
         bSizer12.Add( self.panel_source, 0, wx.EXPAND | wx.ALL, 0 )
+
+        self.m_staticline5 = wx.StaticLine( self.panel_connection, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+        bSizer12.Add( self.m_staticline5, 0, wx.EXPAND | wx.ALL, 5 )
 
         bSizer122111 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -350,6 +384,19 @@ class ConnectionsDialog ( wx.Dialog ):
 
 
         bSizer102.Add( bSizer121311, 0, wx.EXPAND, 5 )
+
+        bSizer121322 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText21322 = wx.StaticText( self.panel_ssh_tunnel, wx.ID_ANY, _(u"SSH extra args"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText21322.Wrap( -1 )
+
+        bSizer121322.Add( self.m_staticText21322, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.ssh_tunnel_extra_args = wx.TextCtrl( self.panel_ssh_tunnel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer121322.Add( self.ssh_tunnel_extra_args, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer102.Add( bSizer121322, 0, wx.EXPAND, 5 )
 
 
         self.panel_ssh_tunnel.SetSizer( bSizer102 )
@@ -1777,7 +1824,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_table.SetSizer( bSizer251 )
         self.panel_table.Layout()
         bSizer251.Fit( self.panel_table )
-        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), True )
+        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2036,10 +2083,37 @@ class MainFrameView ( wx.Frame ):
 
         bSizer94 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.name_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"Table `%(database_name)s`.`%(table_name)s`: %(total_rows) rows total"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.name_database_table = wx.StaticText( self.panel_records, wx.ID_ANY, _(u"{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.name_database_table.Wrap( -1 )
 
-        bSizer94.Add( self.name_database_table, 0, wx.ALL, 5 )
+        bSizer94.Add( self.name_database_table, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer94.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+        self.btn_first_records = wx.Button( self.panel_records, wx.ID_ANY, _(u"First"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.btn_first_records.SetBitmap( wx.Bitmap( u"icons/16x16/resultset_first.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer94.Add( self.btn_first_records, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.btn_prev_records = wx.Button( self.panel_records, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE|wx.BU_EXACTFIT )
+
+        self.btn_prev_records.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_left.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer94.Add( self.btn_prev_records, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.limit_records = wx.SpinCtrl( self.panel_records, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 1000, 100 )
+        bSizer94.Add( self.limit_records, 0, wx.ALL, 5 )
+
+        self.btn_next_records = wx.Button( self.panel_records, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE|wx.BU_EXACTFIT|wx.BU_NOTEXT )
+
+        self.btn_next_records.SetBitmap( wx.Bitmap( u"icons/16x16/resultset_next.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer94.Add( self.btn_next_records, 0, wx.ALL|wx.EXPAND, 5 )
+
+        self.btn_last_records = wx.Button( self.panel_records, wx.ID_ANY, _(u"Last"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.btn_last_records.SetBitmap( wx.Bitmap( u"icons/16x16/resultset_last.png", wx.BITMAP_TYPE_ANY ) )
+        self.btn_last_records.SetBitmapPosition( wx.RIGHT )
+        bSizer94.Add( self.btn_last_records, 0, wx.ALL|wx.EXPAND, 5 )
 
 
         bSizer61.Add( bSizer94, 0, wx.EXPAND, 5 )
@@ -2088,14 +2162,6 @@ class MainFrameView ( wx.Frame ):
         self.btn_apply_record.Enable( False )
 
         bSizer83.Add( self.btn_apply_record, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-
-        bSizer83.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-        self.m_button40 = wx.Button( self.panel_records, wx.ID_ANY, _(u"Next"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.m_button40.SetBitmap( wx.Bitmap( u"icons/16x16/resultset_next.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer83.Add( self.m_button40, 0, wx.ALL, 5 )
 
 
         bSizer61.Add( bSizer83, 0, wx.EXPAND, 5 )
@@ -2168,7 +2234,7 @@ class MainFrameView ( wx.Frame ):
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
+        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2381,11 +2447,14 @@ class MainFrameView ( wx.Frame ):
         self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
         self.btn_cancel_table.Bind( wx.EVT_BUTTON, self.on_cancel_table )
         self.btn_apply_table.Bind( wx.EVT_BUTTON, self.do_apply_table )
+        self.btn_first_records.Bind( wx.EVT_BUTTON, self.on_first_records )
+        self.btn_prev_records.Bind( wx.EVT_BUTTON, self.on_prev_records )
+        self.btn_next_records.Bind( wx.EVT_BUTTON, self.on_next_records )
+        self.btn_last_records.Bind( wx.EVT_BUTTON, self.on_last_records )
         self.btn_insert_record.Bind( wx.EVT_BUTTON, self.on_insert_record )
         self.btn_duplicate_record.Bind( wx.EVT_BUTTON, self.on_duplicate_record )
         self.btn_delete_record.Bind( wx.EVT_BUTTON, self.on_delete_record )
         self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
-        self.m_button40.Bind( wx.EVT_BUTTON, self.on_next_records )
         self.m_collapsiblePane1.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_collapsible_pane_changed )
         self.m_button41.Bind( wx.EVT_BUTTON, self.on_apply_filters )
 
@@ -2467,6 +2536,18 @@ class MainFrameView ( wx.Frame ):
     def do_apply_table( self, event ):
         event.Skip()
 
+    def on_first_records( self, event ):
+        event.Skip()
+
+    def on_prev_records( self, event ):
+        event.Skip()
+
+    def on_next_records( self, event ):
+        event.Skip()
+
+    def on_last_records( self, event ):
+        event.Skip()
+
     def on_insert_record( self, event ):
         event.Skip()
 
@@ -2477,9 +2558,6 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def on_auto_apply( self, event ):
-        event.Skip()
-
-    def on_next_records( self, event ):
         event.Skip()
 
     def on_collapsible_pane_changed( self, event ):
@@ -2530,6 +2608,9 @@ class Trash ( wx.Panel ):
 
         self.m_textCtrl221 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer90.Add( self.m_textCtrl221, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.total_rows_loading = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"icons/16x16/hourglass.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer90.Add( self.total_rows_loading, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
         bSizer93 = wx.BoxSizer( wx.VERTICAL )
 

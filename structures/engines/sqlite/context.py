@@ -515,7 +515,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(database.tables)
 
         if name is None:
-            name = _(f"Table{str(id * -1):03}")
+            name = _("Table{table_index:03}").format(table_index=id * -1)
 
         return SQLiteTable(
             id=id,
@@ -539,7 +539,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.columns)
 
         if name is None:
-            name = _(f"Column{str(id * -1):03}")
+            name = _("Column{column_index:03}").format(column_index=id * -1)
 
         return SQLiteColumn(
             id=id, name=name, table=table, datatype=datatype, **default_values
@@ -557,7 +557,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.indexes)
 
         if name is None:
-            name = _(f"Index{str(id * -1):03}")
+            name = _("Index{index_number:03}").format(index_number=id * -1)
 
         return SQLiteIndex(
             id=id,
@@ -599,7 +599,9 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
-            name = _(f"ForeignKey{str(id * -1):03}")
+            name = _("ForeignKey{foreign_key_number:03}").format(
+                foreign_key_number=id * -1
+            )
 
         return SQLiteForeignKey(
             id=id,
@@ -625,7 +627,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(database.views)
 
         if name is None:
-            name = _(f"View{str(id * -1):03}")
+            name = _("View{view_index:03}").format(view_index=id * -1)
 
         return SQLiteView(
             id=id,

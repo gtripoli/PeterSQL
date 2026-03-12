@@ -10,6 +10,7 @@ import wx
 import wx.dataview
 
 from helpers.logger import logger
+from helpers.dataview import BaseDataViewListModel
 
 from structures.session import Session
 from structures.connection import ConnectionEngine
@@ -296,22 +297,29 @@ class QueryResultsRenderer:
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         if result.success and result.columns:
-            grid = QueryEditorResultsDataViewCtrl(panel)
-            self._populate_grid(grid, result)
-            sizer.Add(grid, 1, wx.EXPAND | wx.ALL, 5)
+            results_dataview = QueryEditorResultsDataViewCtrl(panel)
+            self._populate_grid(results_dataview, result)
+            sizer.Add(results_dataview, 1, wx.EXPAND | wx.ALL, 5)
 
             tab_name = self._generate_tab_name(result)
         elif result.success:
-            msg = wx.StaticText(panel, label=_("{} rows affected").format(result.affected_rows or 0))
+            msg = wx.StaticText(
+                panel,
+                label=_("{affected_rows} rows affected").format(
+                    affected_rows=result.affected_rows or 0
+                ),
+            )
             msg.SetFont(msg.GetFont().MakeBold())
             sizer.Add(msg, 1, wx.ALIGN_CENTER | wx.ALL, 20)
 
-            tab_name = _("Query {}").format(self._tab_counter)
+            tab_name = _("Query {query_number}").format(query_number=self._tab_counter)
         else:
             error_panel = self._create_error_panel(panel, result)
             sizer.Add(error_panel, 1, wx.EXPAND | wx.ALL, 5)
 
-            tab_name = _("Query {} (Error)").format(self._tab_counter)
+            tab_name = _("Query {query_number} (Error)").format(
+                query_number=self._tab_counter
+            )
 
         footer = self._create_footer(panel, result)
         sizer.Add(footer, 0, wx.EXPAND | wx.ALL, 5)
@@ -323,39 +331,43 @@ class QueryResultsRenderer:
 
     def _generate_tab_name(self, result: ExecutionResult) -> str:
         if result.columns and result.rows is not None:
-            return _("Query {} ({} rows × {} cols)").format(
-                self._tab_counter,
-                len(result.rows),
-                len(result.columns)
+            return _("Query {query_number} ({rows_count} rows × {columns_count} cols)").format(
+                query_number=self._tab_counter,
+                rows_count=len(result.rows),
+                columns_count=len(result.columns),
             )
-        return _("Query {}").format(self._tab_counter)
+        return _("Query {query_number}").format(query_number=self._tab_counter)
 
     def _populate_grid(
         self,
-        grid: QueryEditorResultsDataViewCtrl,
+        results_dataview: QueryEditorResultsDataViewCtrl,
         result: ExecutionResult
     ) -> None:
-        if not result.columns or not result.rows:
+        if not result.columns:
             return
 
-        for col_name in result.columns:
-            grid.AppendTextColumn(col_name, wx.dataview.DATAVIEW_CELL_INERT)
+        for i, col_name in enumerate(result.columns):
+            results_dataview.AppendTextColumn(col_name, i, wx.dataview.DATAVIEW_CELL_INERT)
 
-        model = grid.GetModel()
-        if hasattr(model, 'data'):
-            model.data = list(result.rows)
-            model.Reset(len(result.rows))
+        model = QueryResultsGridModel(column_count=len(result.columns))
+        model.load_rows(result.columns, result.rows or [])
+        results_dataview.AssociateModel(model)
+        results_dataview._query_results_model = model
 
     def _create_footer(self, parent: wx.Panel, result: ExecutionResult) -> wx.StaticText:
         parts = []
 
         if result.affected_rows is not None:
-            parts.append(_("{} rows").format(result.affected_rows))
+            parts.append(_("{rows_count} rows").format(rows_count=result.affected_rows))
 
-        parts.append(_("{:.1f} ms").format(result.elapsed_ms))
+        parts.append(_("{elapsed_ms:.1f} ms").format(elapsed_ms=result.elapsed_ms))
 
         if result.warnings:
-            parts.append(_("{} warnings").format(len(result.warnings)))
+            parts.append(
+                _("{warnings_count} warnings").format(
+                    warnings_count=len(result.warnings)
+                )
+            )
 
         footer_text = " | ".join(parts)
         footer = wx.StaticText(parent, label=footer_text)
@@ -386,6 +398,38 @@ class QueryResultsRenderer:
         while self.notebook.GetPageCount() > 0:
             self.notebook.DeletePage(0)
         self._tab_counter = 0
+
+
+class QueryResultsGridModel(BaseDataViewListModel):
+    def __init__(self, column_count: int):
+        super().__init__(column_count)
+        self._columns: list[str] = []
+
+    def load_rows(self, columns: list[str], rows: list[Any]) -> None:
+        self._columns = list(columns)
+
+        normalized_rows: list[tuple[Any, ...]] = []
+        for row in rows:
+            if isinstance(row, dict):
+                normalized_rows.append(tuple(row.get(column) for column in self._columns))
+            elif isinstance(row, (list, tuple)):
+                normalized_rows.append(tuple(row))
+            else:
+                normalized_rows.append((row,))
+
+        self._data = normalized_rows
+        self.Reset(len(self._data))
+
+    def GetValueByRow(self, row, col):
+        if row < 0 or row >= len(self.data):
+            return ""
+
+        row_values = self.data[row]
+        if col < 0 or col >= len(row_values):
+            return ""
+
+        value = row_values[col]
+        return "" if value is None else str(value)
 
 
 class QueryEditorController:

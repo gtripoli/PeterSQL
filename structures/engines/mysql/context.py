@@ -122,9 +122,19 @@ class MySQLContext(AbstractContext):
         if self._connection is None:
             self.before_connect()
 
-            use_tls_enabled = bool(
-                getattr(self.connection.configuration, "use_tls_enabled", False)
+            connect_timeout_override = connect_kwargs.pop("connect_timeout", None)
+            compressed_protocol_override = connect_kwargs.pop("compress", None)
+            compressed_protocol = bool(
+                compressed_protocol_override
+                if compressed_protocol_override is not None
+                else getattr(self.connection.configuration, "compressed_protocol", False)
             )
+            connect_timeout = (
+                int(connect_timeout_override)
+                if connect_timeout_override is not None
+                else int(getattr(self.connection.configuration, "connect_timeout", 10))
+            )
+            use_tls = bool(getattr(self.connection.configuration, "use_tls", False))
 
             base_kwargs = dict(
                 host=self.host,
@@ -132,19 +142,23 @@ class MySQLContext(AbstractContext):
                 password=self.password,
                 port=self.port,
                 cursorclass=pymysql.cursors.DictCursor,
+                connect_timeout=connect_timeout,
+                compress=compressed_protocol,
                 **connect_kwargs,
             )
-            if use_tls_enabled:
+            if use_tls:
                 base_kwargs["ssl"] = {
                     "cert_reqs": ssl.CERT_NONE,
                     "check_hostname": False,
                 }
             logger.debug(
-                "MySQL connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                "MySQL connect target host=%s port=%s user=%s compressed_protocol=%s connect_timeout=%s use_tls=%s",
                 base_kwargs.get("host"),
                 base_kwargs.get("port"),
                 base_kwargs.get("user"),
-                use_tls_enabled,
+                compressed_protocol,
+                connect_timeout,
+                use_tls,
             )
 
             try:
@@ -175,7 +189,7 @@ class MySQLContext(AbstractContext):
 
                 if hasattr(self.connection, "configuration"):
                     self.connection.configuration = (
-                        self.connection.configuration._replace(use_tls_enabled=True)
+                        self.connection.configuration._replace(use_tls=True)
                     )
                 logger.info(
                     "MySQL connection succeeded after enabling TLS automatically."
@@ -546,7 +560,7 @@ class MySQLContext(AbstractContext):
         id = MySQLContext.get_temporary_id(database.tables)
 
         if name is None:
-            name = _(f"Table{str(id * -1):03}")
+            name = _("Table{table_index:03}").format(table_index=id * -1)
 
         default_values.setdefault("engine", "InnoDB")
         default_values.setdefault("collation_name", "utf8mb4_general_ci")
@@ -574,7 +588,7 @@ class MySQLContext(AbstractContext):
         id = MySQLContext.get_temporary_id(table.columns)
 
         if name is None:
-            name = _(f"Column{str(id * -1):03}")
+            name = _("Column{column_index:03}").format(column_index=id * -1)
 
         return MySQLColumn(
             id=id, name=name, table=table, datatype=datatype, **default_values
@@ -592,7 +606,7 @@ class MySQLContext(AbstractContext):
         id = MySQLContext.get_temporary_id(table.indexes)
 
         if name is None:
-            name = _(f"Index{str(id * -1):03}")
+            name = _("Index{index_number:03}").format(index_number=id * -1)
 
         return MySQLIndex(
             id=id,
@@ -632,7 +646,9 @@ class MySQLContext(AbstractContext):
         id = MySQLContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
-            name = _(f"ForeignKey{str(id * -1):03}")
+            name = _("ForeignKey{foreign_key_number:03}").format(
+                foreign_key_number=id * -1
+            )
 
         reference_table = default_values.get("reference_table", "")
         reference_columns = default_values.get("reference_columns", [])
@@ -661,7 +677,7 @@ class MySQLContext(AbstractContext):
         id = MySQLContext.get_temporary_id(database.views)
 
         if name is None:
-            name = _(f"View{str(id * -1):03}")
+            name = _("View{view_index:03}").format(view_index=id * -1)
 
         return MySQLView(
             id=id,

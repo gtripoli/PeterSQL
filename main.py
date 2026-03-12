@@ -67,7 +67,10 @@ class PeterSQL(wx.App):
         _locale = self.settings.get_value("locale")
 
         if _locale is None:
-            _locale, encoding = locale.getdefaultlocale()
+            _locale = locale.getlocale()[0]
+
+        if not _locale:
+            _locale = "en_US"
 
         translation = gettext.translation(
             'petersql',

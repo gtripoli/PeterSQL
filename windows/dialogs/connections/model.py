@@ -20,7 +20,9 @@ class ConnectionModel(AbstractModel):
         self.hostname = Observable[str]()
         self.username = Observable[str]()
         self.password = Observable[str]()
-        self.use_tls_enabled = Observable[bool](initial=False)
+        self.use_tls = Observable[bool](initial=False)
+        self.connection_timeout = Observable[int](initial=10)
+        self.compressed_protocol = Observable[bool](initial=False)
         self.port = Observable[int](initial=3306)
         self.filename = Observable[str]()
         self.comments = Observable[str]("")
@@ -45,6 +47,7 @@ class ConnectionModel(AbstractModel):
         self.ssh_tunnel_identity_file = Observable[str]()
         self.ssh_tunnel_remote_hostname = Observable[str]()
         self.ssh_tunnel_remote_port = Observable[int](initial=3306)
+        self.ssh_tunnel_extra_args = Observable[str]()
 
         self.engine.subscribe(self._set_default_port)
 
@@ -54,7 +57,9 @@ class ConnectionModel(AbstractModel):
             self.hostname,
             self.username,
             self.password,
-            self.use_tls_enabled,
+            self.use_tls,
+            self.connection_timeout,
+            self.compressed_protocol,
             self.port,
             self.filename,
             self.comments,
@@ -77,6 +82,7 @@ class ConnectionModel(AbstractModel):
             self.ssh_tunnel_identity_file,
             self.ssh_tunnel_remote_hostname,
             self.ssh_tunnel_remote_port,
+            self.ssh_tunnel_extra_args,
             callback=self._build,
         )
 
@@ -97,7 +103,9 @@ class ConnectionModel(AbstractModel):
             self.hostname: None,
             self.username: None,
             self.password: None,
-            self.use_tls_enabled: False,
+            self.use_tls: False,
+            self.connection_timeout: 10,
+            self.compressed_protocol: False,
             self.port: 3306,
             self.filename: None,
             self.comments: None,
@@ -120,6 +128,7 @@ class ConnectionModel(AbstractModel):
             self.ssh_tunnel_identity_file: None,
             self.ssh_tunnel_remote_hostname: None,
             self.ssh_tunnel_remote_port: 3306,
+            self.ssh_tunnel_extra_args: "",
         }
 
         for observable, value in defaults.items():
@@ -157,8 +166,12 @@ class ConnectionModel(AbstractModel):
             self.hostname(connection.configuration.hostname)
             self.username(connection.configuration.username)
             self.password(connection.configuration.password)
-            self.use_tls_enabled(
-                getattr(connection.configuration, "use_tls_enabled", False)
+            self.use_tls(getattr(connection.configuration, "use_tls", False))
+            self.connection_timeout(
+                getattr(connection.configuration, "connect_timeout", 10)
+            )
+            self.compressed_protocol(
+                getattr(connection.configuration, "compressed_protocol", False)
             )
             self.port(connection.configuration.port)
 
@@ -178,8 +191,14 @@ class ConnectionModel(AbstractModel):
             self.ssh_tunnel_remote_port(
                 getattr(ssh_tunnel, "remote_port", None) or self.port()
             )
+            extra_args = getattr(ssh_tunnel, "extra_args", "")
+            if isinstance(extra_args, list):
+                self.ssh_tunnel_extra_args(" ".join(extra_args))
+            else:
+                self.ssh_tunnel_extra_args(extra_args or "")
         else:
             self.ssh_tunnel_enabled(False)
+            self.ssh_tunnel_extra_args("")
 
     def _build_empty_connection(self):
         return Connection(
@@ -187,7 +206,12 @@ class ConnectionModel(AbstractModel):
             name=self.name() or _("New connection"),
             engine=ConnectionEngine.MYSQL,
             configuration=CredentialsConfiguration(
-                hostname="localhost", username="root", password="", port=3306
+                hostname="localhost",
+                username="root",
+                password="",
+                port=3306,
+                connect_timeout=10,
+                compressed_protocol=False,
             ),
         )
 
@@ -224,7 +248,9 @@ class ConnectionModel(AbstractModel):
                 username=db_username,
                 password=db_password,
                 port=self.port.get_value() or 3306,
-                use_tls_enabled=bool(self.use_tls_enabled.get_value()),
+                use_tls=bool(self.use_tls.get_value()),
+                connect_timeout=self.connection_timeout.get_value() or 10,
+                compressed_protocol=bool(self.compressed_protocol.get_value()),
             )
 
             if ssh_tunnel_enabled := bool(self.ssh_tunnel_enabled()):
@@ -253,6 +279,10 @@ class ConnectionModel(AbstractModel):
                     identity_file=self.ssh_tunnel_identity_file.get_value() or None,
                     remote_host=remote_host,
                     remote_port=remote_port,
+                    extra_args=(
+                        self.ssh_tunnel_extra_args.get_value() or ""
+                    ).strip()
+                    or None,
                 )
 
         elif connection_engine == ConnectionEngine.SQLITE:

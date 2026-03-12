@@ -96,7 +96,7 @@ class ConnectionsRepository(
                 ConnectionEngine.MARIADB,
                 ConnectionEngine.POSTGRESQL,
             ]:
-                configuration = CredentialsConfiguration(**config_data)
+                configuration = self._build_credentials_configuration(config_data)
             elif engine == ConnectionEngine.SQLITE:
                 configuration = SourceConfiguration(**config_data)
 
@@ -326,7 +326,44 @@ class ConnectionsRepository(
                 if data.get("remote_port")
                 else None,
                 identity_file=data.get("identity_file"),
-                extra_args=data.get("extra_args"),
+                extra_args=self._normalize_ssh_extra_args(data.get("extra_args")),
             )
         except (TypeError, ValueError):
             return None
+
+    def _build_credentials_configuration(
+        self, data: dict[str, Any]
+    ) -> Optional[CredentialsConfiguration]:
+        if not data:
+            return None
+
+        try:
+            return CredentialsConfiguration(
+                hostname=str(data.get("hostname", "")),
+                username=str(data.get("username", "")),
+                password=data.get("password"),
+                port=int(data.get("port", 3306)),
+                use_tls=bool(
+                    data.get("use_tls", data.get("use_tls_enabled", False))
+                ),
+                connect_timeout=int(data.get("connect_timeout", 10)),
+                compressed_protocol=bool(data.get("compressed_protocol", False)),
+            )
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _normalize_ssh_extra_args(extra_args: Any) -> Optional[Union[str, list[str]]]:
+        if isinstance(extra_args, str):
+            value = extra_args.strip()
+            return value if value else None
+
+        if isinstance(extra_args, list):
+            values = [
+                str(value).strip()
+                for value in extra_args
+                if isinstance(value, str) and value.strip()
+            ]
+            return values if values else None
+
+        return None

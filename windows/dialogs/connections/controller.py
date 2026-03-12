@@ -133,8 +133,6 @@ class ConnectionsTreeController:
         self._allow_next_edit = False
 
     def do_filter_connections(self, search_text):
-        # self.search_text = search_text
-        # self._update_displayed_connections()
         self.repository.connections.filter(
             lambda x: search_text.lower() in x.name.lower()
         )

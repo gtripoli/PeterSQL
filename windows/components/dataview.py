@@ -16,6 +16,7 @@ from structures.engines.indextype import SQLIndexType, StandardIndexType
 from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
+from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
 
 from windows.state import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, NEW_TABLE
 
@@ -449,7 +450,44 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
 
 class QueryEditorResultsDataViewCtrl(TableRecordsDataViewCtrl):
-    pass
+    def __init__(self, *args, **kwargs):
+        BaseDataViewCtrl.__init__(self, *args, **kwargs)
+        self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+
+    def _get_activated_model_column(self, event: wx.dataview.DataViewEvent) -> Optional[int]:
+        current_column = self.CurrentColumn
+        if current_column:
+            return current_column.GetModelColumn()
+
+        model_column = event.GetColumn()
+        return model_column if model_column >= 0 else None
+
+    def _on_item_activated(self, event: wx.dataview.DataViewEvent) -> None:
+        item = event.GetItem()
+        if not item.IsOk():
+            event.Skip()
+            return
+
+        model = self.GetModel()
+        if not model:
+            event.Skip()
+            return
+
+        model_column = self._get_activated_model_column(event)
+        if model_column is None:
+            event.Skip()
+            return
+
+        row = model.GetRow(item)
+        value = model.GetValueByRow(row, model_column)
+
+        dialog = AdvancedCellEditorController(self, str(value or ""), read_only=True)
+        try:
+            dialog.ShowModal()
+        finally:
+            dialog.Destroy()
+
+        event.Skip()
 
 
 class DatabaseTablesDataViewCtrl(BaseDataViewCtrl):

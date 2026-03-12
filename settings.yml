@@ -1,5 +1,5 @@
 window:
-  size: 1920,1048
+  size: 1920,1080
   position: 0,0
 appearance:
   theme: petersql
@@ -12,13 +12,12 @@ shortcuts:
   query_editor:
     execute: F5
     execute_selection: Ctrl+Enter
-settings:
-  autocomplete:
-    debounce_ms: 80
-    min_prefix_length: 1
-    add_space_after_completion: true
-    popup_width: 300
-    popup_max_height: 10
+autocomplete:
+  debounce_ms: 80
+  min_prefix_length: 1
+  add_space_after_completion: true
+  popup_width: 300
+  popup_max_height: 10
 language: en_US
 query_editor:
   statement_separator: ;
@@ -30,3 +29,7 @@ advanced:
   connection_timeout: 10
   query_timeout: 10
   logging_level: INFO
+connections_dialog:
+  expanded_directories:
+  - - 3
+records: {}

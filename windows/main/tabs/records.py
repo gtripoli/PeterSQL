@@ -76,7 +76,10 @@ class RecordsModel(BaseDataViewListModel):
         return True
 
     def GetAttr(self, item, col, attr):
-        column: SQLColumn = self.table.columns[col]
+        try :
+            column: SQLColumn = self.table.columns[col]
+        except Exception as ex :
+            logger.error(exc_info=True)
 
         color = column.datatype.category.value.color
 
@@ -91,17 +94,6 @@ class RecordsModel(BaseDataViewListModel):
         self.data.append(data)
         self.RowAppended()
         return self.GetItem(len(self.data) - 1)
-
-    #
-    # def del_row(self, item: wx.dataview.DataViewItem):
-    #     row = self.GetRow(item)
-    #     del self.data[row]
-    #     self.RowDeleted(row)
-    #
-    # def clear(self):
-    #     self.data = []
-    #     self.Reset(0)
-    #     self.Cleared()
 
 
 class TableRecordsController:
@@ -127,6 +119,8 @@ class TableRecordsController:
     def _load_table(self, table: SQLTable):
         if table is not None:
             self.table = table
+            self.table.load_records()
+            self.load_model()
 
     def load_model(self):
         self.model = RecordsModel(self.table, len(self.table.columns))

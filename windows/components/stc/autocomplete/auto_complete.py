@@ -126,15 +126,15 @@ class SQLAutoCompleteController:
 
         if settings:
             self._debounce_ms = (
-                settings.get_value("settings", "autocomplete", "debounce_ms")
+                settings.get_value("autocomplete", "debounce_ms")
                 or debounce_ms
             )
             self._min_prefix_length = (
-                settings.get_value("settings", "autocomplete", "min_prefix_length")
+                settings.get_value("autocomplete", "min_prefix_length")
                 or min_prefix_length
             )
             self._add_space_after_completion = settings.get_value(
-                "settings", "autocomplete", "add_space_after_completion"
+                "autocomplete", "add_space_after_completion"
             )
             if self._add_space_after_completion is None:
                 self._add_space_after_completion = True

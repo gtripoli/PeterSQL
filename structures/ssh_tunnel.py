@@ -1,12 +1,13 @@
 import atexit
 import os
+import shlex
 import shutil
 import signal
 import socket
 import subprocess
 import time
 
-from typing import Optional
+from typing import Optional, Union
 
 from gettext import gettext as _
 
@@ -27,7 +28,7 @@ class SSHTunnel:
         local_bind_address: tuple[str, int] = ("localhost", 0),
         ssh_executable: str = "ssh",
         identity_file: Optional[str] = None,
-        extra_args: Optional[list[str]] = None,
+        extra_args: Optional[Union[str, list[str]]] = None,
     ):
         self.ssh_hostname = ssh_hostname
         self.ssh_port = ssh_port
@@ -40,8 +41,18 @@ class SSHTunnel:
 
         self.ssh_executable = ssh_executable
         self.identity_file = identity_file
-        self.extra_args = extra_args or []
+        self.extra_args = self._normalize_extra_args(extra_args)
         self._process: Optional[subprocess.Popen] = None
+
+    @staticmethod
+    def _normalize_extra_args(extra_args: Optional[Union[str, list[str]]]) -> list[str]:
+        if not extra_args:
+            return []
+
+        if isinstance(extra_args, list):
+            return [str(value) for value in extra_args if str(value).strip()]
+
+        return [value for value in shlex.split(extra_args) if value.strip()]
 
     def __enter__(self):
         self.start()
