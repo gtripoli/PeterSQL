@@ -1,12 +1,13 @@
 import psycopg2
 import psycopg2.extras
 
+from psycopg2.extensions import cursor as PostgreSQLCursor
+
 from typing import Any, Optional
 from gettext import gettext as _
 
 from helpers.logger import logger
 from structures.connection import Connection
-from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import (
@@ -101,6 +102,66 @@ class PostgreSQLContext(AbstractContext):
                 format=DataTypeFormat.STRING,
             )
             setattr(PostgreSQLDataType, row["typname"].upper(), datatype)
+
+    def _extract_description_type_code(self, description: Any) -> Optional[int]:
+        if hasattr(description, "type_code"):
+            value = getattr(description, "type_code")
+            return int(value) if value is not None else None
+
+        if len(description) > 1 and description[1] is not None:
+            return int(description[1])
+
+        return None
+
+    def _load_result_type_names_by_oid(
+        self, cursor: PostgreSQLCursor, oid_values: list[int]
+    ) -> dict[int, str]:
+        type_name_by_oid: dict[int, str] = {}
+
+        lookup_cursor = cursor.connection.cursor()
+        try:
+            lookup_cursor.execute(
+                "SELECT oid, format_type(oid, NULL) AS type_name FROM pg_type WHERE oid = ANY(%s)",
+                (oid_values,),
+            )
+            for oid, type_name in lookup_cursor.fetchall():
+                type_name_by_oid[int(oid)] = str(type_name)
+        finally:
+            lookup_cursor.close()
+
+        return type_name_by_oid
+
+    def _normalize_result_type_name(self, datatype_name: str) -> str:
+        normalized = datatype_name.strip().upper()
+        normalized = normalized.split("(")[0].strip()
+        normalized = " ".join(normalized.split())
+        return normalized
+
+    def get_result_column_datatypes(
+        self, cursor: PostgreSQLCursor
+    ) -> list[Optional[SQLDataType]]:
+        descriptions = list(cursor.description or [])
+        oids = [self._extract_description_type_code(desc) for desc in descriptions]
+        oid_values = [oid for oid in oids if oid is not None]
+
+        if not oid_values:
+            return [None for _ in descriptions]
+
+        type_name_by_oid = self._load_result_type_names_by_oid(cursor, oid_values)
+        datatypes: list[Optional[SQLDataType]] = []
+
+        for oid in oids:
+            if oid is None or oid not in type_name_by_oid:
+                datatypes.append(None)
+                continue
+
+            try:
+                type_name = self._normalize_result_type_name(type_name_by_oid[oid])
+                datatypes.append(self.DATATYPE.get_by_name(type_name))
+            except Exception:
+                datatypes.append(None)
+
+        return datatypes
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
@@ -427,7 +488,7 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_checks(self, table: PostgreSQLTable) -> list[PostgreSQLCheck]:
+    def get_checks(self, table: PostgreSQLTable) -> list["PostgreSQLCheck"]:
         from structures.engines.postgresql.database import PostgreSQLCheck
 
         if table is None or table.is_new:
@@ -636,7 +697,7 @@ class PostgreSQLContext(AbstractContext):
         name: Optional[str] = None,
         expression: Optional[str] = None,
         **default_values,
-    ) -> PostgreSQLCheck:
+    ) -> "PostgreSQLCheck":
         from structures.engines.postgresql.database import PostgreSQLCheck
 
         id = PostgreSQLContext.get_temporary_id(table.checks)

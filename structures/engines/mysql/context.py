@@ -4,6 +4,8 @@ from typing import Any, Optional
 
 import pymysql
 
+from pymysql.constants import FIELD_TYPE
+
 from gettext import gettext as _
 
 from helpers.logger import logger
@@ -33,8 +35,6 @@ from structures.engines.mysql.database import (
 )
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
-
-from structures.ssh_tunnel import SSHTunnel
 
 
 class MySQLContext(AbstractContext):
@@ -117,6 +117,39 @@ class MySQLContext(AbstractContext):
             )
 
         return dict()
+
+    def _get_field_type_name(self, type_code: Optional[int]) -> Optional[str]:
+        if type_code is None:
+            return None
+
+        for name, value in vars(FIELD_TYPE).items():
+            if not name.isupper() or not isinstance(value, int):
+                continue
+
+            if value == type_code:
+                return name
+
+        return None
+
+    def get_result_column_datatypes(
+        self, cursor: pymysql.cursors.Cursor
+    ) -> list[Optional[SQLDataType]]:
+        datatypes: list[Optional[SQLDataType]] = []
+
+        for description in cursor.description or []:
+            type_code = description[1] if len(description) > 1 else None
+            datatype_name = self._get_field_type_name(type_code)
+
+            if datatype_name is None:
+                datatypes.append(None)
+                continue
+
+            try:
+                datatypes.append(self.DATATYPE.get_by_name(datatype_name))
+            except Exception:
+                datatypes.append(None)
+
+        return datatypes
 
     def connect(self, **connect_kwargs) -> None:
         if self._connection is None:
