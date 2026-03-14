@@ -16,7 +16,6 @@ from structures.engines.indextype import SQLIndexType, StandardIndexType
 from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
-from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
 
 from windows.state import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, NEW_TABLE
 
@@ -288,7 +287,6 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
 
     def _on_context_menu(self, event):
-        from icons import BitmapList
 
         selected = self.GetSelection()
         model = self.GetModel()
@@ -298,22 +296,17 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
         menu = wx.Menu()
 
         add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        add_item.SetBitmap(BitmapList.ADD)
+        add_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.ADD))
         menu.Append(add_item)
 
         self.Bind(wx.EVT_MENU, self.on_foreign_key_insert, add_item)
 
         delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        delete_item.SetBitmap(BitmapList.DELETE)
+        delete_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.DELETE))
         menu.Append(delete_item)
         menu.Enable(delete_item.GetId(), selected.IsOk())
 
         self.Bind(wx.EVT_MENU, self.on_foreign_key_delete, delete_item)
-
-        # Forse non necessario, dato che editing è già disponibile
-        # update_item = wx.MenuItem(menu, wx.ID_ANY, _("Update foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        # menu.Append(update_item)
-        # self.Bind(wx.EVT_MENU, self.on_foreign_key_update, update_item)
 
         self.PopupMenu(menu)
 
@@ -336,9 +329,9 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
         CURRENT_TABLE.subscribe(self._load_table)
 
-    def make_advanced_dialog(self, parent, value: str):
+    def make_advanced_dialog(self, parent, value: str, read_only : bool = False):
         from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
-        return AdvancedCellEditorController(parent, value)
+        return AdvancedCellEditorController(parent, value, read_only)
 
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:
@@ -481,7 +474,7 @@ class QueryEditorResultsDataViewCtrl(TableRecordsDataViewCtrl):
         row = model.GetRow(item)
         value = model.GetValueByRow(row, model_column)
 
-        dialog = AdvancedCellEditorController(self, str(value or ""), read_only=True)
+        dialog = self.make_advanced_dialog(self, str(value or ""), read_only=True)
         try:
             dialog.ShowModal()
         finally:

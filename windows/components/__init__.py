@@ -134,6 +134,7 @@ class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.app = wx.GetApp()
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 
     def finish_editing(self, current_column):
