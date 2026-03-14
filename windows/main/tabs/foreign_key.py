@@ -5,7 +5,7 @@ from icons import IconList
 
 from helpers.loader import Loader
 from helpers.logger import logger
-from helpers.dataview import BaseDataViewListModel
+from helpers.dataview import BaseObservableDataViewListModel
 
 
 from structures.helpers import merge_original_current
@@ -16,7 +16,7 @@ from windows.state import CURRENT_TABLE, CURRENT_FOREIGN_KEY, CURRENT_SESSION, N
 from structures.engines.database import SQLForeignKey, SQLTable
 
 
-class TableForeignKeyModel(BaseDataViewListModel):
+class TableForeignKeyModel(BaseObservableDataViewListModel):
 
     def GetValueByRow(self, row, col):
         if row >= len(self.data):

@@ -3,7 +3,7 @@ from typing import Optional, Any, Callable
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewTreeModel
+from helpers.dataview import BaseObservableDataViewTreeModel
 
 from structures.connection import Connection
 
@@ -11,7 +11,7 @@ from . import CURRENT_CONNECTION, ConnectionDirectory, CURRENT_DIRECTORY
 from windows.dialogs.connections.repository import ConnectionsRepository
 
 
-class ConnectionsTreeModel(BaseDataViewTreeModel):
+class ConnectionsTreeModel(BaseObservableDataViewTreeModel):
     def __init__(self):
         super().__init__(column_count=2)
         self._parent_map = {}
