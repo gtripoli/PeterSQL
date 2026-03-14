@@ -660,3 +660,8 @@ class SQLiteContext(AbstractContext):
             database=database,
             statement=default_values.get("statement", ""),
         )
+
+    def get_result_column_datatypes(
+        self, cursor: sqlite3.Cursor
+    ) -> list[Optional[SQLDataType]]:
+        return [None for _ in (cursor.description or [])]
