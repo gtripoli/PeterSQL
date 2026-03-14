@@ -527,7 +527,7 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer37111211 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText15111211 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u" Average connection time (ms)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText15111211 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Average connection time (ms)"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText15111211.Wrap( -1 )
 
         self.m_staticText15111211.SetMinSize( wx.Size( 200,-1 ) )
@@ -544,7 +544,7 @@ class ConnectionsDialog ( wx.Dialog ):
 
         bSizer371112111 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText151112111 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u" Most recent connection duration"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText151112111 = wx.StaticText( self.panel_statistics, wx.ID_ANY, _(u"Most recent connection duration"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText151112111.Wrap( -1 )
 
         self.m_staticText151112111.SetMinSize( wx.Size( 200,-1 ) )
@@ -2234,7 +2234,7 @@ class MainFrameView ( wx.Frame ):
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
+        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2249,6 +2249,13 @@ class MainFrameView ( wx.Frame ):
 
         self.m_panel52 = wx.Panel( self.m_splitter6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer125 = wx.BoxSizer( wx.VERTICAL )
+
+        self.cancel_query_execution = wx.Button( self.m_panel52, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.cancel_query_execution.SetBitmap( wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ) )
+        self.cancel_query_execution.Enable( False )
+
+        bSizer125.Add( self.cancel_query_execution, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
         self.sql_query_editor = wx.stc.StyledTextCtrl( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         self.sql_query_editor.SetUseTabs ( True )
@@ -2315,7 +2322,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_query.SetSizer( bSizer26 )
         self.panel_query.Layout()
         bSizer26.Fit( self.panel_query )
-        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), False )
+        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2457,6 +2464,7 @@ class MainFrameView ( wx.Frame ):
         self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
         self.m_collapsiblePane1.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_collapsible_pane_changed )
         self.m_button41.Bind( wx.EVT_BUTTON, self.on_apply_filters )
+        self.cancel_query_execution.Bind( wx.EVT_BUTTON, self.on_cancel_query_execution )
 
     def __del__( self ):
         pass
@@ -2564,6 +2572,9 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def on_apply_filters( self, event ):
+        event.Skip()
+
+    def on_cancel_query_execution( self, event ):
         event.Skip()
 
     def m_splitter51OnIdle( self, event ):

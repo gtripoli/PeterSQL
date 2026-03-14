@@ -76,7 +76,11 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_check = TableCheckController(self.dv_table_checks)
         self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
-        self.controller_query_records = QueryResultsController(self.sql_query_editor, self.notebook_sql_results)
+        self.controller_query_records = QueryResultsController(
+            self.sql_query_editor,
+            self.notebook_sql_results,
+            cancel_button=self.cancel_query_execution,
+        )
 
         self.controller_view_editor = ViewEditorController(self)
 
@@ -1059,6 +1063,9 @@ class MainFrameController(MainFrameView):
     def on_apply_filters(self, event):
         self._records_offset = 0
         self._load_records_page()
+
+    def on_cancel_query_execution(self, event):
+        self.controller_query_records.cancel_execution(event)
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()
