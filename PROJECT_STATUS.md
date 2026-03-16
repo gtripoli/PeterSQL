@@ -1,43 +1,32 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-03-10  
-> **Validation Policy:** new engine features are marked **PARTIAL** until broader integration validation is complete.
+> **Last Updated:** 2026-03-16
+> **Status Rule:** newly implemented features are tracked as **PARTIAL** until validated across supported versions.
+> **Definition of DONE:** engine methods implemented, integration tests pass on target versions, UI workflow exists (if user-facing), no known regressions, documentation updated.
 
 ---
 
-## 1. Executive Summary
+## Priority Matrix
 
-### ✅ Solid and Stable Areas
+| Priority | Focus | Target |
+|----------|-------|--------|
+| 🔴 **P0 - Validation Now** | stabilize newly added engine features | 1-2 weeks |
+| 🟡 **P1 - Engine Gaps** | close remaining CRUD parity gaps | 2-4 weeks |
+| 🟢 **P2 - UI Completeness** | add missing editors for exposed objects | 1-2 months |
+| 🔵 **P3 - Advanced Features** | schema/security/import-export roadmap | 2-3 months |
+
+---
+
+## 1. Solid and Stable Areas
 
 | Area | Status |
 |------|--------|
 | **SQLite Engine** | Most mature path with complete day-to-day table/record workflows. |
 | **MySQL/MariaDB Core** | Strong parity for tables, columns, indexes, foreign keys, records, views, triggers, functions. |
 | **UI Core Editors** | Table, columns, indexes, foreign keys, records, and view editor are operational. |
+| **Multi-tab Query Editor** | Multi-tab editor with per-tab dirty tracking, autosave, cancelable execution, and configurable shortcuts. |
 | **Explorer Navigation** | Databases, tables, views, triggers, procedures, functions, and events are visible in tree explorer. |
 | **SSH Tunnel Support** | Implemented for MySQL, MariaDB, and PostgreSQL. |
-
-### 🟡 Partial / Under Validation
-
-| Area | Current State |
-|------|---------------|
-| **MySQL Procedure** | Class + CRUD methods exist, context introspection exists, integration tests added, broader validation still ongoing. |
-| **MariaDB Procedure** | Class + CRUD methods exist, context introspection exists, integration tests added, broader validation still ongoing. |
-| **PostgreSQL Function** | Class + CRUD methods exist, context introspection exists, integration tests now cover create/alter/drop across supported PG versions; broader validation still ongoing. |
-| **PostgreSQL Procedure** | Class + CRUD methods exist, context introspection exists, integration tests now cover create/alter/drop across supported PG versions; broader validation still ongoing. |
-| **Check Constraints (MySQL/MariaDB/PostgreSQL)** | Engine classes and introspection exist, cross-version validation still needed. |
-| **Connection Reliability Features** | Persistent connection statistics, empty DB password support, and TLS auto-retry are implemented and need longer real-world validation. |
-| **SQL Dump / Backup** | `SQLDatabase.dump()` produces object-driven `.sql` dumps (schema + records); restore/import workflow is still missing. |
-| **Database Lifecycle (Create/Drop)** | Engine database objects expose lifecycle methods, but context/UI workflow parity is still incomplete. |
-
-### ❌ Missing / Not Implemented
-
-| Area | Notes |
-|------|-------|
-| **Function/Procedure UI Editors** | Explorer lists objects, but dedicated create/edit UI is still missing. |
-| **Database Create/Drop UI** | No complete create/drop workflow across engines. |
-| **Schema/Sequence Management** | PostgreSQL schema/sequence CRUD is not available. |
-| **User/Role/Grants** | Not implemented for any engine. |
 
 ---
 
@@ -112,18 +101,92 @@
 | Table / Column / Index / Foreign Key | ✅ | ✅ | ✅ | ✅ | Main table editor workflow complete. |
 | Check Constraint | ✅ | 🟡 | 🟡 | 🟡 | `TableCheckController` exists; broader multi-engine UX validation pending. |
 | View | ✅ | ✅ | ✅ | ✅ | Dedicated view editor is available. |
-| Trigger | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated trigger editor panel yet. |
+| Trigger | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated editor yet. |
 | Function | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated editor yet. |
 | Procedure | ✅ | ❌ | ❌ | ❌ | Explorer only; no dedicated editor yet. |
 | Event | ✅ | ❌ | ❌ | ❌ | Explorer only. |
 | Records | ✅ | ✅ | ✅ | ✅ | Insert/update/delete/duplicate in table records tab. |
+| Query Editor | ✅ | ✅ | ✅ | ✅ | Multi-tab, cancelable execution, configurable shortcuts, autosave. |
 
 ---
 
-## 4. Cross-Cutting Notes
+## 4. Feature Backlog
 
-### Recently Added
+### 🔴 P0 - Validation Now
 
+- [x] **PostgreSQL Function engine implementation** (PARTIAL)
+  - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
+  - **Next:** long-run/manual workflow validation + broader regression checks.
+
+- [x] **PostgreSQL Procedure engine implementation** (PARTIAL)
+  - **Files:** `structures/engines/postgresql/database.py`, `structures/engines/postgresql/context.py`
+  - **Next:** long-run/manual workflow validation + introspection consistency checks.
+
+- [x] **Check constraint implementations for MySQL/MariaDB/PostgreSQL** (PARTIAL)
+  - **Files:** `structures/engines/mysql/`, `structures/engines/mariadb/`, `structures/engines/postgresql/`
+  - **Next:** cross-version validation matrix.
+
+- [x] **Connection reliability updates** (PARTIAL)
+  - **Scope:** persistent connection statistics, empty DB password support, TLS auto-retry (MySQL/MariaDB).
+  - **Files:** `structures/connection.py`, `windows/dialogs/connections/`
+  - **Next:** SSH testcontainers integration validation (currently skipped) + long-run behavioral validation.
+
+- [x] **SQL dump/backup object-driven flow** (PARTIAL)
+  - **Scope:** `SQLDatabase.dump()` generates SQL dump files through domain objects (`raw_create()`).
+  - **Files:** `structures/engines/database.py`, `structures/engines/dump.py`, per-engine `database.py`
+  - **Next:** cross-engine manual restore/import verification from produced dumps.
+
+### 🟡 P1 - Engine Gaps
+
+- [x] **MySQL Procedure implementation** (PARTIAL)
+  - **Files:** `structures/engines/mysql/context.py`, `structures/engines/mysql/database.py`
+
+- [x] **MariaDB Procedure implementation** (PARTIAL)
+  - **Files:** `structures/engines/mariadb/context.py`, `structures/engines/mariadb/database.py`
+
+- [ ] **Database lifecycle parity (context + UI wiring)**
+  - **Current state:** engine database objects expose create/alter/drop, but context/UI workflow remains read/list oriented.
+  - **Files:** `structures/engines/*/context.py`
+
+### 🟢 P2 - UI Completeness
+
+- [x] **View Create/Edit Dialog** — DONE. (`windows/main/tabs/view.py`, `helpers/sql.py`)
+- [x] **Multi-tab query editor** — DONE. (`windows/main/controller.py`, `windows/main/tabs/query.py`)
+- [x] **Cancelable query execution with richer result metadata** — DONE. (`windows/main/tabs/query.py`)
+- [x] **Configurable keyboard shortcuts for query editor** — DONE. (`windows/main/controller.py`, `windows/dialogs/settings/`)
+- [ ] **Trigger Create/Edit UI** — Explorer visibility exists, editor panel missing.
+- [ ] **Function Create/Edit UI** — Explorer visibility exists, editor panel missing.
+- [ ] **Procedure Create/Edit UI** — Explorer visibility exists, editor panel missing.
+- [ ] **Database Create/Drop UI** — Depends on engine create/drop API parity.
+
+### 🔵 P3 - Advanced Features
+
+- [ ] PostgreSQL schema CRUD
+- [ ] PostgreSQL sequence CRUD
+- [ ] User/role management
+- [ ] Privileges/grants management
+- [ ] Restore + structured import/export workflows
+- [ ] PostgreSQL advanced objects (materialized views, partitioning, extensions)
+
+---
+
+## 5. Progress Snapshot
+
+- **P0 implemented (partial):** 5/5
+- **P1 gaps closed:** 2/3
+- **P2 UI tasks complete:** 4/8
+- **P3 advanced tasks complete:** 0/6
+
+---
+
+## 6. Recently Added
+
+- Multi-tab query editor with per-tab dirty tracking, autosave before execution, and close/save confirmation dialogs.
+- Cancelable query execution with background thread, per-statement result rendering, and execution summary.
+- Configurable keyboard shortcuts for all query editor actions (execute, stop, new tab, close tab, save, save-as).
+- `save` toolbar tool is disabled when the query has no unsaved changes.
+- Settings module moved to `helpers/settings.py` with restructured key schema.
+- `skip_before_connect` / `skip_after_connect` support added to all engine contexts.
 - Persistent connection statistics in connection model and dialog.
 - Empty database password accepted in connection validation.
 - Automatic TLS retry path for MySQL/MariaDB when server requires TLS.
@@ -131,49 +194,16 @@
 - SQL dump/backup pipeline is now object-driven via `SQLDatabase.dump()` + per-object `raw_create()`.
 - CI workflow split into `test`, `update` (nightly), and `release` jobs.
 
-### Main Remaining Risks
+---
 
-- PostgreSQL Function/Procedure now have integration coverage for create/alter/drop, but still need broader long-run/manual validation.
+## 7. Main Remaining Risks
+
+- PostgreSQL Function/Procedure still need broader long-run/manual validation.
 - Check constraints across MySQL/MariaDB/PostgreSQL need more cross-version coverage.
 - SQL dump/backup still needs broader cross-engine manual restore validation.
-- SSH tunnel integration validation with testcontainers remains blocked (existing SSH integration suites are still skipped).
+- SSH tunnel integration validation with testcontainers remains blocked.
 - UI parity lags engine parity for Trigger/Function/Procedure editors.
 
 ---
 
-## 5. Actionable Backlog (High Signal)
-
-### Priority A — Validate Newly Implemented Features
-
-1. PostgreSQL Function/Procedure long-run validation (manual workflows + regression suites after integration coverage).
-2. Check constraints validation matrix for MySQL, MariaDB, PostgreSQL.
-3. Connection statistics + TLS auto-retry robustness checks.
-
-### Priority B — Close Engine Gaps
-
-1. Complete context/UI wiring for database lifecycle (create/drop) across engines.
-
-### Priority C — UI Completeness
-
-1. Trigger create/edit UI.
-2. Function create/edit UI.
-3. Procedure create/edit UI.
-
-### Priority D — Future Platform Features
-
-1. PostgreSQL schema CRUD.
-2. PostgreSQL sequence CRUD.
-3. User/role/grants management.
-4. Restore and structured import/export workflows.
-
----
-
-## 6. Definition of DONE
-
-A capability is treated as **DONE** only when:
-
-- Engine methods are implemented (`create/read/update/delete` where applicable).
-- Integration tests pass on target engine versions.
-- UI workflow exists (if feature is user-facing in explorer).
-- No known regression in existing suites.
-- Documentation is updated (`README`, `PROJECT_STATUS`, `ROADMAP`).
+*This document is a living reference and should be updated whenever a PARTIAL item is validated or a new gap is identified.*
