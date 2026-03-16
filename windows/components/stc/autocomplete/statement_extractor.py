@@ -39,6 +39,32 @@ class StatementExtractor:
         return text, cursor_pos
     
     @staticmethod
+    def extract_all_statements(text: str) -> list[tuple[str, int, int]]:
+        """Return all statements as (text, start_pos, end_pos) tuples."""
+        if not text.strip():
+            return []
+
+        cleaned = StatementExtractor._remove_strings_and_comments(text)
+
+        boundaries = [0]
+        for i, char in enumerate(cleaned):
+            if char == ';':
+                boundaries.append(i + 1)
+        boundaries.append(len(text))
+
+        results = []
+        for i in range(len(boundaries) - 1):
+            start, end = boundaries[i], boundaries[i + 1]
+            statement = text[start:end]
+            if statement.endswith(';'):
+                statement = statement[:-1]
+            statement = statement.strip()
+            if statement:
+                results.append((statement, start, end))
+
+        return results
+
+    @staticmethod
     def _remove_strings_and_comments(text: str) -> str:
         text = StatementExtractor._string_pattern.sub(lambda m: ' ' * len(m.group(0)), text)
         text = StatementExtractor._comment_pattern.sub(lambda m: ' ' * len(m.group(0)), text)
