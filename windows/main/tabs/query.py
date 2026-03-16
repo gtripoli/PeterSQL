@@ -11,6 +11,7 @@ from gettext import gettext as _
 import wx
 import wx.dataview
 
+from helpers.loader import Loader
 from helpers.logger import logger
 from helpers.dataview import BaseDataViewListModel
 
@@ -18,6 +19,7 @@ from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.engines.datatype import DataTypeCategory, SQLDataType
 
+from windows.components.stc.autocomplete.statement_extractor import StatementExtractor
 from windows.components.popup import PopupCalendar, PopupCalendarTime
 from windows.components.renders import AdvancedTextRenderer, FloatRenderer, IntegerRenderer, PopupRenderer, TextRenderer, TimeRenderer
 from windows.components.dataview import QueryEditorResultsDataViewCtrl
@@ -77,94 +79,10 @@ class SQLStatementParser:
         self.engine = engine
 
     def parse(self, sql_text: str) -> list[ParsedStatement]:
-        if not sql_text.strip():
-            return []
-
-        statements = []
-        statement_index = 0
-        current_start = 0
-        i = 0
-        length = len(sql_text)
-
-        in_single_quote = False
-        in_double_quote = False
-        in_line_comment = False
-        in_block_comment = False
-
-        while i < length:
-            char = sql_text[i]
-
-            if in_line_comment:
-                if char == '\n':
-                    in_line_comment = False
-                i += 1
-                continue
-
-            if in_block_comment:
-                if i + 1 < length and sql_text[i:i + 2] == '*/':
-                    in_block_comment = False
-                    i += 2
-                    continue
-                i += 1
-                continue
-
-            if not in_single_quote and not in_double_quote:
-                if self._is_line_comment_start(sql_text, i):
-                    in_line_comment = True
-                    i += 2
-                    continue
-
-                if self._is_block_comment_start(sql_text, i):
-                    in_block_comment = True
-                    i += 2
-                    continue
-
-            if char == "'" and not in_double_quote:
-                if i + 1 < length and sql_text[i + 1] == "'":
-                    i += 2
-                    continue
-                in_single_quote = not in_single_quote
-
-            elif char == '"' and not in_single_quote:
-                if i + 1 < length and sql_text[i + 1] == '"':
-                    i += 2
-                    continue
-                in_double_quote = not in_double_quote
-
-            elif char == ';' and not in_single_quote and not in_double_quote:
-                statement_text = sql_text[current_start:i].strip()
-                if statement_text:
-                    statements.append(ParsedStatement(
-                        text=statement_text,
-                        start_pos=current_start,
-                        end_pos=i,
-                        statement_index=statement_index
-                    ))
-                    statement_index += 1
-                current_start = i + 1
-
-            i += 1
-
-        final_statement = sql_text[current_start:].strip()
-        if final_statement:
-            statements.append(ParsedStatement(
-                text=final_statement,
-                start_pos=current_start,
-                end_pos=length,
-                statement_index=statement_index
-            ))
-
-        return statements
-
-    def _is_line_comment_start(self, text: str, pos: int) -> bool:
-        if pos + 1 >= len(text):
-            return False
-        return text[pos:pos + 2] in ('--', '# ')
-
-    def _is_block_comment_start(self, text: str, pos: int) -> bool:
-        if pos + 1 >= len(text):
-            return False
-        return text[pos:pos + 2] == '/*'
+        return [
+            ParsedStatement(text=text, start_pos=start, end_pos=end, statement_index=i)
+            for i, (text, start, end) in enumerate(StatementExtractor.extract_all_statements(sql_text))
+        ]
 
 
 class StatementSelector:
@@ -260,28 +178,29 @@ class QueryExecutor:
         summary = ExecutionSummary(total_statements=len(statements))
 
         try:
-            context = self._create_worker_context(current_database)
-            self._set_worker_context(context)
+            with Loader.cursor_wait():
+                context = self._create_worker_context(current_database)
+                self._set_worker_context(context)
 
-            for stmt in statements:
-                if self._cancel_requested:
-                    summary.cancelled = True
-                    break
+                for stmt in statements:
+                    if self._cancel_requested:
+                        summary.cancelled = True
+                        break
 
-                summary.last_statement = stmt
-                result = self._execute_single(context, stmt)
+                    summary.last_statement = stmt
+                    result = self._execute_single(context, stmt)
 
-                if result.success:
-                    summary.completed_statements += 1
-                    summary.successful_statements += 1
-                elif not result.cancelled:
-                    summary.completed_statements += 1
-                    summary.failed_statements += 1
+                    if result.success:
+                        summary.completed_statements += 1
+                        summary.successful_statements += 1
+                    elif not result.cancelled:
+                        summary.completed_statements += 1
+                        summary.failed_statements += 1
 
-                self._dispatch_statement_result(on_statement_complete, result)
+                    self._dispatch_statement_result(on_statement_complete, result)
 
-                if not result.success and stop_on_error:
-                    break
+                    if not result.success and stop_on_error:
+                        break
 
         except Exception as ex:
             logger.error(f"Execution worker error: {ex}", exc_info=True)
@@ -379,7 +298,20 @@ class QueryExecutor:
 
     def _create_worker_context(self, current_database: Optional[Any]) -> Any:
         context = self.session._get_context_class()(self._build_worker_connection())
-        context.connect()
+
+        if self.session.engine == ConnectionEngine.POSTGRESQL:
+            connect_kwargs = {
+                "skip_before_connect": True,
+                "skip_after_connect": True,
+            }
+
+            if current_database is not None and hasattr(current_database, "name"):
+                connect_kwargs["database"] = current_database.name
+
+            context.connect(**connect_kwargs)
+            return context
+
+        context.connect(skip_before_connect=True, skip_after_connect=True)
 
         if current_database is not None:
             with contextlib.suppress(Exception):
@@ -694,42 +626,111 @@ class QueryEditorController:
             session_provider: Callable[[], Optional[Session]],
             database_provider: Optional[Callable[[], Optional[Any]]] = None,
             cancel_button: Optional[wx.Button] = None,
+            on_new_query: Optional[Callable[[wx.Event], None]] = None,
+            on_close_query: Optional[Callable[[wx.Event], None]] = None,
+            on_save_query: Optional[Callable[[wx.Event], None]] = None,
+            on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
+            on_stop_state_changed: Optional[Callable[[bool], None]] = None,
     ):
         self.editor = stc_editor
         self.notebook = results_notebook
         self.get_session = session_provider
         self.get_database = database_provider or (lambda: None)
         self.cancel_button = cancel_button
+        self.on_new_query = on_new_query
+        self.on_close_query = on_close_query
+        self.on_save_query = on_save_query
+        self.on_save_as_query = on_save_as_query
+        self.on_stop_state_changed = on_stop_state_changed
 
         self.parser: Optional[SQLStatementParser] = None
         self.selector = StatementSelector(stc_editor)
         self.executor: Optional[QueryExecutor] = None
         self.renderer: Optional[QueryResultsRenderer] = None
         self._cancel_feedback_pending = False
+        self._shortcuts = self._load_shortcuts()
 
         self._bind_shortcuts()
+        self._set_cancel_button_enabled(False)
+
+    def _load_shortcuts(self) -> dict[str, str]:
+        settings = wx.GetApp().settings
+        return {
+            "execute_current": settings.get_value("ui", "shortcuts", "query", "execute_current", default="Ctrl+Enter"),
+            "execute_all": settings.get_value("ui", "shortcuts", "query", "execute_all", default="Ctrl+Shift+Enter"),
+            "stop": settings.get_value("ui", "shortcuts", "query", "stop", default="Esc"),
+            "new_query": settings.get_value("ui", "shortcuts", "query", "new_query", default="Ctrl+T"),
+            "close_query": settings.get_value("ui", "shortcuts", "query", "close_query", default="Ctrl+W"),
+            "save": settings.get_value("ui", "shortcuts", "query", "save", default="Ctrl+S"),
+            "save_as": settings.get_value("ui", "shortcuts", "query", "save_as", default="Ctrl+Shift+S"),
+        }
+
+    def get_shortcuts(self) -> dict[str, str]:
+        return dict(self._shortcuts)
+
+    def _matches_shortcut(self, event: wx.KeyEvent, shortcut: str) -> bool:
+        parts = [part.strip().lower() for part in shortcut.split("+") if part.strip()]
+        if not parts:
+            return False
+
+        key_name = parts[-1]
+        modifiers = set(parts[:-1])
+
+        if event.ControlDown() != ("ctrl" in modifiers):
+            return False
+
+        if event.ShiftDown() != ("shift" in modifiers):
+            return False
+
+        if event.AltDown() != ("alt" in modifiers):
+            return False
+
+        key_code = event.GetKeyCode()
+        return self._matches_shortcut_key(key_name, key_code)
+
+    @staticmethod
+    def _matches_shortcut_key(key_name: str, key_code: int) -> bool:
+        if key_name == "enter":
+            return key_code in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]
+
+        if key_name == "esc":
+            return key_code == wx.WXK_ESCAPE
+
+        if len(key_name) == 1:
+            return key_code == ord(key_name.upper())
+
+        return False
 
     def _bind_shortcuts(self) -> None:
         self.editor.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
 
     def _on_key_down(self, event: wx.KeyEvent) -> None:
-        key_code = event.GetKeyCode()
-        ctrl_down = event.ControlDown()
-        shift_down = event.ShiftDown()
-
-        if key_code == wx.WXK_F5:
-            if shift_down:
-                self.cancel_execution(event)
-            else:
-                self.execute_all(event)
-            return
-
-        if ctrl_down and key_code == wx.WXK_RETURN:
+        if self._matches_shortcut(event, self._shortcuts["execute_current"]):
             self.execute_current(event)
             return
 
-        if ctrl_down and shift_down and key_code == ord('C'):
+        if self._matches_shortcut(event, self._shortcuts["execute_all"]):
+            self.execute_all(event)
+            return
+
+        if self._matches_shortcut(event, self._shortcuts["stop"]):
             self.cancel_execution(event)
+            return
+
+        if self._matches_shortcut(event, self._shortcuts["new_query"]) and self.on_new_query is not None:
+            self.on_new_query(event)
+            return
+
+        if self._matches_shortcut(event, self._shortcuts["close_query"]) and self.on_close_query is not None:
+            self.on_close_query(event)
+            return
+
+        if self._matches_shortcut(event, self._shortcuts["save_as"]) and self.on_save_as_query is not None:
+            self.on_save_as_query(event)
+            return
+
+        if self._matches_shortcut(event, self._shortcuts["save"]) and self.on_save_query is not None:
+            self.on_save_query(event)
             return
 
         event.Skip()
@@ -800,6 +801,9 @@ class QueryEditorController:
         if self.cancel_button is not None:
             self.cancel_button.Enable(enabled)
 
+        if self.on_stop_state_changed is not None:
+            self.on_stop_state_changed(enabled)
+
     def _format_elapsed(self, elapsed_ms: float) -> str:
         if elapsed_ms < 1000:
             return _("{elapsed_ms:.0f} ms").format(elapsed_ms=elapsed_ms)
@@ -846,6 +850,11 @@ class QueryResultsController(QueryEditorController):
             stc_sql_query: wx.stc.StyledTextCtrl,
             notebook_sql_results: wx.Notebook,
             cancel_button: Optional[wx.Button] = None,
+            on_new_query: Optional[Callable[[wx.Event], None]] = None,
+            on_close_query: Optional[Callable[[wx.Event], None]] = None,
+            on_save_query: Optional[Callable[[wx.Event], None]] = None,
+            on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
+            on_stop_state_changed: Optional[Callable[[bool], None]] = None,
     ):
         from windows.main import CURRENT_DATABASE, CURRENT_SESSION  # Lazy import: unavoidable circular dependency.
 
@@ -855,4 +864,9 @@ class QueryResultsController(QueryEditorController):
             session_provider=lambda: CURRENT_SESSION.get_value(),
             database_provider=lambda: CURRENT_DATABASE.get_value(),
             cancel_button=cancel_button,
+            on_new_query=on_new_query,
+            on_close_query=on_close_query,
+            on_save_query=on_save_query,
+            on_save_as_query=on_save_as_query,
+            on_stop_state_changed=on_stop_state_changed,
         )

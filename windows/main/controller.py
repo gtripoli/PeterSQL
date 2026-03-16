@@ -53,6 +53,10 @@ class MainFrameController(MainFrameView):
         super().__init__(None)
 
         self.styled_text_ctrls_name = ["sql_query_logs", "stc_view_select", "sql_query_filters", "sql_create_table", "sql_query_editor"]
+        self._query_pages: list[wx.Panel] = []
+        self._query_page_counter = 1
+        self._query_page_meta: dict[wx.Panel, dict[str, Any]] = {}
+        self._query_shortcuts = self._load_query_shortcuts()
 
         self.edit_table_model = EditTableModel()
         self.edit_table_model.bind_controls(
@@ -76,11 +80,7 @@ class MainFrameController(MainFrameView):
         self.controller_list_table_check = TableCheckController(self.dv_table_checks)
         self.controller_list_table_foreign_key = TableForeignKeyController(self.dv_table_foreign_keys)
 
-        self.controller_query_records = QueryResultsController(
-            self.sql_query_editor,
-            self.notebook_sql_results,
-            cancel_button=self.cancel_query_execution,
-        )
+        self._setup_query_pages()
 
         self.controller_view_editor = ViewEditorController(self)
 
@@ -115,32 +115,427 @@ class MainFrameController(MainFrameView):
         event.Skip()
 
     def _setup_query_editors(self):
+        editors = set()
+
         for styled_text_ctrl_name in self.styled_text_ctrls_name:
             styled_text_ctrl = getattr(self, styled_text_ctrl_name)
+            self._setup_sql_editor(styled_text_ctrl)
+            editors.add(styled_text_ctrl)
 
-            styled_text_ctrl.EmptyUndoBuffer()
+        for meta in self._query_page_meta.values():
+            styled_text_ctrl = meta["editor"]
+            if styled_text_ctrl in editors:
+                continue
 
-            wx.GetApp().theme_manager.register(styled_text_ctrl, lambda: wx.GetApp().syntax_registry.get("sql"))
+            self._setup_sql_editor(styled_text_ctrl)
 
-            apply_stc_theme(styled_text_ctrl, SQL)
+    def _setup_sql_editor(self, styled_text_ctrl: wx.stc.StyledTextCtrl) -> None:
+        styled_text_ctrl.EmptyUndoBuffer()
 
-            sql_completion_provider = SQLCompletionProvider(
-                get_database=lambda: CURRENT_DATABASE.get_value(),
-                get_current_table=lambda: CURRENT_TABLE.get_value(),
-            )
+        wx.GetApp().theme_manager.register(styled_text_ctrl, lambda: wx.GetApp().syntax_registry.get("sql"))
 
-            sql_autocomplete_controller = SQLAutoCompleteController(
-                editor=styled_text_ctrl,
-                provider=sql_completion_provider,
-                settings=wx.GetApp().settings,
-                theme_loader=wx.GetApp().theme_loader,
-            )
-            
-            sql_template_menu = SQLTemplateMenuController(
-                editor=styled_text_ctrl,
-                get_database=lambda: CURRENT_DATABASE.get_value(),
-                get_current_table=lambda: CURRENT_TABLE.get_value(),
-            )
+        apply_stc_theme(styled_text_ctrl, SQL)
+
+        sql_completion_provider = SQLCompletionProvider(
+            get_database=lambda: CURRENT_DATABASE.get_value(),
+            get_current_table=lambda: CURRENT_TABLE.get_value(),
+        )
+
+        SQLAutoCompleteController(
+            editor=styled_text_ctrl,
+            provider=sql_completion_provider,
+            settings=wx.GetApp().settings,
+            theme_loader=wx.GetApp().theme_loader,
+        )
+
+        SQLTemplateMenuController(
+            editor=styled_text_ctrl,
+            get_database=lambda: CURRENT_DATABASE.get_value(),
+            get_current_table=lambda: CURRENT_TABLE.get_value(),
+        )
+
+    def _build_query_editor(self, parent: wx.Window) -> wx.stc.StyledTextCtrl:
+        editor = wx.stc.StyledTextCtrl(parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        editor.SetUseTabs(True)
+        editor.SetTabWidth(4)
+        editor.SetIndent(4)
+        editor.SetTabIndents(True)
+        editor.SetBackSpaceUnIndents(True)
+        editor.SetViewEOL(False)
+        editor.SetViewWhiteSpace(False)
+        editor.SetMarginWidth(2, 0)
+        editor.SetIndentationGuides(True)
+        editor.SetReadOnly(False)
+        editor.SetMarginType(1, wx.stc.STC_MARGIN_SYMBOL)
+        editor.SetMarginMask(1, wx.stc.STC_MASK_FOLDERS)
+        editor.SetMarginWidth(1, 16)
+        editor.SetMarginSensitive(1, True)
+        editor.SetProperty("fold", "1")
+        editor.SetFoldFlags(wx.stc.STC_FOLDFLAG_LINEBEFORE_CONTRACTED | wx.stc.STC_FOLDFLAG_LINEAFTER_CONTRACTED)
+        editor.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
+        editor.SetMarginWidth(0, editor.TextWidth(wx.stc.STC_STYLE_LINENUMBER, "_99999"))
+        editor.SetSelBackground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT))
+        editor.SetSelForeground(True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+        return editor
+
+    def _load_query_shortcuts(self) -> dict[str, str]:
+        settings = wx.GetApp().settings
+        return {
+            "execute_current": settings.get_value("ui", "shortcuts", "query", "execute_current", default="Ctrl+Enter"),
+            "execute_all": settings.get_value("ui", "shortcuts", "query", "execute_all", default="Ctrl+Shift+Enter"),
+            "stop": settings.get_value("ui", "shortcuts", "query", "stop", default="Esc"),
+            "new_query": settings.get_value("ui", "shortcuts", "query", "new_query", default="Ctrl+T"),
+            "close_query": settings.get_value("ui", "shortcuts", "query", "close_query", default="Ctrl+W"),
+            "save": settings.get_value("ui", "shortcuts", "query", "save", default="Ctrl+S"),
+            "save_as": settings.get_value("ui", "shortcuts", "query", "save_as", default="Ctrl+Shift+S"),
+        }
+
+    def _with_shortcut(self, text: str, shortcut_key: str) -> str:
+        shortcut = self._query_shortcuts.get(shortcut_key)
+        if not shortcut:
+            return text
+
+        return _("{text} ({shortcut})").format(text=text, shortcut=shortcut)
+
+    def _apply_query_toolbar_shortcuts(self, toolbar: wx.ToolBar, tool_ids: dict[str, int]) -> None:
+        toolbar.SetToolShortHelp(tool_ids["new"], self._with_shortcut(_("New query"), "new_query"))
+        toolbar.SetToolShortHelp(tool_ids["close"], self._with_shortcut(_("Close query"), "close_query"))
+        toolbar.SetToolShortHelp(tool_ids["execute"], self._with_shortcut(_("Execute"), "execute_current"))
+        toolbar.SetToolShortHelp(tool_ids["execute_all"], self._with_shortcut(_("Execute all"), "execute_all"))
+        toolbar.SetToolShortHelp(tool_ids["stop"], self._with_shortcut(_("Stop"), "stop"))
+        toolbar.SetToolShortHelp(tool_ids["save"], self._with_shortcut(_("Save"), "save"))
+
+    def _build_query_toolbar(self, parent: wx.Window) -> tuple[wx.ToolBar, dict[str, int]]:
+        toolbar = wx.ToolBar(parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORIZONTAL)
+        new_query = toolbar.AddTool(wx.ID_ANY, _("New query"), wx.Bitmap("icons/16x16/add.png", wx.BITMAP_TYPE_ANY),
+                                    wx.NullBitmap, wx.ITEM_NORMAL, _("New query"), wx.EmptyString, None)
+        close_query = toolbar.AddTool(wx.ID_ANY, _("Close query"), wx.Bitmap("icons/16x16/delete.png", wx.BITMAP_TYPE_ANY),
+                                      wx.NullBitmap, wx.ITEM_NORMAL, _("Close query"), wx.EmptyString, None)
+        toolbar.AddSeparator()
+        execute_statement = toolbar.AddTool(wx.ID_ANY, _("Execute"), wx.Bitmap("icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY),
+                                            wx.NullBitmap, wx.ITEM_NORMAL, _("Execute"), wx.EmptyString, None)
+        execute_all = toolbar.AddTool(wx.ID_ANY, _("Execute all"), wx.Bitmap("icons/16x16/arrows_lefttoright.png", wx.BITMAP_TYPE_ANY),
+                                      wx.NullBitmap, wx.ITEM_NORMAL, _("Execute all statements"), wx.EmptyString, None)
+        toolbar.AddSeparator()
+        stop_statements = toolbar.AddTool(wx.ID_ANY, _("Stop"), wx.Bitmap("icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY),
+                                          wx.NullBitmap, wx.ITEM_NORMAL, _("Stop"), wx.EmptyString, None)
+        toolbar.AddSeparator()
+        save_query = toolbar.AddTool(wx.ID_ANY, _("Save"), wx.Bitmap("icons/16x16/disk.png", wx.BITMAP_TYPE_ANY),
+                                     wx.NullBitmap, wx.ITEM_NORMAL, _("Save"), wx.EmptyString, None)
+        toolbar.Realize()
+
+        tool_ids = {
+            "new": new_query.GetId(),
+            "close": close_query.GetId(),
+            "execute": execute_statement.GetId(),
+            "execute_all": execute_all.GetId(),
+            "stop": stop_statements.GetId(),
+            "save": save_query.GetId(),
+        }
+
+        self._apply_query_toolbar_shortcuts(toolbar, tool_ids)
+
+        toolbar.Bind(wx.EVT_TOOL, self.on_new_query, id=new_query.GetId())
+        toolbar.Bind(wx.EVT_TOOL, self.on_close_query, id=close_query.GetId())
+        toolbar.Bind(wx.EVT_TOOL, self.on_execute_statement, id=execute_statement.GetId())
+        toolbar.Bind(wx.EVT_TOOL, self.on_execute_statements, id=execute_all.GetId())
+        toolbar.Bind(wx.EVT_TOOL, self.on_stop_statements, id=stop_statements.GetId())
+        toolbar.Bind(wx.EVT_TOOL, self.on_save, id=save_query.GetId())
+        return toolbar, tool_ids
+
+    def _build_query_page(self) -> tuple[wx.Panel, wx.stc.StyledTextCtrl, wx.Window, wx.ToolBar, dict[str, int]]:
+        panel_query = wx.Panel(self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        query_sizer = wx.BoxSizer(wx.VERTICAL)
+        splitter = wx.SplitterWindow(panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D)
+
+        panel_top = wx.Panel(splitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        top_sizer = wx.BoxSizer(wx.VERTICAL)
+        toolbar, tool_ids = self._build_query_toolbar(panel_top)
+        editor = self._build_query_editor(panel_top)
+        top_sizer.Add(toolbar, 0, wx.EXPAND, 5)
+        top_sizer.Add(editor, 1, wx.EXPAND | wx.ALL, 5)
+        panel_top.SetSizer(top_sizer)
+
+        panel_bottom = wx.Panel(splitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        bottom_sizer = wx.BoxSizer(wx.VERTICAL)
+        results_notebook_class = self.notebook_sql_results.__class__
+        results_notebook = results_notebook_class(panel_bottom, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        bottom_sizer.Add(results_notebook, 1, wx.EXPAND | wx.ALL, 5)
+        panel_bottom.SetSizer(bottom_sizer)
+
+        splitter.SplitHorizontally(panel_top, panel_bottom, -300)
+        query_sizer.Add(splitter, 1, wx.EXPAND, 5)
+        panel_query.SetSizer(query_sizer)
+        return panel_query, editor, results_notebook, toolbar, tool_ids
+
+    def _get_active_query_controller(self) -> Optional[QueryResultsController]:
+        page = self.MainFrameNotebook.GetCurrentPage()
+        if page is None:
+            return None
+
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return None
+
+        return meta["controller"]
+
+    def _register_query_page(
+            self,
+            panel: wx.Panel,
+            editor: wx.stc.StyledTextCtrl,
+            results_notebook: wx.Window,
+            toolbar: wx.ToolBar,
+            tool_ids: dict[str, int],
+            display_name: str,
+    ) -> None:
+        controller = QueryResultsController(
+            editor,
+            results_notebook,
+            cancel_button=None,
+            on_new_query=self.on_new_query,
+            on_close_query=self.on_close_query,
+            on_save_query=self.on_save,
+            on_save_as_query=self.on_save_as_query,
+            on_stop_state_changed=lambda enabled: self._set_query_stop_enabled(panel, enabled),
+        )
+        self._query_pages.append(panel)
+        self._query_page_meta[panel] = {
+            "editor": editor,
+            "toolbar": toolbar,
+            "controller": controller,
+            "tool_ids": tool_ids,
+            "file_path": None,
+            "is_dirty": False,
+            "display_name": display_name,
+        }
+        self._bind_query_editor_events(panel, editor)
+        self._set_query_stop_enabled(panel, enabled=False)
+
+    def _set_query_stop_enabled(self, page: wx.Panel, enabled: bool) -> None:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return
+
+        toolbar = meta["toolbar"]
+        tool_ids = meta["tool_ids"]
+        toolbar.EnableTool(tool_ids["stop"], enabled)
+        toolbar.EnableTool(tool_ids["execute"], not enabled)
+        toolbar.EnableTool(tool_ids["execute_all"], not enabled)
+
+    def _bind_query_editor_events(self, page: wx.Panel, editor: wx.stc.StyledTextCtrl) -> None:
+        editor.Bind(wx.stc.EVT_STC_CHANGE, lambda event: self._on_query_editor_changed(page, event))
+
+    def _on_query_editor_changed(self, page: wx.Panel, event: wx.Event) -> None:
+        self._set_query_dirty(page, is_dirty=True)
+        event.Skip()
+
+    def _set_query_dirty(self, page: wx.Panel, is_dirty: bool) -> None:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return
+
+        if meta["is_dirty"] == is_dirty:
+            return
+
+        meta["is_dirty"] = is_dirty
+        self._update_query_page_title(page)
+
+    def _update_query_page_title(self, page: wx.Panel) -> None:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return
+
+        page_index = self.MainFrameNotebook.FindPage(page)
+        if page_index < 0:
+            return
+
+        title = meta["display_name"]
+        if meta["is_dirty"]:
+            title = f"{title} *"
+
+        self.MainFrameNotebook.SetPageText(page_index, title)
+
+    def _setup_query_pages(self) -> None:
+        template_index = self.MainFrameNotebook.FindPage(self.QueryPanelTpl)
+        if template_index >= 0:
+            self.MainFrameNotebook.DeletePage(template_index)
+
+        query_index = self.MainFrameNotebook.FindPage(self.panel_query)
+        self.MainFrameNotebook.SetPageText(query_index, _("Query (1)"))
+
+        self._register_query_page(
+            panel=self.panel_query,
+            editor=self.sql_query_editor,
+            results_notebook=self.notebook_sql_results,
+            toolbar=self.m_toolBar2,
+            tool_ids={
+                "new": self.new_query.GetId(),
+                "close": self.close_query.GetId(),
+                "execute": self.execute_statement.GetId(),
+                "execute_all": self.execute_all_statements.GetId(),
+                "stop": self.stop_statements.GetId(),
+                "save": self.save.GetId(),
+            },
+            display_name=_("Query (1)"),
+        )
+
+        self._apply_query_toolbar_shortcuts(self.m_toolBar2, self._query_page_meta[self.panel_query]["tool_ids"])
+
+        self.controller_query_records = self._query_page_meta[self.panel_query]["controller"]
+        self._update_query_close_tools_state()
+
+    def _update_query_close_tools_state(self) -> None:
+        can_close = len(self._query_pages) > 1
+        for meta in self._query_page_meta.values():
+            toolbar = meta["toolbar"]
+            close_query_tool_id = meta["tool_ids"]["close"]
+            toolbar.EnableTool(close_query_tool_id, can_close)
+
+    def _create_new_query_page(self) -> None:
+        self._query_page_counter += 1
+        label = _("Query ({query_number})").format(query_number=self._query_page_counter)
+
+        panel, editor, results_notebook, toolbar, tool_ids = self._build_query_page()
+        self.MainFrameNotebook.AddPage(panel, label, select=True)
+
+        self._register_query_page(
+            panel=panel,
+            editor=editor,
+            results_notebook=results_notebook,
+            toolbar=toolbar,
+            tool_ids=tool_ids,
+            display_name=label,
+        )
+
+        self._setup_sql_editor(editor)
+        self._update_query_close_tools_state()
+
+    def _confirm_close_query_page(self, page: wx.Panel) -> bool:
+        meta = self._query_page_meta.get(page)
+        if meta is None or not meta["is_dirty"]:
+            return True
+
+        result = wx.MessageDialog(
+            None,
+            message=_("You have unsaved changes. Save before closing?"),
+            caption=_("Unsaved query"),
+            style=wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION,
+        ).ShowModal()
+
+        if result == wx.ID_YES:
+            return self._save_query_page(page, force_save_as=False)
+
+        if result == wx.ID_NO:
+            return True
+
+        return False
+
+    def _close_active_query_page(self) -> None:
+        if len(self._query_pages) <= 1:
+            return
+
+        page = self.MainFrameNotebook.GetCurrentPage()
+        if page is None or page not in self._query_page_meta:
+            return
+
+        if not self._confirm_close_query_page(page):
+            return
+
+        meta = self._query_page_meta.pop(page)
+        self._query_pages.remove(page)
+
+        controller = meta["controller"]
+        controller.cancel_execution(wx.CommandEvent())
+
+        query_page_index = self.MainFrameNotebook.FindPage(page)
+        if query_page_index >= 0:
+            self.MainFrameNotebook.DeletePage(query_page_index)
+
+        self._update_query_close_tools_state()
+
+        active_controller = self._get_active_query_controller()
+        if active_controller is not None:
+            self.controller_query_records = active_controller
+
+    def _ask_query_save_path(self, file_path: Optional[str] = None) -> Optional[str]:
+        default_dir = os.path.dirname(file_path) if file_path else os.getcwd()
+        default_name = os.path.basename(file_path) if file_path else "query.sql"
+
+        dialog = wx.FileDialog(
+            self,
+            message=_("Save query"),
+            defaultDir=default_dir,
+            defaultFile=default_name,
+            wildcard=_("SQL files (*.sql)|*.sql|All files (*.*)|*.*"),
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        )
+
+        if dialog.ShowModal() != wx.ID_OK:
+            return None
+
+        return dialog.GetPath()
+
+    @staticmethod
+    def _write_query_file(file_path: str, content: str) -> None:
+        with open(file_path, "w", encoding="utf-8") as file_obj:
+            file_obj.write(content)
+
+    @staticmethod
+    def _get_query_autosave_path() -> str:
+        query_dir = os.path.join(os.getcwd(), ".queries")
+        os.makedirs(query_dir, exist_ok=True)
+        return os.path.join(query_dir, f"query_{time.strftime('%Y%m%d_%H%M%S')}_{time.time_ns()}.sql")
+
+    def _save_query_page(self, page: wx.Panel, force_save_as: bool) -> bool:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return False
+
+        file_path = meta["file_path"]
+        if force_save_as or not file_path:
+            file_path = self._ask_query_save_path(file_path)
+            if not file_path:
+                return False
+
+        editor = meta["editor"]
+
+        try:
+            self._write_query_file(file_path, editor.GetText())
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), _("Error"), wx.OK | wx.ICON_ERROR).ShowModal()
+            return False
+
+        meta["file_path"] = file_path
+        meta["display_name"] = os.path.basename(file_path)
+        self._set_query_dirty(page, is_dirty=False)
+        QUERY_LOGS.append(_("Saved query to {file_path}").format(file_path=file_path))
+        return True
+
+    def _autosave_query_page_before_execute(self, page: wx.Panel) -> bool:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return False
+
+        if meta["file_path"] is not None:
+            return True
+
+        editor = meta["editor"]
+        if not editor.GetText().strip():
+            return True
+
+        file_path = self._get_query_autosave_path()
+        try:
+            self._write_query_file(file_path, editor.GetText())
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), _("Error"), wx.OK | wx.ICON_ERROR).ShowModal()
+            return False
+
+        meta["file_path"] = file_path
+        self._set_query_dirty(page, is_dirty=False)
+        QUERY_LOGS.append(_("Autosaved query to {file_path}").format(file_path=file_path))
+        return True
 
     def _setup_subscribers(self):
         self.toggle_panel()
@@ -395,7 +790,7 @@ class MainFrameController(MainFrameView):
         return connection
 
     def _format_records_number(self, value: int) -> str:
-        locale = wx.GetApp().settings.get_value("locale") or wx.GetApp().settings.get_value("language") or "en_US"
+        locale = wx.GetApp().settings.get_value("language", default="en_US")
         try:
             return babel.numbers.format_decimal(value, locale=locale)
         except Exception:
@@ -403,17 +798,13 @@ class MainFrameController(MainFrameView):
 
     def _load_records_limit_from_settings(self) -> int:
         settings = wx.GetApp().settings
-        if settings.get_value("records") is None:
-            settings.set_value("records", value={})
 
         max_limit = 1000
         if hasattr(self, "limit_records"):
             with contextlib.suppress(Exception):
                 max_limit = max(1, int(self.limit_records.GetMax()))
 
-        saved_limit = settings.get_value("records", "limit")
-        if saved_limit is None:
-            return min(100, max_limit)
+        saved_limit = settings.get_value("records", "limit", default=100)
 
         try:
             return min(max(1, int(saved_limit)), max_limit)
@@ -1064,8 +1455,63 @@ class MainFrameController(MainFrameView):
         self._records_offset = 0
         self._load_records_page()
 
+    def on_new_query(self, event):
+        self._create_new_query_page()
+
+    def on_close_query(self, event):
+        self._close_active_query_page()
+
+    def on_save(self, event):
+        page = self.MainFrameNotebook.GetCurrentPage()
+        if page is None:
+            return
+
+        self._save_query_page(page, force_save_as=False)
+
+    def on_save_as_query(self, event):
+        page = self.MainFrameNotebook.GetCurrentPage()
+        if page is None:
+            return
+
+        self._save_query_page(page, force_save_as=True)
+
+    def on_execute_statement(self, event):
+        controller = self._get_active_query_controller()
+        if controller is not None:
+            page = self.MainFrameNotebook.GetCurrentPage()
+            if page is None:
+                return
+
+            if not self._autosave_query_page_before_execute(page):
+                return
+
+            self.controller_query_records = controller
+            controller.execute_current(event)
+
+    def on_execute_statements(self, event):
+        controller = self._get_active_query_controller()
+        if controller is not None:
+            page = self.MainFrameNotebook.GetCurrentPage()
+            if page is None:
+                return
+
+            if not self._autosave_query_page_before_execute(page):
+                return
+
+            self.controller_query_records = controller
+            controller.execute_all(event)
+
+    def on_stop_statements(self, event):
+        controller = self._get_active_query_controller()
+        if controller is not None:
+            self.controller_query_records = controller
+            controller.cancel_execution(event)
+
     def on_cancel_query_execution(self, event):
-        self.controller_query_records.cancel_execution(event)
+        controller = self._get_active_query_controller()
+        if controller is not None:
+            self.controller_query_records = controller
+            controller.cancel_execution(event)
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()

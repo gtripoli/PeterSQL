@@ -19,6 +19,7 @@ import wx.dataview
 import wx.stc
 import wx.lib.agw.hypertreelist
 import wx.aui
+import wx.adv
 
 import gettext
 _ = gettext.gettext
@@ -2250,12 +2251,26 @@ class MainFrameView ( wx.Frame ):
         self.m_panel52 = wx.Panel( self.m_splitter6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer125 = wx.BoxSizer( wx.VERTICAL )
 
-        self.cancel_query_execution = wx.Button( self.m_panel52, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+        self.m_toolBar2 = wx.ToolBar( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORIZONTAL )
+        self.new_query = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"New query"), wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"New query"), wx.EmptyString, None )
 
-        self.cancel_query_execution.SetBitmap( wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ) )
-        self.cancel_query_execution.Enable( False )
+        self.close_query = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"Close query"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Close query"), wx.EmptyString, None )
 
-        bSizer125.Add( self.cancel_query_execution, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+        self.m_toolBar2.AddSeparator()
+
+        self.execute_statement = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"Execute"), wx.Bitmap( u"icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Execute"), wx.EmptyString, None )
+
+        self.execute_all_statements = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"Execute all"), wx.Bitmap( u"icons/16x16/arrows_lefttoright.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Execute all statements"), wx.EmptyString, None )
+
+        self.stop_statements = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"Stop"), wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Stop"), wx.EmptyString, None )
+
+        self.m_toolBar2.AddSeparator()
+
+        self.save = self.m_toolBar2.AddTool( wx.ID_ANY, _(u"tool"), wx.Bitmap( u"icons/16x16/disk.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
+
+        self.m_toolBar2.Realize()
+
+        bSizer125.Add( self.m_toolBar2, 0, wx.EXPAND, 5 )
 
         self.sql_query_editor = wx.stc.StyledTextCtrl( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         self.sql_query_editor.SetUseTabs ( True )
@@ -2464,7 +2479,12 @@ class MainFrameView ( wx.Frame ):
         self.chb_auto_apply.Bind( wx.EVT_CHECKBOX, self.on_auto_apply )
         self.m_collapsiblePane1.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_collapsible_pane_changed )
         self.m_button41.Bind( wx.EVT_BUTTON, self.on_apply_filters )
-        self.cancel_query_execution.Bind( wx.EVT_BUTTON, self.on_cancel_query_execution )
+        self.Bind( wx.EVT_TOOL, self.on_new_query, id = self.new_query.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_close_query, id = self.close_query.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_execute_statement, id = self.execute_statement.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_execute_statements, id = self.execute_all_statements.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_stop_statements, id = self.stop_statements.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_save, id = self.save.GetId() )
 
     def __del__( self ):
         pass
@@ -2574,7 +2594,22 @@ class MainFrameView ( wx.Frame ):
     def on_apply_filters( self, event ):
         event.Skip()
 
-    def on_cancel_query_execution( self, event ):
+    def on_new_query( self, event ):
+        event.Skip()
+
+    def on_close_query( self, event ):
+        event.Skip()
+
+    def on_execute_statement( self, event ):
+        event.Skip()
+
+    def on_execute_statements( self, event ):
+        event.Skip()
+
+    def on_stop_statements( self, event ):
+        event.Skip()
+
+    def on_save( self, event ):
         event.Skip()
 
     def m_splitter51OnIdle( self, event ):
@@ -2619,6 +2654,13 @@ class Trash ( wx.Panel ):
 
         self.m_textCtrl221 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer90.Add( self.m_textCtrl221, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.cancel_query_execution = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.cancel_query_execution.SetBitmap( wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ) )
+        self.cancel_query_execution.Enable( False )
+
+        bSizer90.Add( self.cancel_query_execution, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
         self.total_rows_loading = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"icons/16x16/hourglass.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer90.Add( self.total_rows_loading, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -2966,6 +3008,7 @@ class Trash ( wx.Panel ):
 
 
         # Connect Events
+        self.cancel_query_execution.Bind( wx.EVT_BUTTON, self.on_cancel_query_execution )
         self.Bind( wx.EVT_MENU, self.on_import, id = self.m_menuItem10.GetId() )
         self.tree_ctrl_sessions.Bind( wx.EVT_TREE_ITEM_RIGHT_CLICK, self.show_tree_ctrl_menu )
 
@@ -2974,6 +3017,9 @@ class Trash ( wx.Panel ):
 
 
     # Virtual event handlers, override them in your derived class
+    def on_cancel_query_execution( self, event ):
+        event.Skip()
+
     def on_import( self, event ):
         event.Skip()
 
@@ -3477,5 +3523,83 @@ class TablePanel ( wx.Panel ):
 
     def panel_table_columnsOnContextMenu( self, event ):
         self.panel_table_columns.PopupMenu( self.menu_table_columns, event.GetPosition() )
+
+
+###########################################################################
+## Class MyWizard1
+###########################################################################
+
+class MyWizard1 ( wx.adv.Wizard ):
+
+    def __init__( self, parent ):
+        wx.adv.Wizard.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, bitmap = wx.NullBitmap, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE )
+
+        self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+        self.m_pages = []
+
+        self.Centre( wx.BOTH )
+
+
+    def __del__( self ):
+        pass
+
+
+###########################################################################
+## Class SaveStatments
+###########################################################################
+
+class SaveStatments ( wx.Dialog ):
+
+    def __init__( self, parent ):
+        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Save Starments"), pos = wx.DefaultPosition, size = wx.DefaultSize, style = wx.DEFAULT_DIALOG_STYLE )
+
+        self.SetSizeHints( wx.Size( 320,200 ), wx.DefaultSize )
+
+        bSizer163 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer164 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText86 = wx.StaticText( self, wx.ID_ANY, _(u"Location"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText86.Wrap( -1 )
+
+        self.m_staticText86.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer164.Add( self.m_staticText86, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.m_filePicker5 = wx.FilePickerCtrl( self, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.sql"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SAVE|wx.FLP_SMALL|wx.FLP_USE_TEXTCTRL )
+        bSizer164.Add( self.m_filePicker5, 1, wx.ALL, 5 )
+
+
+        bSizer163.Add( bSizer164, 0, wx.EXPAND, 5 )
+
+
+        bSizer163.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+        self.m_staticline7 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+        bSizer163.Add( self.m_staticline7, 0, wx.EXPAND | wx.ALL, 5 )
+
+        bSizer165 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_button57 = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer165.Add( self.m_button57, 0, wx.ALL, 5 )
+
+
+        bSizer165.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+        self.m_button58 = wx.Button( self, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer165.Add( self.m_button58, 0, wx.ALL, 5 )
+
+
+        bSizer163.Add( bSizer165, 0, wx.EXPAND, 5 )
+
+
+        self.SetSizer( bSizer163 )
+        self.Layout()
+        bSizer163.Fit( self )
+
+        self.Centre( wx.BOTH )
+
+    def __del__( self ):
+        pass
 
 
