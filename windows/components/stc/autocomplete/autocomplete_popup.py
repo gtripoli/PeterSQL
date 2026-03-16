@@ -16,8 +16,8 @@ class AutoCompletePopup(wx.PopupWindow):
         self._theme_loader = theme_loader
         
         if settings:
-            self._popup_width = settings.get_value("autocomplete", "popup_width") or 300
-            self._popup_max_height = settings.get_value("autocomplete", "popup_max_height") or 10
+            self._popup_width = settings.get_value("editor", "autocomplete", "popup_width", default=300)
+            self._popup_max_height = settings.get_value("editor", "autocomplete", "popup_max_height", default=10)
         else:
             self._popup_width = 300
             self._popup_max_height = 10

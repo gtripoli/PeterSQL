@@ -126,18 +126,14 @@ class SQLAutoCompleteController:
 
         if settings:
             self._debounce_ms = (
-                settings.get_value("autocomplete", "debounce_ms")
-                or debounce_ms
+                settings.get_value("editor", "autocomplete", "debounce_ms", default=debounce_ms)
             )
             self._min_prefix_length = (
-                settings.get_value("autocomplete", "min_prefix_length")
-                or min_prefix_length
+                settings.get_value("editor", "autocomplete", "min_prefix_length", default=min_prefix_length)
             )
             self._add_space_after_completion = settings.get_value(
-                "autocomplete", "add_space_after_completion"
+                "editor", "autocomplete", "add_space_after_completion", default=True
             )
-            if self._add_space_after_completion is None:
-                self._add_space_after_completion = True
         else:
             self._debounce_ms = debounce_ms
             self._min_prefix_length = min_prefix_length
@@ -161,7 +157,7 @@ class SQLAutoCompleteController:
 
     def get_effective_separator(self) -> str:
         if self._settings:
-            separator = self._settings.get_value("query_editor", "statement_separator")
+            separator = self._settings.get_value("editor", "statement_separator", default=";")
             if separator:
                 return separator
 

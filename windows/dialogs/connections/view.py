@@ -31,7 +31,9 @@ from windows.dialogs.connections.repository import ConnectionsRepository
 
 
 class ConnectionsManager(ConnectionsDialog):
-    _SETTINGS_SECTION = "connections_dialog"
+    _SETTINGS_UI = "ui"
+    _SETTINGS_DIALOGS = "dialogs"
+    _SETTINGS_CONNECTIONS = "connections"
     _SETTINGS_EXPANDED_DIRECTORIES = "expanded_directories"
 
     def __init__(self, parent):
@@ -291,19 +293,28 @@ class ConnectionsManager(ConnectionsDialog):
         expanded_paths = self._capture_expanded_directory_paths()
         serialized_paths = self._serialize_expanded_directory_paths(expanded_paths)
 
-        if self._app.settings.get_value(self._SETTINGS_SECTION) is None:
-            self._app.settings.set_value(self._SETTINGS_SECTION, value={})
+        self._app.settings.get_value(
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
+            default={},
+        )
 
         self._app.settings.set_value(
-            self._SETTINGS_SECTION,
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
             self._SETTINGS_EXPANDED_DIRECTORIES,
             value=serialized_paths,
         )
 
     def _restore_expanded_directory_paths_from_settings(self) -> None:
         raw_paths = self._app.settings.get_value(
-            self._SETTINGS_SECTION,
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
             self._SETTINGS_EXPANDED_DIRECTORIES,
+            default=[],
         )
         expanded_paths = self._deserialize_expanded_directory_paths(raw_paths)
         self._restore_expanded_directory_paths(expanded_paths)

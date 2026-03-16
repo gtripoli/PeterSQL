@@ -11,9 +11,7 @@ from icons import IconRegistry
 
 from helpers.loader import Loader
 from helpers.logger import logger
-from helpers.observables import ObservableObject
-
-from windows.dialogs.settings.repository import SettingsRepository
+from helpers.settings import Settings, SettingsRepository
 
 from windows.components.stc.styles import apply_stc_theme, set_theme_loader
 from windows.components.stc.themes import ThemeManager
@@ -26,7 +24,7 @@ class PeterSQL(wx.App):
     locale: wx.Locale = wx.Locale()
 
     settings_repository = SettingsRepository(WORKDIR / "settings.yml")
-    settings: ObservableObject = settings_repository.load()
+    settings: Settings = settings_repository.load()
 
     main_frame: wx.Frame = None
 
@@ -53,7 +51,7 @@ class PeterSQL(wx.App):
         return True
     
     def _init_theme_loader(self) -> None:
-        theme_name = self.settings.get_value("theme", "current") or "petersql"
+        theme_name = self.settings.get_value("ui", "appearance", "theme", default="petersql")
         self.theme_loader = ThemeLoader(WORKDIR / "themes")
         try:
             self.theme_loader.load_theme(theme_name)
@@ -64,13 +62,7 @@ class PeterSQL(wx.App):
             logger.error(f"Error loading theme: {ex}", exc_info=True)
 
     def _init_locale(self):
-        _locale = self.settings.get_value("locale")
-
-        if _locale is None:
-            _locale = locale.getlocale()[0]
-
-        if not _locale:
-            _locale = "en_US"
+        _locale = self.settings.get_value("language", default="en_US")
 
         translation = gettext.translation(
             'petersql',
@@ -104,16 +96,12 @@ class PeterSQL(wx.App):
             from windows.main.controller import MainFrameController
 
             self.main_frame = MainFrameController()
-            size = wx.Size(
-                *list(map(int, self.settings.get_value("window", "size").split(",")))
-            )
+            size_values = self.settings.get_value("ui", "window", "size", default=[1920, 1080])
+            size = wx.Size(*list(map(int, size_values)))
             self.main_frame.SetSize(width=size.width, height=size.height)
 
-            position = wx.Point(
-                *list(
-                    map(int, self.settings.get_value("window", "position").split(","))
-                )
-            )
+            position_values = self.settings.get_value("ui", "window", "position", default=[0, 0])
+            position = wx.Point(*list(map(int, position_values)))
             self.main_frame.SetPosition(position)
             self.main_frame.Layout()
             self.main_frame.SetIcon(
@@ -128,13 +116,13 @@ class PeterSQL(wx.App):
 
     def _on_size(self, event: wx.SizeEvent) -> None:
         size = event.GetSize()
-        self.settings.set_value("window", "size", value=f"{size.Width},{size.Height}")
+        self.settings.set_value("ui", "window", "size", value=[size.Width, size.Height])
         self.main_frame.Layout()
 
     def _on_move(self, event: wx.MouseEvent) -> None:
         position = event.GetPosition()
         self.settings.set_value(
-            "window", "position", value=f"{position.x},{position.y}"
+            "ui", "window", "position", value=[position.x, position.y]
         )
         self.main_frame.Layout()
 
