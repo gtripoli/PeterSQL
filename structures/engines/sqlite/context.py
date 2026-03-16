@@ -96,8 +96,13 @@ class SQLiteContext(AbstractContext):
         # self.execute("PRAGMA page_size = 4096")
 
     def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
         if self._connection is None:
             try:
+                if not skip_before_connect:
+                    self.before_connect()
                 self._connection = sqlite3.connect(self.filename)
 
             except Exception as e:
@@ -106,7 +111,8 @@ class SQLiteContext(AbstractContext):
             else:
                 self._connection.row_factory = sqlite3.Row
                 self._cursor = self._connection.cursor()
-                self.after_connect()
+                if not skip_after_connect:
+                    self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:
         pass

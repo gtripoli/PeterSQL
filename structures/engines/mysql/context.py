@@ -152,8 +152,12 @@ class MySQLContext(AbstractContext):
         return datatypes
 
     def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
         if self._connection is None:
-            self.before_connect()
+            if not skip_before_connect:
+                self.before_connect()
 
             connect_timeout_override = connect_kwargs.pop("connect_timeout", None)
             compressed_protocol_override = connect_kwargs.pop("compress", None)
@@ -231,7 +235,7 @@ class MySQLContext(AbstractContext):
                 logger.error(f"Failed to connect to MySQL: {e}")
                 raise
 
-            if self._cursor is not None:
+            if self._cursor is not None and not skip_after_connect:
                 self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:

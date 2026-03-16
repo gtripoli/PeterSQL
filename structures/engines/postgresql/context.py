@@ -164,9 +164,13 @@ class PostgreSQLContext(AbstractContext):
         return datatypes
 
     def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
         if self._connection is None:
             try:
-                self.before_connect()
+                if not skip_before_connect:
+                    self.before_connect()
                 database = connect_kwargs.pop("database", "postgres")
                 connect_timeout_override = connect_kwargs.pop("connect_timeout", None)
                 connect_timeout = (
@@ -202,7 +206,8 @@ class PostgreSQLContext(AbstractContext):
                 logger.error(f"Failed to connect to PostgreSQL: {e}", exc_info=True)
                 raise
             else:
-                self.after_connect()
+                if not skip_after_connect:
+                    self.after_connect()
 
     def after_disconnect(self):
         self._current_database = None
