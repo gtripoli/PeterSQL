@@ -15,31 +15,18 @@ If a requested change conflicts with these rules, the change must **stop** and c
 
 ---
 
-## Core Rules (Quick Reference)
+## Mandatory Rules (Quick Reference)
 
-The following rules are the most critical and must always be respected:
+The following rules are strict and MUST NOT be violated. When generating or modifying code, tools and agents MUST consult this file before producing changes.
 
 1. All code, comments, documentation, commit messages, and user-facing text MUST be written in English.
 2. Python typing rules MUST be respected (PEP 585 generics; `Optional[T]`, not `T | None`).
-3. Import ordering and grouping rules MUST be followed exactly.
-4. Functions and methods MUST NOT exceed 50 lines.
-5. Code changes MUST avoid modifying unrelated code.
-6. Naming MUST remain explicit and descriptive (no aggressive abbreviations).
-7. Code MUST remain mypy-friendly whenever possible.
-
-When generating or modifying code, tools and agents MUST consult this file before producing changes.
-
----
-
-## Mandatory Rules
-
-The following rules are strict and MUST NOT be violated:
-
-- English must always be used for code and documentation.
-- `typing.Optional[T]` MUST be used instead of `T | None`.
-- `from __future__ import annotations` MUST NOT be used.
-- Import ordering rules MUST be respected exactly.
-- Functions MUST NOT exceed the maximum size limit.
+3. `from __future__ import annotations` MUST NOT be used.
+4. Import ordering and grouping rules MUST be followed exactly.
+5. Functions and methods MUST NOT exceed 50 lines.
+6. Code changes MUST avoid modifying unrelated code.
+7. Naming MUST remain explicit and descriptive (no aggressive abbreviations).
+8. Code MUST remain mypy-friendly whenever possible.
 
 ---
 
@@ -431,9 +418,10 @@ This rule applies only to builtin modules.
 import os
 import sys
 
+import gettext as _
+
 import numpy as np
 import pandas as pd
-import gettext as _
 ```
 
 #### Bad example
@@ -448,7 +436,7 @@ import sys
 
 When importing multiple symbols from the same module:
 
-- Parenthesized multiline `from ... import (...)` MUST NOT be used for functions or methods.
+- Parenthesized multiline `from ... import (...)` MUST NOT be used.
 - Imports MUST NOT be split into one line per symbol.
 - Prefer a single `from ... import ...` line whenever possible.
 - If a `from ... import ...` statement would exceed the maximum line width:
@@ -639,7 +627,7 @@ class Example:
 
 ## 10. Walrus Operator ( := )
 
-- The walrus operator MAY be used when it improves clarity and avoids redundant calls.
+- The walrus operator MUST be used whenever it avoids redundant calls or repeated expressions.
 - It MUST NOT be used when it makes the control flow harder to read.
 
 #### Good examples
