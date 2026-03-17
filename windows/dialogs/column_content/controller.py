@@ -5,10 +5,10 @@ import wx
 from windows.components.stc.detectors import detect_syntax_id
 from windows.components.stc.profiles import SyntaxProfile
 from windows.components.stc.styles import apply_stc_theme
-from windows.views import AdvancedCellEditorDialog
+from windows.views import ColumnContentDialog
 
 
-class AdvancedCellEditorController(AdvancedCellEditorDialog):
+class ColumnContentDialogController(ColumnContentDialog):
     app = wx.GetApp()
 
     def __init__(self, parent, value: str, read_only: bool = False):

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typing import Optional
+from typing import Optional, Union
 
 from structures.engines.database import SQLTable
 
@@ -20,7 +20,7 @@ class VirtualTable:
 class TableReference:
     name: str
     alias: Optional[str] = None
-    table: Optional[SQLTable | VirtualTable] = None
+    table: Optional[Union[SQLTable, VirtualTable]] = None
 
 
 @dataclass

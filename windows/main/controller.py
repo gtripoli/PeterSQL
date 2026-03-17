@@ -310,6 +310,16 @@ class MainFrameController(MainFrameView):
         }
         self._bind_query_editor_events(panel, editor)
         self._set_query_stop_enabled(panel, enabled=False)
+        self._set_query_save_enabled(panel, enabled=False)
+
+    def _set_query_save_enabled(self, page: wx.Panel, enabled: bool) -> None:
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return
+
+        toolbar = meta["toolbar"]
+        tool_ids = meta["tool_ids"]
+        toolbar.EnableTool(tool_ids["save"], enabled)
 
     def _set_query_stop_enabled(self, page: wx.Panel, enabled: bool) -> None:
         meta = self._query_page_meta.get(page)
@@ -339,6 +349,7 @@ class MainFrameController(MainFrameView):
 
         meta["is_dirty"] = is_dirty
         self._update_query_page_title(page)
+        self._set_query_save_enabled(page, enabled=is_dirty)
 
     def _update_query_page_title(self, page: wx.Panel) -> None:
         meta = self._query_page_meta.get(page)

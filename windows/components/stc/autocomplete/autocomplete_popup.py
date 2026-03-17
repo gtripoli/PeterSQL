@@ -1,3 +1,5 @@
+from typing import Callable, Optional
+
 import wx
 import wx.dataview
 
@@ -11,7 +13,7 @@ class AutoCompletePopup(wx.PopupWindow):
         
         self._selected_index: int = 0
         self._items: list[CompletionItem] = []
-        self._on_item_selected: callable = None
+        self._on_item_selected: Optional[Callable] = None
         self._settings = settings
         self._theme_loader = theme_loader
         
@@ -156,10 +158,10 @@ class AutoCompletePopup(wx.PopupWindow):
             self._on_item_selected(item)
         self.Hide()
     
-    def set_on_item_selected(self, callback: callable) -> None:
+    def set_on_item_selected(self, callback: Callable) -> None:
         self._on_item_selected = callback
-    
-    def get_selected_item(self) -> CompletionItem:
+
+    def get_selected_item(self) -> Optional[CompletionItem]:
         row = self._list_ctrl.GetFirstSelected()
         if row != wx.NOT_FOUND and row < len(self._items):
             return self._items[row]

@@ -2,9 +2,6 @@ import re
 
 from typing import Optional
 
-import sqlglot
-from sqlglot import exp
-
 from helpers.logger import logger
 
 from windows.components.stc.autocomplete.query_scope import (
@@ -349,64 +346,6 @@ class ContextDetector:
 
         return table_name
 
-    def _extract_scope_from_select(
-        self, parsed: exp.Select, database: Optional[SQLDatabase]
-    ) -> QueryScope:
-        from_tables = []
-        join_tables = []
-        aliases = {}
-
-        if from_clause := parsed.args.get("from"):
-            if isinstance(from_clause, exp.From):
-                for table_exp in from_clause.find_all(exp.Table):
-                    table_name = table_exp.name
-                    alias = (
-                        table_exp.alias
-                        if hasattr(table_exp, "alias") and table_exp.alias
-                        else None
-                    )
-
-                    table_obj = (
-                        self._find_table_in_database(table_name, database)
-                        if database
-                        else None
-                    )
-                    ref = TableReference(name=table_name, alias=alias, table=table_obj)
-                    from_tables.append(ref)
-
-                    if alias:
-                        aliases[alias.lower()] = ref
-                    aliases[table_name.lower()] = ref
-
-        for join_exp in parsed.find_all(exp.Join):
-            if table_exp := join_exp.this:
-                if isinstance(table_exp, exp.Table):
-                    table_name = table_exp.name
-                    alias = (
-                        table_exp.alias
-                        if hasattr(table_exp, "alias") and table_exp.alias
-                        else None
-                    )
-
-                    table_obj = (
-                        self._find_table_in_database(table_name, database)
-                        if database
-                        else None
-                    )
-                    ref = TableReference(name=table_name, alias=alias, table=table_obj)
-                    join_tables.append(ref)
-
-                    if alias:
-                        aliases[alias.lower()] = ref
-                    aliases[table_name.lower()] = ref
-
-        return QueryScope(
-            from_tables=from_tables,
-            join_tables=join_tables,
-            current_table=None,
-            aliases=aliases,
-        )
-
     def _extract_scope_from_text(
         self, text: str, database: Optional[SQLDatabase]
     ) -> QueryScope:
@@ -693,51 +632,6 @@ class ContextDetector:
             pass
         return None
 
-    def _is_in_where(self, text: str) -> bool:
-        upper = text.upper()
-        where_pos = upper.rfind("WHERE")
-        if where_pos == -1:
-            return False
-
-        after_where = upper[where_pos:]
-        return (
-            "ORDER BY" not in after_where
-            and "GROUP BY" not in after_where
-            and "LIMIT" not in after_where
-        )
-
-    def _is_after_from(self, text: str) -> bool:
-        upper = text.upper()
-        from_pos = upper.rfind("FROM")
-        if from_pos == -1:
-            return False
-
-        after_from = upper[from_pos + 4 :].strip()
-        return len(after_from) == 0 or (
-            len(after_from) > 0 and after_from[-1] in [" ", "\n", "\t"]
-        )
-
-    def _is_after_on(self, text: str) -> bool:
-        upper = text.upper()
-        on_pos = upper.rfind(" ON ")
-        if on_pos == -1:
-            return False
-
-        after_on = upper[on_pos + 4 :].strip()
-        return len(after_on) == 0 or (
-            len(after_on) > 0
-            and not after_on.endswith(("WHERE", "ORDER", "GROUP", "LIMIT"))
-        )
-
-    def _is_after_order_by(self, text: str) -> bool:
-        upper = text.upper()
-        order_by_pos = upper.rfind("ORDER BY")
-        if order_by_pos == -1:
-            return False
-
-        after_order_by = upper[order_by_pos + 8 :].strip()
-        return "LIMIT" not in after_order_by
-
     def _is_after_limit_number(
         self, left_text: str, limit_pos: int, prefix: str
     ) -> bool:
@@ -794,24 +688,3 @@ class ContextDetector:
             return True
         return False
 
-    def _is_after_group_by(self, text: str) -> bool:
-        upper = text.upper()
-        group_by_pos = upper.rfind("GROUP BY")
-        if group_by_pos == -1:
-            return False
-
-        after_group_by = upper[group_by_pos + 8 :].strip()
-        return (
-            "HAVING" not in after_group_by
-            and "ORDER BY" not in after_group_by
-            and "LIMIT" not in after_group_by
-        )
-
-    def _is_in_having(self, text: str) -> bool:
-        upper = text.upper()
-        having_pos = upper.rfind("HAVING")
-        if having_pos == -1:
-            return False
-
-        after_having = upper[having_pos:]
-        return "ORDER BY" not in after_having and "LIMIT" not in after_having

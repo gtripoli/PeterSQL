@@ -91,8 +91,6 @@ def test_empty_context():
     assert "INSERT" in item_names
     assert "UPDATE" in item_names
 
-    print("✓ GT-010 EMPTY context test passed")
-
 
 def test_single_token():
     database = create_mock_database()
@@ -108,8 +106,6 @@ def test_single_token():
 
     item_names = [item.name for item in result.items]
     assert "SELECT" in item_names
-
-    print("✓ GT-011 SINGLE_TOKEN test passed")
 
 
 def test_select_without_from():
@@ -127,8 +123,6 @@ def test_select_without_from():
     assert "COUNT" in item_names
     assert "SUM" in item_names
     assert "*" in item_names
-
-    print("✓ GT-020 SELECT without FROM test passed")
 
 
 def test_select_with_from():
@@ -148,8 +142,6 @@ def test_select_with_from():
     assert "users.name" in item_names
     assert "COUNT" in item_names
 
-    print("✓ GT-021 SELECT with FROM test passed")
-
 
 def test_where_basic():
     database = create_mock_database()
@@ -168,8 +160,6 @@ def test_where_basic():
     assert "name" in item_names
     assert "COUNT" in item_names
 
-    print("✓ GT-030 WHERE basic test passed")
-
 
 def test_from_clause():
     database = create_mock_database()
@@ -185,8 +175,6 @@ def test_from_clause():
     item_names = [item.name for item in result.items]
     assert "users" in item_names
     assert "orders" in item_names
-
-    print("✓ FROM clause test passed")
 
 
 def test_dot_completion():
@@ -208,8 +196,6 @@ def test_dot_completion():
     for name in item_names:
         assert "users." not in name
 
-    print("✓ GT-002 Dot completion test passed")
-
 
 def test_multi_query():
     database = create_mock_database()
@@ -229,8 +215,6 @@ def test_multi_query():
 
     assert "id" in item_names
     assert "user_id" in item_names
-
-    print("✓ GT-001 Multi-query test passed")
 
 
 if __name__ == "__main__":
