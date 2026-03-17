@@ -25,11 +25,11 @@ from windows.state import CURRENT_SESSION
 
 class SQLCompletionProvider:
     def __init__(
-        self,
-        get_database: Callable[[], Optional[SQLDatabase]],
-        get_current_table: Optional[Callable[[], Optional[SQLTable]]] = None,
-        *,
-        is_filter_editor: bool = False,
+            self,
+            get_database: Callable[[], Optional[SQLDatabase]],
+            get_current_table: Optional[Callable[[], Optional[SQLTable]]] = None,
+            *,
+            is_filter_editor: bool = False,
     ) -> None:
         self._get_database = get_database
         self._get_current_table = get_current_table or (lambda: None)
@@ -109,35 +109,24 @@ class SQLCompletionProvider:
 
 class SQLAutoCompleteController:
     def __init__(
-        self,
-        editor: wx.stc.StyledTextCtrl,
-        provider: SQLCompletionProvider,
-        *,
-        settings: Optional[object] = None,
-        theme_loader: Optional[object] = None,
-        debounce_ms: int = 80,
-        is_enabled: bool = True,
-        min_prefix_length: int = 1,
+            self,
+            editor: wx.stc.StyledTextCtrl,
+            provider: SQLCompletionProvider,
+            *,
+            settings: Optional[object] = None,
+            theme_loader: Optional[object] = None,
+            debounce_ms: int = 80,
+            is_enabled: bool = True,
+            min_prefix_length: int = 1,
     ) -> None:
         self._editor = editor
         self._provider = provider
         self._settings = settings
         self._theme_loader = theme_loader
 
-        if settings:
-            self._debounce_ms = (
-                settings.get_value("editor", "autocomplete", "debounce_ms", default=debounce_ms)
-            )
-            self._min_prefix_length = (
-                settings.get_value("editor", "autocomplete", "min_prefix_length", default=min_prefix_length)
-            )
-            self._add_space_after_completion = settings.get_value(
-                "editor", "autocomplete", "add_space_after_completion", default=True
-            )
-        else:
-            self._debounce_ms = debounce_ms
-            self._min_prefix_length = min_prefix_length
-            self._add_space_after_completion = True
+        self._debounce_ms = settings.get_value("editor", "autocomplete", "debounce_ms", default=debounce_ms)
+        self._min_prefix_length = settings.get_value("editor", "autocomplete", "min_prefix_length", default=min_prefix_length)
+        self._add_space_after_completion = settings.get_value("editor", "autocomplete", "add_space_after_completion", default=True)
 
         self._is_enabled = is_enabled
 
@@ -156,16 +145,11 @@ class SQLAutoCompleteController:
             self._hide_popup()
 
     def get_effective_separator(self) -> str:
-        if self._settings:
-            separator = self._settings.get_value("editor", "statement_separator", default=";")
-            if separator:
-                return separator
-
         session = CURRENT_SESSION.get_value()
         if session and hasattr(session, "context"):
             return session.context.DEFAULT_STATEMENT_SEPARATOR
 
-        return ";"
+        return self._settings.get_value("editor", "statement_separator", default=";")
 
     def show(self, *, force: bool) -> None:
         if not self._is_enabled:
@@ -226,8 +210,8 @@ class SQLAutoCompleteController:
         self._editor.SetSelection(start_pos, current_pos)
 
         should_add_space = (
-            self._add_space_after_completion
-            and item.item_type == CompletionItemType.KEYWORD
+                self._add_space_after_completion
+                and item.item_type == CompletionItemType.KEYWORD
         )
         completion_text = item.name + " " if should_add_space else item.name
         self._editor.ReplaceSelection(completion_text)
@@ -322,7 +306,7 @@ class SQLAutoCompleteController:
 
     @staticmethod
     def _unique_sorted_items(
-        *, items: tuple[CompletionItem, ...]
+            *, items: tuple[CompletionItem, ...]
     ) -> list[CompletionItem]:
         seen_names: set[str] = set()
         unique_items: list[CompletionItem] = []
