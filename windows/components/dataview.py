@@ -330,8 +330,8 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
         CURRENT_TABLE.subscribe(self._load_table)
 
     def make_advanced_dialog(self, parent, value: str, read_only : bool = False):
-        from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
-        return AdvancedCellEditorController(parent, value, read_only)
+        from windows.dialogs.column_content import ColumnContentDialogController
+        return ColumnContentDialogController(parent, value, read_only)
 
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:

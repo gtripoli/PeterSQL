@@ -15,7 +15,7 @@ from structures.engines.datatype import DataTypeCategory
 
 from windows.views import TableRecordsDataViewCtrl
 
-from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
+from windows.dialogs.column_content import ColumnContentDialogController
 
 from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
 
@@ -166,7 +166,7 @@ class TableRecordsController:
         event.Skip()
 
     def make_advanced_dialog(self, parent, value: str):
-        dialog = AdvancedCellEditorController(parent, value)
+        dialog = ColumnContentDialogController(parent, value)
 
         return dialog
 
