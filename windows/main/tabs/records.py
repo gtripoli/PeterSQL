@@ -90,6 +90,17 @@ class RecordsModel(BaseObservableDataViewListModel):
 
         return super().GetAttr(item, col, attr)
 
+    def HasValue(self, item, col):
+        if not self.data:
+            return False
+
+        column = self.table.columns[col]
+
+        record: SQLRecord = self.get_data_by_item(item)
+
+        return record.values.get(column.name, None) is not None
+
+
     def add_row(self, data: SQLRecord) -> wx.dataview.DataViewItem:
         self.data.append(data)
         self.RowAppended()

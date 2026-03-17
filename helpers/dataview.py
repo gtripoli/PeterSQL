@@ -128,7 +128,7 @@ class _DataViewListValueMixin:
         if fields := self._get_column_fields():
             return fields[col].has_value(self.get_data_by_item(item))
 
-        return self.get_data_by_item(item)[col] is not None
+        return getattr(self.get_data_by_item(item), col, None) is not None
 
 
 class BaseDataViewListModel(_DataViewListValueMixin, BaseDataModel, wx.dataview.DataViewIndexListModel):
