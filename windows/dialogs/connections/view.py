@@ -130,7 +130,9 @@ class ConnectionsManager(ConnectionsDialog):
         )
 
         if not connection.is_new:
+            expanded_paths = self._capture_expanded_directory_paths()
             self._repository.save_connection(connection)
+            wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def _sync_statistics_to_model(self, connection: Connection) -> None:
         self.connections_model.created_at(connection.created_at or "")
