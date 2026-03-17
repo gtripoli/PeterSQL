@@ -14,10 +14,13 @@ class EditTableModel(AbstractModel):
 
         self.auto_increment = Observable()
         self.collation = Observable()
+        self.convert_data = Observable()
         self.engine = Observable()
+        self.row_format = Observable()
 
         debounce(
-            self.name, self.comment, self.auto_increment, self.collation, self.engine,
+            self.name, self.comment, self.auto_increment, self.collation, self.convert_data,
+            self.engine, self.row_format,
             callback=self.update_table
         )
 
@@ -31,7 +34,9 @@ class EditTableModel(AbstractModel):
         self.comment.set_initial(table.comment)
         self.auto_increment.set_initial(table.auto_increment)
         self.collation.set_initial(table.collation_name)
+        self.convert_data.set_initial(False)
         self.engine.set_initial(table.engine)
+        self.row_format.set_initial(getattr(table, "row_format", None))
 
     def update_table(self, *args):
         if not any(args):
@@ -44,6 +49,10 @@ class EditTableModel(AbstractModel):
         table.auto_increment = int(self.auto_increment.get_value() or 0)
         table.collation_name = self.collation.get_value()
         table.engine = self.engine.get_value()
+        if hasattr(table, "convert_data"):
+            table.convert_data = bool(self.convert_data.get_value())
+        if hasattr(table, "row_format"):
+            table.row_format = self.row_format.get_value() or None
 
         if not table.is_new:
             original_table = next((t for t in CURRENT_DATABASE.get_value().tables if t.id == table.id), None)

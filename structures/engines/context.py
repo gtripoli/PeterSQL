@@ -45,6 +45,8 @@ class AbstractContext(abc.ABC):
     DATATYPE: StandardDataType
     INDEXTYPE: StandardIndexType
     COLLATIONS: dict[str, str] = {}
+    ROW_FORMATS: list[str] = []
+    server_version: str = ""
 
     IDENTIFIER_QUOTE_CHAR: str = '"'
     DEFAULT_STATEMENT_SEPARATOR: str = ";"

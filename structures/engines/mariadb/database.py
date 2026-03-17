@@ -57,6 +57,9 @@ class MariaDBDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBTable(SQLTable):
+    row_format: Optional[str] = None
+    convert_data: bool = dataclasses.field(default=False, compare=False)
+
     def raw_create(self) -> str:
         columns = [str(MariaDBColumnBuilder(column)) for column in self.columns]
 
@@ -86,6 +89,12 @@ class MariaDBTable(SQLTable):
 
     def alter_engine(self, engine: str):
         statement = f"ALTER TABLE {self.fully_qualified_name} ENGINE {engine};"
+        self.database.context.execute(statement)
+
+        return True
+
+    def alter_row_format(self, row_format: str):
+        statement = f"ALTER TABLE {self.fully_qualified_name} ROW_FORMAT={row_format};"
         self.database.context.execute(statement)
 
         return True
@@ -140,9 +149,11 @@ class MariaDBTable(SQLTable):
                 if self.auto_increment != original_table.auto_increment:
                     original_table.alter_auto_increment(self.auto_increment)
                 if self.collation_name != original_table.collation_name:
-                    original_table.alter_collation(self.collation_name)
+                    original_table.alter_collation(self.collation_name, convert=self.convert_data)
                 if self.engine != original_table.engine:
                     original_table.alter_engine(self.engine)
+                if self.row_format != original_table.row_format and self.row_format:
+                    original_table.alter_row_format(self.row_format)
 
                 for i, (original, current) in enumerate(map_columns):
                     if original is None:

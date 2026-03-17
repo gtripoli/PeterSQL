@@ -46,6 +46,8 @@ class MariaDBContext(AbstractContext):
     IDENTIFIER_QUOTE_CHAR = "`"
     DEFAULT_STATEMENT_SEPARATOR = ";"
 
+    ROW_FORMATS: list[str] = ["DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT"]
+
     def __init__(self, connection: Connection):
         super().__init__(connection)
 
@@ -68,9 +70,9 @@ class MariaDBContext(AbstractContext):
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
-            "mariadb", server_version
+            "mariadb", self.server_version
         )
 
         self.execute("""
@@ -348,7 +350,7 @@ class MariaDBContext(AbstractContext):
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
-            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT,
+            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT, ROW_FORMAT,
             CREATE_TIME, UPDATE_TIME, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = '{database.name}'
@@ -365,6 +367,7 @@ class MariaDBContext(AbstractContext):
                     database=database,
                     engine=row["ENGINE"],
                     collation_name=row["TABLE_COLLATION"],
+                    row_format=row["ROW_FORMAT"],
                     auto_increment=int(row["AUTO_INCREMENT"] or 0),
                     total_bytes=row["total_bytes"],
                     total_rows=row["TABLE_ROWS"],

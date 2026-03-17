@@ -69,6 +69,9 @@ class MySQLDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class MySQLTable(SQLTable):
+    row_format: Optional[str] = None
+    convert_data: bool = dataclasses.field(default=False, compare=False)
+
     def raw_create(self) -> str:
         columns = [str(MySQLColumnBuilder(column)) for column in self.columns]
 
@@ -90,14 +93,20 @@ class MySQLTable(SQLTable):
 
         return True
 
-    def alter_collation(self, convert: bool = True):
+    def alter_collation(self, collation_name: str, convert: bool = True):
         charset = ""
         if convert:
-            charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[self.collation_name]}"
-        return self.database.context.execute(f"""ALTER TABLE `{self.database.name}`.`{self.name}` {charset} COLLATE {self.collation_name};""")
+            charset = f"CONVERT TO CHARACTER SET {self.database.context.COLLATIONS[collation_name]} "
+        return self.database.context.execute(f"ALTER TABLE `{self.database.name}`.`{self.name}` {charset}COLLATE {collation_name};")
 
     def alter_engine(self, engine: str):
         statement = f"ALTER TABLE `{self.database.name}`.`{self.name}` ENGINE {engine};"
+        self.database.context.execute(statement)
+
+        return True
+
+    def alter_row_format(self, row_format: str):
+        statement = f"ALTER TABLE `{self.database.name}`.`{self.name}` ROW_FORMAT={row_format};"
         self.database.context.execute(statement)
 
         return True
@@ -152,9 +161,11 @@ class MySQLTable(SQLTable):
                 if self.auto_increment != original_table.auto_increment:
                     original_table.alter_auto_increment(self.auto_increment)
                 if self.collation_name != original_table.collation_name:
-                    original_table.alter_collation(self.collation_name)
+                    original_table.alter_collation(self.collation_name, convert=self.convert_data)
                 if self.engine != original_table.engine:
                     original_table.alter_engine(self.engine)
+                if self.row_format != original_table.row_format and self.row_format:
+                    original_table.alter_row_format(self.row_format)
 
                 for original, current in map_columns:
                     if original is None:

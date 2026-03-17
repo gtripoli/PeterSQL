@@ -65,7 +65,9 @@ class MainFrameController(MainFrameView):
             comments=self.table_comment,
             auto_increment=self.table_auto_increment,
             collation=self.table_collation,
+            convert_data=self.convert_data_collation,
             engine=self.table_engine,
+            row_format=self.table_row_format,
         )
 
         self.list_database_tables = ListDatabaseTable(self.list_ctrl_database_tables)
@@ -1082,7 +1084,7 @@ class MainFrameController(MainFrameView):
         if session:
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {session.name}", 0)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.get_server_version()}", 1)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.server_version}", 1)
 
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
 
@@ -1118,8 +1120,16 @@ class MainFrameController(MainFrameView):
             self.table_collation.Enable(len(database.context.COLLATIONS.keys()) > 1)
             self.table_collation.SetItems(list(database.context.COLLATIONS.keys()))
 
+            row_formats = database.context.ROW_FORMATS
+            self.table_row_format.Enable(bool(row_formats))
+            self.table_row_format.SetItems(row_formats)
+
+            self.convert_data_collation.Enable(bool(database.context.COLLATIONS))
+
         if (session := CURRENT_SESSION.get_value()) and session.engine in [ConnectionEngine.SQLITE]:
             self.table_collation.Enable(False)
+            self.convert_data_collation.Enable(False)
+            self.table_row_format.Enable(False)
 
     def on_apply_database(self, event: wx.Event):
         database = CURRENT_DATABASE.get_value()
