@@ -49,6 +49,7 @@ class EditTableModel(AbstractModel):
         table.auto_increment = int(self.auto_increment.get_value() or 0)
         table.collation_name = self.collation.get_value()
         table.engine = self.engine.get_value()
+
         if hasattr(table, "convert_data"):
             table.convert_data = bool(self.convert_data.get_value())
         if hasattr(table, "row_format"):

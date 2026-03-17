@@ -59,9 +59,9 @@ class PostgreSQLContext(AbstractContext):
         self.execute("SELECT collname FROM pg_collation;")
         self.COLLATIONS = {row["collname"]: row["collname"] for row in self.fetchall()}
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
-            "postgresql", server_version
+            "postgresql", self.server_version
         )
 
         self.execute("""

@@ -13,8 +13,6 @@ from structures.engines.database import SQLTable, SQLDatabase
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
 
 
-# SELECTED_TABLE: Observable[SQLTable] = Observable()
-
 class ModelDatabaseTable(BaseObservableDataViewListModel):
     MAP_COLUMN_FIELDS = {
         0: ColumnField("name", str),

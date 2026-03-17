@@ -69,9 +69,9 @@ class SQLiteContext(AbstractContext):
     def after_connect(self, *args, **kwargs):
         super().after_connect(*args, **kwargs)
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         spec_keywords, spec_functions = self.get_engine_vocabulary(
-            "sqlite", server_version
+            "sqlite", self.server_version
         )
         self.KEYWORDS = tuple(
             dict.fromkeys(

@@ -114,12 +114,25 @@ class _DataViewListValueMixin:
 
     def GetValueByRow(self, row, col):
         if not self.data or row >= len(self.data):
-            return ""
+            return None
 
-        if fields := self._get_column_fields():
-            return fields[col].get_value(self.get_data_by_row(row))
+        field = self.get_data_by_row(row)
 
-        return self.get_data_by_row(row)[col]
+        # if fields := self._get_column_fields():
+        #     return fields[col].get_value(self.get_data_by_row(row))
+
+        # return self.get_data_by_row(row)[col]
+
+        if self._get_column_fields():
+            return self._get_column_fields()[col].get_value(field)
+
+    # def GetValueByRow(self, row, col):
+    #     if not len(self.data):
+    #         return None
+    #
+    #     table: SQLTable = self.get_data_by_row(row)
+    #
+    #     return self.MAP_COLUMN_FIELDS[col].get_value(table)
 
     def HasValue(self, item, col):
         if not self.data:

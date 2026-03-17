@@ -897,9 +897,9 @@ class MainFrameView ( wx.Frame ):
         self.m_toolBar1 = self.CreateToolBar( wx.TB_HORIZONTAL, wx.ID_ANY )
         self.m_tool5 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Open connection manager"), wx.Bitmap( u"icons/16x16/server_connect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.m_tool4 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Disconnect from server"), wx.Bitmap( u"icons/16x16/disconnect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
-
         self.m_toolBar1.AddSeparator()
+
+        self.m_tool4 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Disconnect from server"), wx.Bitmap( u"icons/16x16/disconnect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
         self.database_refresh = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"tool"), wx.Bitmap( u"icons/16x16/database_refresh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Refresh"), _(u"Refresh"), None )
 
@@ -1023,27 +1023,6 @@ class MainFrameView ( wx.Frame ):
 
         bSizer142 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_character_set_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer139 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText70 = wx.StaticText( self.database_character_set_panel, wx.ID_ANY, _(u"Character set"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText70.Wrap( -1 )
-
-        self.m_staticText70.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer139.Add( self.m_staticText70, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        database_character_setChoices = []
-        self.database_character_set = wx.Choice( self.database_character_set_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, database_character_setChoices, 0 )
-        self.database_character_set.SetSelection( 0 )
-        bSizer139.Add( self.database_character_set, 1, wx.ALL, 5 )
-
-
-        self.database_character_set_panel.SetSizer( bSizer139 )
-        self.database_character_set_panel.Layout()
-        bSizer139.Fit( self.database_character_set_panel )
-        bSizer142.Add( self.database_character_set_panel, 1, wx.ALIGN_CENTER, 5 )
-
         self.database_collation_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1392 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -1064,6 +1043,9 @@ class MainFrameView ( wx.Frame ):
         self.database_collation_panel.Layout()
         bSizer1392.Fit( self.database_collation_panel )
         bSizer142.Add( self.database_collation_panel, 1, wx.ALIGN_CENTER, 5 )
+
+
+        bSizer142.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
 
         bSizer158.Add( bSizer142, 0, wx.EXPAND, 5 )
@@ -1439,7 +1421,7 @@ class MainFrameView ( wx.Frame ):
         self.m_menu15 = wx.Menu()
         self.panel_database.Bind( wx.EVT_RIGHT_DOWN, self.panel_databaseOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_database, _(u"Database"), True )
+        self.MainFrameNotebook.AddPage( self.panel_database, _(u"Database"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/database.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1494,7 +1476,7 @@ class MainFrameView ( wx.Frame ):
         self.PanelTableBase.SetSizer( bSizer262 )
         self.PanelTableBase.Layout()
         bSizer262.Fit( self.PanelTableBase )
-        self.m_notebook3.AddPage( self.PanelTableBase, _(u"Base"), True )
+        self.m_notebook3.AddPage( self.PanelTableBase, _(u"Base"), False )
         m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
         if ( m_notebook3Bitmap.IsOk() ):
             m_notebook3Images.Add( m_notebook3Bitmap )
@@ -1526,9 +1508,9 @@ class MainFrameView ( wx.Frame ):
 
         bSizer2712.Add( self.m_staticText812, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        table_engineChoices = [ wx.EmptyString ]
+        table_engineChoices = []
         self.table_engine = wx.Choice( self.PanelTableOptions, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, table_engineChoices, 0 )
-        self.table_engine.SetSelection( 1 )
+        self.table_engine.SetSelection( 0 )
         bSizer2712.Add( self.table_engine, 1, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -1546,8 +1528,28 @@ class MainFrameView ( wx.Frame ):
         self.table_collation.SetSelection( 0 )
         bSizer2721.Add( self.table_collation, 1, wx.ALL, 5 )
 
+        self.convert_data_collation = wx.CheckBox( self.PanelTableOptions, wx.ID_ANY, _(u"Convert data"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer2721.Add( self.convert_data_collation, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
 
         gSizer11.Add( bSizer2721, 0, wx.EXPAND, 5 )
+
+        bSizer145 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText71 = wx.StaticText( self.PanelTableOptions, wx.ID_ANY, _(u"Row format"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText71.Wrap( -1 )
+
+        self.m_staticText71.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer145.Add( self.m_staticText71, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        table_row_formatChoices = []
+        self.table_row_format = wx.Choice( self.PanelTableOptions, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, table_row_formatChoices, 0 )
+        self.table_row_format.SetSelection( 0 )
+        bSizer145.Add( self.table_row_format, 1, wx.ALL, 5 )
+
+
+        gSizer11.Add( bSizer145, 1, wx.EXPAND, 5 )
 
 
         bSizer261.Add( gSizer11, 0, wx.EXPAND, 5 )
@@ -1556,7 +1558,7 @@ class MainFrameView ( wx.Frame ):
         self.PanelTableOptions.SetSizer( bSizer261 )
         self.PanelTableOptions.Layout()
         bSizer261.Fit( self.PanelTableOptions )
-        self.m_notebook3.AddPage( self.PanelTableOptions, _(u"Options"), False )
+        self.m_notebook3.AddPage( self.PanelTableOptions, _(u"Options"), True )
         m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/wrench.png", wx.BITMAP_TYPE_ANY )
         if ( m_notebook3Bitmap.IsOk() ):
             m_notebook3Images.Add( m_notebook3Bitmap )
@@ -1833,7 +1835,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_table.SetSizer( bSizer251 )
         self.panel_table.Layout()
         bSizer251.Fit( self.panel_table )
-        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), False )
+        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2454,7 +2456,8 @@ class MainFrameView ( wx.Frame ):
         self.Bind( wx.EVT_MENU, self.on_settings, id = self.m_menuItem22.GetId() )
         self.Bind( wx.EVT_MENU, self.on_menu_about, id = self.m_menuItem15.GetId() )
         self.Bind( wx.EVT_TOOL, self.do_open_connection_manager, id = self.m_tool5.GetId() )
-        self.Bind( wx.EVT_TOOL, self.do_disconnect, id = self.m_tool4.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_database_disconnect, id = self.m_tool4.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_database_refresh, id = self.database_refresh.GetId() )
         self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
         self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
         self.btn_clone_table.Bind( wx.EVT_BUTTON, self.on_clone_table )
@@ -2511,7 +2514,10 @@ class MainFrameView ( wx.Frame ):
     def do_open_connection_manager( self, event ):
         event.Skip()
 
-    def do_disconnect( self, event ):
+    def on_database_disconnect( self, event ):
+        event.Skip()
+
+    def on_database_refresh( self, event ):
         event.Skip()
 
     def on_page_chaged( self, event ):
@@ -2662,6 +2668,32 @@ class Trash ( wx.Panel ):
     def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
         wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
 
+        bSizer144 = wx.BoxSizer( wx.VERTICAL )
+
+        self.database_character_set_panel = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer139 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText70 = wx.StaticText( self.database_character_set_panel, wx.ID_ANY, _(u"Character set"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText70.Wrap( -1 )
+
+        self.m_staticText70.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer139.Add( self.m_staticText70, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        database_character_setChoices = []
+        self.database_character_set = wx.Choice( self.database_character_set_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, database_character_setChoices, 0 )
+        self.database_character_set.SetSelection( 0 )
+        bSizer139.Add( self.database_character_set, 1, wx.ALL, 5 )
+
+
+        self.database_character_set_panel.SetSizer( bSizer139 )
+        self.database_character_set_panel.Layout()
+        bSizer139.Fit( self.database_character_set_panel )
+        bSizer144.Add( self.database_character_set_panel, 1, wx.ALIGN_CENTER, 5 )
+
+
+        self.SetSizer( bSizer144 )
+        self.Layout()
 
     def __del__( self ):
         pass

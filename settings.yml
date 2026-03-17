@@ -2,8 +2,8 @@ language: en_US
 ui:
   window:
     size:
-    - 1920
-    - 1048
+    - 2256
+    - 1472
     position:
     - 0
     - 0
