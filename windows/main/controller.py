@@ -116,7 +116,6 @@ class MainFrameController(MainFrameView):
 
         database_observables = [
             model.database_name,
-            model.database_character_set,
             model.database_collation,
             model.database_encryption,
             model.database_read_only,

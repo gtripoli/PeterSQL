@@ -3,7 +3,7 @@ from typing import Optional
 import wx
 
 from helpers.bindings import AbstractModel
-from helpers.observables import Observable, debounce
+from helpers.observables import CallbackEvent, Observable, debounce
 
 from structures.connection import ConnectionEngine
 
@@ -13,7 +13,6 @@ from windows.main import CURRENT_DATABASE, CURRENT_SESSION
 class EditDatabaseOptionsModel(AbstractModel):
     def __init__(self):
         self.database_name = Observable()
-        self.database_character_set = Observable()
         self.database_collation = Observable()
         self.database_encryption = Observable(False)
         self.database_read_only = Observable(False)
@@ -30,7 +29,6 @@ class EditDatabaseOptionsModel(AbstractModel):
 
         debounce(
             self.database_name,
-            self.database_character_set,
             self.database_collation,
             self.database_encryption,
             self.database_read_only,
@@ -78,15 +76,6 @@ class EditDatabaseOptionsModel(AbstractModel):
             self._first_attr(database, ["default_collation", "collation", "collation_name"], "")
         )
 
-        context = database.context if database else None
-        charset = None
-        if context and self.database_collation.get_value() and getattr(context, "COLLATIONS", None):
-            charset = context.COLLATIONS.get(self.database_collation.get_value())
-
-        self.database_character_set.set_initial(
-            charset or self._first_attr(database, ["character_set", "charset"], "")
-        )
-
         self.database_encryption.set_initial(
             self._encryption_to_bool(self._first_attr(database, ["encryption"], None))
         )
@@ -121,8 +110,6 @@ class EditDatabaseOptionsModel(AbstractModel):
             database.name = self.database_name.get_value()
 
         mapping = {
-            "character_set": self.database_character_set.get_value(),
-            "charset": self.database_character_set.get_value(),
             "default_collation": self.database_collation.get_value(),
             "collation": self.database_collation.get_value(),
             "collation_name": self.database_collation.get_value(),
@@ -144,6 +131,8 @@ class EditDatabaseOptionsModel(AbstractModel):
         for attr, value in mapping.items():
             if hasattr(database, attr):
                 setattr(database, attr, value)
+
+        CURRENT_DATABASE.execute_callback(CallbackEvent.AFTER_CHANGE)
 
 
 class DatabaseOptionsController:
@@ -213,7 +202,6 @@ class DatabaseOptionsController:
     def _bind_controls(self) -> None:
         self.model.bind_controls(
             database_name=self.parent.database_name,
-            database_character_set=self.parent.database_character_set,
             database_collation=self.parent.database_collation,
             database_encryption=self.parent.database_encryption,
             database_read_only=self.parent.database_read_only,
@@ -231,7 +219,6 @@ class DatabaseOptionsController:
 
     def _build_controls_all(self) -> list[wx.Window]:
         return [
-            self.parent.database_character_set,
             self.parent.database_collation,
             self.parent.database_encryption,
             self.parent.database_read_only,
@@ -249,7 +236,6 @@ class DatabaseOptionsController:
 
     def _build_panel_by_name(self) -> dict[str, wx.Window]:
         return {
-            "database_character_set_panel": self.parent.database_character_set_panel,
             "database_collation_panel": self.parent.database_collation_panel,
             "database_encryption_panel": self.parent.database_encryption_panel,
             "database_read_only_panel": self.parent.database_read_only_panel,
@@ -268,7 +254,6 @@ class DatabaseOptionsController:
     def _get_panel_names_for_engine(self, engine: Optional[ConnectionEngine]) -> list[str]:
         if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
             return [
-                "database_character_set_panel",
                 "database_collation_panel",
                 "database_encryption_panel",
             ]
@@ -312,15 +297,6 @@ class DatabaseOptionsController:
         if context and getattr(context, "COLLATIONS", None):
             collations = sorted(context.COLLATIONS.keys())
 
-        charsets = []
-        if context and getattr(context, "COLLATIONS", None):
-            charsets = sorted(set(context.COLLATIONS.values()))
-
-        self._apply_choice(
-            self.parent.database_character_set,
-            charsets,
-            self.model.database_character_set.get_value(),
-        )
         self._apply_choice(
             self.parent.database_collation,
             collations,
