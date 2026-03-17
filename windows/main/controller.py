@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import contextlib
+import dataclasses
 
 from collections import defaultdict
 from gettext import gettext as _
@@ -99,6 +100,8 @@ class MainFrameController(MainFrameView):
 
         self._setup_query_editors()
 
+        self._setup_database_action_buttons_bindings()
+
         self._setup_subscribers()
 
         # Memory update timer
@@ -107,6 +110,75 @@ class MainFrameController(MainFrameView):
         self.memory_timer.Start(5000)  # Update every 5 seconds
 
         self.Bind(wx.EVT_SYS_COLOUR_CHANGED, self.on_sys_colour_changed)
+
+    def _setup_database_action_buttons_bindings(self) -> None:
+        model = self.controller_database_options.model
+
+        database_observables = [
+            model.database_name,
+            model.database_character_set,
+            model.database_collation,
+            model.database_encryption,
+            model.database_read_only,
+            model.database_tablespace,
+            model.database_connection_limit,
+            model.database_password,
+            model.database_profile,
+            model.database_default_tablespace,
+            model.database_temporary_tablespace,
+            model.database_quota,
+            model.database_unlimited_quota,
+            model.database_account_status,
+            model.database_password_expire,
+        ]
+
+        for observable in database_observables:
+            observable.subscribe(self._on_database_options_changed)
+
+        CURRENT_SESSION.subscribe(self._on_database_options_changed)
+
+    def _on_database_options_changed(self, _=None) -> None:
+        self._update_database_action_buttons()
+
+    @staticmethod
+    def _database_has_changes(database: Optional[SQLDatabase]) -> bool:
+        if database is None:
+            return False
+
+        if database.is_new:
+            return True
+
+        session = CURRENT_SESSION.get_value()
+        if session is None:
+            return False
+
+        original_database = next(
+            (db for db in session.context.databases.get_value() if db.id == database.id),
+            None,
+        )
+
+        if original_database is None:
+            return True
+
+        for field in dataclasses.fields(database):
+            if not field.compare:
+                continue
+
+            if getattr(database, field.name, None) != getattr(original_database, field.name, None):
+                return True
+
+        return False
+
+    def _update_database_action_buttons(self) -> None:
+        database = CURRENT_DATABASE.get_value()
+
+        has_database = database is not None
+        has_changes = self._database_has_changes(database)
+        is_persisted = bool(database is not None and not database.is_new)
+
+        self.btn_apply_database.Enable(has_database and has_changes)
+        self.btn_cancel_database.Enable(is_persisted and has_changes)
+        self.btn_delete_database.Enable(is_persisted)
 
     def on_sys_colour_changed(self, event):
         self._setup_query_editors()
@@ -1037,6 +1109,8 @@ class MainFrameController(MainFrameView):
 
     def _on_current_database(self, database: SQLDatabase):
         self.toggle_panel(database)
+
+        self._update_database_action_buttons()
 
         if database:
             self.table_engine.Enable(len(database.context.ENGINES) > 1)
