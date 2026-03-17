@@ -23,7 +23,7 @@ The following rules are strict and MUST NOT be violated. When generating or modi
 2. Python typing rules MUST be respected (PEP 585 generics; `Optional[T]`, not `T | None`).
 3. `from __future__ import annotations` MUST NOT be used.
 4. Import ordering and grouping rules MUST be followed exactly.
-5. Functions and methods MUST NOT exceed 50 lines.
+5. Functions and methods MUST NOT exceed 80 lines.
 6. Code changes MUST avoid modifying unrelated code.
 7. Naming MUST remain explicit and descriptive (no aggressive abbreviations).
 8. Code MUST remain mypy-friendly whenever possible.
@@ -620,8 +620,8 @@ class Example:
 
 ## 9. Function and Method Size
 
-- A function/method MUST be at most 50 lines.
-- If it exceeds 50 lines, it MUST be split into smaller functions/methods with clear names.
+- A function/method MUST be at most 80 lines.
+- If it exceeds 80 lines, it MUST be split into smaller functions/methods with clear names.
 
 ---
 

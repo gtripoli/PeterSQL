@@ -19,10 +19,10 @@ from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.engines.datatype import DataTypeCategory, SQLDataType
 
-from windows.components.stc.autocomplete.statement_extractor import StatementExtractor
 from windows.components.popup import PopupCalendar, PopupCalendarTime
 from windows.components.renders import AdvancedTextRenderer, FloatRenderer, IntegerRenderer, PopupRenderer, TextRenderer, TimeRenderer
 from windows.components.dataview import QueryEditorResultsDataViewCtrl
+from windows.components.stc.autocomplete.statement_extractor import StatementExtractor
 
 
 class _ReadOnlyPopupRenderer(PopupRenderer):

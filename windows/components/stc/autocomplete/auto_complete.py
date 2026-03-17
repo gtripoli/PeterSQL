@@ -113,7 +113,7 @@ class SQLAutoCompleteController:
             editor: wx.stc.StyledTextCtrl,
             provider: SQLCompletionProvider,
             *,
-            settings: Optional[object] = None,
+            settings: object,
             theme_loader: Optional[object] = None,
             debounce_ms: int = 80,
             is_enabled: bool = True,

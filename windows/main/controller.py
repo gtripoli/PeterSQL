@@ -1,9 +1,9 @@
+import contextlib
+import dataclasses
 import math
 import os
 import threading
 import time
-import contextlib
-import dataclasses
 
 from collections import defaultdict
 from gettext import gettext as _

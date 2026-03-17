@@ -185,7 +185,7 @@ class BaseDataViewListModel(_DataViewListValueMixin, BaseDataModel, wx.dataview.
 class BaseObservableDataModel(BaseDataModel):
     def __init__(self, column_count: Optional[int] = None):
         super().__init__(column_count)
-        self._observable: Union[ObservableList, ObservableLazyList] = None
+        self._observable: Union[ObservableList, ObservableLazyList]
 
     def load(self, data: list[Any]):
         super().load(data.copy())
