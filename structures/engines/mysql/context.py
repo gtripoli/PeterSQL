@@ -85,6 +85,12 @@ class MySQLContext(AbstractContext):
         self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
     def _parse_type(self, column_type: str):
+        """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
+
+        Used in get_columns() to extract length, precision, scale, set values, and flags
+        from DDL-style strings such as 'varchar(255)', 'decimal(10,2)', or 'enum('a','b')'.
+        Returns an empty dict when no pattern matches.
+        """
         types = MySQLDataType.get_all()
         type_set = [
             x.lower()
@@ -121,6 +127,12 @@ class MySQLContext(AbstractContext):
         return dict()
 
     def _get_field_type_name(self, type_code: Optional[int]) -> Optional[str]:
+        """Resolve a pymysql FIELD_TYPE integer code to its constant name.
+
+        Used in get_result_column_datatypes() to bridge the driver's numeric type
+        representation to a named string (e.g. 253 -> 'VAR_STRING').
+        Returns None when the code is absent or unrecognised.
+        """
         if type_code is None:
             return None
 
@@ -136,6 +148,12 @@ class MySQLContext(AbstractContext):
     def get_result_column_datatypes(
         self, cursor: pymysql.cursors.Cursor
     ) -> list[Optional[SQLDataType]]:
+        """Map each result column to its SQLDataType using the pymysql cursor description.
+
+        Resolves the driver's numeric type code via _get_field_type_name(), then looks up
+        the matching SQLDataType by name. Returns None for columns whose type cannot be resolved.
+        Unlike _parse_type(), this operates on query result metadata, not on DDL column strings.
+        """
         datatypes: list[Optional[SQLDataType]] = []
 
         for description in cursor.description or []:
