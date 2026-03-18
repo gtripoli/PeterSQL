@@ -81,7 +81,7 @@ The system detects which table is on the left of the operator and filters out AL
 
 ## Test Coverage Matrix
 
-Golden tests organized by SQL query writing flow (180 base tests, executed across 11 engine/version targets):
+Golden tests organized by SQL query writing flow (211 base tests, executed across 11 engine/version targets):
 
 - mysql: `8`, `9`
 - mariadb: `5`, `10`, `11`, `12`
@@ -153,7 +153,19 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | WINDOW_FUNCTIONS_OVER ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/window_functions_over.json` | 1 | 1 | 0 | 0 | OVER-clause bootstrap suggestions (`PARTITION BY`, `ORDER BY`). |
 | CURSOR_IN_TOKEN ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/cursor_in_token.json` | 1 | 1 | 0 | 0 | Correct prefix/context when cursor is inside an existing token. |
 
-### 11. Multi-Query & Special Cases
+### 11. INSERT, UPDATE, DELETE Operations
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| INSERT ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/insert.json` | 14 | 14 | 0 | 0 | INSERT INTO statements with table selection, column specification, VALUES clauses, and string literal handling. |
+| UPDATE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/update.json` | 16 | 16 | 0 | 0 | UPDATE statements with table selection, SET clauses, WHERE conditions, JOIN operations, and string literal handling. |
+| DELETE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/delete.json` | 15 | 15 | 0 | 0 | DELETE FROM statements with table selection, WHERE conditions, JOIN/USING clauses, subqueries, and string literal handling. |
+
+### 12. String Literal Handling
+| Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
+|------------|------|-------|---|---|---|-------------|
+| STRING_LITERALS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/insert.json`, `cases/update.json`, `cases/delete.json`, `cases/where.json` | 11 | 11 | 0 | 0 | No suggestions when cursor is inside string literals across INSERT, UPDATE, DELETE, and SELECT statements. |
+
+### 13. Multi-Query & Special Cases
 | Test Group | File | Total | ✅ | ❌ | ⚠️ | Description |
 |------------|------|-------|---|---|---|-------------|
 | DERIVED_TABLES_CTE ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/derived_tables_cte.json` | 9 | 9 | 0 | 0 | Minimal CTE/derived-table scope extraction for FROM/JOIN/WHERE and dot completion. |
@@ -165,8 +177,8 @@ Golden tests organized by SQL query writing flow (180 base tests, executed acros
 | LARGE_SCHEMA_GUARDRAILS ![status](https://img.shields.io/badge/status-pass-brightgreen) | `cases/perf.json` | 2 | 2 | 0 | 0 | Large-schema guardrails for prefix filtering and noise control. |
 
 ### Summary Statistics
-- **Total Tests**: 1936 (176 base × 11 engine/version targets)
-- **✅ Passing**: 1936 (176 base × 11 targets, 100%)
+- **Total Tests**: 2321 (211 base × 11 engine/version targets)
+- **✅ Passing**: 2321 (211 base × 11 targets, 100%)
 - **❌ Failing**: 0 (remaining tests, 0%)
 - **⚠️ Expected Failures (xfail)**: 0 (0 base × 11 targets, 0%)
 - **⚪ Not Implemented**: 0 (0%)

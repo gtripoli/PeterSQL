@@ -65,6 +65,12 @@ class SuggestionBuilder:
         "POWER",
     }
 
+    _literal_functions = {
+        "CURRENT_DATE",
+        "CURRENT_TIME",
+        "CURRENT_TIMESTAMP",
+    }
+
     _max_database_columns = 400
 
     _scope_restricted_contexts = {
@@ -211,6 +217,64 @@ class SuggestionBuilder:
 
         if context == SQLContext.AFTER_LIMIT_NUMBER:
             return self._build_after_limit_number(prefix)
+
+        # INSERT contexts
+        if context == SQLContext.INSERT_INTO:
+            return self._build_insert_into(prefix)
+        if context == SQLContext.INSERT_COLUMNS:
+            return self._build_insert_columns(scope, prefix, statement)
+        if context == SQLContext.INSERT_VALUES:
+            return self._build_insert_values(prefix)
+        if context == SQLContext.INSERT_VALUE_EXPRESSIONS:
+            return self._build_insert_value_expressions(prefix)
+        if context == SQLContext.INSERT_COMPLETE:
+            return []
+        if context == SQLContext.INSERT_POST_VALUES:
+            return self._build_insert_post_values(prefix)
+        if context == SQLContext.INSERT_STRING_LITERAL:
+            return []
+
+        # UPDATE contexts
+        if context == SQLContext.UPDATE_TABLE:
+            return self._build_update_table(prefix)
+        if context == SQLContext.UPDATE_SET_CLAUSE:
+            return self._build_update_set_clause(prefix, scope)
+        if context == SQLContext.UPDATE_SET_COLUMNS:
+            return self._build_update_set_columns(scope, prefix, statement)
+        if context == SQLContext.UPDATE_SET_EXPRESSIONS:
+            return self._build_insert_value_expressions(prefix)
+        if context == SQLContext.UPDATE_WHERE_CLAUSE:
+            return self._build_update_where_clause(prefix, scope)
+        if context == SQLContext.UPDATE_WHERE_CONDITIONS:
+            return self._build_update_where_conditions(scope, prefix, statement)
+        if context == SQLContext.UPDATE_WHERE_OPERATORS:
+            return self._build_update_where_operators(prefix)
+        if context == SQLContext.UPDATE_JOIN_ON:
+            return self._build_update_join_on(scope, prefix)
+        if context in (SQLContext.UPDATE_STRING_LITERAL, SQLContext.UPDATE_WHERE_STRING_LITERAL):
+            return []
+
+        # DELETE contexts
+        if context == SQLContext.DELETE_FROM:
+            return self._build_delete_from(prefix)
+        if context == SQLContext.DELETE_WHERE_CLAUSE:
+            return self._build_delete_where_clause(prefix, scope, statement)
+        if context == SQLContext.DELETE_WHERE_CONDITIONS:
+            return self._build_delete_where_conditions(scope, prefix, statement)
+        if context == SQLContext.DELETE_WHERE_OPERATORS:
+            return self._build_update_where_operators(prefix)
+        if context == SQLContext.DELETE_WHERE_EXPRESSIONS:
+            return self._build_insert_value_expressions(prefix)
+        if context == SQLContext.DELETE_JOIN_ON:
+            return self._build_update_join_on(scope, prefix)
+        if context == SQLContext.DELETE_USING:
+            return self._build_delete_using(scope, prefix, statement)
+        if context == SQLContext.DELETE_SUBQUERY:
+            return self._build_delete_subquery(prefix)
+        if context == SQLContext.DELETE_WHERE_STRING_LITERAL:
+            return []
+        if context == SQLContext.WHERE_STRING_LITERAL:
+            return []
 
         return self._build_keywords(prefix)
 
@@ -1388,6 +1452,20 @@ class SuggestionBuilder:
         ]
 
     @staticmethod
+    def _build_join_literals(prefix: str) -> list[CompletionItem]:
+        literals = ["NULL", "TRUE", "FALSE"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            literals = [
+                literal for literal in literals if literal.startswith(prefix_upper)
+            ]
+
+        return [
+            CompletionItem(name=literal, item_type=CompletionItemType.KEYWORD)
+            for literal in literals
+        ]
+
+    @staticmethod
     def _build_after_is_keywords(prefix: str) -> list[CompletionItem]:
         keywords = ["NULL", "NOT NULL", "TRUE", "FALSE"]
         if prefix:
@@ -1802,7 +1880,9 @@ class SuggestionBuilder:
             if item.name not in self._select_list_excluded_functions
         ]
 
-    def _build_functions(self, prefix: str) -> list[CompletionItem]:
+    def _build_functions(
+        self, prefix: str, exclude: Optional[set[str]] = None
+    ) -> list[CompletionItem]:
         if not self._database:
             return []
 
@@ -1813,6 +1893,7 @@ class SuggestionBuilder:
                     name=str(func).upper(), item_type=CompletionItemType.FUNCTION
                 )
                 for func in functions
+                if not exclude or str(func).upper() not in exclude
             ]
         except (AttributeError, TypeError):
             return []
@@ -2393,3 +2474,271 @@ class SuggestionBuilder:
                     filtered.append(col)
 
         return filtered
+
+    # ── INSERT builders ──────────────────────────────────────────────
+
+    def _build_insert_into(self, prefix: str) -> list[CompletionItem]:
+        return self._build_all_tables(prefix)
+
+    def _build_insert_columns(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        table = self._find_insert_target_table(statement)
+        if not table:
+            return []
+
+        already_listed = self._extract_already_listed_columns(statement)
+        columns = []
+        try:
+            for col in table.columns:
+                if col.name.lower() not in already_listed:
+                    if not prefix or col.name.lower().startswith(prefix.lower()):
+                        columns.append(
+                            CompletionItem(name=col.name, item_type=CompletionItemType.COLUMN)
+                        )
+        except (AttributeError, TypeError):
+            pass
+        return columns
+
+    def _build_insert_values(self, prefix: str) -> list[CompletionItem]:
+        keywords = ["VALUES", "SELECT", "DEFAULT"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [k for k in keywords if k.startswith(prefix_upper)]
+        return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+    def _build_insert_value_expressions(self, prefix: str) -> list[CompletionItem]:
+        items = self._build_where_literals(prefix)
+        items.extend(self._build_functions(prefix, exclude=self._literal_functions))
+        return items
+
+    def _build_insert_post_values(self, prefix: str) -> list[CompletionItem]:
+        keywords = ["ON DUPLICATE KEY UPDATE", "ON CONFLICT", "RETURNING", ";"]
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+        return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+    # ── UPDATE builders ──────────────────────────────────────────────
+
+    def _build_update_table(self, prefix: str) -> list[CompletionItem]:
+        return self._build_all_tables(prefix)
+
+    def _build_update_set_clause(self, prefix: str, scope: QueryScope) -> list[CompletionItem]:
+        keywords = ["SET"]
+        if not scope.join_tables:
+            keywords.extend(["JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "CROSS JOIN"])
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+        return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+    def _build_update_set_columns(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        table = self._find_update_target_table(statement)
+        if not table:
+            return []
+
+        already_set = self._extract_already_set_columns(statement)
+        columns = []
+        try:
+            for col in table.columns:
+                if col.name.lower() not in already_set:
+                    if not prefix or col.name.lower().startswith(prefix.lower()):
+                        columns.append(
+                            CompletionItem(name=col.name, item_type=CompletionItemType.COLUMN)
+                        )
+        except (AttributeError, TypeError):
+            pass
+        return columns
+
+    def _build_update_where_clause(self, prefix: str, scope: QueryScope) -> list[CompletionItem]:
+        keywords = ["WHERE"]
+        if not scope.join_tables:
+            keywords.extend(["JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "CROSS JOIN"])
+        keywords.extend(["RETURNING", ";"])
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+        return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+    def _build_update_where_conditions(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        table = self._find_update_target_table(statement)
+
+        # After a complete condition: suggest AND/OR/LIMIT/etc
+        if self._is_after_where_condition_value(statement):
+            keywords = ["AND", "OR", "LIMIT", "ORDER BY", "RETURNING", ";"]
+            if prefix:
+                prefix_upper = prefix.upper()
+                keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+            return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+        # Suggest columns + functions
+        columns = self._get_table_columns_as_items(table, prefix)
+        items = list(columns)
+        items.extend(self._build_where_literals(prefix))
+        items.extend(self._build_functions(prefix, exclude=self._literal_functions))
+        return items
+
+    def _build_update_where_operators(self, prefix: str) -> list[CompletionItem]:
+        operators = [
+            "=", "!=", "<>", ">", "<", ">=", "<=",
+            "IS", "IS NOT", "IN", "NOT IN", "LIKE", "NOT LIKE",
+            "BETWEEN", "NOT BETWEEN", "AND", "OR",
+        ]
+        if prefix:
+            prefix_upper = prefix.upper()
+            operators = [op for op in operators if op.upper().startswith(prefix_upper)]
+        return [CompletionItem(name=op, item_type=CompletionItemType.KEYWORD) for op in operators]
+
+    def _build_update_join_on(self, scope: QueryScope, prefix: str) -> list[CompletionItem]:
+        items = self._resolve_columns_in_scope(scope, prefix, SQLContext.JOIN_ON)
+        items.extend(self._build_join_literals(prefix))
+        items.extend(self._build_functions(prefix, exclude=self._literal_functions))
+        return items
+
+    # ── DELETE builders ──────────────────────────────────────────────
+
+    def _build_delete_from(self, prefix: str) -> list[CompletionItem]:
+        return self._build_all_tables(prefix)
+
+    def _build_delete_where_clause(
+        self, prefix: str, scope: QueryScope, statement: str
+    ) -> list[CompletionItem]:
+        keywords = ["WHERE"]
+        if not scope.join_tables:
+            keywords.extend(["JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "CROSS JOIN"])
+            keywords.append("USING")
+        keywords.extend(["RETURNING", ";"])
+        if prefix:
+            prefix_upper = prefix.upper()
+            keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+        return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+    def _build_delete_where_conditions(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        table = self._find_delete_target_table(statement)
+
+        if self._is_after_where_condition_value(statement):
+            keywords = ["AND", "OR", "LIMIT", "ORDER BY", "RETURNING", ";"]
+            if prefix:
+                prefix_upper = prefix.upper()
+                keywords = [k for k in keywords if k.upper().startswith(prefix_upper)]
+            return [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+
+        columns = self._get_table_columns_as_items(table, prefix)
+        items = list(columns)
+        items.extend(self._build_where_literals(prefix))
+        items.extend(self._build_functions(prefix, exclude=self._literal_functions))
+        return items
+
+    def _build_delete_using(
+        self, scope: QueryScope, prefix: str, statement: str
+    ) -> list[CompletionItem]:
+        delete_table = self._find_delete_target_table(statement)
+        exclude = {delete_table.name.lower()} if delete_table else set()
+        return self._build_all_tables(prefix, exclude=exclude)
+
+    def _build_delete_subquery(self, prefix: str) -> list[CompletionItem]:
+        keywords = ["SELECT", "WITH"]
+        items = [CompletionItem(name=k, item_type=CompletionItemType.KEYWORD) for k in keywords]
+        items.extend(self._build_where_literals(prefix))
+        items.extend(self._build_functions(prefix, exclude=self._literal_functions))
+        if prefix:
+            prefix_upper = prefix.upper()
+            items = [item for item in items if item.name.upper().startswith(prefix_upper)]
+        return items
+
+    # ── Shared helpers ───────────────────────────────────────────────
+
+    def _build_all_tables(
+        self, prefix: str, exclude: Optional[set[str]] = None
+    ) -> list[CompletionItem]:
+        if not self._database:
+            return []
+        try:
+            tables = []
+            for table in self._database.tables:
+                if exclude and table.name.lower() in exclude:
+                    continue
+                if not prefix or table.name.lower().startswith(prefix.lower()):
+                    tables.append(
+                        CompletionItem(name=table.name, item_type=CompletionItemType.TABLE)
+                    )
+            return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+        except (AttributeError, TypeError):
+            return []
+
+    def _find_insert_target_table(self, statement: str) -> Optional[SQLTable]:
+        match = re.search(r"\bINSERT\s+INTO\s+(\w+)", statement, re.IGNORECASE)
+        if match:
+            return self._get_table_by_name(match.group(1))
+        return None
+
+    def _find_update_target_table(self, statement: str) -> Optional[SQLTable]:
+        match = re.search(r"\bUPDATE\s+(\w+)", statement, re.IGNORECASE)
+        if match:
+            return self._get_table_by_name(match.group(1))
+        return None
+
+    def _find_delete_target_table(self, statement: str) -> Optional[SQLTable]:
+        match = re.search(r"\bFROM\s+(\w+)", statement, re.IGNORECASE)
+        if match:
+            return self._get_table_by_name(match.group(1))
+        return None
+
+    def _get_table_columns_as_items(
+        self, table: Optional[SQLTable], prefix: str
+    ) -> list[CompletionItem]:
+        if not table:
+            return []
+        try:
+            columns = []
+            for col in table.columns:
+                if not prefix or col.name.lower().startswith(prefix.lower()):
+                    columns.append(
+                        CompletionItem(name=col.name, item_type=CompletionItemType.COLUMN)
+                    )
+            return columns
+        except (AttributeError, TypeError):
+            return []
+
+    @staticmethod
+    def _extract_already_listed_columns(statement: str) -> set[str]:
+        match = re.search(r"\(\s*(.+?)(?:\)|$)", statement, re.IGNORECASE)
+        if not match:
+            return set()
+        column_list = match.group(1)
+        return {col.strip().lower() for col in column_list.split(",") if col.strip()}
+
+    @staticmethod
+    def _extract_already_set_columns(statement: str) -> set[str]:
+        set_match = re.search(r"\bSET\s+(.*)", statement, re.IGNORECASE | re.DOTALL)
+        if not set_match:
+            return set()
+        set_clause = set_match.group(1)
+        columns = set()
+        for assignment in set_clause.split(","):
+            eq_match = re.match(r"\s*(\w+)\s*=", assignment)
+            if eq_match:
+                columns.add(eq_match.group(1).lower())
+        return columns
+
+    def _is_after_where_condition_value(self, statement: str) -> bool:
+        where_match = re.search(r"\bWHERE\s+(.*)", statement, re.IGNORECASE | re.DOTALL)
+        if not where_match:
+            return False
+        clause = where_match.group(1).strip()
+        if not clause:
+            return False
+        return bool(re.search(
+            r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s*"
+            r"(?:=|!=|<>|<=|>=|<|>|LIKE|IN|BETWEEN)\s*"
+            r"(?:[A-Za-z_][A-Za-z0-9_]*|\d+|'[^']*'|\"[^\"]*\"|NULL|TRUE|FALSE|\w+\([^)]*\))\s*$",
+            clause,
+            re.IGNORECASE,
+        ))
