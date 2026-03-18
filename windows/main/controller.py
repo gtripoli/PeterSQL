@@ -34,17 +34,21 @@ from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteCon
 from windows.components.stc.template_menu import SQLTemplateMenuController
 
 from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
-from windows.main.tabs.query import QueryResultsController
-from windows.main.tabs.table import EditTableModel, NEW_TABLE
-from windows.main.tabs.index import TableIndexController
-from windows.main.tabs.check import TableCheckController
-from windows.main.tabs.column import TableColumnsController
-from windows.main.tabs.records import TableRecordsController
-from windows.main.tabs.database import ListDatabaseTable
-from windows.main.tabs.database_options import DatabaseOptionsController
-from windows.main.tabs.explorer import TreeExplorerController
-from windows.main.tabs.foreign_key import TableForeignKeyController
-from windows.main.tabs.view import ViewEditorController
+
+from windows.main.explorer import TreeExplorerController
+
+from windows.main.database.list import ListDatabaseTable
+from windows.main.database.view import ViewEditorController
+from windows.main.database.options import DatabaseOptionsController
+
+from windows.main.table.check import TableCheckController
+from windows.main.table.index import TableIndexController
+from windows.main.table.column import TableColumnsController
+from windows.main.table.records import TableRecordsController
+from windows.main.table.options import EditTableModel, NEW_TABLE
+from windows.main.table.foreign_key import TableForeignKeyController
+
+from windows.main.query.controller import QueryResultsController
 
 
 class MainFrameController(MainFrameView):
@@ -370,6 +374,7 @@ class MainFrameController(MainFrameView):
             on_save_query=self.on_save,
             on_save_as_query=self.on_save_as_query,
             on_stop_state_changed=lambda enabled: self._set_query_stop_enabled(panel, enabled),
+            on_before_execute=lambda: self._autosave_query_page_before_execute(panel),
         )
         self._query_pages.append(panel)
         self._query_page_meta[panel] = {
@@ -593,7 +598,7 @@ class MainFrameController(MainFrameView):
         meta["file_path"] = file_path
         meta["display_name"] = os.path.basename(file_path)
         self._set_query_dirty(page, is_dirty=False)
-        QUERY_LOGS.append(_("Saved query to {file_path}").format(file_path=file_path))
+        QUERY_LOGS.append(_("-- Saved query to {file_path}").format(file_path=file_path))
         return True
 
     def _autosave_query_page_before_execute(self, page: wx.Panel) -> bool:
@@ -618,7 +623,7 @@ class MainFrameController(MainFrameView):
 
         meta["file_path"] = file_path
         self._set_query_dirty(page, is_dirty=False)
-        QUERY_LOGS.append(_("Autosaved query to {file_path}").format(file_path=file_path))
+        QUERY_LOGS.append(_("-- Autosaved query to {file_path}").format(file_path=file_path))
         return True
 
     def _setup_subscribers(self):
@@ -788,10 +793,10 @@ class MainFrameController(MainFrameView):
         return table.database.name, schema, table.name, filters
 
     def _count_table_records(
-        self,
-        table: SQLTable,
-        filters: str,
-        context: Optional[Any] = None,
+            self,
+            table: SQLTable,
+            filters: str,
+            context: Optional[Any] = None,
     ) -> int:
         if context is None:
             context = table.database.context
@@ -815,12 +820,12 @@ class MainFrameController(MainFrameView):
         return int(total_rows or 0)
 
     def _count_table_records_worker(
-        self,
-        session: Session,
-        table: SQLTable,
-        filters: str,
-        total_key: tuple[str, str, str, str],
-        request_id: int,
+            self,
+            session: Session,
+            table: SQLTable,
+            filters: str,
+            total_key: tuple[str, str, str, str],
+            request_id: int,
     ) -> None:
         total_rows = 0
         error = None
@@ -828,7 +833,7 @@ class MainFrameController(MainFrameView):
 
         try:
             context = session._get_context_class()(self._build_records_count_connection(session))
-            context.connect()
+            context.connect(skip_before_connect=True, skip_after_connect=True)
             context.set_database(table.database)
             total_rows = self._count_table_records(table, filters, context)
         except Exception as ex:
@@ -962,11 +967,11 @@ class MainFrameController(MainFrameView):
         worker.start()
 
     def _on_records_count_complete(
-        self,
-        total_key: tuple[str, str, str, str],
-        request_id: int,
-        total_rows: int,
-        error: Optional[str],
+            self,
+            total_key: tuple[str, str, str, str],
+            request_id: int,
+            total_rows: int,
+            error: Optional[str],
     ) -> None:
         if request_id != self._records_total_request_id:
             return
@@ -1163,11 +1168,11 @@ class MainFrameController(MainFrameView):
             return
 
         if wx.MessageDialog(
-            None,
-            message=_("Do you want discard the change to {database_name}?").format(
-                database_name=database.name
-            ),
-            style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
+                None,
+                message=_("Do you want discard the change to {database_name}?").format(
+                    database_name=database.name
+                ),
+                style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         ).ShowModal() != wx.ID_YES:
             return
 
@@ -1572,26 +1577,12 @@ class MainFrameController(MainFrameView):
     def on_execute_statement(self, event):
         controller = self._get_active_query_controller()
         if controller is not None:
-            page = self.MainFrameNotebook.GetCurrentPage()
-            if page is None:
-                return
-
-            if not self._autosave_query_page_before_execute(page):
-                return
-
             self.controller_query_records = controller
             controller.execute_current(event)
 
     def on_execute_statements(self, event):
         controller = self._get_active_query_controller()
         if controller is not None:
-            page = self.MainFrameNotebook.GetCurrentPage()
-            if page is None:
-                return
-
-            if not self._autosave_query_page_before_execute(page):
-                return
-
             self.controller_query_records = controller
             controller.execute_all(event)
 

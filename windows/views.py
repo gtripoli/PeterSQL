@@ -1835,7 +1835,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_table.SetSizer( bSizer251 )
         self.panel_table.Layout()
         bSizer251.Fit( self.panel_table )
-        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), True )
+        self.MainFrameNotebook.AddPage( self.panel_table, _(u"Table"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2320,9 +2320,6 @@ class MainFrameView ( wx.Frame ):
         self.sql_query_editor.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
         bSizer125.Add( self.sql_query_editor, 1, wx.EXPAND | wx.ALL, 5 )
 
-        self.m_button12 = wx.Button( self.m_panel52, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer125.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
-
 
         self.m_panel52.SetSizer( bSizer125 )
         self.m_panel52.Layout()
@@ -2347,7 +2344,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_query.SetSizer( bSizer26 )
         self.panel_query.Layout()
         bSizer26.Fit( self.panel_query )
-        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), False )
+        self.MainFrameNotebook.AddPage( self.panel_query, _(u"Query"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2690,6 +2687,9 @@ class Trash ( wx.Panel ):
         self.database_character_set_panel.Layout()
         bSizer139.Fit( self.database_character_set_panel )
         bSizer144.Add( self.database_character_set_panel, 1, wx.ALIGN_CENTER, 5 )
+
+        self.m_button12 = wx.Button( self, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer144.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
 
         self.SetSizer( bSizer144 )

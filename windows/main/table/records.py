@@ -21,12 +21,22 @@ from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
+NULL_DISPLAY = "NULL"
+
 
 class RecordsModel(BaseObservableDataViewListModel):
     def __init__(self, table: SQLTable, column_count: Optional[int] = None):
         super().__init__(column_count)
 
         self.table: SQLTable = table
+
+    def _load(self, data):
+        super()._load([record.copy() for record in data])
+
+    def _is_null(self, row, col):
+        column = self.table.columns[col]
+        record: SQLRecord = self.data[row]
+        return record.values.get(column.name) is None
 
     def GetValueByRow(self, row, col):
         if not len(self.data):
@@ -36,10 +46,12 @@ class RecordsModel(BaseObservableDataViewListModel):
 
         record: SQLRecord = self.data[row]
 
-        value = record.values.get(column.name, "")
+        value = record.values.get(column.name)
 
         if value is None:
-            return ''
+            if column.datatype.name == "BOOLEAN":
+                return False
+            return NULL_DISPLAY
 
         if not str(value).strip():
             return ''
@@ -65,40 +77,36 @@ class RecordsModel(BaseObservableDataViewListModel):
         return str(value)
 
     def SetValueByRow(self, value, row, col):
-        item = self.GetItem(row)
-
         column: SQLColumn = self.table.columns[col]
 
-        self.data[row].values[column.name] = value
+        if value == NULL_DISPLAY or (isinstance(value, str) and not value.strip()):
+            value = None
 
-        self.ValueChanged(item, col)
+        self.data[row].values[column.name] = value
 
         return True
 
     def GetAttr(self, item, col, attr):
-        try :
+        try:
             column: SQLColumn = self.table.columns[col]
-        except Exception as ex :
-            logger.error(exc_info=True)
-
-        color = column.datatype.category.value.color
-
-        attr.SetColour(wx.Colour(color))
-
-        if self.table.columns[col].is_primary_key:
-            attr.SetBold(True)
-
-        return super().GetAttr(item, col, attr)
-
-    def HasValue(self, item, col):
-        if not self.data:
+        except Exception:
             return False
 
-        column = self.table.columns[col]
+        row = self.GetRow(item)
+        if 0 <= row < len(self.data) and self._is_null(row, col):
+            attr.SetItalic(True)
+            attr.SetColour(wx.Colour(180, 180, 120))
+        else:
+            color = column.datatype.category.value.color
+            attr.SetColour(wx.Colour(color))
 
-        record: SQLRecord = self.get_data_by_item(item)
+        if column.is_primary_key:
+            attr.SetBold(True)
 
-        return record.values.get(column.name, None) is not None
+        return True
+
+    def HasValue(self, item, col):
+        return bool(self.data)
 
 
     def add_row(self, data: SQLRecord) -> wx.dataview.DataViewItem:

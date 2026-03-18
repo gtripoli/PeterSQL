@@ -8,8 +8,8 @@ from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 from structures.helpers import merge_original_current
 from structures.engines.database import SQLCheck, SQLTable
 
+from windows.state import NEW_TABLE
 from windows.main import CURRENT_INDEX, CURRENT_TABLE
-from windows.main.tabs.column import NEW_TABLE
 
 
 class TableCheckModel(BaseObservableDataViewListModel):

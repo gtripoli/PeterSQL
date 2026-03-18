@@ -5,10 +5,10 @@ from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
 
-from windows.main import CURRENT_TABLE, CURRENT_INDEX
-from windows.main.tabs.column import NEW_TABLE
-
 from structures.engines.database import SQLTable, SQLIndex
+
+from windows.state import NEW_TABLE
+from windows.main import CURRENT_TABLE, CURRENT_INDEX
 
 
 class TableIndexModel(BaseObservableDataViewListModel):
