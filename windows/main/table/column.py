@@ -247,8 +247,8 @@ class TableColumnsController:
             default_values['set'] = datatype.default_set
 
         new_empty_column = session.context.build_empty_column(
-            table=table,
-            datatype=datatype,
+            table,
+            datatype,
             **default_values
         )
 

@@ -1,7 +1,7 @@
 import pytest
 from dataclasses import dataclass
 
-from helpers.dataview import ColumnField, AbstractBaseDataModel
+from helpers.dataview import ColumnField, BaseDataModel
 
 
 @dataclass
@@ -60,14 +60,14 @@ class TestColumnField:
         assert field.has_value(item) is False
 
 
-class ConcreteDataModel(AbstractBaseDataModel):
+class ConcreteDataModel(BaseDataModel):
     """Concrete implementation for testing."""
 
     def set_observable(self, observable):
         self._observable = observable
 
 
-class TestAbstractBaseDataModel:
+class TestBaseDataModel:
     """Tests for AbstractBaseDataModel."""
 
     def test_load(self):

@@ -18,6 +18,7 @@ from windows.views import TableRecordsDataViewCtrl
 from windows.dialogs.column_content import ColumnContentDialogController
 
 from windows.main import CURRENT_TABLE, CURRENT_SESSION, CURRENT_DATABASE, AUTO_APPLY, CURRENT_RECORDS
+from windows.main.table.executor import RecordsExecutor, RecordsOperationResult
 
 NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
@@ -128,9 +129,12 @@ class TableRecordsController:
         CURRENT_SESSION.subscribe(self._load_session)
         CURRENT_DATABASE.subscribe(self._load_database)
         CURRENT_TABLE.subscribe(self._load_table)
+        
+        self.executor: Optional[RecordsExecutor] = None
 
     def _load_session(self, session: Session):
         self.session = session
+        self.executor = RecordsExecutor(session) if session else None
 
     def _load_database(self, database: SQLDatabase):
         self.database = database
@@ -138,8 +142,40 @@ class TableRecordsController:
     def _load_table(self, table: SQLTable):
         if table is not None:
             self.table = table
-            self.table.load_records()
+            self.load_records_async()
+
+    def _on_auto_apply_changed(self, auto_apply_enabled: bool):
+        """Handle auto-apply setting change and update toolbar states."""
+        selected_records = self.get_selected_records()
+        self._update_toolbar_states(selected_records)
+
+    def load_records_async(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
+        """Load records asynchronously using RecordsExecutor."""
+        if not self.executor or not self.table:
+            return
+            
+        self.executor.load_records(
+            table=self.table,
+            on_complete=self._on_records_loaded,
+            filters=filters,
+            limit=limit,
+            offset=offset,
+            orders=orders
+        )
+    
+    def _on_records_loaded(self, result: RecordsOperationResult):
+        """Handle completion of records loading."""
+        if result.success and result.records is not None:
+            self.table.records.set_value(result.records)
             self.load_model()
+        else:
+            logger.error(f"Failed to load records: {result.error}")
+            # Fallback to synchronous loading
+            try:
+                self.table.load_records()
+                self.load_model()
+            except Exception as ex:
+                logger.error(f"Fallback loading also failed: {ex}", exc_info=True)
 
     def load_model(self):
         self.model = RecordsModel(self.table, len(self.table.columns))
@@ -169,11 +205,9 @@ class TableRecordsController:
                     current_record.save()
                 except Exception as ex:
                     logger.error(f"Error saving record: {ex}", exc_info=True)
-
                 else:
-                    records = list(self.session.context.get_records(table=self.table))
-
-                self.table.records.set_value(records)
+                    # Refresh records after successful save
+                    self.load_records_async()
             else:
                 NEW_RECORDS.append(current_record, replace_existing=True)
 
@@ -181,8 +215,51 @@ class TableRecordsController:
 
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         logger.debug(f"{'#' * 10} ON SELECTION CHANGED {'#' * 10}")
-        CURRENT_RECORDS.set_value(self.get_selected_records())
+        selected_records = self.get_selected_records()
+        CURRENT_RECORDS.set_value(selected_records)
+        
+        # Update toolbar states based on selection
+        self._update_toolbar_states(selected_records)
+        
         event.Skip()
+
+
+    def _update_toolbar_states(self, selected_records: list):
+        """Update toolbar tool states based on record selection and auto-apply setting."""
+        # This method provides the logic for toolbar state management
+        # The actual toolbar updates will be handled by the main controller
+        # through the CURRENT_RECORDS observable subscription
+        
+        # Calculate toolbar states
+        has_selection = len(selected_records) > 0
+        has_single_selection = len(selected_records) == 1
+        auto_apply_enabled = AUTO_APPLY.get_value()
+        
+        # Store states for the main controller to use
+        self._toolbar_states = {
+            'duplicate_enabled': has_single_selection,
+            'delete_enabled': has_selection,
+            'apply_enabled': not auto_apply_enabled,
+            'cancel_enabled': not auto_apply_enabled
+        }
+
+    def get_selection_state(self):
+        """Return the current selection state for toolbar management."""
+        selected_records = self.get_selected_records()
+        return {
+            'has_selection': len(selected_records) > 0,
+            'has_single_selection': len(selected_records) == 1,
+            'auto_apply_enabled': AUTO_APPLY.get_value()
+        }
+
+    def get_toolbar_states(self):
+        """Return the current toolbar states for the main controller."""
+        return getattr(self, '_toolbar_states', {
+            'duplicate_enabled': False,
+            'delete_enabled': False,
+            'apply_enabled': not AUTO_APPLY.get_value(),
+            'cancel_enabled': not AUTO_APPLY.get_value()
+        })
 
     def make_advanced_dialog(self, parent, value: str):
         dialog = ColumnContentDialogController(parent, value)
@@ -240,6 +317,11 @@ class TableRecordsController:
 
         self._do_edit(new_empty_item, 1)
 
+    def do_refresh_records(self):
+        """Refresh records from database."""
+        if self.table:
+            self.load_records_async()
+
     def do_insert_record(self):
         session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
@@ -274,9 +356,19 @@ class TableRecordsController:
 
         records = CURRENT_RECORDS.get_value()
 
-        SQLRecord.delete_many(table, records)
-
-        CURRENT_RECORDS.set_value([])
+        if records:
+            try:
+                SQLRecord.delete_many(table, records)
+                CURRENT_RECORDS.set_value([])
+                # Refresh records after successful deletion
+                self.load_records_async()
+            except Exception as ex:
+                logger.error(f"Error deleting records: {ex}", exc_info=True)
+                wx.MessageBox(
+                    f"Failed to delete records: {ex}",
+                    "Error",
+                    wx.OK | wx.ICON_ERROR
+                )
 
     # def update_record(self, row, record):
     #     if row < 0 or row >= len(self.list_ctrl_records.GetModel().records):
