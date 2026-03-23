@@ -2,11 +2,11 @@ language: en_US
 ui:
   window:
     size:
-    - 2256
-    - 1472
+    - 1769
+    - 967
     position:
-    - 0
-    - 0
+    - 26
+    - 23
   appearance:
     theme: petersql
     mode: auto
@@ -15,6 +15,7 @@ ui:
       expanded_directories:
       - - 0
       - - 3
+      - - 18
   shortcuts:
     query:
       execute_current: Ctrl+Enter
