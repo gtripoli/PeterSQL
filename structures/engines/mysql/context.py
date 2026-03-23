@@ -32,6 +32,7 @@ from structures.engines.mysql.database import (
     MySQLTable,
     MySQLTrigger,
     MySQLView,
+    MySQLCheck,
 )
 from structures.engines.mysql.datatype import MySQLDataType
 from structures.engines.mysql.indextype import MySQLIndexType
@@ -682,8 +683,6 @@ class MySQLContext(AbstractContext):
         expression: Optional[str] = None,
         **default_values,
     ) -> "MySQLCheck":
-        from structures.engines.mysql.database import MySQLCheck
-
         id = MySQLContext.get_temporary_id(table.checks)
 
         if name is None:

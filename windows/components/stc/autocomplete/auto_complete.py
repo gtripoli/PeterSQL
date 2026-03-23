@@ -35,6 +35,7 @@ class SQLCompletionProvider:
         self._get_current_table = get_current_table or (lambda: None)
         self._is_filter_editor = is_filter_editor
         self._cached_database_id: Optional[int] = None
+        self._cached_dialect: Optional[str] = None
 
         self._context_detector: Optional[ContextDetector] = None
         self._dot_handler: Optional[DotCompletionHandler] = None
@@ -44,7 +45,12 @@ class SQLCompletionProvider:
         if session := CURRENT_SESSION.get_value():
             return session.engine.value.dialect
 
-    def get(self, text: str, pos: int) -> Optional[CompletionResult]:
+    def get(
+            self,
+            text: str,
+            pos: int,
+            separator: Optional[str] = None,
+    ) -> Optional[CompletionResult]:
         try:
             database = self._get_database()
             if database is None:
@@ -55,7 +61,11 @@ class SQLCompletionProvider:
             safe_pos = self._clamp_position(pos=pos, text=text)
 
             statement, relative_pos = (
-                self._statement_extractor.extract_current_statement(text, safe_pos)
+                self._statement_extractor.extract_current_statement(
+                    text,
+                    safe_pos,
+                    separator=separator,
+                )
             )
 
             if not self._context_detector:
@@ -99,10 +109,15 @@ class SQLCompletionProvider:
 
     def _update_cache(self, *, database: SQLDatabase) -> None:
         database_id = id(database)
-        if self._cached_database_id != database_id:
-            self._cached_database_id = database_id
+        dialect = self._get_current_dialect()
 
-            dialect = self._get_current_dialect()
+        if (
+            self._cached_database_id != database_id
+            or self._cached_dialect != dialect
+        ):
+            self._cached_database_id = database_id
+            self._cached_dialect = dialect
+
             self._context_detector = ContextDetector(dialect)
             self._dot_handler = DotCompletionHandler(database, None)
 
@@ -145,11 +160,23 @@ class SQLAutoCompleteController:
             self._hide_popup()
 
     def get_effective_separator(self) -> str:
-        session = CURRENT_SESSION.get_value()
-        if session and hasattr(session, "context"):
-            return session.context.DEFAULT_STATEMENT_SEPARATOR
+        user_override = ";"
+        if settings := getattr(self, "_settings", None):
+            user_override = settings.get_value(
+                "editor",
+                "statement_separator",
+                default=";",
+            )
 
-        return self._settings.get_value("editor", "statement_separator", default=";")
+        session = CURRENT_SESSION.get_value()
+        default_separator = ";"
+        if session and hasattr(session, "context"):
+            default_separator = session.context.DEFAULT_STATEMENT_SEPARATOR
+
+        return StatementExtractor.normalize_separator(
+            user_override,
+            default=default_separator,
+        )
 
     def show(self, *, force: bool) -> None:
         if not self._is_enabled:
@@ -162,7 +189,11 @@ class SQLAutoCompleteController:
             pos = self._editor.GetCurrentPos()
             text = self._editor.GetText()
 
-            result = self._provider.get(pos=pos, text=text)
+            result = self._provider.get(
+                pos=pos,
+                text=text,
+                separator=self.get_effective_separator(),
+            )
 
             if result is None:
                 self._hide_popup()
@@ -172,8 +203,12 @@ class SQLAutoCompleteController:
                 self._hide_popup()
                 return
 
+            if not force and result.prefix_length < self._min_prefix_length:
+                self._hide_popup()
+                return
+
             self._current_result = result
-            items = self._unique_sorted_items(items=result.items)
+            items = self._unique_items(items=result.items)
             self._show_popup(items)
         except Exception as ex:
             logger.error(f"Error in show(): {ex}", exc_info=True)
@@ -205,9 +240,13 @@ class SQLAutoCompleteController:
             return
 
         current_pos = self._editor.GetCurrentPos()
-        start_pos = current_pos - self._current_result.prefix_length
+        start_pos, end_pos = self._get_identifier_bounds_around_cursor(current_pos)
 
-        self._editor.SetSelection(start_pos, current_pos)
+        if start_pos == end_pos:
+            start_pos = max(0, current_pos - self._current_result.prefix_length)
+            end_pos = current_pos
+
+        self._editor.SetSelection(start_pos, end_pos)
 
         should_add_space = (
                 self._add_space_after_completion
@@ -232,6 +271,25 @@ class SQLAutoCompleteController:
             ]
             if item.name.upper() in trigger_keywords:
                 wx.CallAfter(lambda: self._schedule_show(force=False))
+
+    @staticmethod
+    def _is_identifier_char(character: str) -> bool:
+        return character.isalnum() or character == "_"
+
+    def _get_identifier_bounds_around_cursor(self, cursor_pos: int) -> tuple[int, int]:
+        text = self._editor.GetText()
+        text_length = len(text)
+
+        start_pos = min(max(cursor_pos, 0), text_length)
+        end_pos = start_pos
+
+        while start_pos > 0 and self._is_identifier_char(text[start_pos - 1]):
+            start_pos -= 1
+
+        while end_pos < text_length and self._is_identifier_char(text[end_pos]):
+            end_pos += 1
+
+        return start_pos, end_pos
 
     def _on_key_down(self, event: wx.KeyEvent) -> None:
         if not self._is_enabled:
@@ -305,15 +363,22 @@ class SQLAutoCompleteController:
         self._pending_call = None
 
     @staticmethod
-    def _unique_sorted_items(
+    def _unique_items(
             *, items: tuple[CompletionItem, ...]
     ) -> list[CompletionItem]:
-        seen_names: set[str] = set()
+        seen_keys: set[tuple[str, CompletionItemType]] = set()
         unique_items: list[CompletionItem] = []
 
         for item in items:
-            if item.name not in seen_names:
-                seen_names.add(item.name)
+            key = (item.name, item.item_type)
+            if key not in seen_keys:
+                seen_keys.add(key)
                 unique_items.append(item)
 
         return unique_items
+
+    @staticmethod
+    def _unique_sorted_items(
+            *, items: tuple[CompletionItem, ...]
+    ) -> list[CompletionItem]:
+        return SQLAutoCompleteController._unique_items(items=items)

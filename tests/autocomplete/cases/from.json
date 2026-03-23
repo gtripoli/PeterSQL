@@ -231,6 +231,43 @@
           "WHERE"
         ]
       }
+    },
+    {
+      "case_id": "FROM_013",
+      "title": "Schema-qualified table token supports follow-up clause keywords",
+      "sql": "SELECT * FROM public.users W|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "FROM_CLAUSE",
+        "prefix": "W",
+        "suggestions": [
+          "WHERE"
+        ]
+      }
+    },
+    {
+      "case_id": "FROM_014",
+      "title": "Quoted table token supports follow-up clause keywords",
+      "sql": "SELECT * FROM \"users\" |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "FROM_CLAUSE",
+        "prefix": null,
+        "suggestions_contains": [
+          "WHERE",
+          "JOIN"
+        ],
+        "suggestions_not_contains": [
+          "users",
+          "orders"
+        ]
+      }
     }
   ]
 }

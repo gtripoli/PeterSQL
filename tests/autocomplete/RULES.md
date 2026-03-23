@@ -39,18 +39,25 @@ The scope classification determines which columns are suggested in expression co
 - **SCOPED**: Explicit scope exists via FROM/JOIN clauses in the current statement
   - Example: `SELECT id, | FROM users` → scope = `users` table
   - Example: `SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT u.id, |` → scope = `u`, `o` tables
-  - Behavior: Suggest only columns from scope tables (qualified if multiple tables, unqualified if single table)
+  - Behavior: Suggest only columns from scope tables
+    - normally **unqualified** if there is a single explicit table
+    - **qualified** if there are multiple explicit tables
+    - if the statement already uses qualified style (for example `users.id` or `u.id`), suggestions must continue in **qualified** form
 
 - **VIRTUAL_SCOPED**: Implicit scope inferred from context without explicit FROM/JOIN
-  - Via qualified columns: `SELECT users.id, |` → virtual scope = `users` (inferred from qualified column)
-  - Via CURRENT_TABLE: `SELECT id, |` with CURRENT_TABLE=users → virtual scope = `users`
-  - **CRITICAL:** VIRTUAL_SCOPED requires CURRENT_TABLE to be set in UI (or qualified column present)
-  - When VIRTUAL_SCOPED via CURRENT_TABLE (no FROM/JOIN), columns MUST be qualified (e.g., `users.id`, not `id`)
-  - Behavior: Suggest columns from the inferred table(s), but allow DB-wide suggestions with prefix
+  - Via qualified references already present in the statement:
+    - `SELECT users.id, |` → virtual scope = `users`
+    - `SELECT users.*, |` → virtual scope = `users`
+  - Via CURRENT_TABLE:
+    - `SELECT |` with CURRENT_TABLE=users → virtual scope = `users`
+  - **CRITICAL:** VIRTUAL_SCOPED exists when there is no explicit `FROM/JOIN` scope, but there is still a strong table reference intent
+  - In VIRTUAL_SCOPED, columns MUST be **always qualified**
+    - `users.id`, not `id`
+  - Behavior: Suggest columns from the inferred table(s); DB-wide suggestions are allowed only when there is no explicit scope and either a prefix exists or autocomplete is forced
 
 - **NO_SCOPED**: No scope information available
   - No FROM/JOIN in current statement
-  - No qualified columns to infer scope from
+  - No qualified references to infer virtual scope from
   - No CURRENT_TABLE set
   - Example: `SELECT id, |` with CURRENT_TABLE=null and no qualified columns
   - Behavior: Suggest only functions (no columns without prefix)
@@ -99,8 +106,8 @@ For clarity, examples use the following assumed schema order:
 
 ## Context Detection
 
-The autocomplete system uses `sqlglot` to parse the SQL query and determine the current context.
-Contexts are defined in the `SQLContext` enum.
+The autocomplete system determines the current SQL context (for example `SELECT_LIST`, `WHERE_CLAUSE`, `JOIN_ON`, `ORDER_BY_CLAUSE`).
+This document defines the expected behavior for each context, independently of the internal implementation.
 
 ---
 
@@ -110,7 +117,7 @@ These examples demonstrate the strict separation between table-selection and exp
 
 **Assume:** `CURRENT_TABLE = users` (set in table editor)
 
-### Example 1: SELECT with no FROM → CURRENT_TABLE + DB-wide allowed
+### Example 1: SELECT with no FROM → VIRTUAL_SCOPED via CURRENT_TABLE
 
 ```sql
 SELECT u|
@@ -119,11 +126,11 @@ SELECT u|
 **Context:** SELECT_LIST, no scope tables exist
 
 **Suggestions:**
-- `users.id, users.name, users.email, ...` (CURRENT_TABLE columns first)
-- `products.unit_price, ...` (DB-wide columns matching 'u')
+- `users.id, users.name, users.email, ...` (CURRENT_TABLE columns first, always qualified in VIRTUAL_SCOPED)
+- `products.unit_price, ...` (DB-wide columns matching 'u', only because no explicit scope exists and a prefix is present)
 - `UPPER, UUID, UNIX_TIMESTAMP` (functions)
 
-**Rationale:** No scope tables exist, so CURRENT_TABLE and DB-wide columns are allowed.
+**Rationale:** No explicit scope tables exist, but CURRENT_TABLE creates a VIRTUAL_SCOPED context. Its columns must stay qualified. DB-wide suggestions are allowed here only because there is still no explicit scope and a prefix is present.
 
 ---
 
@@ -161,7 +168,7 @@ SELECT * FROM orders WHERE u|
 - ❌ `users.*` (CURRENT_TABLE not in scope)
 - ❌ `products.unit_price` (DB-wide column)
 
-**Rationale:** WHERE is an expression context with scope tables. CURRENT_TABLE is not in scope, so it MUST be ignored. DB-wide columns MUST NOT be suggested.
+**Rationale:** WHERE is an expression context with explicit scope tables. CURRENT_TABLE is not in scope, so it MUST be ignored. DB-wide columns MUST NOT be suggested when explicit scope exists.
 
 ```sql
 -- Case B: CURRENT_TABLE in scope
@@ -191,9 +198,8 @@ The autocomplete resolution follows this strict precedence order:
    - Show columns of that table/alias (ignore broader context)
    - Example: `WHERE u.i|` → show columns of `u` starting with `i`
 
-3. **Context Detection** (sqlglot/regex)
+3. **Context Detection**
    - Determine SQL context: SELECT_LIST, WHERE, JOIN ON, ORDER BY, etc.
-   - Use sqlglot parsing (primary) or regex fallback
 
 4. **Within Context: Prefix Rules**
    - If prefix exists (token before cursor without `.`) → apply prefix matching
@@ -280,7 +286,7 @@ SELECT ui|
 
 **Qualification rules:**
 
-1. **Single table in scope (no ambiguity):** 
+1. **Single explicit table in scope (no ambiguity):** 
    - **No prefix:** Use **unqualified** column names (e.g., `id`, `name`)
    - **With prefix:**
      - **Column-name match** (Generic Prefix Matching rule B): Use **unqualified** column names (e.g., `name`)
@@ -300,19 +306,26 @@ SELECT ui|
    - **Implication for autocomplete:** If prefix does not match the alias and does not match any column name, return empty suggestions. Do NOT suggest qualified columns with the original table name.
    - **Example:** `FROM users u WHERE us|` → NO suggestions (prefix 'us' does not match alias 'u' or any column)
 
-4. **Consistency rule - Qualified context propagation:** If the query already uses at least one qualified column (e.g., `users.id` or `u.id`) in the SELECT list, column suggestions MUST stay qualified for consistency, even for single-table scopes.
+4. **Consistency rule - Qualified context propagation:** If the query already uses at least one qualified column (e.g., `users.id` or `u.id`) in the current statement, column suggestions MUST stay qualified for consistency, even for single-table scopes.
    - This is a style lock: once qualified style is used, autocomplete keeps qualified style.
    - Applies to all column contexts: SELECT list (after comma), WHERE, JOIN ON, ORDER BY, GROUP BY, HAVING.
    - For aliased tables, qualification MUST use alias only (never table name).
    - For non-aliased tables, qualification uses `table.column`.
 
-**Rationale:** When only one table is in scope, qualification usually adds noise. However, table-name prefix expansion and explicit qualified usage both express a clear qualification intent. Once user intent is qualified style, maintaining it across contexts keeps SQL consistent and avoids invalid `table.column` usage when aliases are present.
+5. **VIRTUAL_SCOPED rule:** If scope is only virtual (via `CURRENT_TABLE`, `table.column`, or `table.*` without explicit `FROM/JOIN`), suggestions MUST stay **qualified**.
+
+**Rationale:** When only one explicit table is in scope, qualification usually adds noise. However, table-name prefix expansion, VIRTUAL_SCOPED contexts, and explicit qualified usage all express a clear qualification intent. Once user intent is qualified style, maintaining it across contexts keeps SQL consistent and unambiguous.
 
 **Examples:**
 ```sql
 -- Single table, no prefix: unqualified
 SELECT * FROM users WHERE |
 → id, name, email, password, is_enabled, created_at
+
+-- Virtual scoped via CURRENT_TABLE: always qualified
+SELECT |
+-- CURRENT_TABLE = users
+→ users.id, users.name, users.email, users.password, users.is_enabled, users.created_at
 
 -- Single table, prefix matches ONLY column name: unqualified
 SELECT * FROM users WHERE n|
@@ -343,6 +356,10 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id WHERE |
 -- Consistency rule: qualified style propagates to all contexts
 SELECT u.id FROM users u WHERE |
 → u.id, u.name, u.email, u.status, u.created_at
+
+-- Virtual scoped via qualified reference: always qualified
+SELECT users.id, |
+→ users.name, users.email, users.password, users.is_enabled, users.created_at
 
 SELECT u.id FROM users u ORDER BY |
 → u.id, u.name, u.email, ...
@@ -505,14 +522,18 @@ These contexts suggest **columns** from scope tables only.
 #### SELECT_LIST Context (Special Case)
 
 **If statement has NO scope tables (no FROM/JOIN yet):**
-- Without prefix: `CURRENT_TABLE` columns MUST be included first (if set)
+- Without prefix:
+  - if `CURRENT_TABLE` exists, the context is VIRTUAL_SCOPED and `CURRENT_TABLE` columns MUST be included first in **qualified** form
+  - if `CURRENT_TABLE` does not exist and there are no qualified references, suggest only functions
 - With prefix: `CURRENT_TABLE` columns MUST be included ONLY if they match the prefix via:
   - Column-name match (e.g., `SELECT na|` → `name` from CURRENT_TABLE)
   - Table-name expansion (e.g., `SELECT u|` and CURRENT_TABLE is `users` → suggest `users.*` columns)
-- Database-wide columns MUST be included ONLY if prefix exists (guardrail: avoid noise when no prefix)
+- Database-wide columns MUST be included ONLY if:
+  - no explicit scope exists
+  - and a prefix exists, **or** autocomplete was explicitly forced
 - Functions and keywords are included
 
-**If statement HAS scope tables (FROM/JOIN exists):**
+**If statement HAS explicit scope tables (FROM/JOIN exists):**
 - `CURRENT_TABLE` columns MUST be included ONLY if `CURRENT_TABLE` is in scope
 - If `CURRENT_TABLE` is not in scope, it MUST be ignored
 - Database-wide columns MUST NOT be suggested
@@ -625,7 +646,7 @@ SEL| → SELECT (SINGLE_TOKEN)
 #### 3a. Without prefix (after SELECT, no FROM/JOIN in query)
 
 **Show:**
-- `CURRENT_TABLE` columns (if set)
+- `CURRENT_TABLE` columns in qualified form (if set)
 - Functions
 - Keywords (FROM, WHERE, etc.) - **only if SELECT list already has items**
   - e.g., `SELECT id |` → show keywords (can continue query)
@@ -682,8 +703,8 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
 **CURRENT_TABLE handling:**
 
 - **When NO scope tables exist (no FROM/JOIN):**
-  - `CURRENT_TABLE` columns MUST be included first (if set)
-  - Database-wide table-name expansion and column-name matching are included
+  - `CURRENT_TABLE` columns MUST be included first in qualified form (if set)
+  - Database-wide table-name expansion and column-name matching are included only if a prefix exists or autocomplete is forced
   - Functions are included
   
 - **When NO scope tables AND NO prefix:**
@@ -704,8 +725,8 @@ SELECT * FROM users u JOIN orders o ON u.id = o.user_id; SELECT |
 ```sql
 -- Assume CURRENT_TABLE = users
 SELECT u|
-→ users.id, users.name, users.email, ... (CURRENT_TABLE via table-name expansion)
-→ user_sessions.* (other tables starting with 'u')
+→ users.id, users.name, users.email, ... (CURRENT_TABLE first, VIRTUAL_SCOPED)
+→ user_sessions.id, user_sessions.user_id, ... (DB-wide columns allowed because no explicit scope and prefix exists)
 → orders.user_id, products.unit_price (DB-wide columns starting with 'u')
 → Functions: UPPER, UUID, UNIX_TIMESTAMP
 ```
@@ -1550,7 +1571,7 @@ Suggestions are always ordered by priority:
 
 **CURRENT_TABLE group inclusion is context-dependent:**
 - **Expression contexts (JOIN_ON, WHERE, ORDER_BY, GROUP_BY, HAVING):** CURRENT_TABLE group MUST be omitted unless `CURRENT_TABLE` is in scope
-- **SELECT_LIST without scope tables:** CURRENT_TABLE group MUST be included (if set)
+- **SELECT_LIST without explicit scope tables:** CURRENT_TABLE group MUST be included (if set)
 - **SELECT_LIST with scope tables:** CURRENT_TABLE group MUST be included ONLY if `CURRENT_TABLE` is in scope
 - **Table-selection contexts (FROM_CLAUSE, JOIN_CLAUSE):** Not applicable (these suggest tables, not columns)
 
@@ -1563,9 +1584,9 @@ Suggestions are always ordered by priority:
 
 **Column ordering reminder:** See "Important Note on Column Ordering in Examples" section at the beginning of this document. All columns preserve schema order (ordinal_position), NOT alphabetical order.
 
-1. **Columns from CURRENT_TABLE** (if set in context, e.g., table editor)
-   - **Single table in scope:** Unqualified (e.g., `id`, `name`)
-   - **Multiple tables in scope:** Use `alias.column` format if the table has an alias in the current query, otherwise `table.column`
+1. **Columns from CURRENT_TABLE** (if allowed by context rules)
+   - In **VIRTUAL_SCOPED** they are always **qualified**
+   - In explicit scope they follow the normal qualification rules of that context
    - Columns preserve their definition order (ordinal position in the table schema). They must NOT be reordered alphabetically.
 
 2. **Columns from tables in FROM clause** (if any)
@@ -1586,17 +1607,16 @@ Suggestions are always ordered by priority:
 
 4. **All table.column from database** (all other tables not in FROM/JOIN)
    - **CRITICAL: Group 4 eligibility is context-dependent:**
-     - ✅ **Eligible in SELECT_LIST when NO scope tables exist** (and only with prefix - guardrail against noise)
+     - ✅ **Eligible in SELECT_LIST when NO explicit scope tables exist** and either a prefix exists or autocomplete is forced
      - ❌ **NOT eligible in SELECT_LIST when scope tables exist** (scope restriction active)
      - ❌ **NOT eligible in scope-restricted expression contexts** (WHERE, JOIN_ON, ORDER_BY, GROUP_BY, HAVING)
      - ❌ **NOT applicable in table-selection contexts** (FROM_CLAUSE, JOIN_CLAUSE suggest tables, not columns)
    - Always use `table.column` format (no aliases for tables not in query)
    - Columns preserve their definition order (ordinal position in the table schema). They must NOT be reordered alphabetically.
    - Database-wide tables follow a deterministic stable order (schema order or internal stable ordering); within each table, preserve column definition order.
-   - **Performance guardrail (applies ONLY to this group when eligible):** If no prefix and total suggestions exceed threshold (400 items), skip this group to avoid lag in large databases
    - **No prefix definition:** prefix is `None` OR empty string after trimming whitespace
    - The cap applies only to group 4 (DB-wide columns). Groups 1-3 (CURRENT_TABLE, FROM, JOIN) are always included in full (already loaded/scoped).
-   - With prefix: always include this group when eligible (filtered results are manageable)
+   - With prefix: include this group when eligible (filtered results are manageable)
 
 5. **Functions**
    - Alphabetically within this group
@@ -1712,7 +1732,7 @@ Given a prefix P (token immediately before cursor, without '.'):
   - **Single table in scope:** Unqualified (e.g., `name`)
   - **Multiple tables in scope:** Qualified with `alias.column` if table has alias, otherwise `table.column`
 
-**A) Table-name match expansion:**
+**Table-name match expansion:*
 - For EVERY table T whose name startswith(P), return ALL columns of T as column suggestions
 - **Qualification:** Always qualified with `alias.column` if table has alias, otherwise `table.column` (even for single table)
 - **Rationale:** Qualified names indicate the match is from table name, helping users discover dot-completion
@@ -1739,17 +1759,17 @@ Given a prefix P (token immediately before cursor, without '.'):
 
 See **Scope-Restricted Expression Contexts** section for complete rules.
 
-**SELECT_LIST without scope tables:**
+**SELECT_LIST without explicit scope tables:**
 - `CURRENT_TABLE` columns MUST be included first (if set)
-- Database-wide table-name expansion and column-name matching are included **ONLY when prefix exists**
-- **CRITICAL: When no prefix exists, DB-wide columns MUST NOT be shown (guardrail against noise)**
+- Database-wide table-name expansion and column-name matching are included **ONLY when a prefix exists or autocomplete is forced**
+- **CRITICAL: When there is no prefix and autocomplete is not forced, DB-wide columns MUST NOT be shown**
 - **With prefix matching order:**
   1. **CURRENT_TABLE table-name expansion** (if CURRENT_TABLE name matches prefix)
   2. **Other DB-wide table-name expansions** (tables whose names match prefix)
   3. **Column-name matching from all DB tables** (columns whose names match prefix)
   4. **Functions**
 
-**SELECT_LIST with scope tables:**
+**SELECT_LIST with explicit scope tables:**
 - `CURRENT_TABLE` columns MUST be included ONLY if `CURRENT_TABLE` is in scope
 - Database-wide columns MUST NOT be suggested (regardless of prefix)
 - Scope table columns are included with alias-first qualification
@@ -1765,7 +1785,7 @@ See **Scope-Restricted Expression Contexts** section for complete rules.
 
 **Examples:**
 
-**SELECT_LIST without scope, with CURRENT_TABLE and prefix:**
+**SELECT_LIST without explicit scope, with CURRENT_TABLE and prefix:**
 ```sql
 -- Assume CURRENT_TABLE = users, prefix = "u"
 SELECT u|
@@ -1824,57 +1844,6 @@ SELECT * FROM users u JOIN orders o WHERE u|
 → u.id, u.name, u.email, ...  (alias columns first)
 → CURRENT_TABLE priority ignored in this case
 ```
-
-**Example in table editor context (CURRENT_TABLE = users, no alias):**
-```sql
-SELECT u|
-→ Context: SELECT_LIST without scope (no FROM/JOIN)
-→ Prefix: "u"
-→ users.id          (CURRENT_TABLE column starting with 'u')
-→ users.name        (CURRENT_TABLE column - shown for context)
-→ orders.user_id    (DB-wide column starting with 'u' - allowed because no scope AND prefix exists)
-→ products.unit_price (DB-wide column starting with 'u')
-→ UPPER             (function starting with 'u')
-→ UUID              (function starting with 'u')
-→ UPDATE            (keyword starting with 'u')
-```
-
-**Example in multi-query context (CURRENT_TABLE = users, second query has no scope):**
-```sql
-SELECT * FROM users u WHERE id = 1; SELECT u|
-→ Context: SELECT_LIST without scope (second query has no FROM/JOIN)
-→ Prefix: "u"
-→ users.id          (CURRENT_TABLE column starting with 'u')
-→ users.name        (CURRENT_TABLE column - shown for context)
-→ orders.user_id    (DB-wide column starting with 'u' - allowed because no scope AND prefix exists)
-→ products.unit_price (DB-wide column starting with 'u')
-→ UPPER             (function starting with 'u')
-→ UUID              (function starting with 'u')
-→ UPDATE            (keyword starting with 'u')
-```
-
-**Example in query with FROM:**
-```sql
-SELECT * FROM users WHERE u|
-→ Columns: (none - no columns start with 'u')  (single table: unqualified)
-→ UPPER             (function starting with 'u')
-→ UPDATE            (keyword starting with 'u')
-→ (DB-wide columns excluded - WHERE is scope-restricted expression context)
-```
-
-**Example in query with JOIN (alias-exact-match mode):**
-```sql
-SELECT * FROM users u JOIN orders o WHERE u|
-→ Context: WHERE (scope-restricted)
-→ Prefix: "u"
-→ Alias-exact-match mode (u == alias 'u')
-→ u.id, u.name, u.email, u.password, u.is_enabled, u.created_at  (all columns from alias 'u', multiple tables: qualified)
-→ UPPER, UUID, UNIX_TIMESTAMP  (functions starting with 'u')
-→ (DB-wide columns excluded - WHERE is scope-restricted expression context)
-→ UPDATE            (KEYWORD)
-```
-
----
 
 ### Out-of-Scope Table Hints (SELECT_LIST with Scope)
 
@@ -1984,7 +1953,7 @@ This table provides a quick reference for implementers to understand the behavio
 
 | Context | Scope Required | DB-wide Columns | CURRENT_TABLE | Table Hints |
 |---------|---------------|-----------------|---------------|-------------|
-| **SELECT_LIST (no scope)** | No | Only with prefix | Yes (if set) | No |
+| **SELECT_LIST (no scope)** | No | With prefix, or with forced autocomplete | Yes (if set) | No |
 | **SELECT_LIST (with scope)** | Yes | No | Only if in scope | Yes (if prefix matches) |
 | **FROM_CLAUSE** | Scope building | N/A | Yes (if set, not present) | N/A |
 | **JOIN_CLAUSE** | Scope extension | N/A | Yes (if set, not present) | N/A |
@@ -2001,125 +1970,37 @@ This table provides a quick reference for implementers to understand the behavio
 - **Table Hints:** Whether out-of-scope table hints can be suggested
 
 **Notes:**
-- SELECT_LIST without scope: DB-wide columns included only when prefix exists (guardrail against noise)
+- SELECT_LIST without explicit scope: DB-wide columns included only when a prefix exists or autocomplete is forced
 - SELECT_LIST with scope: DB-wide columns excluded; Out-of-Scope Table Hints shown when prefix matches DB tables but no scope tables/columns
 - FROM_CLAUSE and JOIN_CLAUSE are table-selection contexts (scope building/extension), not column contexts
 - All scope-restricted expression contexts (JOIN_ON, WHERE, ORDER_BY, GROUP_BY, HAVING) follow the same rules (see **Scope-Restricted Expression Contexts** section)
-- Performance guardrail applies only to DB-wide columns group when no prefix (see Ordering Rules group 4)
+
+## DB-wide policy summary
+
+DB-wide suggestions are allowed only when there is **no explicit scope**.
+
+They are allowed when at least one of the following is true:
+- a prefix exists
+- autocomplete was explicitly forced
 
 ---
 
-## Implementation Notes
+## Scope and Product Notes
 
-- Context detection uses `sqlglot.parse_one()` with `ErrorLevel.IGNORE` for incomplete SQL
-- Dialect is retrieved from `CURRENT_CONNECTION.get_value().engine.value.dialect`
-- `CURRENT_TABLE` is an observable: `CURRENT_TABLE.get_value() -> Optional[SQLTable]`
-  - Used to prioritize columns from the current table when set
-  - Can be `None` if no table is currently selected
-- Fallback to regex-based context detection if sqlglot parsing fails
+This file describes the **target autocomplete behavior**.
 
----
+Implementation details such as:
+- parser choice
+- regex strategy
+- internal architecture
+- helper functions
+- caching strategy
 
-### Architecture Notes
-
-**Critical:** Centralize resolution logic to avoid duplication, but distinguish between table-selection and expression contexts.
-
-**Two distinct resolution functions are needed:**
-
-#### 1. Table Selection (FROM_CLAUSE, JOIN_CLAUSE)
-
-```python
-def resolve_tables_for_table_selection(
-    context: SQLContext,
-    scope: QueryScope,
-    current_table: Optional[SQLTable] = None,
-    prefix: Optional[str] = None
-) -> List[TableSuggestion]:
-    """
-    Resolve table candidates for FROM/JOIN clauses.
-    
-    Returns tables in priority order:
-    1. CTE names (if available from WITH clause)
-    2. Physical tables from database
-    3. CURRENT_TABLE (if set and not already present in current statement) - convenience shortcut
-    
-    Filtering:
-    - If prefix provided, filter by startswith(prefix)
-    - Exclude tables already present in the current statement (query separated by separator)
-    
-    Note: This is table-selection, not column resolution.
-    CURRENT_TABLE can appear even if scope tables already exist.
-    """
-    pass
-```
-
-#### 2. Expression Contexts (SELECT_LIST, WHERE, JOIN_ON, ORDER_BY, GROUP_BY, HAVING)
-
-```python
-def resolve_columns_for_expression(
-    context: SQLContext,
-    scope: QueryScope,
-    current_table: Optional[SQLTable] = None,
-    prefix: Optional[str] = None
-) -> List[ColumnSuggestion]:
-    """
-    Resolve columns for expression contexts with scope-aware restrictions.
-    
-    Behavior depends on context and scope:
-    
-    SCOPE-RESTRICTED contexts (WHERE, JOIN_ON, HAVING, ORDER_BY, GROUP_BY):
-      - See Scope-Restricted Expression Contexts section for complete rules
-      - Priority: FROM tables > JOIN tables
-    
-    SELECT_LIST context:
-      - If NO scope tables:
-        * Include CURRENT_TABLE columns (if set)
-        * Include database-wide columns (only with prefix - guardrail against noise)
-      - If scope tables exist:
-        * CURRENT_TABLE included only if in scope; otherwise ignored
-        * Include scope table columns
-        * Database-wide columns EXCLUDED (scope restriction active)
-        * Exception: Out-of-Scope Table Hints if prefix matches DB tables but no scope columns
-    
-    All columns use alias.column format when alias exists, otherwise table.column.
-    """
-    pass
-```
-
-**Benefits:**
-- Clear separation between table-selection and expression contexts
-- Enforces scope restriction rules consistently
-- Single source of truth for each context type
-- Easier to test and maintain
-- Avoids logic duplication
-
-**Architectural improvement (optional):**
-
-For cleaner architecture, consider using a `QueryScope` object instead of passing multiple parameters:
-
-```python
-@dataclass
-class QueryScope:
-    from_tables: List[TableReference]
-    join_tables: List[TableReference]
-    derived_tables: List[DerivedTable]
-    ctes: List[CTE]
-    current_table: Optional[SQLTable]
-    aliases: Dict[str, TableReference]  # alias -> table mapping
-
-def resolve_columns_in_scope(
-    scope: QueryScope,
-    prefix: Optional[str] = None
-) -> List[ColumnSuggestion]:
-    """Pure function - no global context dependency."""
-    pass
-```
-
-This makes the function pure and easier to test.
+do **not** belong in `RULES.md`. They belong in technical documentation such as the README or developer docs.
 
 ---
 
-**Tables in Scope Definition (with CTEs and Derived Tables):**
+## Tables in Scope Definition (with CTEs and Derived Tables)
 
 With CTEs and subquery aliases, "tables in scope" is not just physical tables from FROM/JOIN. The priority order is:
 
@@ -2163,9 +2044,9 @@ WHERE |
 
 **Important:** Scope handling for subqueries and CTEs.
 
-**v1 subquery scope resolution:**
-- **v1 supports inner scope when cursor is inside parentheses of a subquery** (sqlglot typically handles this correctly)
-- Fallback to outer scope only when parsing/cursor mapping fails
+**Goal:**
+- when cursor is inside a subquery, suggestions should use the subquery scope
+- when cursor is outside, suggestions should use the outer query scope
 - When subquery has FROM clause, suggest columns from subquery scope (inner scope)
 - When cursor is outside subquery parentheses, suggest columns from outer scope
 
@@ -2263,119 +2144,6 @@ SELECT *, ROW_NUMBER() OVER (PARTITION BY status ORDER BY |
 
 ---
 
-### Potential Challenges
-
-**sqlglot Parsing of Incomplete SQL:**
-
-Test thoroughly with partial queries. You might need a hybrid approach that falls back to regex faster than expected.
-
-**Examples of challenging cases:**
-```sql
-SELECT id, name FROM users WHERE |
-→ sqlglot may parse successfully
-
-SELECT id, name FROM users WH|
-→ sqlglot may fail, need regex fallback
-
-SELECT * FROM users WHERE status = '|
-→ Incomplete string, sqlglot may fail
-```
-
-**Recommendation:**
-- Use `sqlglot.parse_one()` with `ErrorLevel.IGNORE` as primary approach
-- Implement robust regex fallback for common patterns
-- Test with many incomplete query variations
-- Log parsing failures to identify patterns that need special handling
-
-**Fallback trigger rule:**
-- If sqlglot does not produce a useful AST → fallback to regex
-- If cursor position cannot be mapped to an AST node → fallback to regex
-- Log: `(dialect, snippet_around_cursor, reason)` for building golden test cases
-
-**Example logging:**
-```python
-if not ast or not can_map_cursor_to_node(ast, cursor_pos):
-    logger.debug(
-        "sqlglot_fallback",
-        dialect=dialect,
-        snippet=text[max(0, cursor_pos-50):cursor_pos+50],
-        reason="no_useful_ast" if not ast else "cursor_mapping_failed"
-    )
-    return regex_based_context_detection(text, cursor_pos)
-```
-
-**Benefit:** Build real-world golden tests from production edge cases
-
-**Cursor Position Context:**
-
-Make sure context detection knows exactly where the cursor is, not just what's before it.
-
-**Critical distinction:**
-```sql
-SELECT | FROM users
-→ Context: SELECT_LIST (before FROM)
-→ Show: columns, functions
-
-SELECT id| FROM users
-→ Context: After column name (before FROM)
-→ Show: FROM, AS, etc. (comma is never suggested)
-```
-
-**Implementation note:**
-- Extract text before cursor: `text[:cursor_pos]`
-- Extract text after cursor: `text[cursor_pos:]` (for context validation)
-- Check if cursor is immediately after a complete token vs in the middle
-- Use both left and right context for accurate detection
-
----
-
-### Performance Optimization
-
-**Large Schemas:**
-
-The 400-item guardrail is good, but additional optimizations are recommended:
-
-**Debouncing:**
-- Delay autocomplete trigger by 150-300ms after last keystroke
-- Avoids excessive computation while user is typing rapidly
-- Cancel pending autocomplete requests if new input arrives
-
-**Caching:**
-- Cache database schema (tables, columns) in memory
-- Refresh only when schema changes (DDL operations detected)
-- Cache parsed query structure for current statement
-- Invalidate cache when query changes significantly
-
-**Schema cache invalidation triggers:**
-- DDL operations: `CREATE`, `ALTER`, `DROP`, `TRUNCATE`
-- Database/schema change (e.g., `USE database`)
-- Manual refresh (user-triggered)
-- Reconnection to database
-- **Best-effort approach:** Some engines (e.g., PostgreSQL) support event listeners for schema changes; if not available, invalidate on DDL keyword detection or periodic refresh
-
-**Lazy Loading:**
-- Load column details only when needed (not all upfront)
-- For large tables (>100 columns), load columns on-demand
-- Consider pagination for very large suggestion lists
-
-**Example implementation:**
-```python
-class AutocompleteCache:
-    def __init__(self):
-        self._schema_cache = {}  # {database: {table: [columns]}}
-        self._last_query_hash = None
-        self._parsed_query_cache = None
-    
-    def get_columns(self, table: str) -> List[Column]:
-        if table not in self._schema_cache:
-            self._schema_cache[table] = fetch_columns(table)
-        return self._schema_cache[table]
-    
-    def invalidate_schema(self):
-        self._schema_cache.clear()
-```
-
----
 
 ### Statement Separator
 
@@ -2420,19 +2188,7 @@ effective_separator = user_override or engine_default
 - `"$$"` → invalid (symbols only)
 - `"GO "` → invalid after trim (contains space before trim)
 
-**Implementation notes:**
-
-- **Single-character separators:** Simple string split with string/comment awareness
-- **Multi-character token separators:** Require word boundary detection using regex `\b{separator}\b`
-  - Example: `\bGO\b` for SQL Server
-  - Word boundary `\b` works correctly because multi-char separators are restricted to `[A-Za-z0-9_]+`
-- **Both types MUST respect:**
-  - String literals: `'...'`, `"..."`, `` `...` ``
-  - Comments: `-- ...`, `/* ... */`
-  - Dollar-quoted strings (PostgreSQL): `$$...$$`, `$tag$...$tag$`
-
-All multi-query splitting logic MUST use the effective separator.
-Hardcoding `";"` is forbidden.
+The separator detection must respect strings, comments, and the active separator rules.
 
 ---
 
@@ -2440,10 +2196,10 @@ Hardcoding `";"` is forbidden.
 
 **Important:** When multiple queries are present in the editor (separated by the effective statement separator), context detection must operate on the **current query** (where the cursor is), not the entire buffer.
 
-**Implementation approach:**
-1. Find statement boundaries by detecting the effective separator
-2. Extract the query containing the cursor position
-3. Run context detection only on that query
+The autocomplete system must:
+1. find the current statement using the effective separator
+2. extract only the statement containing the cursor
+3. resolve context only inside that statement
 
 **Edge cases:**
 - If cursor is on the separator, treat it as "end of previous statement".
@@ -2477,11 +2233,6 @@ Context detection should analyze only: `SELECT * FROM orders WHERE |`
   - Comments (`--`, `/* */`)
   - Dollar-quoted strings (PostgreSQL: `$$...$$`)
 - For token separators, word boundaries MUST be respected (e.g., `users_GO` is NOT a separator)
-
-**Recommended approach:**
-- Use sqlglot lexer/tokenizer to find statement boundaries (handles strings/comments correctly)
-- For token separators: use regex with word boundaries (e.g., `\bGO\b` case-insensitive)
-- Or implement robust separator detection with string/comment awareness
 
 ### Multi-Word Keywords
 
@@ -2534,7 +2285,7 @@ SELECT * FROM users;;|
 SELECT * FROM users WHERE name = '|
 ```
 
-**Resolution:** sqlglot parsing may fail. Fallback to regex-based context detection. Suggest literal keywords (`NULL`, `TRUE`, `FALSE`) and allow user to complete the string.
+**Resolution:** Keep the user in the string-literal context and avoid unrelated suggestions.
 
 ---
 
@@ -2546,7 +2297,7 @@ SELECT * FROM users WHERE name = '|
 SELECT * FROM users WHERE note = 'Price: $10; Discount: 20%' AND |
 ```
 
-**Resolution:** The `;` inside the string MUST be ignored. Use sqlglot lexer/tokenizer or implement string/comment-aware separator detection. Context: WHERE clause.
+**Resolution:** The `;` inside the string MUST be ignored. Context remains WHERE clause.
 
 ---
 
@@ -2627,7 +2378,7 @@ SELECT * FROM active_users WHERE |
 WITH active_users AS (SELECT * FROM users WHERE status = 'active')
 ```
 
-**Resolution:** sqlglot parsing may fail or produce incorrect AST. Fallback to regex-based context detection. CTE `active_users` is not recognized (defined after usage). Treat as physical table or show error hint.
+**Resolution:** `active_users` is not yet available in scope. Treat it as unresolved and do not assume CTE scope before its definition.
 
 ---
 

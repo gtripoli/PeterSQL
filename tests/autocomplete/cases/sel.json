@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "SEL_LIST_001",
-      "title": "SELECT_LIST without FROM/JOIN shows functions + clause keywords",
+      "title": "SELECT_LIST without FROM/JOIN and without CURRENT_TABLE shows functions only",
       "sql": "SELECT |",
       "dialect": "generic",
       "current_table": null,

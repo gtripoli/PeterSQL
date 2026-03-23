@@ -6,6 +6,9 @@ from windows.components.stc.autocomplete.completion_types import (
     CompletionItem,
     CompletionItemType,
 )
+from windows.components.stc.autocomplete.dot_completion_handler import (
+    DotCompletionHandler,
+)
 from windows.components.stc.autocomplete.query_scope import QueryScope, TableReference
 from windows.components.stc.autocomplete.sql_context import SQLContext
 
@@ -13,6 +16,10 @@ from structures.engines.database import SQLDatabase, SQLTable
 
 
 class SuggestionBuilder:
+    _identifier_segment_pattern = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\])"
+    _table_name_pattern = (
+        _identifier_segment_pattern + r"(?:\." + _identifier_segment_pattern + r")?"
+    )
     _primary_keywords = {
         "SELECT",
         "INSERT",
@@ -111,114 +118,135 @@ class SuggestionBuilder:
         statement: str = "",
         cursor_pos: Optional[int] = None,
     ) -> list[CompletionItem]:
-        if context == SQLContext.EMPTY:
-            return self._build_empty(prefix)
-
-        if context == SQLContext.SINGLE_TOKEN:
-            return self._build_single_token(prefix)
+        if context in (SQLContext.EMPTY, SQLContext.SINGLE_TOKEN):
+            return self._build_empty(prefix) if context == SQLContext.EMPTY else self._build_single_token(prefix)
 
         if context == SQLContext.DOT_COMPLETION:
             return self._build_dot_completion(scope, prefix, statement)
 
+        if context in {
+            SQLContext.SELECT_LIST,
+            SQLContext.FROM_CLAUSE,
+            SQLContext.JOIN_CLAUSE,
+            SQLContext.JOIN_AFTER_TABLE,
+            SQLContext.JOIN_ON,
+            SQLContext.JOIN_ON_AFTER_OPERATOR,
+            SQLContext.JOIN_ON_AFTER_EXPRESSION,
+            SQLContext.WHERE_CLAUSE,
+            SQLContext.WHERE_AFTER_EXPRESSION,
+            SQLContext.WHERE_AFTER_OPERATOR,
+            SQLContext.ORDER_BY_CLAUSE,
+            SQLContext.ORDER_BY_AFTER_COLUMN,
+            SQLContext.GROUP_BY_CLAUSE,
+            SQLContext.HAVING_CLAUSE,
+            SQLContext.HAVING_AFTER_OPERATOR,
+            SQLContext.HAVING_AFTER_EXPRESSION,
+            SQLContext.WINDOW_OVER,
+            SQLContext.LIMIT_OFFSET_CLAUSE,
+            SQLContext.AFTER_LIMIT_NUMBER,
+            SQLContext.WHERE_STRING_LITERAL,
+        }:
+            return self._build_select_family_context(
+                context=context,
+                scope=scope,
+                prefix=prefix,
+                statement=statement,
+                cursor_pos=cursor_pos,
+            )
+
+        if context in {
+            SQLContext.INSERT_INTO,
+            SQLContext.INSERT_COLUMNS,
+            SQLContext.INSERT_VALUES,
+            SQLContext.INSERT_VALUE_EXPRESSIONS,
+            SQLContext.INSERT_COMPLETE,
+            SQLContext.INSERT_POST_VALUES,
+            SQLContext.INSERT_STRING_LITERAL,
+        }:
+            return self._build_insert_context(context, scope, prefix, statement)
+
+        if context in {
+            SQLContext.UPDATE_TABLE,
+            SQLContext.UPDATE_SET_CLAUSE,
+            SQLContext.UPDATE_SET_COLUMNS,
+            SQLContext.UPDATE_SET_EXPRESSIONS,
+            SQLContext.UPDATE_WHERE_CLAUSE,
+            SQLContext.UPDATE_WHERE_CONDITIONS,
+            SQLContext.UPDATE_WHERE_OPERATORS,
+            SQLContext.UPDATE_JOIN_ON,
+            SQLContext.UPDATE_STRING_LITERAL,
+            SQLContext.UPDATE_WHERE_STRING_LITERAL,
+        }:
+            return self._build_update_context(context, scope, prefix, statement)
+
+        if context in {
+            SQLContext.DELETE_FROM,
+            SQLContext.DELETE_WHERE_CLAUSE,
+            SQLContext.DELETE_WHERE_CONDITIONS,
+            SQLContext.DELETE_WHERE_OPERATORS,
+            SQLContext.DELETE_WHERE_EXPRESSIONS,
+            SQLContext.DELETE_JOIN_ON,
+            SQLContext.DELETE_USING,
+            SQLContext.DELETE_SUBQUERY,
+            SQLContext.DELETE_WHERE_STRING_LITERAL,
+        }:
+            return self._build_delete_context(context, scope, prefix, statement)
+
+        return self._build_keywords(prefix)
+
+    def _build_select_family_context(
+        self,
+        context: SQLContext,
+        scope: QueryScope,
+        prefix: str,
+        statement: str,
+        cursor_pos: Optional[int],
+    ) -> list[CompletionItem]:
         if context == SQLContext.SELECT_LIST:
             return self._build_select_list(scope, prefix, statement, cursor_pos)
-
         if context == SQLContext.FROM_CLAUSE:
-            import re
-
-            statement_upper = statement.upper()
-
-            if re.search(r"\bAS\s+$", statement_upper):
-                return []
-
-            if prefix and re.search(r"\bAS\s+\w+$", statement_upper):
-                return []
-
-            if (
-                prefix
-                and scope.from_tables
-                and "," not in statement
-                and self._is_after_completed_from_table_with_prefix(
-                    statement, prefix, scope
-                )
-            ):
-                return self._build_from_followup_keywords(prefix, scope)
-
-            if not prefix and scope.from_tables:
-                if "," in statement:
-                    in_scope_table_names = {
-                        ref.name.lower() for ref in scope.from_tables
-                    }
-                    try:
-                        tables = [
-                            CompletionItem(
-                                name=table.name, item_type=CompletionItemType.TABLE
-                            )
-                            for table in self._database.tables
-                            if table.name.lower() not in in_scope_table_names
-                        ]
-                        return sorted(
-                            tables, key=lambda x: self._table_name_sort_key(x.name)
-                        )
-                    except (AttributeError, TypeError):
-                        return []
-                else:
-                    return self._build_from_followup_keywords(prefix, scope)
-
-            return self._build_from_clause(prefix, statement, scope)
-
+            return self._build_from_context(scope, prefix, statement)
         if context == SQLContext.JOIN_CLAUSE:
             return self._build_join_clause(prefix, scope, statement)
-
         if context == SQLContext.JOIN_AFTER_TABLE:
             return self._build_join_after_table(scope)
-
         if context == SQLContext.JOIN_ON:
             return self._build_join_on(scope, prefix, statement)
-
         if context == SQLContext.JOIN_ON_AFTER_OPERATOR:
             return self._build_join_on_after_operator(scope, prefix, statement)
-
         if context == SQLContext.JOIN_ON_AFTER_EXPRESSION:
             return self._build_join_on_after_expression(prefix)
-
         if context == SQLContext.WHERE_CLAUSE:
             return self._build_where_clause(scope, prefix, statement)
-
         if context == SQLContext.WHERE_AFTER_EXPRESSION:
             return self._build_where_after_expression(prefix, statement)
-
         if context == SQLContext.WHERE_AFTER_OPERATOR:
             return self._build_where_after_operator(scope, prefix, statement)
-
         if context == SQLContext.ORDER_BY_CLAUSE:
             return self._build_order_by(scope, prefix, statement)
-
         if context == SQLContext.ORDER_BY_AFTER_COLUMN:
             return self._build_order_by_after_column(prefix)
-
         if context == SQLContext.GROUP_BY_CLAUSE:
             return self._build_group_by(scope, prefix, statement, cursor_pos)
-
         if context == SQLContext.HAVING_CLAUSE:
             return self._build_having(scope, prefix, statement)
-
         if context == SQLContext.HAVING_AFTER_OPERATOR:
             return self._build_having_after_operator(scope, prefix, statement)
-
         if context == SQLContext.HAVING_AFTER_EXPRESSION:
             return self._build_having_after_expression(prefix)
-
         if context == SQLContext.WINDOW_OVER:
             return self._build_window_over(prefix)
-
-        if context == SQLContext.LIMIT_OFFSET_CLAUSE:
-            return []
-
         if context == SQLContext.AFTER_LIMIT_NUMBER:
             return self._build_after_limit_number(prefix)
+        return []
 
-        # INSERT contexts
+    def _build_insert_context(
+        self,
+        context: SQLContext,
+        scope: QueryScope,
+        prefix: str,
+        statement: str,
+    ) -> list[CompletionItem]:
         if context == SQLContext.INSERT_INTO:
             return self._build_insert_into(prefix)
         if context == SQLContext.INSERT_COLUMNS:
@@ -227,14 +255,17 @@ class SuggestionBuilder:
             return self._build_insert_values(prefix)
         if context == SQLContext.INSERT_VALUE_EXPRESSIONS:
             return self._build_insert_value_expressions(prefix)
-        if context == SQLContext.INSERT_COMPLETE:
-            return []
         if context == SQLContext.INSERT_POST_VALUES:
             return self._build_insert_post_values(prefix)
-        if context == SQLContext.INSERT_STRING_LITERAL:
-            return []
+        return []
 
-        # UPDATE contexts
+    def _build_update_context(
+        self,
+        context: SQLContext,
+        scope: QueryScope,
+        prefix: str,
+        statement: str,
+    ) -> list[CompletionItem]:
         if context == SQLContext.UPDATE_TABLE:
             return self._build_update_table(prefix)
         if context == SQLContext.UPDATE_SET_CLAUSE:
@@ -251,10 +282,15 @@ class SuggestionBuilder:
             return self._build_update_where_operators(prefix)
         if context == SQLContext.UPDATE_JOIN_ON:
             return self._build_update_join_on(scope, prefix)
-        if context in (SQLContext.UPDATE_STRING_LITERAL, SQLContext.UPDATE_WHERE_STRING_LITERAL):
-            return []
+        return []
 
-        # DELETE contexts
+    def _build_delete_context(
+        self,
+        context: SQLContext,
+        scope: QueryScope,
+        prefix: str,
+        statement: str,
+    ) -> list[CompletionItem]:
         if context == SQLContext.DELETE_FROM:
             return self._build_delete_from(prefix)
         if context == SQLContext.DELETE_WHERE_CLAUSE:
@@ -271,12 +307,56 @@ class SuggestionBuilder:
             return self._build_delete_using(scope, prefix, statement)
         if context == SQLContext.DELETE_SUBQUERY:
             return self._build_delete_subquery(prefix)
-        if context == SQLContext.DELETE_WHERE_STRING_LITERAL:
-            return []
-        if context == SQLContext.WHERE_STRING_LITERAL:
+        return []
+
+    def _build_from_context(
+        self,
+        scope: QueryScope,
+        prefix: str,
+        statement: str,
+    ) -> list[CompletionItem]:
+        statement_upper = statement.upper()
+
+        if re.search(r"\bAS\s+$", statement_upper):
             return []
 
-        return self._build_keywords(prefix)
+        if prefix and re.search(r"\bAS\s+\w+$", statement_upper):
+            return []
+
+        if (
+            prefix
+            and scope.from_tables
+            and "," not in statement
+            and self._is_after_completed_from_table_with_prefix(
+                statement, prefix, scope
+            )
+        ):
+            return self._build_from_followup_keywords(prefix, scope)
+
+        if not prefix and scope.from_tables:
+            if "," in statement:
+                in_scope_table_names = {ref.name.lower() for ref in scope.from_tables}
+                try:
+                    tables = [
+                        CompletionItem(name=table.name, item_type=CompletionItemType.TABLE)
+                        for table in self._database.tables
+                        if table.name.lower() not in in_scope_table_names
+                    ]
+                    return sorted(tables, key=lambda x: self._table_name_sort_key(x.name))
+                except (AttributeError, TypeError):
+                    return []
+            return self._build_from_followup_keywords(prefix, scope)
+
+        return self._build_from_clause(prefix, statement, scope)
+
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        normalized = identifier.strip()
+        if not normalized:
+            return normalized
+        if normalized[0] in {'`', '"', '['} and normalized[-1] in {'`', '"', ']'}:
+            normalized = normalized[1:-1]
+        return normalized
 
     def _build_empty(self, prefix: str) -> list[CompletionItem]:
         keywords = [
@@ -293,95 +373,25 @@ class SuggestionBuilder:
     def _build_dot_completion(
         self, scope: QueryScope, prefix: str, statement: str
     ) -> list[CompletionItem]:
-        import re
-
+        # Moved to DotCompletionHandler - this method now delegates to the centralized handler
+        handler = DotCompletionHandler(self._database, scope)
         cursor_pos = len(statement)
-        text_before_cursor = statement[:cursor_pos]
-
-        dot_match = re.search(
-            r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$",
-            text_before_cursor,
-        )
-        if not dot_match:
+        if prefix and statement.endswith(prefix):
+            cursor_pos -= len(prefix)
+        items, _resolved_prefix = handler.get_completions(statement, cursor_pos)
+        if items is None:
             return []
-
-        table_alias = dot_match.group(1)
-        column_prefix = dot_match.group(2) if dot_match.group(2) else ""
-
-        resolved_table = self._resolve_table_alias(table_alias, scope, statement)
-        if not resolved_table:
-            return []
-
-        table_name = resolved_table.name
-        columns = resolved_table.columns
-
-        try:
-            ordered_columns = self._order_columns_for_dot_completion(columns)
-        except (AttributeError, TypeError):
-            ordered_columns = []
-
-        column_items = []
-        for col in ordered_columns:
-            col_name = col.name
-            if not column_prefix or col_name.upper().startswith(column_prefix.upper()):
-                column_items.append(
-                    CompletionItem(name=col_name, item_type=CompletionItemType.COLUMN)
-                )
-
-        return column_items
-
-    @staticmethod
-    def _order_columns_for_dot_completion(columns: object) -> list[object]:
-        columns_list = list(columns)
-
-        def key(item_with_index: tuple[int, object]) -> tuple[int, int]:
-            idx, col = item_with_index
-            raw_id = getattr(col, "id", None)
-            if isinstance(raw_id, int):
-                return (0, raw_id)
-            if isinstance(raw_id, str) and raw_id.isdigit():
-                return (0, int(raw_id))
-            return (1, idx)
-
-        return [col for _, col in sorted(enumerate(columns_list), key=key)]
-
-    def _resolve_table_alias(self, table_alias: str, scope: QueryScope, statement: str):
-        for ref in scope.from_tables:
-            if ref.alias and ref.alias.lower() == table_alias.lower():
-                if ref.table is not None:
-                    return ref.table
-                return self._get_table_by_name(ref.name)
-            if ref.name.lower() == table_alias.lower():
-                if ref.table is not None:
-                    return ref.table
-                return self._get_table_by_name(ref.name)
-
-        for ref in scope.join_tables:
-            if ref.alias and ref.alias.lower() == table_alias.lower():
-                if ref.table is not None:
-                    return ref.table
-                return self._get_table_by_name(ref.name)
-            if ref.name.lower() == table_alias.lower():
-                if ref.table is not None:
-                    return ref.table
-                return self._get_table_by_name(ref.name)
-
-        for ref in scope.cte_tables:
-            if ref.name.lower() == table_alias.lower() and ref.table is not None:
-                return ref.table
-
-        if (
-            scope.current_table
-            and scope.current_table.name.lower() == table_alias.lower()
-        ):
-            return scope.current_table
-
-        return self._get_table_by_name(table_alias)
+        if prefix:
+            prefix_lower = prefix.lower()
+            items = [item for item in items if item.name.lower().startswith(prefix_lower)]
+        return items
 
     def _get_table_by_name(self, table_name: str):
+        raw_name = table_name.split(".")[-1]
+        normalized_name = self._normalize_identifier(raw_name).lower()
         try:
             for table in self._database.tables:
-                if table.name.lower() == table_name.lower():
+                if table.name.lower() == normalized_name:
                     return table
         except (AttributeError, TypeError):
             pass
@@ -823,8 +833,6 @@ class SuggestionBuilder:
     def _is_after_completed_from_table_with_prefix(
         statement: str, prefix: str, scope: QueryScope
     ) -> bool:
-        import re
-
         if not scope.from_tables:
             return False
 
@@ -837,8 +845,12 @@ class SuggestionBuilder:
             return False
 
         prefix_lower = prefix.lower()
-        matches_completed_table = prefix_lower == last_ref.name.lower() or (
-            bool(last_ref.alias) and prefix_lower == last_ref.alias.lower()
+        last_ref_name = SuggestionBuilder._normalize_identifier(last_ref.name).lower()
+        last_ref_base_name = last_ref_name.split(".")[-1]
+        matches_completed_table = (
+            prefix_lower == last_ref_name
+            or prefix_lower == last_ref_base_name
+            or (bool(last_ref.alias) and prefix_lower == last_ref.alias.lower())
         )
 
         if matches_completed_table:
@@ -846,7 +858,9 @@ class SuggestionBuilder:
 
         return bool(
             re.search(
-                r"\bFROM\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
+                r"\bFROM\s+"
+                + SuggestionBuilder._table_name_pattern
+                + r"(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
                 statement_trimmed,
                 re.IGNORECASE,
             )
@@ -979,14 +993,21 @@ class SuggestionBuilder:
 
         prefix_lower = prefix.lower()
 
-        if prefix_lower == last_ref.name.lower() or (
-            bool(last_ref.alias) and prefix_lower == last_ref.alias.lower()
+        last_ref_name = SuggestionBuilder._normalize_identifier(last_ref.name).lower()
+        last_ref_base_name = last_ref_name.split(".")[-1]
+
+        if (
+            prefix_lower == last_ref_name
+            or prefix_lower == last_ref_base_name
+            or (bool(last_ref.alias) and prefix_lower == last_ref.alias.lower())
         ):
             return True
 
         return bool(
             re.search(
-                r"\bJOIN\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
+                r"\bJOIN\s+"
+                + SuggestionBuilder._table_name_pattern
+                + r"(?:\s+(?:AS\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s+[A-Za-z_][A-Za-z0-9_]*$",
                 statement_trimmed,
                 re.IGNORECASE,
             )
@@ -1346,7 +1367,7 @@ class SuggestionBuilder:
         if not table:
             return []
 
-        if reference.alias or prefer_qualified:
+        if reference.alias or prefer_qualified or "." in reference.name:
             return self._build_qualified_columns_for_reference(reference, prefix)
 
         if not prefix:
@@ -2674,19 +2695,31 @@ class SuggestionBuilder:
             return []
 
     def _find_insert_target_table(self, statement: str) -> Optional[SQLTable]:
-        match = re.search(r"\bINSERT\s+INTO\s+(\w+)", statement, re.IGNORECASE)
+        match = re.search(
+            r"\bINSERT\s+INTO\s+(" + self._table_name_pattern + r")",
+            statement,
+            re.IGNORECASE,
+        )
         if match:
             return self._get_table_by_name(match.group(1))
         return None
 
     def _find_update_target_table(self, statement: str) -> Optional[SQLTable]:
-        match = re.search(r"\bUPDATE\s+(\w+)", statement, re.IGNORECASE)
+        match = re.search(
+            r"\bUPDATE\s+(" + self._table_name_pattern + r")",
+            statement,
+            re.IGNORECASE,
+        )
         if match:
             return self._get_table_by_name(match.group(1))
         return None
 
     def _find_delete_target_table(self, statement: str) -> Optional[SQLTable]:
-        match = re.search(r"\bFROM\s+(\w+)", statement, re.IGNORECASE)
+        match = re.search(
+            r"\bFROM\s+(" + self._table_name_pattern + r")",
+            statement,
+            re.IGNORECASE,
+        )
         if match:
             return self._get_table_by_name(match.group(1))
         return None

@@ -89,7 +89,7 @@
     },
     {
       "case_id": "NO_SCOPED_COMMA_001",
-      "title": "After column + comma suggests next-item (columns + functions)",
+      "title": "After column + comma with NO_SCOPED suggests next-item functions only",
       "sql": "SELECT id, |",
       "dialect": "generic",
       "current_table": null,
@@ -98,7 +98,7 @@
         "mode": "CONTEXT",
         "context": "SELECT_LIST",
         "prefix": null,
-        "comment": "Comma = next-item rules. With no scope and no prefix, expect functions.",
+        "comment": "Comma = next-item rules. With no explicit scope, no qualified references, and no CURRENT_TABLE, this remains NO_SCOPED so only functions are expected.",
         "suggestions_contains": [
           "COUNT",
           "UUID"

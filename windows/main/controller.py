@@ -346,7 +346,7 @@ class MainFrameController(MainFrameView):
         return panel_query, editor, results_notebook, toolbar, tool_ids
 
     def _get_active_query_controller(self) -> Optional[QueryResultsController]:
-        page = self.MainFrameNotebook.GetCurrentPage()
+        page = self.notebook_query_editor.GetCurrentPage()
         if page is None:
             return None
 
@@ -434,7 +434,7 @@ class MainFrameController(MainFrameView):
         if meta is None:
             return
 
-        page_index = self.MainFrameNotebook.FindPage(page)
+        page_index = self.notebook_query_editor.FindPage(page)
         if page_index < 0:
             return
 
@@ -442,39 +442,51 @@ class MainFrameController(MainFrameView):
         if meta["is_dirty"]:
             title = f"{title} *"
 
-        self.MainFrameNotebook.SetPageText(page_index, title)
+        self.notebook_query_editor.SetPageText(page_index, title)
+
+    def _build_query_editor_panel(self) -> tuple[wx.Panel, wx.stc.StyledTextCtrl]:
+        panel = wx.Panel(self.notebook_query_editor, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        editor = self._build_query_editor(panel)
+        sizer.Add(editor, 1, wx.EXPAND | wx.ALL, 5)
+        panel.SetSizer(sizer)
+        return panel, editor
+
+    def _on_notebook_query_tab_changed(self, event: wx.BookCtrlEvent) -> None:
+        controller = self._get_active_query_controller()
+        if controller is not None:
+            self.controller_query_records = controller
+        event.Skip()
 
     def _setup_query_pages(self) -> None:
-        template_index = self.MainFrameNotebook.FindPage(self.QueryPanelTpl)
-        if template_index >= 0:
-            self.MainFrameNotebook.DeletePage(template_index)
+        shared_tool_ids = {
+            "new": self.new_query.GetId(),
+            "close": self.close_query.GetId(),
+            "execute": self.execute_statement.GetId(),
+            "execute_all": self.execute_all_statements.GetId(),
+            "stop": self.stop_statements.GetId(),
+            "save": self.save.GetId(),
+        }
 
-        query_index = self.MainFrameNotebook.FindPage(self.panel_query)
-        self.MainFrameNotebook.SetPageText(query_index, _("Query (1)"))
+        self.notebook_query_editor.SetPageText(0, _("Query (1)"))
 
         self._register_query_page(
-            panel=self.panel_query,
+            panel=self.m_panel63,
             editor=self.sql_query_editor,
-            results_notebook=self.notebook_sql_results,
+            results_notebook=self.notebook_query_results,
             toolbar=self.m_toolBar2,
-            tool_ids={
-                "new": self.new_query.GetId(),
-                "close": self.close_query.GetId(),
-                "execute": self.execute_statement.GetId(),
-                "execute_all": self.execute_all_statements.GetId(),
-                "stop": self.stop_statements.GetId(),
-                "save": self.save.GetId(),
-            },
+            tool_ids=shared_tool_ids,
             display_name=_("Query (1)"),
         )
 
-        self._apply_query_toolbar_shortcuts(self.m_toolBar2, self._query_page_meta[self.panel_query]["tool_ids"])
+        self._apply_query_toolbar_shortcuts(self.m_toolBar2, shared_tool_ids)
 
-        self.controller_query_records = self._query_page_meta[self.panel_query]["controller"]
+        self.controller_query_records = self._query_page_meta[self.m_panel63]["controller"]
+        self.notebook_query_editor.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_notebook_query_tab_changed)
         self._update_query_close_tools_state()
 
     def _update_query_close_tools_state(self) -> None:
-        can_close = len(self._query_pages) > 1
+        can_close = self.notebook_query_editor.GetPageCount() > 1
         for meta in self._query_page_meta.values():
             toolbar = meta["toolbar"]
             close_query_tool_id = meta["tool_ids"]["close"]
@@ -484,15 +496,24 @@ class MainFrameController(MainFrameView):
         self._query_page_counter += 1
         label = _("Query ({query_number})").format(query_number=self._query_page_counter)
 
-        panel, editor, results_notebook, toolbar, tool_ids = self._build_query_page()
-        self.MainFrameNotebook.AddPage(panel, label, select=True)
+        panel, editor = self._build_query_editor_panel()
+        self.notebook_query_editor.AddPage(panel, label, select=True)
+
+        shared_tool_ids = {
+            "new": self.new_query.GetId(),
+            "close": self.close_query.GetId(),
+            "execute": self.execute_statement.GetId(),
+            "execute_all": self.execute_all_statements.GetId(),
+            "stop": self.stop_statements.GetId(),
+            "save": self.save.GetId(),
+        }
 
         self._register_query_page(
             panel=panel,
             editor=editor,
-            results_notebook=results_notebook,
-            toolbar=toolbar,
-            tool_ids=tool_ids,
+            results_notebook=self.notebook_query_results,
+            toolbar=self.m_toolBar2,
+            tool_ids=shared_tool_ids,
             display_name=label,
         )
 
@@ -520,10 +541,10 @@ class MainFrameController(MainFrameView):
         return False
 
     def _close_active_query_page(self) -> None:
-        if len(self._query_pages) <= 1:
+        if self.notebook_query_editor.GetPageCount() <= 1:
             return
 
-        page = self.MainFrameNotebook.GetCurrentPage()
+        page = self.notebook_query_editor.GetCurrentPage()
         if page is None or page not in self._query_page_meta:
             return
 
@@ -536,9 +557,9 @@ class MainFrameController(MainFrameView):
         controller = meta["controller"]
         controller.cancel_execution(wx.CommandEvent())
 
-        query_page_index = self.MainFrameNotebook.FindPage(page)
+        query_page_index = self.notebook_query_editor.FindPage(page)
         if query_page_index >= 0:
-            self.MainFrameNotebook.DeletePage(query_page_index)
+            self.notebook_query_editor.DeletePage(query_page_index)
 
         self._update_query_close_tools_state()
 
@@ -656,6 +677,12 @@ class MainFrameController(MainFrameView):
         NEW_TABLE.subscribe(self._on_new_table)
 
         AUTO_APPLY.subscribe(self._on_auto_apply)
+
+        # Initialize record toolbar states
+        self._initialize_record_toolbar_states()
+        
+        # Initialize column toolbar states
+        self._initialize_column_toolbar_states()
 
     def _write_query_log(self, text: str):
         self.sql_query_logs.AppendText(f"{text}\n")
@@ -1437,17 +1464,17 @@ class MainFrameController(MainFrameView):
     def _on_current_column(self, column: SQLColumn):
         selected = self.controller_list_table_columns.list_ctrl_table_columns.GetSelection()
         if not selected.IsOk():
-            self.btn_delete_column.Enable(False)
-            self.btn_move_up_column.Enable(False)
-            self.btn_move_down_column.Enable(False)
+            self.toolbar_columns.EnableTool(self.tool_remove_column.GetId(), False)
+            self.toolbar_columns.EnableTool(self.tool_move_up_column.GetId(), False)
+            self.toolbar_columns.EnableTool(self.tool_move_down_column.GetId(), False)
             return
 
         row = self.controller_list_table_columns.model.GetRow(selected)
         total_rows = len(self.controller_list_table_columns.model.data) - 1
 
-        self.btn_delete_column.Enable(column is not None)
-        self.btn_move_up_column.Enable(column is not None and row > 0)
-        self.btn_move_down_column.Enable(column is not None and row < total_rows)
+        self.toolbar_columns.EnableTool(self.tool_remove_column.GetId(), column is not None)
+        self.toolbar_columns.EnableTool(self.tool_move_up_column.GetId(), column is not None and row > 0)
+        self.toolbar_columns.EnableTool(self.tool_move_down_column.GetId(), column is not None and row < total_rows)
 
     def on_insert_column(self, event: wx.Event):
         self.controller_list_table_columns.on_column_insert(event)
@@ -1486,8 +1513,29 @@ class MainFrameController(MainFrameView):
 
     # RECORDS
     def _on_auto_apply(self, value: bool):
-        self.btn_cancel_record.Enable(not self.chb_auto_apply.GetValue())
-        self.btn_apply_record.Enable(not self.chb_auto_apply.GetValue())
+        auto_apply_enabled = self.chb_auto_apply.GetValue()
+        
+        # Enable/disable apply and cancel tools based on auto-apply state
+        self.m_toolBar3.EnableTool(self.tool_apply_record.GetId(), not auto_apply_enabled)
+        self.m_toolBar3.EnableTool(self.tool_cancel_record.GetId(), not auto_apply_enabled)
+
+    def _initialize_record_toolbar_states(self):
+        """Initialize toolbar states to ensure proper default behavior."""
+        # Initially disable duplicate and delete tools (no selection)
+        self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), False)
+        self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), False)
+        
+        # Set apply/cancel tools based on auto-apply checkbox state
+        auto_apply_enabled = self.chb_auto_apply.GetValue()
+        self.m_toolBar3.EnableTool(self.tool_apply_record.GetId(), not auto_apply_enabled)
+        self.m_toolBar3.EnableTool(self.tool_cancel_record.GetId(), not auto_apply_enabled)
+
+    def _initialize_column_toolbar_states(self):
+        """Initialize column toolbar states to ensure proper default behavior."""
+        # Initially disable all column tools (no selection)
+        self.toolbar_columns.EnableTool(self.tool_remove_column.GetId(), False)
+        self.toolbar_columns.EnableTool(self.tool_move_up_column.GetId(), False)
+        self.toolbar_columns.EnableTool(self.tool_move_down_column.GetId(), False)
 
     def on_auto_apply(self, event):
         AUTO_APPLY.set_value(self.chb_auto_apply.GetValue())
@@ -1497,11 +1545,15 @@ class MainFrameController(MainFrameView):
         event.Skip()
 
     def _on_current_records(self, records: list[SQLRecord]):
-        self.btn_duplicate_record.Enable(len(records) == 1)
-        self.btn_delete_record.Enable(len(records) > 0)
+        # Enable/disable duplicate and delete tools based on record selection
+        self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), len(records) == 1)
+        self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), len(records) > 0)
 
     def on_insert_record(self, event):
         self.controller_list_table_records.do_insert_record()
+
+    def on_refresh_records(self, event):
+        self.controller_list_table_records.do_refresh_records()
 
     def on_duplicate_record(self, event):
         self.controller_list_table_records.do_duplicate_record()
@@ -1561,14 +1613,14 @@ class MainFrameController(MainFrameView):
         self._close_active_query_page()
 
     def on_save(self, event):
-        page = self.MainFrameNotebook.GetCurrentPage()
+        page = self.notebook_query_editor.GetCurrentPage()
         if page is None:
             return
 
         self._save_query_page(page, force_save_as=False)
 
     def on_save_as_query(self, event):
-        page = self.MainFrameNotebook.GetCurrentPage()
+        page = self.notebook_query_editor.GetCurrentPage()
         if page is None:
             return
 

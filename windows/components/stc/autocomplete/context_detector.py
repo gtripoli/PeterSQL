@@ -17,8 +17,12 @@ from structures.engines.database import SQLDatabase, SQLTable
 
 class ContextDetector:
     _prefix_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+    _identifier_segment_pattern = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\])"
+    _table_name_pattern = (
+        _identifier_segment_pattern + r"(?:\." + _identifier_segment_pattern + r")?"
+    )
     _join_after_table_pattern = re.compile(
-        r"\b(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)(?:\s+OUTER)?\s+)?JOIN\s+([A-Za-z_][A-Za-z0-9_]*)"
+        r"\b(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)(?:\s+OUTER)?\s+)?JOIN\s+(" + _table_name_pattern + r")"
         r"\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*$",
         re.IGNORECASE,
     )
@@ -90,7 +94,10 @@ class ContextDetector:
             return ""
         return match.group(0)
 
-    _dot_pattern = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$")
+    _dot_pattern = re.compile(
+        r"((?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\]))"
+        r"\.([A-Za-z_][A-Za-z0-9_]*)?$"
+    )
 
     def _check_dot_completion(self, left_text: str, prefix: str) -> Optional[re.Match]:
         if "." in left_text:
@@ -99,21 +106,37 @@ class ContextDetector:
 
     def _detect_context_with_regex(self, left_text: str, prefix: str) -> SQLContext:
         left_upper = left_text.upper()
+        statement_type, statement_pos = self._detect_statement_type(left_upper)
 
-        insert_pos = left_upper.rfind("INSERT")
-        update_pos = left_upper.rfind("UPDATE")
-        delete_pos = left_upper.rfind("DELETE")
+        if statement_type == "INSERT":
+            return self._detect_insert_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type == "UPDATE":
+            return self._detect_update_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type == "DELETE":
+            return self._detect_delete_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type != "SELECT":
+            return SQLContext.UNKNOWN
 
-        if insert_pos != -1 and insert_pos >= max(update_pos, delete_pos, -1):
-            return self._detect_insert_context(left_text, left_upper, prefix, insert_pos)
+        return self._detect_select_context(left_text, left_upper, prefix)
 
-        if update_pos != -1 and update_pos >= max(insert_pos, delete_pos, -1):
-            return self._detect_update_context(left_text, left_upper, prefix, update_pos)
+    @staticmethod
+    def _detect_statement_type(left_upper: str) -> tuple[str, int]:
+        statement_positions = {
+            "SELECT": left_upper.rfind("SELECT"),
+            "INSERT": left_upper.rfind("INSERT"),
+            "UPDATE": left_upper.rfind("UPDATE"),
+            "DELETE": left_upper.rfind("DELETE"),
+        }
+        statement_type = max(statement_positions, key=lambda key: statement_positions[key])
+        return statement_type, statement_positions[statement_type]
 
-        if delete_pos != -1 and delete_pos >= max(insert_pos, update_pos, -1):
-            return self._detect_delete_context(left_text, left_upper, prefix, delete_pos)
-
+    def _detect_select_context(
+        self, left_text: str, left_upper: str, prefix: str
+    ) -> SQLContext:
         select_pos = left_upper.rfind("SELECT")
+        if select_pos == -1:
+            return SQLContext.UNKNOWN
+
         from_pos = left_upper.rfind("FROM")
         where_pos = left_upper.rfind("WHERE")
         join_pos = left_upper.rfind("JOIN")
@@ -123,9 +146,6 @@ class ContextDetector:
         having_pos = left_upper.rfind("HAVING")
         limit_pos = left_upper.rfind("LIMIT")
         offset_pos = left_upper.rfind("OFFSET")
-
-        if select_pos == -1:
-            return SQLContext.UNKNOWN
 
         if re.search(r"\bOVER\s*(?:\(\s*)?$", left_text, re.IGNORECASE):
             return SQLContext.WINDOW_OVER
@@ -185,6 +205,15 @@ class ContextDetector:
                 return SQLContext.FROM_CLAUSE
 
         return SQLContext.SELECT_LIST
+
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        normalized = identifier.strip()
+        if not normalized:
+            return normalized
+        if normalized[0] in {'`', '"', '['} and normalized[-1] in {'`', '"', ']'}:
+            return normalized[1:-1]
+        return normalized
 
     # ── INSERT ──────────────────────────────────────────────────────
 
@@ -679,7 +708,7 @@ class ContextDetector:
         }
 
         join_pattern = re.compile(
-            r"\bJOIN\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*(?:\bON\b|\bUSING\b|$)",
+            r"\bJOIN\s+(" + self._table_name_pattern + r")\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*(?:\bON\b|\bUSING\b|$)",
             re.IGNORECASE,
         )
 
@@ -689,7 +718,7 @@ class ContextDetector:
 
         # Extract UPDATE target table into scope (only for UPDATE statements)
         update_match = re.match(
-            r"\s*UPDATE\s+([A-Za-z_][A-Za-z0-9_]*)"
+            r"\s*UPDATE\s+(" + self._table_name_pattern + r")"
             r"(?:\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?",
             main_text,
             re.IGNORECASE,
@@ -804,7 +833,7 @@ class ContextDetector:
 
             if not (
                 table_match := re.match(
-                    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s+[A-Za-z_][A-Za-z0-9_]*)?$",
+                    r"(?P<table>" + ContextDetector._table_name_pattern + r")(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s+[A-Za-z_][A-Za-z0-9_]*)?$",
                     part,
                     re.IGNORECASE,
                 )
@@ -939,9 +968,14 @@ class ContextDetector:
     def _find_table_in_database(
         self, table_name: str, database: SQLDatabase
     ) -> Optional[SQLTable]:
+        table_name_candidate = table_name.split(".")[-1]
+        normalized_candidate = self._normalize_identifier(table_name_candidate)
+        normalized_full_name = self._normalize_identifier(table_name)
         try:
             for table in database.tables:
-                if table.name.lower() == table_name.lower():
+                if table.name.lower() == normalized_full_name.lower():
+                    return table
+                if table.name.lower() == normalized_candidate.lower():
                     return table
         except Exception:
             pass
