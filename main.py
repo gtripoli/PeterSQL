@@ -10,7 +10,7 @@ from constants import WORKDIR
 from icons import IconRegistry
 
 from helpers.loader import Loader
-from helpers.logger import logger
+from helpers.logger import configure_logging, enable_fault_handler, install_global_exception_hooks, logger
 from helpers.settings import Settings, SettingsRepository
 
 from windows.components.stc.styles import apply_stc_theme, set_theme_loader
@@ -48,6 +48,11 @@ class PeterSQL(wx.App):
 
         self.open_session_manager()
 
+        return True
+
+    def OnExceptionInMainLoop(self) -> bool:
+        # wx calls this hook implicitly when an exception escapes an event callback in MainLoop.
+        logger.exception("Unhandled exception raised inside wx main loop")
         return True
     
     def _init_theme_loader(self) -> None:
@@ -138,5 +143,10 @@ class PeterSQL(wx.App):
 
 
 if __name__ == "__main__":
+    logs_directory = WORKDIR / "logs"
+    configure_logging(logs_directory / "petersql.log")
+    enable_fault_handler(logs_directory / "fault.log")
+    install_global_exception_hooks()
+
     app = PeterSQL()
     app.MainLoop()
