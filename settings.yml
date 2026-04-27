@@ -1,32 +1,51 @@
-window:
-  size: 1920,1048
-  position: 0,0
-appearance:
-  theme: petersql
-  mode: auto
-shortcuts:
+language: en_US
+ui:
+  window:
+    size:
+    - 1769
+    - 967
+    position:
+    - 26
+    - 23
+  appearance:
+    theme: petersql
+    mode: auto
+  dialogs:
+    connections:
+      expanded_directories:
+      - - 0
+      - - 3
+      - - 18
+  shortcuts:
+    query:
+      execute_current: Ctrl+Enter
+      execute_all: Ctrl+Shift+Enter
+      stop: Esc
+      new_query: Ctrl+T
+      close_query: Ctrl+W
+      save: Ctrl+S
+      save_as: Ctrl+Shift+S
+editor:
+  statement_separator: ;
+  trim_whitespace: false
+  execute_selected_only: false
+  autoformat: true
   autocomplete:
-    force_show: Ctrl+Space
-    complete: Tab,Enter
-    cancel: Escape
-  query_editor:
-    execute: F5
-    execute_selection: Ctrl+Enter
-settings:
-  autocomplete:
+    enabled: true
     debounce_ms: 80
     min_prefix_length: 1
     add_space_after_completion: true
     popup_width: 300
     popup_max_height: 10
-language: en_US
-query_editor:
-  statement_separator: ;
-  trim_whitespace: false
-  execute_selected_only: false
-  autocomplete: true
-  autoformat: true
-advanced:
+  shortcuts:
+    execute: F5
+    execute_selection: Ctrl+Enter
+    force_autocomplete: Ctrl+Space
+    complete: Tab,Enter
+    cancel: Escape
+runtime:
   connection_timeout: 10
   query_timeout: 10
   logging_level: INFO
+records:
+  limit: 100

@@ -8,7 +8,7 @@ class TestEditViewModel:
 
     def test_init_creates_observables(self):
         """Test that EditViewModel initializes all required observables."""
-        from windows.main.tabs.view import EditViewModel
+        from windows.main.database.view import EditViewModel
         
         model = EditViewModel()
         
@@ -24,7 +24,7 @@ class TestEditViewModel:
 
     def test_load_view_sets_name_observable(self):
         """Test that _load_view sets name observable from view."""
-        from windows.main.tabs.view import EditViewModel
+        from windows.main.database.view import EditViewModel
         
         model = EditViewModel()
         
@@ -32,7 +32,7 @@ class TestEditViewModel:
         mock_view.name = "test_view"
         mock_view.statement = "SELECT * FROM test"
         
-        with patch('windows.main.tabs.view.CURRENT_SESSION') as mock_session:
+        with patch('windows.main.database.view.CURRENT_SESSION') as mock_session:
             mock_session.get_value.return_value = None
             model._load_view(mock_view)
         
@@ -41,7 +41,7 @@ class TestEditViewModel:
 
     def test_update_view_sets_name_and_statement(self):
         """Test that update_view sets view name and statement from observables."""
-        from windows.main.tabs.view import EditViewModel
+        from windows.main.database.view import EditViewModel
         
         model = EditViewModel()
         
@@ -49,7 +49,7 @@ class TestEditViewModel:
         mock_view.name = ""
         mock_view.statement = ""
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW') as mock_current_view:
+        with patch('windows.main.database.view.CURRENT_VIEW') as mock_current_view:
             mock_current_view.get_value.return_value = mock_view
             
             model.name.set_value("updated_view")
@@ -104,10 +104,10 @@ class TestViewEditorController:
 
     def test_init_binds_controls(self, mock_parent):
         """Test that controller initializes and binds controls."""
-        from windows.main.tabs.view import ViewEditorController
+        from windows.main.database.view import ViewEditorController
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW') as mock_current_view:
-            with patch('windows.main.tabs.view.wx_call_after_debounce'):
+        with patch('windows.main.database.view.CURRENT_VIEW') as mock_current_view:
+            with patch('windows.main.database.view.wx_call_after_debounce'):
                 controller = ViewEditorController(mock_parent)
                 
                 assert controller.parent == mock_parent
@@ -116,10 +116,10 @@ class TestViewEditorController:
 
     def test_get_original_view_returns_none_for_new_view(self, mock_parent):
         """Test that _get_original_view returns None for new views."""
-        from windows.main.tabs.view import ViewEditorController
+        from windows.main.database.view import ViewEditorController
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW'):
-            with patch('windows.main.tabs.view.wx_call_after_debounce'):
+        with patch('windows.main.database.view.CURRENT_VIEW'):
+            with patch('windows.main.database.view.wx_call_after_debounce'):
                 controller = ViewEditorController(mock_parent)
                 
                 mock_view = Mock()
@@ -130,10 +130,10 @@ class TestViewEditorController:
 
     def test_has_changes_returns_true_for_new_view(self, mock_parent):
         """Test that _has_changes returns True for new views."""
-        from windows.main.tabs.view import ViewEditorController
+        from windows.main.database.view import ViewEditorController
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW'):
-            with patch('windows.main.tabs.view.wx_call_after_debounce'):
+        with patch('windows.main.database.view.CURRENT_VIEW'):
+            with patch('windows.main.database.view.wx_call_after_debounce'):
                 controller = ViewEditorController(mock_parent)
                 
                 mock_view = Mock()
@@ -144,10 +144,10 @@ class TestViewEditorController:
 
     def test_update_button_states_disables_all_when_no_view(self, mock_parent):
         """Test that update_button_states disables all buttons when no view."""
-        from windows.main.tabs.view import ViewEditorController
+        from windows.main.database.view import ViewEditorController
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW') as mock_current_view:
-            with patch('windows.main.tabs.view.wx_call_after_debounce'):
+        with patch('windows.main.database.view.CURRENT_VIEW') as mock_current_view:
+            with patch('windows.main.database.view.wx_call_after_debounce'):
                 mock_current_view.get_value.return_value = None
                 
                 controller = ViewEditorController(mock_parent)
@@ -159,10 +159,10 @@ class TestViewEditorController:
 
     def test_update_button_states_enables_save_cancel_for_new_view(self, mock_parent):
         """Test that update_button_states enables save/cancel for new views."""
-        from windows.main.tabs.view import ViewEditorController
+        from windows.main.database.view import ViewEditorController
         
-        with patch('windows.main.tabs.view.CURRENT_VIEW') as mock_current_view:
-            with patch('windows.main.tabs.view.wx_call_after_debounce'):
+        with patch('windows.main.database.view.CURRENT_VIEW') as mock_current_view:
+            with patch('windows.main.database.view.wx_call_after_debounce'):
                 mock_view = Mock()
                 type(mock_view).is_new = PropertyMock(return_value=True)
                 mock_current_view.get_value.return_value = mock_view

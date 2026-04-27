@@ -69,9 +69,9 @@ class SQLiteContext(AbstractContext):
     def after_connect(self, *args, **kwargs):
         super().after_connect(*args, **kwargs)
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         spec_keywords, spec_functions = self.get_engine_vocabulary(
-            "sqlite", server_version
+            "sqlite", self.server_version
         )
         self.KEYWORDS = tuple(
             dict.fromkeys(
@@ -96,8 +96,13 @@ class SQLiteContext(AbstractContext):
         # self.execute("PRAGMA page_size = 4096")
 
     def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
         if self._connection is None:
             try:
+                if not skip_before_connect:
+                    self.before_connect()
                 self._connection = sqlite3.connect(self.filename)
 
             except Exception as e:
@@ -106,7 +111,8 @@ class SQLiteContext(AbstractContext):
             else:
                 self._connection.row_factory = sqlite3.Row
                 self._cursor = self._connection.cursor()
-                self.after_connect()
+                if not skip_after_connect:
+                    self.after_connect()
 
     def set_database(self, database: SQLDatabase) -> None:
         pass
@@ -515,7 +521,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(database.tables)
 
         if name is None:
-            name = _(f"Table{str(id * -1):03}")
+            name = _("Table{table_index:03}").format(table_index=id * -1)
 
         return SQLiteTable(
             id=id,
@@ -539,7 +545,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.columns)
 
         if name is None:
-            name = _(f"Column{str(id * -1):03}")
+            name = _("Column{column_index:03}").format(column_index=id * -1)
 
         return SQLiteColumn(
             id=id, name=name, table=table, datatype=datatype, **default_values
@@ -557,7 +563,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.indexes)
 
         if name is None:
-            name = _(f"Index{str(id * -1):03}")
+            name = _("Index{index_number:03}").format(index_number=id * -1)
 
         return SQLiteIndex(
             id=id,
@@ -599,7 +605,9 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
-            name = _(f"ForeignKey{str(id * -1):03}")
+            name = _("ForeignKey{foreign_key_number:03}").format(
+                foreign_key_number=id * -1
+            )
 
         return SQLiteForeignKey(
             id=id,
@@ -625,7 +633,7 @@ class SQLiteContext(AbstractContext):
         id = SQLiteContext.get_temporary_id(database.views)
 
         if name is None:
-            name = _(f"View{str(id * -1):03}")
+            name = _("View{view_index:03}").format(view_index=id * -1)
 
         return SQLiteView(
             id=id,
@@ -658,3 +666,8 @@ class SQLiteContext(AbstractContext):
             database=database,
             statement=default_values.get("statement", ""),
         )
+
+    def get_result_column_datatypes(
+        self, cursor: sqlite3.Cursor
+    ) -> list[Optional[SQLDataType]]:
+        return [None for _ in (cursor.description or [])]

@@ -3,16 +3,16 @@ from typing import Optional
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewListModel, ColumnField
+from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
 from structures.engines.database import SQLCheck, SQLTable
 
+from windows.state import NEW_TABLE
 from windows.main import CURRENT_INDEX, CURRENT_TABLE
-from windows.main.tabs.column import NEW_TABLE
 
 
-class TableCheckModel(BaseDataViewListModel):
+class TableCheckModel(BaseObservableDataViewListModel):
     MAP_COLUMN_FIELDS = {
         0: ColumnField("name", lambda s, x: wx.dataview.DataViewIconText(s.name or "", wx.NullBitmap)),
         1: ColumnField("expression"),

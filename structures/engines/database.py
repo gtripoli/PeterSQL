@@ -578,6 +578,12 @@ class SQLRecord(abc.ABC):
 
         return self.values == other.values
 
+    def copy(self):
+        cls = self.__class__
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        field_values["values"] = dict(field_values["values"])
+        return cls(**field_values)
+
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(id={self.id}, table={self.table.name}, values={self.values})"
 

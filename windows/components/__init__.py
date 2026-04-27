@@ -84,6 +84,9 @@ class BaseDataViewCustomRenderer(wx.dataview.DataViewCustomRenderer):
         return True
 
     def StartEditing(self, item, labelRect):
+        from windows.main.table.records import NULL_DISPLAY
+        if self._value == NULL_DISPLAY:
+            self._value = ""
         logger.debug("StartEditing")
         return super().StartEditing(item, labelRect)
 
@@ -134,6 +137,7 @@ class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.app = wx.GetApp()
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 
     def finish_editing(self, current_column):

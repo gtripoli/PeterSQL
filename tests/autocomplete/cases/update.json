@@ -1,0 +1,413 @@
+{
+  "group": "UPDATE",
+  "cases": [
+    {
+      "case_id": "UPDATE_001",
+      "title": "UPDATE without prefix suggests tables",
+      "sql": "UPDATE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_TABLE",
+        "prefix": null,
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_002",
+      "title": "UPDATE with prefix filters tables",
+      "sql": "UPDATE u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "UPDATE_TABLE",
+        "prefix": "u",
+        "suggestions": [
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_003",
+      "title": "UPDATE table suggests SET",
+      "sql": "UPDATE users |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_SET_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "SET",
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_004",
+      "title": "UPDATE table SET suggests columns",
+      "sql": "UPDATE users SET |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_SET_COLUMNS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_005",
+      "title": "UPDATE table SET with column prefix filters columns",
+      "sql": "UPDATE users SET e|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "UPDATE_SET_COLUMNS",
+        "prefix": "e",
+        "suggestions": [
+          "email"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_006",
+      "title": "UPDATE table SET column = suggests expressions",
+      "sql": "UPDATE users SET email = |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_SET_EXPRESSIONS",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_007",
+      "title": "UPDATE table SET column = value, suggests more columns",
+      "sql": "UPDATE users SET email = 'test@example.com', |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_SET_COLUMNS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_008",
+      "title": "UPDATE table SET column = value WHERE suggests WHERE",
+      "sql": "UPDATE users SET email = 'test@example.com' |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "WHERE",
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_009",
+      "title": "UPDATE table SET WHERE suggests columns",
+      "sql": "UPDATE users SET email = 'test@example.com' WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_WHERE_CONDITIONS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_010",
+      "title": "UPDATE table SET WHERE column = suggests operators",
+      "sql": "UPDATE users SET email = 'test@example.com' WHERE id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_WHERE_OPERATORS",
+        "prefix": null,
+        "suggestions": [
+          "=",
+          "!=",
+          "<>",
+          ">",
+          "<",
+          ">=",
+          "<=",
+          "IS",
+          "IS NOT",
+          "IN",
+          "NOT IN",
+          "LIKE",
+          "NOT LIKE",
+          "BETWEEN",
+          "NOT BETWEEN",
+          "AND",
+          "OR"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_011",
+      "title": "UPDATE table SET WHERE column = value suggests AND/OR",
+      "sql": "UPDATE users SET email = 'test@example.com' WHERE id = 1 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_WHERE_CONDITIONS",
+        "prefix": null,
+        "suggestions": [
+          "AND",
+          "OR",
+          "LIMIT",
+          "ORDER BY",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_012",
+      "title": "UPDATE with JOIN suggests ON",
+      "sql": "UPDATE users u JOIN orders o ON |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_JOIN_ON",
+        "prefix": null,
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_013",
+      "title": "UPDATE with JOIN ON condition suggests SET",
+      "sql": "UPDATE users u JOIN orders o ON u.id = o.user_id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_SET_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "SET"
+        ]
+      }
+    },
+    {
+      "case_id": "UPDATE_014",
+      "title": "UPDATE inside string literal no suggestions",
+      "sql": "UPDATE users SET email = '|', name = 'test'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside string literal should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "UPDATE_015",
+      "title": "UPDATE inside string literal with content no suggestions",
+      "sql": "UPDATE users SET email = 'test|', name = 'test2'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "UPDATE_STRING_LITERAL",
+        "prefix": "test",
+        "comment": "Cursor inside string literal with content should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "UPDATE_016",
+      "title": "UPDATE WHERE inside string literal no suggestions",
+      "sql": "UPDATE users SET email = 'test@example.com' WHERE name = '|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "UPDATE_WHERE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside WHERE string literal should not suggest anything",
+        "suggestions": []
+      }
+    }
+  ]
+}

@@ -1,12 +1,13 @@
 import psycopg2
 import psycopg2.extras
 
+from psycopg2.extensions import cursor as PostgreSQLCursor
+
 from typing import Any, Optional
 from gettext import gettext as _
 
 from helpers.logger import logger
 from structures.connection import Connection
-from structures.ssh_tunnel import SSHTunnel
 
 from structures.engines.context import QUERY_LOGS, AbstractContext
 from structures.engines.database import (
@@ -58,9 +59,9 @@ class PostgreSQLContext(AbstractContext):
         self.execute("SELECT collname FROM pg_collation;")
         self.COLLATIONS = {row["collname"]: row["collname"] for row in self.fetchall()}
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
-            "postgresql", server_version
+            "postgresql", self.server_version
         )
 
         self.execute("""
@@ -102,11 +103,81 @@ class PostgreSQLContext(AbstractContext):
             )
             setattr(PostgreSQLDataType, row["typname"].upper(), datatype)
 
+    def _extract_description_type_code(self, description: Any) -> Optional[int]:
+        if hasattr(description, "type_code"):
+            value = getattr(description, "type_code")
+            return int(value) if value is not None else None
+
+        if len(description) > 1 and description[1] is not None:
+            return int(description[1])
+
+        return None
+
+    def _load_result_type_names_by_oid(
+        self, cursor: PostgreSQLCursor, oid_values: list[int]
+    ) -> dict[int, str]:
+        type_name_by_oid: dict[int, str] = {}
+
+        lookup_cursor = cursor.connection.cursor()
+        try:
+            lookup_cursor.execute(
+                "SELECT oid, format_type(oid, NULL) AS type_name FROM pg_type WHERE oid = ANY(%s)",
+                (oid_values,),
+            )
+            for oid, type_name in lookup_cursor.fetchall():
+                type_name_by_oid[int(oid)] = str(type_name)
+        finally:
+            lookup_cursor.close()
+
+        return type_name_by_oid
+
+    def _normalize_result_type_name(self, datatype_name: str) -> str:
+        normalized = datatype_name.strip().upper()
+        normalized = normalized.split("(")[0].strip()
+        normalized = " ".join(normalized.split())
+        return normalized
+
+    def get_result_column_datatypes(
+        self, cursor: PostgreSQLCursor
+    ) -> list[Optional[SQLDataType]]:
+        descriptions = list(cursor.description or [])
+        oids = [self._extract_description_type_code(desc) for desc in descriptions]
+        oid_values = [oid for oid in oids if oid is not None]
+
+        if not oid_values:
+            return [None for _ in descriptions]
+
+        type_name_by_oid = self._load_result_type_names_by_oid(cursor, oid_values)
+        datatypes: list[Optional[SQLDataType]] = []
+
+        for oid in oids:
+            if oid is None or oid not in type_name_by_oid:
+                datatypes.append(None)
+                continue
+
+            try:
+                type_name = self._normalize_result_type_name(type_name_by_oid[oid])
+                datatypes.append(self.DATATYPE.get_by_name(type_name))
+            except Exception:
+                datatypes.append(None)
+
+        return datatypes
+
     def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
         if self._connection is None:
             try:
-                self.before_connect()
+                if not skip_before_connect:
+                    self.before_connect()
                 database = connect_kwargs.pop("database", "postgres")
+                connect_timeout_override = connect_kwargs.pop("connect_timeout", None)
+                connect_timeout = (
+                    int(connect_timeout_override)
+                    if connect_timeout_override is not None
+                    else int(getattr(self.connection.configuration, "connect_timeout", 10))
+                )
 
                 base_kwargs = dict(
                     host=self.host,
@@ -114,14 +185,16 @@ class PostgreSQLContext(AbstractContext):
                     password=self.password,
                     database=database,
                     port=self.port,
+                    connect_timeout=connect_timeout,
                     **connect_kwargs,
                 )
                 logger.debug(
-                    "PostgreSQL connect target host=%s port=%s user=%s database=%s",
+                    "PostgreSQL connect target host=%s port=%s user=%s database=%s connect_timeout=%s",
                     base_kwargs.get("host"),
                     base_kwargs.get("port"),
                     base_kwargs.get("user"),
                     base_kwargs.get("database"),
+                    base_kwargs.get("connect_timeout"),
                 )
 
                 self._connection = psycopg2.connect(**base_kwargs)
@@ -133,7 +206,8 @@ class PostgreSQLContext(AbstractContext):
                 logger.error(f"Failed to connect to PostgreSQL: {e}", exc_info=True)
                 raise
             else:
-                self.after_connect()
+                if not skip_after_connect:
+                    self.after_connect()
 
     def after_disconnect(self):
         self._current_database = None
@@ -419,7 +493,7 @@ class PostgreSQLContext(AbstractContext):
 
         return results
 
-    def get_checks(self, table: PostgreSQLTable) -> list[PostgreSQLCheck]:
+    def get_checks(self, table: PostgreSQLTable) -> list["PostgreSQLCheck"]:
         from structures.engines.postgresql.database import PostgreSQLCheck
 
         if table is None or table.is_new:
@@ -568,7 +642,7 @@ class PostgreSQLContext(AbstractContext):
         id = PostgreSQLContext.get_temporary_id(database.tables)
 
         if name is None:
-            name = _(f"Table{str(id * -1):03}")
+            name = _("Table{table_index:03}").format(table_index=id * -1)
 
         return PostgreSQLTable(
             id=id,
@@ -593,7 +667,7 @@ class PostgreSQLContext(AbstractContext):
         id = PostgreSQLContext.get_temporary_id(table.columns)
 
         if name is None:
-            name = _(f"Column{str(id * -1):03}")
+            name = _("Column{column_index:03}").format(column_index=id * -1)
 
         return PostgreSQLColumn(
             id=id, name=name, table=table, datatype=datatype, **default_values
@@ -611,7 +685,7 @@ class PostgreSQLContext(AbstractContext):
         id = PostgreSQLContext.get_temporary_id(table.indexes)
 
         if name is None:
-            name = _(f"Index{str(id * -1):03}")
+            name = _("Index{index_number:03}").format(index_number=id * -1)
 
         return PostgreSQLIndex(
             id=id,
@@ -628,7 +702,7 @@ class PostgreSQLContext(AbstractContext):
         name: Optional[str] = None,
         expression: Optional[str] = None,
         **default_values,
-    ) -> PostgreSQLCheck:
+    ) -> "PostgreSQLCheck":
         from structures.engines.postgresql.database import PostgreSQLCheck
 
         id = PostgreSQLContext.get_temporary_id(table.checks)
@@ -651,7 +725,9 @@ class PostgreSQLContext(AbstractContext):
         id = PostgreSQLContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
-            name = _(f"ForeignKey{str(id * -1):03}")
+            name = _("ForeignKey{foreign_key_number:03}").format(
+                foreign_key_number=id * -1
+            )
 
         return PostgreSQLForeignKey(
             id=id,
@@ -679,7 +755,7 @@ class PostgreSQLContext(AbstractContext):
         id = PostgreSQLContext.get_temporary_id(database.views)
 
         if name is None:
-            name = _(f"View{str(id * -1):03}")
+            name = _("View{view_index:03}").format(view_index=id * -1)
 
         return PostgreSQLView(
             id=id,

@@ -1,0 +1,45 @@
+{
+  "group": "PROVIDER_EDGES",
+  "cases": [
+    {
+      "case_id": "PROVIDER_EDGES_001",
+      "title": "Cursor on new whitespace-only statement after separator opens EMPTY context",
+      "sql": "SELECT * FROM users; |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "EMPTY",
+        "context": "EMPTY",
+        "prefix": null,
+        "suggestions_contains": [
+          "SELECT",
+          "INSERT"
+        ],
+        "suggestions_not_contains": [
+          "users",
+          "id"
+        ]
+      }
+    },
+    {
+      "case_id": "PROVIDER_EDGES_002",
+      "title": "Second statement scope is isolated from the previous statement in multi-query buffer",
+      "sql": "SELECT * FROM users;\nSELECT * FROM orders WHERE st|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_CLAUSE",
+        "prefix": "st",
+        "suggestions_contains": [
+          "status"
+        ],
+        "suggestions_not_contains": [
+          "users.status"
+        ]
+      }
+    }
+  ]
+}

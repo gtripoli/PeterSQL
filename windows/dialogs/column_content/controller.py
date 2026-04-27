@@ -1,16 +1,20 @@
+from typing import Optional
+
 import wx
 
 from windows.components.stc.detectors import detect_syntax_id
 from windows.components.stc.profiles import SyntaxProfile
 from windows.components.stc.styles import apply_stc_theme
-from windows.views import AdvancedCellEditorDialog
+from windows.views import ColumnContentDialog
 
 
-class AdvancedCellEditorController(AdvancedCellEditorDialog):
+class ColumnContentDialogController(ColumnContentDialog):
     app = wx.GetApp()
 
-    def __init__(self, parent, value: str):
+    def __init__(self, parent, value: str, read_only: bool = False):
         super().__init__(parent)
+
+        self._read_only = read_only
 
         self.syntax_choice.AppendItems(self.app.syntax_registry.labels())
         self.advanced_stc_editor.SetText(value or "")
@@ -21,6 +25,10 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
         self.syntax_choice.SetStringSelection(self._auto_syntax_profile().label)
 
         self.do_apply_syntax(do_format=True)
+        self._apply_read_only_state()
+
+        self.m_button48.Bind(wx.EVT_BUTTON, self._on_ok)
+        self.m_button49.Bind(wx.EVT_BUTTON, self._on_cancel)
 
     def _auto_syntax_profile(self) -> SyntaxProfile:
         text = self.advanced_stc_editor.GetText()
@@ -33,8 +41,22 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
         return self.app.syntax_registry.get(label)
 
     def on_syntax_changed(self, _evt):
-        label = self.syntax_choice.GetStringSelection()
-        self.do_apply_syntax(label)
+        self.do_apply_syntax(do_format=True)
+
+    def _apply_read_only_state(self) -> None:
+        if not self._read_only:
+            return
+
+        self.advanced_stc_editor.SetReadOnly(True)
+        self.m_button49.Hide()
+        self.m_button48.SetLabel("Close")
+        self.Layout()
+
+    def _on_ok(self, _evt: wx.Event) -> None:
+        self.EndModal(wx.ID_OK)
+
+    def _on_cancel(self, _evt: wx.Event) -> None:
+        self.EndModal(wx.ID_CANCEL)
 
     def do_apply_syntax(self, do_format: bool = True):
         label = self.syntax_choice.GetStringSelection()
@@ -58,3 +80,6 @@ class AdvancedCellEditorController(AdvancedCellEditorDialog):
             self.advanced_stc_editor.SetText(new_text)
         finally:
             self.advanced_stc_editor.EndUndoAction()
+
+    def get_value(self) -> Optional[str]:
+        return self.advanced_stc_editor.GetText()

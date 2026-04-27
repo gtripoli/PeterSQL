@@ -31,7 +31,9 @@ from windows.dialogs.connections.repository import ConnectionsRepository
 
 
 class ConnectionsManager(ConnectionsDialog):
-    _SETTINGS_SECTION = "connections_dialog"
+    _SETTINGS_UI = "ui"
+    _SETTINGS_DIALOGS = "dialogs"
+    _SETTINGS_CONNECTIONS = "connections"
     _SETTINGS_EXPANDED_DIRECTORIES = "expanded_directories"
 
     def __init__(self, parent):
@@ -55,7 +57,9 @@ class ConnectionsManager(ConnectionsDialog):
             port=self.port,
             username=self.username,
             password=self.password,
-            use_tls_enabled=self.use_tls_enabled,
+            use_tls=self.use_tls,
+            connection_timeout=self.connection_timeout,
+            compressed_protocol=self.compressed_protocol,
             filename=self.filename,
             comments=self.comments,
             created_at=self.created_at,
@@ -77,6 +81,7 @@ class ConnectionsManager(ConnectionsDialog):
             ssh_tunnel_identity_file=self.identity_file,
             ssh_tunnel_remote_hostname=self.remote_hostname,
             ssh_tunnel_remote_port=self.remote_port,
+            ssh_tunnel_extra_args=self.ssh_tunnel_extra_args,
         )
 
         self.connections_model.engine.subscribe(self._on_change_engine)
@@ -125,7 +130,9 @@ class ConnectionsManager(ConnectionsDialog):
         )
 
         if not connection.is_new:
+            expanded_paths = self._capture_expanded_directory_paths()
             self._repository.save_connection(connection)
+            wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def _sync_statistics_to_model(self, connection: Connection) -> None:
         self.connections_model.created_at(connection.created_at or "")
@@ -195,6 +202,10 @@ class ConnectionsManager(ConnectionsDialog):
 
     def _on_change_engine(self, value: str):
         connection_engine = ConnectionEngine.from_name(value)
+        supports_compressed_protocol = connection_engine in [
+            ConnectionEngine.MYSQL,
+            ConnectionEngine.MARIADB,
+        ]
 
         self.panel_credentials.Show(
             connection_engine
@@ -214,6 +225,9 @@ class ConnectionsManager(ConnectionsDialog):
         )
 
         self.panel_source.Show(connection_engine == ConnectionEngine.SQLITE)
+        self.compressed_protocol.Enable(supports_compressed_protocol)
+        if not supports_compressed_protocol:
+            self.connections_model.compressed_protocol(False)
 
         self.panel_source.GetParent().Layout()
 
@@ -281,19 +295,28 @@ class ConnectionsManager(ConnectionsDialog):
         expanded_paths = self._capture_expanded_directory_paths()
         serialized_paths = self._serialize_expanded_directory_paths(expanded_paths)
 
-        if self._app.settings.get_value(self._SETTINGS_SECTION) is None:
-            self._app.settings.set_value(self._SETTINGS_SECTION, value={})
+        self._app.settings.get_value(
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
+            default={},
+        )
 
         self._app.settings.set_value(
-            self._SETTINGS_SECTION,
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
             self._SETTINGS_EXPANDED_DIRECTORIES,
             value=serialized_paths,
         )
 
     def _restore_expanded_directory_paths_from_settings(self) -> None:
         raw_paths = self._app.settings.get_value(
-            self._SETTINGS_SECTION,
+            self._SETTINGS_UI,
+            self._SETTINGS_DIALOGS,
+            self._SETTINGS_CONNECTIONS,
             self._SETTINGS_EXPANDED_DIRECTORIES,
+            default=[],
         )
         expanded_paths = self._deserialize_expanded_directory_paths(raw_paths)
         self._restore_expanded_directory_paths(expanded_paths)
@@ -368,13 +391,10 @@ class ConnectionsManager(ConnectionsDialog):
         _walk(self._repository.connections.get_value())
 
     def do_open_session(self, session: Session):
-        # CONNECTIONS_LIST.append(connection)
-
         SESSIONS_LIST.append(session)
         CURRENT_SESSION(session)
 
         if not self.GetParent():
-            # CURRENT_CONNECTION(connection)
             self._app.open_main_frame()
 
         self.Hide()
@@ -403,7 +423,9 @@ class ConnectionsManager(ConnectionsDialog):
 
         dialog = wx.MessageDialog(
             None,
-            message=_(f"Do you want save the connection {connection.name}?"),
+            message=_("Do you want save the connection {connection_name}?").format(
+                connection_name=connection.name
+            ),
             caption=_("Confirm save"),
             style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )
@@ -704,65 +726,57 @@ class ConnectionsManager(ConnectionsDialog):
     def verify_session(self, session: Session):
         started_at = time.perf_counter()
 
-        with Loader.cursor_wait():
-            try:
-                tls_was_enabled = bool(
-                    getattr(session.connection.configuration, "use_tls_enabled", False)
-                )
+        try:
+            tls_enabled = bool(
+                getattr(session.connection.configuration, "use_tls", False)
+            )
 
-                logger.debug(
-                    "Verifying session connection=%s engine=%s host=%s port=%s user=%s use_tls_enabled=%s",
-                    session.connection.name,
-                    session.connection.engine,
-                    getattr(session.connection.configuration, "hostname", None),
-                    getattr(session.connection.configuration, "port", None),
-                    getattr(session.connection.configuration, "username", None),
-                    tls_was_enabled,
-                )
-                session.connect(connect_timeout=10)
+            connect_timeout = int(
+                getattr(session.connection.configuration, "connect_timeout", 10)
+            )
+            session.connect(connect_timeout=connect_timeout)
 
-                tls_is_enabled = bool(
-                    getattr(session.connection.configuration, "use_tls_enabled", False)
-                )
-                if not tls_was_enabled and tls_is_enabled:
-                    self.connections_model.use_tls_enabled(True)
+            if not tls_enabled and bool(
+                getattr(session.connection.configuration, "use_tls", False)
+            ):
+                self.connections_model.use_tls(True)
 
-                    if not session.connection.is_new:
-                        self._repository.save_connection(session.connection)
-
-                    wx.MessageDialog(
-                        None,
-                        message=_(
-                            "This connection cannot work without TLS. TLS has been enabled automatically."
-                        ),
-                        caption=_("Connection"),
-                        style=wx.OK | wx.ICON_INFORMATION,
-                    ).ShowModal()
-
-                duration_ms = int((time.perf_counter() - started_at) * 1000)
-                self._record_connection_attempt(
-                    session.connection,
-                    success=True,
-                    duration_ms=duration_ms,
-                )
-                self._sync_statistics_to_model(session.connection)
-            except Exception as ex:
-                duration_ms = int((time.perf_counter() - started_at) * 1000)
-                self._record_connection_attempt(
-                    session.connection,
-                    success=False,
-                    duration_ms=duration_ms,
-                    failure_reason=str(ex),
-                )
-                self._sync_statistics_to_model(session.connection)
+                if not session.connection.is_new:
+                    self._repository.save_connection(session.connection)
 
                 wx.MessageDialog(
                     None,
-                    message=_(f"Connection error:\n{str(ex)}"),
-                    caption=_("Connection error"),
-                    style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR,
+                    message=_(
+                        "This connection cannot work without TLS. TLS has been enabled automatically."
+                    ),
+                    caption=_("Connection"),
+                    style=wx.OK | wx.ICON_INFORMATION,
                 ).ShowModal()
-                raise ConnectionError(ex)
+
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            self._record_connection_attempt(
+                session.connection,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            self._sync_statistics_to_model(session.connection)
+        except Exception as ex:
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            self._record_connection_attempt(
+                session.connection,
+                success=False,
+                duration_ms=duration_ms,
+                failure_reason=str(ex),
+            )
+            self._sync_statistics_to_model(session.connection)
+
+            wx.MessageDialog(
+                None,
+                message=_("Connection error:\n{error}").format(error=str(ex)),
+                caption=_("Connection error"),
+                style=wx.OK | wx.OK_DEFAULT | wx.ICON_ERROR,
+            ).ShowModal()
+            raise ConnectionError(ex)
 
     def on_connect(self, event):
         if PENDING_CONNECTION() and not self.on_save(event):
@@ -772,19 +786,22 @@ class ConnectionsManager(ConnectionsDialog):
 
         session = Session(connection)
 
-        try:
-            self.verify_session(session)
-        except ConnectionError as ex:
-            logger.info(ex)
-        except Exception as ex:
-            logger.error(ex, exc_info=True)
-        else:
-            self.do_open_session(session)
+        with Loader.cursor_wait():
+            try:
+                self.verify_session(session)
+            except ConnectionError as ex:
+                logger.info(ex)
+            except Exception as ex:
+                logger.error(ex, exc_info=True)
+            else:
+                self.do_open_session(session)
 
     def on_delete_connection(self, connection: Connection):
         dialog = wx.MessageDialog(
             None,
-            message=_(f"Do you want to delete the connection '{connection.name}'?"),
+            message=_("Do you want to delete the connection '{connection_name}'?").format(
+                connection_name=connection.name
+            ),
             caption=_("Confirm delete"),
             style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )
@@ -799,7 +816,9 @@ class ConnectionsManager(ConnectionsDialog):
     def on_delete_directory(self, directory: ConnectionDirectory):
         dialog = wx.MessageDialog(
             None,
-            message=_(f"Do you want to delete the directory '{directory.name}'?"),
+            message=_("Do you want to delete the directory '{directory_name}'?").format(
+                directory_name=directory.name
+            ),
             caption=_("Confirm delete"),
             style=wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )

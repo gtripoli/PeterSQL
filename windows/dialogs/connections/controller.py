@@ -3,7 +3,7 @@ from typing import Optional, Any, Callable
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewTreeModel
+from helpers.dataview import BaseObservableDataViewTreeModel
 
 from structures.connection import Connection
 
@@ -11,7 +11,7 @@ from . import CURRENT_CONNECTION, ConnectionDirectory, CURRENT_DIRECTORY
 from windows.dialogs.connections.repository import ConnectionsRepository
 
 
-class ConnectionsTreeModel(BaseDataViewTreeModel):
+class ConnectionsTreeModel(BaseObservableDataViewTreeModel):
     def __init__(self):
         super().__init__(column_count=2)
         self._parent_map = {}
@@ -133,8 +133,6 @@ class ConnectionsTreeController:
         self._allow_next_edit = False
 
     def do_filter_connections(self, search_text):
-        # self.search_text = search_text
-        # self._update_displayed_connections()
         self.repository.connections.filter(
             lambda x: search_text.lower() in x.name.lower()
         )

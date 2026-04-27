@@ -1,0 +1,340 @@
+{
+  "group": "INSERT",
+  "cases": [
+    {
+      "case_id": "INSERT_001",
+      "title": "INSERT INTO without prefix suggests tables",
+      "sql": "INSERT INTO |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_INTO",
+        "prefix": null,
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_002",
+      "title": "INSERT INTO with prefix filters tables",
+      "sql": "INSERT INTO u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "INSERT_INTO",
+        "prefix": "u",
+        "suggestions": [
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_003",
+      "title": "INSERT INTO table suggests columns",
+      "sql": "INSERT INTO users (|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_COLUMNS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_004",
+      "title": "INSERT INTO table with column prefix filters columns",
+      "sql": "INSERT INTO users (e|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "INSERT_COLUMNS",
+        "prefix": "e",
+        "suggestions": [
+          "email"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_005",
+      "title": "INSERT INTO table after comma suggests more columns",
+      "sql": "INSERT INTO users (name, |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_COLUMNS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "email",
+          "status",
+          "created_at"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_006",
+      "title": "INSERT INTO table VALUES suggests keywords",
+      "sql": "INSERT INTO users (name, email) |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_VALUES",
+        "prefix": null,
+        "suggestions": [
+          "VALUES",
+          "SELECT",
+          "DEFAULT"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_007",
+      "title": "INSERT INTO table VALUES prefix filters keywords",
+      "sql": "INSERT INTO users (name, email) V|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "INSERT_VALUES",
+        "prefix": "V",
+        "suggestions": [
+          "VALUES"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_008",
+      "title": "INSERT INTO table VALUES ( suggests literals",
+      "sql": "INSERT INTO users (name, email) VALUES (|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_VALUE_EXPRESSIONS",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_009",
+      "title": "INSERT INTO table VALUES (value, suggests next value",
+      "sql": "INSERT INTO users (name, email) VALUES ('test', |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_VALUE_EXPRESSIONS",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_010",
+      "title": "INSERT INTO table VALUES () suggests closing",
+      "sql": "INSERT INTO users (name, email) VALUES ('test', 'test@example.com')|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "INSERT_COMPLETE",
+        "prefix": ")",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "INSERT_011",
+      "title": "INSERT INTO table VALUES () , suggests more inserts",
+      "sql": "INSERT INTO users (name, email) VALUES ('test', 'test@example.com'), |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_VALUE_EXPRESSIONS",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_012",
+      "title": "INSERT complete suggests ON DUPLICATE KEY etc",
+      "sql": "INSERT INTO users (name, email) VALUES ('test', 'test@example.com') |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_POST_VALUES",
+        "prefix": null,
+        "suggestions": [
+          "ON DUPLICATE KEY UPDATE",
+          "ON CONFLICT",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "INSERT_013",
+      "title": "INSERT inside string literal no suggestions",
+      "sql": "INSERT INTO users (name, email) VALUES ('|', 'test@example.com')",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "INSERT_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside string literal should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "INSERT_014",
+      "title": "INSERT inside string literal with content no suggestions",
+      "sql": "INSERT INTO users (name, email) VALUES ('test|', 'test@example.com')",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "INSERT_STRING_LITERAL",
+        "prefix": "test",
+        "comment": "Cursor inside string literal with content should not suggest anything",
+        "suggestions": []
+      }
+    }
+  ]
+}

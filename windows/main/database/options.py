@@ -3,7 +3,7 @@ from typing import Optional
 import wx
 
 from helpers.bindings import AbstractModel
-from helpers.observables import Observable, debounce
+from helpers.observables import CallbackEvent, Observable, debounce
 
 from structures.connection import ConnectionEngine
 
@@ -13,7 +13,6 @@ from windows.main import CURRENT_DATABASE, CURRENT_SESSION
 class EditDatabaseOptionsModel(AbstractModel):
     def __init__(self):
         self.database_name = Observable()
-        self.database_character_set = Observable()
         self.database_collation = Observable()
         self.database_encryption = Observable(False)
         self.database_read_only = Observable(False)
@@ -30,7 +29,6 @@ class EditDatabaseOptionsModel(AbstractModel):
 
         debounce(
             self.database_name,
-            self.database_character_set,
             self.database_collation,
             self.database_encryption,
             self.database_read_only,
@@ -78,15 +76,6 @@ class EditDatabaseOptionsModel(AbstractModel):
             self._first_attr(database, ["default_collation", "collation", "collation_name"], "")
         )
 
-        context = database.context if database else None
-        charset = None
-        if context and self.database_collation.get_value() and getattr(context, "COLLATIONS", None):
-            charset = context.COLLATIONS.get(self.database_collation.get_value())
-
-        self.database_character_set.set_initial(
-            charset or self._first_attr(database, ["character_set", "charset"], "")
-        )
-
         self.database_encryption.set_initial(
             self._encryption_to_bool(self._first_attr(database, ["encryption"], None))
         )
@@ -121,8 +110,6 @@ class EditDatabaseOptionsModel(AbstractModel):
             database.name = self.database_name.get_value()
 
         mapping = {
-            "character_set": self.database_character_set.get_value(),
-            "charset": self.database_character_set.get_value(),
             "default_collation": self.database_collation.get_value(),
             "collation": self.database_collation.get_value(),
             "collation_name": self.database_collation.get_value(),
@@ -145,10 +132,15 @@ class EditDatabaseOptionsModel(AbstractModel):
             if hasattr(database, attr):
                 setattr(database, attr, value)
 
+        CURRENT_DATABASE.execute_callback(CallbackEvent.AFTER_CHANGE)
+
 
 class DatabaseOptionsController:
     def __init__(self, parent):
         self.parent = parent
+        self._is_updating_choices = False
+        self._is_apply_scheduled = False
+        self._last_applied_state: Optional[tuple[Optional[ConnectionEngine], Optional[int], Optional[str]]] = None
         self.model = EditDatabaseOptionsModel()
         self._panel_by_name = self._build_panel_by_name()
         self._panels_all = list(self._panel_by_name.values())
@@ -159,7 +151,19 @@ class DatabaseOptionsController:
         CURRENT_SESSION.subscribe(self._on_current_session)
         CURRENT_DATABASE.subscribe(self._on_current_database)
 
-        self.apply_for_current_state()
+        self._schedule_apply_for_current_state()
+
+    def _schedule_apply_for_current_state(self) -> None:
+        if self._is_apply_scheduled:
+            return
+
+        self._is_apply_scheduled = True
+
+        def _run():
+            self._is_apply_scheduled = False
+            self.apply_for_current_state()
+
+        wx.CallAfter(_run)
 
     @staticmethod
     def _first_attr(source, names: list[str], default=None):
@@ -174,20 +178,34 @@ class DatabaseOptionsController:
 
         return default
 
-    def _apply_choice(self, choice: wx.Choice, items: list[str], selected: Optional[str]) -> None:
-        normalized = [str(item) for item in items if item is not None and str(item)]
+    @staticmethod
+    def _safe_text(value) -> str:
+        if value is None:
+            return ""
 
-        if selected is not None and str(selected) and str(selected) not in normalized:
-            normalized.append(str(selected))
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+
+        text = str(value)
+        return text.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+
+    def _apply_choice(self, choice: wx.Choice, items: list[str], selected: Optional[str]) -> None:
+        normalized = [self._safe_text(item) for item in items if item is not None and self._safe_text(item)]
+        selected_text = self._safe_text(selected)
+
+        if selected_text and selected_text not in normalized:
+            normalized.append(selected_text)
+
+        if not normalized:
+            if choice.GetCount() > 0:
+                choice.Clear()
+
+            return
 
         choice.SetItems(normalized)
 
-        if not normalized:
+        if selected_text and choice.SetStringSelection(selected_text):
             return
-
-        if selected and choice.SetStringSelection(str(selected)):
-            return
-
         choice.SetSelection(0)
 
     def _apply_engine(self, engine: Optional[ConnectionEngine]) -> None:
@@ -213,7 +231,6 @@ class DatabaseOptionsController:
     def _bind_controls(self) -> None:
         self.model.bind_controls(
             database_name=self.parent.database_name,
-            database_character_set=self.parent.database_character_set,
             database_collation=self.parent.database_collation,
             database_encryption=self.parent.database_encryption,
             database_read_only=self.parent.database_read_only,
@@ -231,7 +248,6 @@ class DatabaseOptionsController:
 
     def _build_controls_all(self) -> list[wx.Window]:
         return [
-            self.parent.database_character_set,
             self.parent.database_collation,
             self.parent.database_encryption,
             self.parent.database_read_only,
@@ -249,7 +265,6 @@ class DatabaseOptionsController:
 
     def _build_panel_by_name(self) -> dict[str, wx.Window]:
         return {
-            "database_character_set_panel": self.parent.database_character_set_panel,
             "database_collation_panel": self.parent.database_collation_panel,
             "database_encryption_panel": self.parent.database_encryption_panel,
             "database_read_only_panel": self.parent.database_read_only_panel,
@@ -268,7 +283,6 @@ class DatabaseOptionsController:
     def _get_panel_names_for_engine(self, engine: Optional[ConnectionEngine]) -> list[str]:
         if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
             return [
-                "database_character_set_panel",
                 "database_collation_panel",
                 "database_encryption_panel",
             ]
@@ -300,67 +314,92 @@ class DatabaseOptionsController:
             parent.Layout()
 
     def _on_current_database(self, database) -> None:
-        self.apply_for_current_state()
+        self._schedule_apply_for_current_state()
 
     def _on_current_session(self, session) -> None:
-        self.apply_for_current_state()
+        self._schedule_apply_for_current_state()
 
-    def _populate_choices(self, database) -> None:
+    def _populate_choices(self, database, engine: Optional[ConnectionEngine]) -> None:
+        if database is None:
+            return
+
         context = database.context if database else None
 
         collations = []
-        if context and getattr(context, "COLLATIONS", None):
-            collations = sorted(context.COLLATIONS.keys())
+        collations_source = getattr(context, "COLLATIONS", None) if context else None
 
-        charsets = []
-        if context and getattr(context, "COLLATIONS", None):
-            charsets = sorted(set(context.COLLATIONS.values()))
+        if isinstance(collations_source, dict):
+            collations = sorted(
+                str(key)
+                for key in collations_source.keys()
+                if key is not None and str(key)
+            )
 
-        self._apply_choice(
-            self.parent.database_character_set,
-            charsets,
-            self.model.database_character_set.get_value(),
-        )
-        self._apply_choice(
-            self.parent.database_collation,
-            collations,
-            self.model.database_collation.get_value(),
-        )
+        if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL]:
+            self._apply_choice(
+                self.parent.database_collation,
+                collations,
+                self.model.database_collation.get_value(),
+            )
 
-        self._apply_choice(
-            self.parent.database_tablespace,
-            [self._first_attr(database, ["tablespace", "default_tablespace"])],
-            self.model.database_tablespace.get_value(),
-        )
-        self._apply_choice(
-            self.parent.database_profile,
-            [self._first_attr(database, ["profile"])],
-            self.model.database_profile.get_value(),
-        )
-        self._apply_choice(
-            self.parent.database_default_tablespace,
-            [self._first_attr(database, ["default_tablespace"])],
-            self.model.database_default_tablespace.get_value(),
-        )
-        self._apply_choice(
-            self.parent.database_temporary_tablespace,
-            [self._first_attr(database, ["temporary_tablespace"])],
-            self.model.database_temporary_tablespace.get_value(),
-        )
-        self._apply_choice(
-            self.parent.database_account_status,
-            [self._first_attr(database, ["account_status"])],
-            self.model.database_account_status.get_value(),
-        )
+        if engine == ConnectionEngine.POSTGRESQL:
+            self._apply_choice(
+                self.parent.database_tablespace,
+                [self._first_attr(database, ["tablespace", "default_tablespace"])],
+                self.model.database_tablespace.get_value(),
+            )
+
+        if engine == ConnectionEngine.ORACLE:
+            self._apply_choice(
+                self.parent.database_profile,
+                [self._first_attr(database, ["profile"])],
+                self.model.database_profile.get_value(),
+            )
+            self._apply_choice(
+                self.parent.database_default_tablespace,
+                [self._first_attr(database, ["default_tablespace"])],
+                self.model.database_default_tablespace.get_value(),
+            )
+            self._apply_choice(
+                self.parent.database_temporary_tablespace,
+                [self._first_attr(database, ["temporary_tablespace"])],
+                self.model.database_temporary_tablespace.get_value(),
+            )
+            self._apply_choice(
+                self.parent.database_account_status,
+                [self._first_attr(database, ["account_status"])],
+                self.model.database_account_status.get_value(),
+            )
 
     def _set_controls_enabled(self, enabled: bool) -> None:
         for control in self._controls_all:
             control.Enable(enabled)
 
     def apply_for_current_state(self) -> None:
+        if self._is_updating_choices:
+            return
+
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
         engine = session.engine if session else None
 
-        self._populate_choices(database)
-        self._apply_engine(engine)
+        if database is None:
+            self._last_applied_state = None
+            return
+
+        current_state = (
+            engine,
+            getattr(database, "id", None),
+            getattr(database, "name", None),
+        )
+
+        if current_state == self._last_applied_state:
+            return
+
+        self._is_updating_choices = True
+        try:
+            self._populate_choices(database, engine)
+            self._apply_engine(engine)
+            self._last_applied_state = current_state
+        finally:
+            self._is_updating_choices = False

@@ -1,17 +1,17 @@
 import wx
 import wx.dataview
 
-from helpers.dataview import BaseDataViewListModel, ColumnField
+from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
 
-from windows.main import CURRENT_TABLE, CURRENT_INDEX
-from windows.main.tabs.column import NEW_TABLE
-
 from structures.engines.database import SQLTable, SQLIndex
 
+from windows.state import NEW_TABLE
+from windows.main import CURRENT_TABLE, CURRENT_INDEX
 
-class TableIndexModel(BaseDataViewListModel):
+
+class TableIndexModel(BaseObservableDataViewListModel):
     MAP_COLUMN_FIELDS = {
         0: ColumnField("name", lambda i, x: wx.dataview.DataViewIconText(i.name, wx.GetApp().icon_registry_16.get_bitmap(i.type.bitmap))),
         1: ColumnField("expression", lambda i, x: ", ".join(i.columns)),

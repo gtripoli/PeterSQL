@@ -287,7 +287,6 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
         self.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
 
     def _on_context_menu(self, event):
-        from icons import BitmapList
 
         selected = self.GetSelection()
         model = self.GetModel()
@@ -297,22 +296,17 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
         menu = wx.Menu()
 
         add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        add_item.SetBitmap(BitmapList.ADD)
+        add_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.ADD))
         menu.Append(add_item)
 
         self.Bind(wx.EVT_MENU, self.on_foreign_key_insert, add_item)
 
         delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        delete_item.SetBitmap(BitmapList.DELETE)
+        delete_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.DELETE))
         menu.Append(delete_item)
         menu.Enable(delete_item.GetId(), selected.IsOk())
 
         self.Bind(wx.EVT_MENU, self.on_foreign_key_delete, delete_item)
-
-        # Forse non necessario, dato che editing è già disponibile
-        # update_item = wx.MenuItem(menu, wx.ID_ANY, _("Update foreign key"), wx.EmptyString, wx.ITEM_NORMAL)
-        # menu.Append(update_item)
-        # self.Bind(wx.EVT_MENU, self.on_foreign_key_update, update_item)
 
         self.PopupMenu(menu)
 
@@ -335,9 +329,9 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
         CURRENT_TABLE.subscribe(self._load_table)
 
-    def make_advanced_dialog(self, parent, value: str):
-        from windows.dialogs.advanced_cell_editor import AdvancedCellEditorController
-        return AdvancedCellEditorController(parent, value)
+    def make_advanced_dialog(self, parent, value: str, read_only : bool = False):
+        from windows.dialogs.column_content import ColumnContentDialogController  # Lazy import: unavoidable circular dependency
+        return ColumnContentDialogController(parent, value, read_only)
 
     def _get_column_renderer(self, column: SQLColumn) -> wx.dataview.DataViewRenderer:
         for foreign_key in column.table.foreign_keys:
@@ -449,7 +443,44 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
 
 class QueryEditorResultsDataViewCtrl(TableRecordsDataViewCtrl):
-    pass
+    def __init__(self, *args, **kwargs):
+        BaseDataViewCtrl.__init__(self, *args, **kwargs)
+        self.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+
+    def _get_activated_model_column(self, event: wx.dataview.DataViewEvent) -> Optional[int]:
+        current_column = self.CurrentColumn
+        if current_column:
+            return current_column.GetModelColumn()
+
+        model_column = event.GetColumn()
+        return model_column if model_column >= 0 else None
+
+    def _on_item_activated(self, event: wx.dataview.DataViewEvent) -> None:
+        item = event.GetItem()
+        if not item.IsOk():
+            event.Skip()
+            return
+
+        model = self.GetModel()
+        if not model:
+            event.Skip()
+            return
+
+        model_column = self._get_activated_model_column(event)
+        if model_column is None:
+            event.Skip()
+            return
+
+        row = model.GetRow(item)
+        value = model.GetValueByRow(row, model_column)
+
+        dialog = self.make_advanced_dialog(self, str(value or ""), read_only=True)
+        try:
+            dialog.ShowModal()
+        finally:
+            dialog.Destroy()
+
+        event.Skip()
 
 
 class DatabaseTablesDataViewCtrl(BaseDataViewCtrl):

@@ -5,7 +5,7 @@ import wx.dataview
 
 from helpers.loader import Loader
 from helpers.logger import logger
-from helpers.dataview import BaseDataViewListModel, ColumnField
+from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 
 from structures.helpers import merge_original_current
 from structures.session import Session
@@ -16,7 +16,7 @@ from windows.views import TableColumnsDataViewCtrl
 from windows.state import CURRENT_COLUMN, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, NEW_TABLE
 
 
-class ColumnModel(BaseDataViewListModel):
+class ColumnModel(BaseObservableDataViewListModel):
     MAP_COLUMN_FIELDS: dict[int, ColumnField]
 
     def GetColumnCount(self):
@@ -247,8 +247,8 @@ class TableColumnsController:
             default_values['set'] = datatype.default_set
 
         new_empty_column = session.context.build_empty_column(
-            table=table,
-            datatype=datatype,
+            table,
+            datatype,
             **default_values
         )
 

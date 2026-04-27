@@ -6,16 +6,14 @@ import wx.dataview
 from gettext import gettext as _
 
 from helpers import bytes_to_human
-from helpers.dataview import BaseDataViewListModel, ColumnField
+from helpers.dataview import BaseObservableDataViewListModel, ColumnField
 
 from structures.engines.database import SQLTable, SQLDatabase
 
 from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
 
 
-# SELECTED_TABLE: Observable[SQLTable] = Observable()
-
-class ModelDatabaseTable(BaseDataViewListModel):
+class ModelDatabaseTable(BaseObservableDataViewListModel):
     MAP_COLUMN_FIELDS = {
         0: ColumnField("name", str),
         1: ColumnField("total_rows", str),

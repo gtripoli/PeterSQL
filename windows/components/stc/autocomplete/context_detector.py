@@ -2,9 +2,6 @@ import re
 
 from typing import Optional
 
-import sqlglot
-from sqlglot import exp
-
 from helpers.logger import logger
 
 from windows.components.stc.autocomplete.query_scope import (
@@ -20,8 +17,12 @@ from structures.engines.database import SQLDatabase, SQLTable
 
 class ContextDetector:
     _prefix_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+    _identifier_segment_pattern = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\])"
+    _table_name_pattern = (
+        _identifier_segment_pattern + r"(?:\." + _identifier_segment_pattern + r")?"
+    )
     _join_after_table_pattern = re.compile(
-        r"\b(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)(?:\s+OUTER)?\s+)?JOIN\s+([A-Za-z_][A-Za-z0-9_]*)"
+        r"\b(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)(?:\s+OUTER)?\s+)?JOIN\s+(" + _table_name_pattern + r")"
         r"\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*$",
         re.IGNORECASE,
     )
@@ -72,6 +73,8 @@ class ContextDetector:
 
         try:
             context = self._detect_context_with_regex(left_text, prefix)
+            if context == SQLContext.INSERT_COMPLETE and left_text.rstrip().endswith(")"):
+                prefix = ")"
             return context, scope, prefix
         except Exception as ex:
             logger.debug(f"context detection error: {ex}")
@@ -91,7 +94,10 @@ class ContextDetector:
             return ""
         return match.group(0)
 
-    _dot_pattern = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$")
+    _dot_pattern = re.compile(
+        r"((?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\]))"
+        r"\.([A-Za-z_][A-Za-z0-9_]*)?$"
+    )
 
     def _check_dot_completion(self, left_text: str, prefix: str) -> Optional[re.Match]:
         if "." in left_text:
@@ -100,8 +106,37 @@ class ContextDetector:
 
     def _detect_context_with_regex(self, left_text: str, prefix: str) -> SQLContext:
         left_upper = left_text.upper()
+        statement_type, statement_pos = self._detect_statement_type(left_upper)
 
+        if statement_type == "INSERT":
+            return self._detect_insert_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type == "UPDATE":
+            return self._detect_update_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type == "DELETE":
+            return self._detect_delete_context(left_text, left_upper, prefix, statement_pos)
+        if statement_type != "SELECT":
+            return SQLContext.UNKNOWN
+
+        return self._detect_select_context(left_text, left_upper, prefix)
+
+    @staticmethod
+    def _detect_statement_type(left_upper: str) -> tuple[str, int]:
+        statement_positions = {
+            "SELECT": left_upper.rfind("SELECT"),
+            "INSERT": left_upper.rfind("INSERT"),
+            "UPDATE": left_upper.rfind("UPDATE"),
+            "DELETE": left_upper.rfind("DELETE"),
+        }
+        statement_type = max(statement_positions, key=lambda key: statement_positions[key])
+        return statement_type, statement_positions[statement_type]
+
+    def _detect_select_context(
+        self, left_text: str, left_upper: str, prefix: str
+    ) -> SQLContext:
         select_pos = left_upper.rfind("SELECT")
+        if select_pos == -1:
+            return SQLContext.UNKNOWN
+
         from_pos = left_upper.rfind("FROM")
         where_pos = left_upper.rfind("WHERE")
         join_pos = left_upper.rfind("JOIN")
@@ -111,9 +146,6 @@ class ContextDetector:
         having_pos = left_upper.rfind("HAVING")
         limit_pos = left_upper.rfind("LIMIT")
         offset_pos = left_upper.rfind("OFFSET")
-
-        if select_pos == -1:
-            return SQLContext.UNKNOWN
 
         if re.search(r"\bOVER\s*(?:\(\s*)?$", left_text, re.IGNORECASE):
             return SQLContext.WINDOW_OVER
@@ -158,6 +190,8 @@ class ContextDetector:
 
         if where_pos > select_pos and where_pos != -1:
             if where_pos > max(from_pos, order_by_pos, group_by_pos, -1):
+                if self._is_inside_string_literal(left_text[where_pos:]):
+                    return SQLContext.WHERE_STRING_LITERAL
                 if self._is_after_where_operator(left_text, where_pos, prefix):
                     return SQLContext.WHERE_AFTER_OPERATOR
                 if self._is_after_where_is(left_text, where_pos, prefix):
@@ -171,6 +205,289 @@ class ContextDetector:
                 return SQLContext.FROM_CLAUSE
 
         return SQLContext.SELECT_LIST
+
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        normalized = identifier.strip()
+        if not normalized:
+            return normalized
+        if normalized[0] in {'`', '"', '['} and normalized[-1] in {'`', '"', ']'}:
+            return normalized[1:-1]
+        return normalized
+
+    # ── INSERT ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _is_inside_string_literal(text: str) -> bool:
+        count = 0
+        i = 0
+        while i < len(text):
+            if text[i] == "'" and (i == 0 or text[i - 1] != "\\"):
+                count += 1
+            i += 1
+        return count % 2 == 1
+
+    def _detect_insert_context(
+        self, left_text: str, left_upper: str, prefix: str, insert_pos: int
+    ) -> SQLContext:
+        after_insert = left_text[insert_pos:]
+
+        if self._is_inside_string_literal(after_insert):
+            return SQLContext.INSERT_STRING_LITERAL
+
+        into_pos = left_upper.rfind("INTO", insert_pos)
+        values_pos = left_upper.rfind("VALUES", insert_pos)
+
+        # INSERT INTO table (...) VALUES (...) |
+        if values_pos != -1:
+            after_values = left_text[values_pos + 6:].strip()
+            # Inside VALUES parentheses or after comma between value groups
+            if after_values:
+                # Check if we have a complete VALUES(...) group
+                open_count = after_values.count("(")
+                close_count = after_values.count(")")
+                if open_count > close_count:
+                    # Inside VALUES(...)
+                    return SQLContext.INSERT_VALUE_EXPRESSIONS
+                if close_count > 0 and after_values.rstrip().endswith(")"):
+                    # Cursor right after ) — no space
+                    if left_text.endswith(")"):
+                        return SQLContext.INSERT_COMPLETE
+                    # After complete VALUES(...) with space
+                    return SQLContext.INSERT_POST_VALUES
+                if after_values.rstrip().endswith(","):
+                    # After VALUES(...),
+                    return SQLContext.INSERT_VALUE_EXPRESSIONS
+            # Just after VALUES keyword
+            return SQLContext.INSERT_VALUE_EXPRESSIONS
+
+        if into_pos == -1:
+            return SQLContext.INSERT_INTO
+
+        after_into = left_text[into_pos + 4:].strip()
+        if not after_into:
+            return SQLContext.INSERT_INTO
+
+        # Check if we're inside column list parentheses
+        paren_open = after_into.rfind("(")
+        paren_close = after_into.rfind(")")
+        if paren_open != -1 and paren_close < paren_open:
+            # Inside parentheses — column list
+            return SQLContext.INSERT_COLUMNS
+
+        if paren_close != -1 and paren_close > paren_open:
+            # After closed parentheses — expect VALUES/SELECT
+            return SQLContext.INSERT_VALUES
+
+        # After INSERT INTO, check if table name is present
+        tokens = after_into.split()
+        if not tokens:
+            return SQLContext.INSERT_INTO
+
+        # We have at least a table name
+        if len(tokens) == 1 and prefix:
+            return SQLContext.INSERT_INTO
+
+        return SQLContext.INSERT_INTO
+
+    # ── UPDATE ──────────────────────────────────────────────────────
+
+    def _detect_update_context(
+        self, left_text: str, left_upper: str, prefix: str, update_pos: int
+    ) -> SQLContext:
+        after_update = left_text[update_pos:]
+
+        if self._is_inside_string_literal(after_update):
+            where_pos = left_upper.rfind("WHERE", update_pos)
+            if where_pos != -1 and self._is_inside_string_literal(left_text[where_pos:]):
+                return SQLContext.UPDATE_WHERE_STRING_LITERAL
+            return SQLContext.UPDATE_STRING_LITERAL
+
+        set_pos = left_upper.rfind(" SET ", update_pos)
+        where_pos = left_upper.rfind("WHERE", update_pos)
+        join_pos = left_upper.rfind("JOIN", update_pos)
+        on_pos = left_upper.rfind(" ON ", update_pos)
+
+        # WHERE clause
+        if where_pos != -1 and where_pos > max(set_pos, on_pos, -1):
+            after_where = left_text[where_pos + 5:]
+            after_where_stripped = after_where.strip()
+            if not after_where_stripped:
+                return SQLContext.UPDATE_WHERE_CONDITIONS
+            # After value (column op value) — suggest AND/OR
+            if self._is_after_complete_condition(after_where, prefix):
+                return SQLContext.UPDATE_WHERE_CONDITIONS
+            # After column — suggest operators
+            if self._is_after_column_name(after_where, prefix):
+                return SQLContext.UPDATE_WHERE_OPERATORS
+            return SQLContext.UPDATE_WHERE_CONDITIONS
+
+        # ON clause (JOIN)
+        if on_pos != -1 and on_pos > max(join_pos, -1) and set_pos == -1:
+            after_on = left_text[on_pos + 4:].strip()
+            if self._is_after_complete_join_condition(after_on, prefix):
+                return SQLContext.UPDATE_SET_CLAUSE
+            return SQLContext.UPDATE_JOIN_ON
+
+        # SET clause
+        if set_pos != -1:
+            after_set = left_text[set_pos + 5:].strip()
+            if not after_set:
+                return SQLContext.UPDATE_SET_COLUMNS
+            # After = operator
+            if re.search(r"=\s*$", after_set):
+                return SQLContext.UPDATE_SET_EXPRESSIONS
+            # After complete assignment (col = value) with trailing space
+            if self._is_after_complete_assignment(after_set, prefix):
+                if after_set.rstrip().endswith(","):
+                    return SQLContext.UPDATE_SET_COLUMNS
+                return SQLContext.UPDATE_WHERE_CLAUSE
+            # Column prefix
+            return SQLContext.UPDATE_SET_COLUMNS
+
+        # After UPDATE keyword — table name
+        after_update_keyword = left_text[update_pos + 6:].strip()
+        if not after_update_keyword:
+            return SQLContext.UPDATE_TABLE
+
+        # After table name — suggest SET or JOINs
+        tokens = after_update_keyword.split()
+        if len(tokens) >= 1 and not prefix:
+            if join_pos != -1 and join_pos > update_pos:
+                # After JOIN table — suggest ON or SET
+                after_join = left_text[join_pos + 4:].strip()
+                join_tokens = after_join.split()
+                if len(join_tokens) >= 1:
+                    return SQLContext.UPDATE_SET_CLAUSE
+                return SQLContext.UPDATE_TABLE
+            return SQLContext.UPDATE_SET_CLAUSE
+
+        return SQLContext.UPDATE_TABLE
+
+    # ── DELETE ──────────────────────────────────────────────────────
+
+    def _detect_delete_context(
+        self, left_text: str, left_upper: str, prefix: str, delete_pos: int
+    ) -> SQLContext:
+        after_delete = left_text[delete_pos:]
+
+        if self._is_inside_string_literal(after_delete):
+            return SQLContext.DELETE_WHERE_STRING_LITERAL
+
+        from_pos = left_upper.rfind("FROM", delete_pos)
+        where_pos = left_upper.rfind("WHERE", delete_pos)
+        using_pos = left_upper.rfind("USING", delete_pos)
+        join_pos = left_upper.rfind("JOIN", delete_pos)
+        on_pos = left_upper.rfind(" ON ", delete_pos)
+        in_pos = left_upper.rfind(" IN ", delete_pos)
+
+        # WHERE clause
+        if where_pos != -1 and where_pos > max(from_pos, using_pos, on_pos, -1):
+            after_where = left_text[where_pos + 5:]
+            after_where_stripped = after_where.strip()
+            if not after_where_stripped:
+                return SQLContext.DELETE_WHERE_CONDITIONS
+            # Check for IN ( subquery
+            if in_pos != -1 and in_pos > where_pos:
+                after_in = left_text[in_pos + 4:].strip()
+                if after_in.startswith("(") and after_in.count("(") > after_in.count(")"):
+                    return SQLContext.DELETE_SUBQUERY
+            # After complete condition
+            if self._is_after_complete_condition(after_where, prefix):
+                return SQLContext.DELETE_WHERE_CONDITIONS
+            # After = operator
+            if re.search(r"(?:=|!=|<>|<=|>=|<|>)\s*$", after_where):
+                return SQLContext.DELETE_WHERE_EXPRESSIONS
+            # After column name
+            if self._is_after_column_name(after_where, prefix):
+                return SQLContext.DELETE_WHERE_OPERATORS
+            return SQLContext.DELETE_WHERE_CONDITIONS
+
+        # ON clause (JOIN)
+        if on_pos != -1 and on_pos > max(join_pos, from_pos, -1):
+            after_on = left_text[on_pos + 4:].strip()
+            if self._is_after_complete_join_condition(after_on, prefix):
+                return SQLContext.DELETE_WHERE_CLAUSE
+            return SQLContext.DELETE_JOIN_ON
+
+        # USING clause
+        if using_pos != -1 and using_pos > max(from_pos, -1):
+            after_using = left_text[using_pos + 5:].strip()
+            if not after_using:
+                return SQLContext.DELETE_USING
+            # After USING table — suggest WHERE
+            tokens = after_using.split()
+            if len(tokens) >= 1 and not prefix:
+                return SQLContext.DELETE_WHERE_CLAUSE
+            return SQLContext.DELETE_USING
+
+        # FROM clause
+        if from_pos != -1 and from_pos > delete_pos:
+            after_from = left_text[from_pos + 4:].strip()
+            if not after_from:
+                return SQLContext.DELETE_FROM
+
+            # After table name
+            tokens = after_from.split()
+            if len(tokens) >= 1 and not prefix:
+                if join_pos != -1 and join_pos > from_pos:
+                    after_join = left_text[join_pos + 4:].strip()
+                    join_tokens = after_join.split()
+                    if len(join_tokens) >= 1:
+                        return SQLContext.DELETE_WHERE_CLAUSE
+                return SQLContext.DELETE_WHERE_CLAUSE
+            return SQLContext.DELETE_FROM
+
+        return SQLContext.DELETE_FROM
+
+    # ── Helpers for INSERT/UPDATE/DELETE ─────────────────────────────
+
+    @staticmethod
+    def _is_after_complete_condition(clause: str, prefix: str) -> bool:
+        if prefix:
+            return False
+        # Match: [word] operator value at end
+        return bool(re.search(
+            r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s*"
+            r"(?:=|!=|<>|<=|>=|<|>|LIKE|IN|BETWEEN)\s*"
+            r"(?:[A-Za-z_][A-Za-z0-9_]*|\d+|'[^']*'|\"[^\"]*\"|NULL|TRUE|FALSE|\w+\([^)]*\))\s*$",
+            clause,
+            re.IGNORECASE,
+        ))
+
+    @staticmethod
+    def _is_after_column_name(clause: str, prefix: str) -> bool:
+        if prefix:
+            return False
+        # Match: identifier at end (with optional qualifier), followed by space
+        return bool(re.search(
+            r"(?:(?:AND|OR)\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s+$",
+            clause,
+            re.IGNORECASE,
+        ))
+
+    @staticmethod
+    def _is_after_complete_assignment(clause: str, prefix: str) -> bool:
+        if prefix:
+            return False
+        return bool(re.search(
+            r"[A-Za-z_][A-Za-z0-9_]*\s*=\s*"
+            r"(?:[A-Za-z_][A-Za-z0-9_.]*|\d+|'[^']*'|\"[^\"]*\"|NULL|TRUE|FALSE|\w+\([^)]*\))\s*$",
+            clause,
+            re.IGNORECASE,
+        ))
+
+    @staticmethod
+    def _is_after_complete_join_condition(clause: str, prefix: str) -> bool:
+        if prefix:
+            return False
+        return bool(re.search(
+            r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s*"
+            r"(?:=|!=|<>|<=|>=|<|>)\s*"
+            r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*\s*$",
+            clause,
+            re.IGNORECASE,
+        ))
 
     def _is_after_join_table(self, left_text: str, prefix: str) -> bool:
         if prefix:
@@ -349,64 +666,6 @@ class ContextDetector:
 
         return table_name
 
-    def _extract_scope_from_select(
-        self, parsed: exp.Select, database: Optional[SQLDatabase]
-    ) -> QueryScope:
-        from_tables = []
-        join_tables = []
-        aliases = {}
-
-        if from_clause := parsed.args.get("from"):
-            if isinstance(from_clause, exp.From):
-                for table_exp in from_clause.find_all(exp.Table):
-                    table_name = table_exp.name
-                    alias = (
-                        table_exp.alias
-                        if hasattr(table_exp, "alias") and table_exp.alias
-                        else None
-                    )
-
-                    table_obj = (
-                        self._find_table_in_database(table_name, database)
-                        if database
-                        else None
-                    )
-                    ref = TableReference(name=table_name, alias=alias, table=table_obj)
-                    from_tables.append(ref)
-
-                    if alias:
-                        aliases[alias.lower()] = ref
-                    aliases[table_name.lower()] = ref
-
-        for join_exp in parsed.find_all(exp.Join):
-            if table_exp := join_exp.this:
-                if isinstance(table_exp, exp.Table):
-                    table_name = table_exp.name
-                    alias = (
-                        table_exp.alias
-                        if hasattr(table_exp, "alias") and table_exp.alias
-                        else None
-                    )
-
-                    table_obj = (
-                        self._find_table_in_database(table_name, database)
-                        if database
-                        else None
-                    )
-                    ref = TableReference(name=table_name, alias=alias, table=table_obj)
-                    join_tables.append(ref)
-
-                    if alias:
-                        aliases[alias.lower()] = ref
-                    aliases[table_name.lower()] = ref
-
-        return QueryScope(
-            from_tables=from_tables,
-            join_tables=join_tables,
-            current_table=None,
-            aliases=aliases,
-        )
-
     def _extract_scope_from_text(
         self, text: str, database: Optional[SQLDatabase]
     ) -> QueryScope:
@@ -449,13 +708,37 @@ class ContextDetector:
         }
 
         join_pattern = re.compile(
-            r"\bJOIN\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*(?:\bON\b|\bUSING\b|$)",
+            r"\bJOIN\s+(" + self._table_name_pattern + r")\s*(?:(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?\s*(?:\bON\b|\bUSING\b|$)",
             re.IGNORECASE,
         )
 
         from_tables = []
         join_tables = []
         aliases = {}
+
+        # Extract UPDATE target table into scope (only for UPDATE statements)
+        update_match = re.match(
+            r"\s*UPDATE\s+(" + self._table_name_pattern + r")"
+            r"(?:\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?",
+            main_text,
+            re.IGNORECASE,
+        )
+        if update_match:
+            table_name = update_match.group(1)
+            alias = update_match.group(2) if update_match.group(2) else None
+            if alias and alias.upper() in sql_keywords:
+                alias = None
+            if table_name.upper() not in sql_keywords:
+                table_obj = (
+                    self._find_table_in_database(table_name, database)
+                    if database
+                    else None
+                )
+                ref = TableReference(name=table_name, alias=alias, table=table_obj)
+                from_tables.append(ref)
+                if alias:
+                    aliases[alias.lower()] = ref
+                aliases[table_name.lower()] = ref
 
         for table_name, alias, projected_columns in self._extract_from_table_tokens(
             main_text
@@ -550,7 +833,7 @@ class ContextDetector:
 
             if not (
                 table_match := re.match(
-                    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s+[A-Za-z_][A-Za-z0-9_]*)?$",
+                    r"(?P<table>" + ContextDetector._table_name_pattern + r")(?:\s+(?:AS\s+)?(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s+[A-Za-z_][A-Za-z0-9_]*)?$",
                     part,
                     re.IGNORECASE,
                 )
@@ -685,58 +968,18 @@ class ContextDetector:
     def _find_table_in_database(
         self, table_name: str, database: SQLDatabase
     ) -> Optional[SQLTable]:
+        table_name_candidate = table_name.split(".")[-1]
+        normalized_candidate = self._normalize_identifier(table_name_candidate)
+        normalized_full_name = self._normalize_identifier(table_name)
         try:
             for table in database.tables:
-                if table.name.lower() == table_name.lower():
+                if table.name.lower() == normalized_full_name.lower():
+                    return table
+                if table.name.lower() == normalized_candidate.lower():
                     return table
         except Exception:
             pass
         return None
-
-    def _is_in_where(self, text: str) -> bool:
-        upper = text.upper()
-        where_pos = upper.rfind("WHERE")
-        if where_pos == -1:
-            return False
-
-        after_where = upper[where_pos:]
-        return (
-            "ORDER BY" not in after_where
-            and "GROUP BY" not in after_where
-            and "LIMIT" not in after_where
-        )
-
-    def _is_after_from(self, text: str) -> bool:
-        upper = text.upper()
-        from_pos = upper.rfind("FROM")
-        if from_pos == -1:
-            return False
-
-        after_from = upper[from_pos + 4 :].strip()
-        return len(after_from) == 0 or (
-            len(after_from) > 0 and after_from[-1] in [" ", "\n", "\t"]
-        )
-
-    def _is_after_on(self, text: str) -> bool:
-        upper = text.upper()
-        on_pos = upper.rfind(" ON ")
-        if on_pos == -1:
-            return False
-
-        after_on = upper[on_pos + 4 :].strip()
-        return len(after_on) == 0 or (
-            len(after_on) > 0
-            and not after_on.endswith(("WHERE", "ORDER", "GROUP", "LIMIT"))
-        )
-
-    def _is_after_order_by(self, text: str) -> bool:
-        upper = text.upper()
-        order_by_pos = upper.rfind("ORDER BY")
-        if order_by_pos == -1:
-            return False
-
-        after_order_by = upper[order_by_pos + 8 :].strip()
-        return "LIMIT" not in after_order_by
 
     def _is_after_limit_number(
         self, left_text: str, limit_pos: int, prefix: str
@@ -794,24 +1037,3 @@ class ContextDetector:
             return True
         return False
 
-    def _is_after_group_by(self, text: str) -> bool:
-        upper = text.upper()
-        group_by_pos = upper.rfind("GROUP BY")
-        if group_by_pos == -1:
-            return False
-
-        after_group_by = upper[group_by_pos + 8 :].strip()
-        return (
-            "HAVING" not in after_group_by
-            and "ORDER BY" not in after_group_by
-            and "LIMIT" not in after_group_by
-        )
-
-    def _is_in_having(self, text: str) -> bool:
-        upper = text.upper()
-        having_pos = upper.rfind("HAVING")
-        if having_pos == -1:
-            return False
-
-        after_having = upper[having_pos:]
-        return "ORDER BY" not in after_having and "LIMIT" not in after_having

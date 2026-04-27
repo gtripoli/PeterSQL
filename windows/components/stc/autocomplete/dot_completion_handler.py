@@ -11,7 +11,21 @@ from structures.engines.database import SQLDatabase, SQLTable
 
 
 class DotCompletionHandler:
-    _token_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+    _identifier_segment_pattern = (
+        r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`|\"[^\"]+\"|\[[^\]]+\])"
+    )
+    _token_pattern = re.compile(_identifier_segment_pattern)
+
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        normalized = identifier.strip()
+        if not normalized:
+            return normalized
+
+        if normalized[0] in {'`', '"', '['} and normalized[-1] in {'`', '"', ']'}:
+            return normalized[1:-1]
+
+        return normalized
 
     def __init__(self, database: Optional[SQLDatabase], scope: Optional[object] = None):
         self._database = database
@@ -63,6 +77,8 @@ class DotCompletionHandler:
 
         if not table_or_alias:
             return None, ""
+
+        table_or_alias = self._normalize_identifier(table_or_alias)
 
         table = self._find_table(table_or_alias)
         if not table:
@@ -116,9 +132,13 @@ class DotCompletionHandler:
             try:
                 for ref in self._scope.from_tables + self._scope.join_tables:
                     if ref.table:
-                        self._table_index[ref.name.lower()] = ref.table
+                        ref_name = self._normalize_identifier(ref.name).lower()
+                        self._table_index[ref_name] = ref.table
+                        if "." in ref_name:
+                            self._table_index[ref_name.split(".")[-1]] = ref.table
                         if ref.alias:
-                            self._table_index[ref.alias.lower()] = ref.table
+                            alias_name = self._normalize_identifier(ref.alias).lower()
+                            self._table_index[alias_name] = ref.table
             except (AttributeError, TypeError):
                 pass
 
@@ -127,8 +147,13 @@ class DotCompletionHandler:
 
         try:
             for table in self._database.tables:
-                if table.name.lower() not in self._table_index:
-                    self._table_index[table.name.lower()] = table
+                table_name = self._normalize_identifier(table.name).lower()
+                if table_name not in self._table_index:
+                    self._table_index[table_name] = table
+                if "." in table_name:
+                    base_name = table_name.split(".")[-1]
+                    if base_name not in self._table_index:
+                        self._table_index[base_name] = table
         except (AttributeError, TypeError):
             pass
 

@@ -13,6 +13,8 @@ class TestMariaDBContextReliability:
             username="root",
             password="secret",
             port=3306,
+            connect_timeout=4,
+            compressed_protocol=True,
         )
         connection = Connection(
             id=1,
@@ -41,9 +43,11 @@ class TestMariaDBContextReliability:
         context.connect(connect_timeout=1)
 
         assert len(calls) == 2
+        assert calls[0]["connect_timeout"] == 1
+        assert calls[0]["compress"] is True
         assert "ssl" not in calls[0]
         assert "ssl" in calls[1]
-        assert connection.configuration.use_tls_enabled is True
+        assert connection.configuration.use_tls is True
 
 
 @pytest.mark.integration

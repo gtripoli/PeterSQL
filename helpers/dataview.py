@@ -26,16 +26,13 @@ class ColumnField(NamedTuple):
         return self.get_value(args[0]) is not None
 
 
-class AbstractBaseDataModel():
+class BaseDataModel():
     def __init__(self, column_count: Optional[int] = None):
         self._data: list[Any] = []
-        self._observable: Union[ObservableList, ObservableLazyList] = None
-
         self._column_count = column_count
 
     def load(self, data: list[Any]):
-        if data:
-            self._data = data.copy()
+        self._data = data
 
     def filter(self, data: list[Any]):
         if data:
@@ -59,7 +56,7 @@ class AbstractBaseDataModel():
 
         return index
 
-    def move(self, data: Any, current: int, future: int) -> (int, int):
+    def move(self, data: Any, current: int, future: int) -> tuple[int, int]:
         self._data[current], self._data[future] = self._data[future], self._data[current]
 
         return current, future
@@ -93,100 +90,201 @@ class AbstractBaseDataModel():
     def get_item_by_filters(self, **filters):
         return next((d for d in self._data if all(hasattr(d, k) and getattr(d, k) == v for k, v in filters.items())), None)
 
+    data = property(lambda self: self._data, lambda self, *args: None, lambda self: None)
+
+
+class _DataViewListValueMixin:
+    def _get_column_fields(self):
+        return getattr(self, "MAP_COLUMN_FIELDS", None)
+
+    def get_data_by_item(self, item: wx.dataview.DataViewItem):
+        return self.get_data_by_row(self.GetRow(item))
+
+    def clear(self):
+        super().clear()
+        self.Reset(0)
+        self.Cleared()
+
+    def GetColumnCount(self) -> int:
+        fields = self._get_column_fields()
+        if fields:
+            return len(fields)
+
+        return self._column_count
+
+    def GetValueByRow(self, row, col):
+        if not self.data or row >= len(self.data):
+            return None
+
+        field = self.get_data_by_row(row)
+
+        # if fields := self._get_column_fields():
+        #     return fields[col].get_value(self.get_data_by_row(row))
+
+        # return self.get_data_by_row(row)[col]
+
+        if self._get_column_fields():
+            return self._get_column_fields()[col].get_value(field)
+
+    # def GetValueByRow(self, row, col):
+    #     if not len(self.data):
+    #         return None
+    #
+    #     table: SQLTable = self.get_data_by_row(row)
+    #
+    #     return self.MAP_COLUMN_FIELDS[col].get_value(table)
+
+    def HasValue(self, item, col):
+        if not self.data:
+            return False
+
+        if fields := self._get_column_fields():
+            return fields[col].has_value(self.get_data_by_item(item))
+
+        # print(self.get_data_by_item(item), col)
+        # return getattr(self.get_data_by_item(item), col, None) is not None
+        return self.get_data_by_item(item) is not None
+
+
+class BaseDataViewListModel(_DataViewListValueMixin, BaseDataModel, wx.dataview.DataViewIndexListModel):
+    def __init__(self, column_count: Optional[int] = None):
+        BaseDataModel.__init__(self, column_count)
+        wx.dataview.DataViewIndexListModel.__init__(self)
+
+    def load(self, data: list[Any]):
+        self.clear()
+
+        BaseDataModel.load(self, data)
+
+        self.Reset(len(self._data))
+
+    def append(self, data: Any) -> wx.dataview.DataViewItem:
+        index = BaseDataModel.append(self, data)
+
+        self.RowAppended()
+
+        return self.GetItem(index)
+
+    def insert(self, data: Any, index: int) -> wx.dataview.DataViewItem:
+        index = BaseDataModel.insert(self, data, index)
+
+        self.RowInserted(index)
+
+        return self.GetItem(index)
+
+    def remove(self, data: Any) -> bool:
+        index = BaseDataModel.remove(self, data)
+
+        self.RowDeleted(index)
+
+        self.Reset(len(self._data))
+
+        return True
+
+    def replace(self, data: Any, index: int) -> bool:
+        index = BaseDataModel.replace(self, data, index)
+
+        self.RowChanged(index)
+
+        return True
+
+    def move(self, data: Any, current: int, future: int) -> bool:
+        BaseDataModel.move(self, data, current, future)
+
+        self.RowChanged(current)
+        self.RowChanged(future)
+
+        return True
+
+
+class BaseObservableDataModel(BaseDataModel):
+    def __init__(self, column_count: Optional[int] = None):
+        super().__init__(column_count)
+        self._observable: Union[ObservableList, ObservableLazyList]
+
+    def load(self, data: list[Any]):
+        super().load(data.copy())
+
     @abc.abstractmethod
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
         raise NotImplementedError
 
-    data = property(lambda self: self._data, lambda self, *args: None, lambda self: None)
+    def _set_observable_handlers(
+            self,
+            observable: Union[ObservableList, ObservableLazyList],
+            on_load: Callable,
+            handlers: dict[CallbackEvent, Callable],
+    ):
+        self._observable = observable
+        self._observable.subscribe(on_load)
+
+        for event, handler in handlers.items():
+            self._observable.subscribe(handler, callback_event=event)
 
 
-class BaseDataViewTreeModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
+class BaseObservableDataViewTreeModel(BaseObservableDataModel, wx.dataview.PyDataViewModel):
     def __init__(self, column_count: Optional[int] = None):
-        AbstractBaseDataModel.__init__(self, column_count)
+        BaseObservableDataModel.__init__(self, column_count)
         wx.dataview.PyDataViewModel.__init__(self)
 
     def _load(self, data: list[Any]):
         self.clear()
-        AbstractBaseDataModel.load(self, data)
+        BaseObservableDataModel.load(self, data)
         self.Cleared()
+
+    def _apply_tree_update(self, data: Any, deleted: bool = False) -> wx.dataview.DataViewItem:
+        item = self.ObjectToItem(data)
+        if item.IsOk():
+            if deleted:
+                self.ItemDeleted(wx.dataview.NullDataViewItem, item)
+            else:
+                self.ItemAdded(wx.dataview.NullDataViewItem, item)
+
+        self.Cleared()
+
+        return item
 
     def _append(self, data: Any) -> wx.dataview.DataViewItem:
-        AbstractBaseDataModel.append(self, data)
-
-        item = self.ObjectToItem(data)
-
-        if item.IsOk():
-            self.ItemAdded(wx.dataview.NullDataViewItem, item)
-
-        self.Cleared()
-
-        return item
+        BaseObservableDataModel.append(self, data)
+        return self._apply_tree_update(data)
 
     def _replace(self, data: Any, index: int) -> wx.dataview.DataViewItem:
-        AbstractBaseDataModel.replace(self, data, index)
-
-        item = self.ObjectToItem(data)
-
-        if item.IsOk():
-            self.ItemAdded(wx.dataview.NullDataViewItem, item)
-
-        self.Cleared()
-
-        return item
+        BaseObservableDataModel.replace(self, data, index)
+        return self._apply_tree_update(data)
 
     def _insert(self, data: Any, index: int) -> wx.dataview.DataViewItem:
-        AbstractBaseDataModel.insert(self, data, index)
-
-        item = self.ObjectToItem(data)
-
-        if item.IsOk():
-            self.ItemAdded(wx.dataview.NullDataViewItem, item)
-
-        self.Cleared()
-
-        return item
+        BaseObservableDataModel.insert(self, data, index)
+        return self._apply_tree_update(data)
 
     def _remove(self, data: Any) -> wx.dataview.DataViewItem:
-        AbstractBaseDataModel.remove(self, data)
-
-        item = self.ObjectToItem(data)
-
-        if item.IsOk():
-            self.ItemDeleted(wx.dataview.NullDataViewItem, item)
-
-        self.Cleared()
-
-        return item
+        BaseObservableDataModel.remove(self, data)
+        return self._apply_tree_update(data, deleted=True)
 
     def _pop(self, data: Any):
-        AbstractBaseDataModel.pop(self, data)
-
-        item = self.ObjectToItem(data)
-
-        if item.IsOk():
-            self.ItemDeleted(wx.dataview.NullDataViewItem, item)
-
-        self.Cleared()
-
-        return item
+        BaseObservableDataModel.pop(self, data)
+        return self._apply_tree_update(data, deleted=True)
 
     def _filter(self, data: Any):
         self.clear()
-        AbstractBaseDataModel.filter(self, data)
+        BaseObservableDataModel.filter(self, data)
         self.Cleared()
 
     def find(self, resolution: Callable[[Any], bool]) -> Optional[Any]:
         return next((v for v in self._data if resolution(v)), None)
 
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
-        self._observable = observable
-        self._observable.subscribe(self._load)
-        self._observable.subscribe(self._append, callback_event=CallbackEvent.ON_APPEND)
-        self._observable.subscribe(self._replace, callback_event=CallbackEvent.ON_REPLACE)
-        self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
-        self._observable.subscribe(self._remove, callback_event=CallbackEvent.ON_REMOVE)
-        self._observable.subscribe(self._pop, callback_event=CallbackEvent.ON_POP)
-        self._observable.subscribe(self._filter, callback_event=CallbackEvent.ON_FILTER)
+        self._set_observable_handlers(
+            observable,
+            self._load,
+            {
+                CallbackEvent.ON_APPEND: self._append,
+                CallbackEvent.ON_REPLACE: self._replace,
+                CallbackEvent.ON_INSERT: self._insert,
+                CallbackEvent.ON_REMOVE: self._remove,
+                CallbackEvent.ON_POP: self._pop,
+                CallbackEvent.ON_FILTER: self._filter,
+            },
+        )
 
     def clear(self):
         super().clear()
@@ -202,33 +300,33 @@ class BaseDataViewTreeModel(AbstractBaseDataModel, wx.dataview.PyDataViewModel):
         return "string"
 
 
-class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexListModel):
+class BaseObservableDataViewListModel(_DataViewListValueMixin, BaseObservableDataModel, wx.dataview.DataViewIndexListModel):
     def __init__(self, column_count: Optional[int] = None):
-        AbstractBaseDataModel.__init__(self, column_count)
+        BaseObservableDataModel.__init__(self, column_count)
         wx.dataview.DataViewIndexListModel.__init__(self)
 
     def _load(self, data: list[Any]):
         self.clear()
-        AbstractBaseDataModel.load(self, data)
+        BaseObservableDataModel.load(self, data)
 
         self.Reset(len(self._data))
 
     def _append(self, data: Any) -> wx.dataview.DataViewItem:
-        index = AbstractBaseDataModel.append(self, data)
+        index = BaseObservableDataModel.append(self, data)
 
         self.RowAppended()
 
         return self.GetItem(index)
 
     def _insert(self, data: Any, index: int) -> wx.dataview.DataViewItem:
-        index = AbstractBaseDataModel.insert(self, data, index)
+        index = BaseObservableDataModel.insert(self, data, index)
 
         self.RowInserted(index)
 
         return self.GetItem(index)
 
     def _remove(self, data: Any) -> bool:
-        index = AbstractBaseDataModel.remove(self, data)
+        index = BaseObservableDataModel.remove(self, data)
 
         self.RowDeleted(index)
 
@@ -237,14 +335,14 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
         return True
 
     def _replace(self, data: Any, index: int) -> bool:
-        index = AbstractBaseDataModel.replace(self, data, index)
+        index = BaseObservableDataModel.replace(self, data, index)
 
         self.RowChanged(index)
 
         return True
 
     def _move(self, data: Any, current: int, future: int) -> bool:
-        AbstractBaseDataModel.move(self, data, current, future)
+        BaseObservableDataModel.move(self, data, current, future)
 
         self.RowChanged(current)
         self.RowChanged(future)
@@ -252,46 +350,13 @@ class BaseDataViewListModel(AbstractBaseDataModel, wx.dataview.DataViewIndexList
         return True
 
     def set_observable(self, observable: Union[ObservableList, ObservableLazyList]):
-        self._observable = observable
-        self._observable.subscribe(self._load)
-        self._observable.subscribe(self._append, callback_event=CallbackEvent.ON_APPEND)
-        self._observable.subscribe(self._insert, callback_event=CallbackEvent.ON_INSERT)
-        self._observable.subscribe(self._remove, callback_event=CallbackEvent.ON_REMOVE)
-        self._observable.subscribe(self._move, callback_event=CallbackEvent.ON_MOVE)
-
-    def get_data_by_item(self, item: wx.dataview.DataViewItem):
-        row = self.GetRow(item)
-
-        return self.get_data_by_row(row)
-
-    def clear(self):
-        AbstractBaseDataModel.clear(self)
-        self.Reset(0)
-        self.Cleared()
-
-    def GetColumnCount(self) -> int:
-        if hasattr(self, "MAP_COLUMN_FIELDS"):
-            return len(self.MAP_COLUMN_FIELDS.keys())
-
-        return self._column_count
-
-    def GetValueByRow(self, row, col):
-        if not self.data:
-            return ""
-
-        if row >= len(self.data):
-            return ""
-
-        if not hasattr(self, "MAP_COLUMN_FIELDS"):
-            return ""
-
-        return self.MAP_COLUMN_FIELDS[col].get_value(self.get_data_by_row(row))
-
-    def HasValue(self, item, col):
-        if not self.data:
-            return False
-
-        if not hasattr(self, "MAP_COLUMN_FIELDS"):
-            return True
-
-        return self.MAP_COLUMN_FIELDS[col].has_value(self.get_data_by_item(item))
+        self._set_observable_handlers(
+            observable,
+            self._load,
+            {
+                CallbackEvent.ON_APPEND: self._append,
+                CallbackEvent.ON_INSERT: self._insert,
+                CallbackEvent.ON_REMOVE: self._remove,
+                CallbackEvent.ON_MOVE: self._move,
+            },
+        )

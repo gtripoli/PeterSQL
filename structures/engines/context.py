@@ -33,6 +33,8 @@ SQL_SAFE_NAME_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 class AbstractContext(abc.ABC):
+    """Base context API for SQL engines."""
+
     _connection: Any = None
     _cursor: Any = None
     _ssh_tunnel: Optional[SSHTunnel] = None
@@ -43,6 +45,8 @@ class AbstractContext(abc.ABC):
     DATATYPE: StandardDataType
     INDEXTYPE: StandardIndexType
     COLLATIONS: dict[str, str] = {}
+    ROW_FORMATS: list[str] = []
+    server_version: str = ""
 
     IDENTIFIER_QUOTE_CHAR: str = '"'
     DEFAULT_STATEMENT_SEPARATOR: str = ";"
@@ -50,32 +54,29 @@ class AbstractContext(abc.ABC):
     databases: ObservableLazyList[SQLDatabase]
 
     def __init__(self, connection: Connection):
+        """Initialize the context with the selected connection."""
         self.connection = connection
 
         self.databases = ObservableLazyList(self.get_databases)
 
     def __del__(self):
+        """Ensure resources are released during object destruction."""
         with contextlib.suppress(Exception):
             self.disconnect()
 
     def before_connect(self, *args, **kwargs):
+        """Prepare transport details before opening the DB connection."""
         # SSH tunnel support via connection configuration
         if hasattr(self.connection, "ssh_tunnel") and self.connection.ssh_tunnel:
             ssh_config = self.connection.ssh_tunnel
             if not ssh_config.is_enabled:
                 return
 
-            base_host = getattr(self, "_base_host", getattr(self, "host", "127.0.0.1"))
-            base_port = getattr(self, "_base_port", getattr(self, "port", 0))
-            self._base_host = base_host
-            self._base_port = base_port
+            self._base_host = getattr(self, "_base_host", getattr(self, "host", "127.0.0.1"))
+            self._base_port = getattr(self, "_base_port", getattr(self, "port", 0))
 
-            remote_host = getattr(ssh_config, "remote_host", None) or getattr(
-                self, "_base_host", "127.0.0.1"
-            )
-            remote_port = int(
-                getattr(ssh_config, "remote_port", 0) or getattr(self, "_base_port", 0)
-            )
+            remote_host = getattr(ssh_config, "remote_host", None) or self._base_host
+            remote_port = int(getattr(ssh_config, "remote_port", 0) or self._base_port)
             local_port = int(getattr(ssh_config, "local_port", 0) or 0)
             logger.debug(
                 "Preparing DB SSH tunnel: connection=%s engine=%s base=%s:%s remote=%s:%s requested_local_port=%s",
@@ -110,9 +111,11 @@ class AbstractContext(abc.ABC):
             )
 
     def after_connect(self, *args, **kwargs):
+        """Run engine-specific setup right after a successful connection."""
         pass
 
     def before_disconnect(self, *args, **kwargs):
+        """Release pre-disconnect resources and restore base host settings."""
         if self._ssh_tunnel is not None:
             logger.debug(
                 "Stopping DB SSH tunnel for connection=%s",
@@ -128,10 +131,12 @@ class AbstractContext(abc.ABC):
             self.port = self._base_port
 
     def after_disconnect(self):
+        """Run engine-specific cleanup after disconnection."""
         pass
 
     @staticmethod
     def _extract_spec_names(values: Any) -> list[str]:
+        """Extract normalized names from spec values."""
         if not isinstance(values, list):
             return []
 
@@ -149,6 +154,7 @@ class AbstractContext(abc.ABC):
 
     @staticmethod
     def _load_yaml_file(path: str) -> dict[str, Any]:
+        """Load a YAML file from the project workspace."""
         file_path = WORKDIR / path
         if not file_path.exists():
             return {}
@@ -163,8 +169,9 @@ class AbstractContext(abc.ABC):
 
     @staticmethod
     def _merge_spec_values(
-        base_values: list[str], add_values: list[str], remove_values: list[str]
+            base_values: list[str], add_values: list[str], remove_values: list[str]
     ) -> list[str]:
+        """Merge additions and removals into a base vocabulary list."""
         removed = {value.upper() for value in remove_values}
         merged = [value for value in base_values if value.upper() not in removed]
 
@@ -179,6 +186,7 @@ class AbstractContext(abc.ABC):
 
     @staticmethod
     def _extract_major(version: Optional[str]) -> str:
+        """Extract the first numeric major version from a version string."""
         if not version:
             return ""
 
@@ -189,13 +197,14 @@ class AbstractContext(abc.ABC):
 
     @staticmethod
     def _select_version_spec(
-        versions_map: dict[str, Any], major_version: str
+            versions_map: dict[str, Any], major_version: str
     ) -> dict[str, Any]:
+        """Select the most suitable version spec for a target major version."""
         if not versions_map:
             return {}
 
         if major_version in versions_map and isinstance(
-            versions_map[major_version], dict
+                versions_map[major_version], dict
         ):
             return versions_map[major_version]
 
@@ -223,8 +232,9 @@ class AbstractContext(abc.ABC):
         return selected_spec
 
     def get_engine_vocabulary(
-        self, engine: str, server_version: Optional[str]
+            self, engine: str, server_version: Optional[str]
     ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """Build engine keywords and functions from shared and engine specs."""
         global_spec = self._load_yaml_file("structures/engines/specification.yaml")
         engine_spec = self._load_yaml_file(
             f"structures/engines/{engine}/specification.yaml"
@@ -280,16 +290,19 @@ class AbstractContext(abc.ABC):
 
     @property
     def is_connected(self):
+        """Return True when both connection and cursor are available."""
         return self._connection is not None and self._cursor is not None
 
     @property
     def cursor(self) -> Any:
+        """Return the active cursor or raise when not connected."""
         if self._cursor is None:
             raise RuntimeError("Not connected to the database. Call connect() first.")
         return self._cursor
 
     @staticmethod
     def get_temporary_id(container: list[SQLTypeAlias]) -> int:
+        """Generate a temporary negative identifier for new objects."""
         return min([0] + [t.id for t in container]) - 1
 
     @abc.abstractmethod
@@ -299,126 +312,154 @@ class AbstractContext(abc.ABC):
 
     @abc.abstractmethod
     def set_database(self, database: SQLDatabase) -> None:
+        """Select the active database for subsequent operations."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_server_version(self) -> str:
+        """Return the database server version string."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_server_uptime(self) -> Optional[int]:
+        """Return the server uptime in seconds when available."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_databases(self) -> list[SQLDatabase]:
+        """Return all databases visible to the current connection."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_views(self, database: SQLDatabase) -> list[SQLView]:
+        """Return views for the given database."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_triggers(self, database: SQLDatabase) -> list[SQLTrigger]:
+        """Return triggers for the given database."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_tables(self, database: SQLDatabase) -> list[SQLTable]:
+        """Return tables for the given database."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_columns(self, table: SQLTable) -> list[SQLColumn]:
+        """Return columns for the given table."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_indexes(self, table: SQLTable) -> list[SQLIndex]:
+        """Return indexes for the given table."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_foreign_keys(self, table: SQLTable) -> list[SQLForeignKey]:
+        """Return foreign keys for the given table."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_table(
-        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+            self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLTable:
+        """Build a new in-memory table model with default values."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_column(
-        self,
-        table: SQLTable,
-        datatype: SQLDataType,
-        /,
-        name: Optional[str] = None,
-        **default_values,
+            self,
+            table: SQLTable,
+            datatype: SQLDataType,
+            /,
+            name: Optional[str] = None,
+            **default_values,
     ) -> SQLColumn:
+        """Build a new in-memory column model with default values."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_index(
-        self,
-        table: SQLTable,
-        indextype: SQLIndexType,
-        columns: list[str],
-        /,
-        name: Optional[str] = None,
-        **default_values,
+            self,
+            table: SQLTable,
+            indextype: SQLIndexType,
+            columns: list[str],
+            /,
+            name: Optional[str] = None,
+            **default_values,
     ) -> SQLIndex:
+        """Build a new in-memory index model with default values."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_check(
-        self,
-        table: SQLTable,
-        /,
-        name: Optional[str] = None,
-        expression: Optional[str] = None,
-        **default_values,
+            self,
+            table: SQLTable,
+            /,
+            name: Optional[str] = None,
+            expression: Optional[str] = None,
+            **default_values,
     ) -> SQLCheck:
+        """Build a new in-memory check constraint model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_foreign_key(
-        self,
-        table: SQLTable,
-        columns: list[str],
-        /,
-        name: Optional[str] = None,
-        **default_values,
+            self,
+            table: SQLTable,
+            columns: list[str],
+            /,
+            name: Optional[str] = None,
+            **default_values,
     ) -> SQLForeignKey:
+        """Build a new in-memory foreign key model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_record(
-        self, table: SQLTable, /, *, values: dict[str, Any]
+            self, table: SQLTable, /, *, values: dict[str, Any]
     ) -> SQLRecord:
+        """Build a new in-memory record model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_view(
-        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+            self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLView:
+        """Build a new in-memory view model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_function(
-        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+            self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> "SQLFunction":
+        """Build a new in-memory function model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_procedure(
-        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+            self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> "SQLProcedure":
+        """Build a new in-memory procedure model."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def build_empty_trigger(
-        self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
+            self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLTrigger:
+        """Build a new in-memory trigger model."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_result_column_datatypes(
+            self, cursor: Any
+    ) -> list[Optional[SQLDataType]]:
+        """Infer SQL data types for result columns from a driver cursor."""
         raise NotImplementedError
 
     def quote_identifier(self, name: str) -> str:
+        """Quote an SQL identifier only when needed."""
         value = name.strip()
         if not value:
             assert False, "Invalid identifier name: %s" % name
@@ -432,18 +473,20 @@ class AbstractContext(abc.ABC):
         return f"{self.IDENTIFIER_QUOTE_CHAR}{escaped_name}{self.IDENTIFIER_QUOTE_CHAR}"
 
     def qualify(self, *parts):
+        """Build a qualified SQL identifier from multiple parts."""
         return ".".join(self.quote_identifier(part) for part in parts)
 
     def get_records(
-        self,
-        table: SQLTable,
-        /,
-        *,
-        filters: Optional[str] = None,
-        limit: int = 1000,
-        offset: int = 0,
-        orders: Optional[str] = None,
+            self,
+            table: SQLTable,
+            /,
+            *,
+            filters: Optional[str] = None,
+            limit: int = 1000,
+            offset: int = 0,
+            orders: Optional[str] = None,
     ) -> list[dict[str, Any]]:
+        """Fetch records from a table using optional filtering and pagination."""
         logger.debug(f"get records for table={table.name}")
         QUERY_LOGS.append(f"/* get_records for table={table.name} */")
         if table is None or table.is_new:
@@ -479,6 +522,7 @@ class AbstractContext(abc.ABC):
 
     # EXECUTION
     def execute(self, query: str) -> bool:
+        """Execute a SQL query and append it to query logs."""
         query_clean = re.sub(r"\s+", " ", str(query)).strip()
         logger.debug("execute query: %s", query_clean)
         QUERY_LOGS.append(query_clean)
@@ -493,6 +537,7 @@ class AbstractContext(abc.ABC):
         return True
 
     def fetchone(self) -> Any:
+        """Fetch a single row from the active cursor."""
         try:
             return self.cursor.fetchone()
         except Exception as ex:
@@ -500,6 +545,7 @@ class AbstractContext(abc.ABC):
             raise
 
     def fetchall(self) -> list[Any]:
+        """Fetch all rows from the active cursor."""
         try:
             return self.cursor.fetchall()
         except Exception as ex:
@@ -507,6 +553,7 @@ class AbstractContext(abc.ABC):
             raise
 
     def disconnect(self) -> None:
+        """Close cursor and connection resources safely."""
         self.before_disconnect()
 
         if self._cursor is not None:
@@ -523,6 +570,7 @@ class AbstractContext(abc.ABC):
 
     @contextlib.contextmanager
     def transaction(self):
+        """Provide a simple BEGIN/COMMIT/ROLLBACK transaction scope."""
         try:
             self.execute("BEGIN")
             yield self

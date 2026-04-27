@@ -1,0 +1,438 @@
+{
+  "group": "DELETE",
+  "cases": [
+    {
+      "case_id": "DELETE_001",
+      "title": "DELETE FROM without prefix suggests tables",
+      "sql": "DELETE FROM |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_FROM",
+        "prefix": null,
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_002",
+      "title": "DELETE FROM with prefix filters tables",
+      "sql": "DELETE FROM u|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "DELETE_FROM",
+        "prefix": "u",
+        "suggestions": [
+          "users",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_003",
+      "title": "DELETE FROM table suggests WHERE",
+      "sql": "DELETE FROM users |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "WHERE",
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "USING",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_004",
+      "title": "DELETE FROM table WHERE suggests columns",
+      "sql": "DELETE FROM users WHERE |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_CONDITIONS",
+        "prefix": null,
+        "suggestions": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "created_at",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_005",
+      "title": "DELETE FROM table WHERE with column prefix filters columns",
+      "sql": "DELETE FROM users WHERE e|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "DELETE_WHERE_CONDITIONS",
+        "prefix": "e",
+        "suggestions": [
+          "email"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_006",
+      "title": "DELETE FROM table WHERE column suggests operators",
+      "sql": "DELETE FROM users WHERE id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_OPERATORS",
+        "prefix": null,
+        "suggestions": [
+          "=",
+          "!=",
+          "<>",
+          ">",
+          "<",
+          ">=",
+          "<=",
+          "IS",
+          "IS NOT",
+          "IN",
+          "NOT IN",
+          "LIKE",
+          "NOT LIKE",
+          "BETWEEN",
+          "NOT BETWEEN",
+          "AND",
+          "OR"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_007",
+      "title": "DELETE FROM table WHERE column = suggests expressions",
+      "sql": "DELETE FROM users WHERE id = |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_EXPRESSIONS",
+        "prefix": null,
+        "suggestions": [
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_008",
+      "title": "DELETE FROM table WHERE column = value suggests AND/OR",
+      "sql": "DELETE FROM users WHERE id = 1 |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_CONDITIONS",
+        "prefix": null,
+        "suggestions": [
+          "AND",
+          "OR",
+          "LIMIT",
+          "ORDER BY",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_009",
+      "title": "DELETE with JOIN suggests ON",
+      "sql": "DELETE users FROM users u JOIN orders o ON |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_JOIN_ON",
+        "prefix": null,
+        "suggestions": [
+          "u.id",
+          "u.name",
+          "u.email",
+          "u.status",
+          "u.created_at",
+          "o.id",
+          "o.user_id",
+          "o.total",
+          "o.status",
+          "o.created_at",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_010",
+      "title": "DELETE with JOIN ON condition suggests WHERE",
+      "sql": "DELETE users FROM users u JOIN orders o ON u.id = o.user_id |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "WHERE",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_011",
+      "title": "DELETE FROM table USING suggests tables",
+      "sql": "DELETE FROM users USING |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_USING",
+        "prefix": null,
+        "suggestions": [
+          "carts",
+          "customers",
+          "inventory",
+          "items",
+          "orders",
+          "orders_archive",
+          "payments",
+          "products",
+          "user_sessions"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_012",
+      "title": "DELETE FROM table USING table suggests WHERE",
+      "sql": "DELETE FROM users USING orders |",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_CLAUSE",
+        "prefix": null,
+        "suggestions": [
+          "WHERE",
+          "JOIN",
+          "INNER JOIN",
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "CROSS JOIN",
+          "USING",
+          "RETURNING",
+          ";"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_013",
+      "title": "DELETE FROM table WHERE IN subquery",
+      "sql": "DELETE FROM users WHERE id IN (|",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_SUBQUERY",
+        "prefix": null,
+        "suggestions": [
+          "SELECT",
+          "WITH",
+          "NULL",
+          "TRUE",
+          "FALSE",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "AVG",
+          "COALESCE",
+          "CONCAT",
+          "COUNT",
+          "DATE",
+          "GROUP_CONCAT",
+          "IF",
+          "IFNULL",
+          "LENGTH",
+          "LOWER",
+          "MAX",
+          "MIN",
+          "MONTH",
+          "NOW",
+          "NULLIF",
+          "PI",
+          "POW",
+          "POWER",
+          "ROW_NUMBER",
+          "SUBSTR",
+          "SUM",
+          "TRIM",
+          "UNIX_TIMESTAMP",
+          "UPPER",
+          "UUID",
+          "YEAR"
+        ]
+      }
+    },
+    {
+      "case_id": "DELETE_014",
+      "title": "DELETE WHERE inside string literal no suggestions",
+      "sql": "DELETE FROM users WHERE name = '|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "DELETE_WHERE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside WHERE string literal should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "DELETE_015",
+      "title": "DELETE WHERE inside string literal with content no suggestions",
+      "sql": "DELETE FROM users WHERE name = 'test|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "DELETE_WHERE_STRING_LITERAL",
+        "prefix": "test",
+        "comment": "Cursor inside WHERE string literal with content should not suggest anything",
+        "suggestions": []
+      }
+    }
+  ]
+}

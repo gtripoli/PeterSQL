@@ -395,6 +395,66 @@
           "email"
         ]
       }
+    },
+    {
+      "case_id": "WHERE_014",
+      "title": "WHERE inside string literal no suggestions",
+      "sql": "SELECT * FROM users WHERE name = '|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside WHERE string literal should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "WHERE_015",
+      "title": "WHERE inside string literal with content no suggestions",
+      "sql": "SELECT * FROM users WHERE name = 'test|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "PREFIX",
+        "context": "WHERE_STRING_LITERAL",
+        "prefix": "test",
+        "comment": "Cursor inside WHERE string literal with content should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "WHERE_016",
+      "title": "WHERE IN inside string literal no suggestions",
+      "sql": "SELECT * FROM users WHERE name IN ('|')",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside WHERE IN string literal should not suggest anything",
+        "suggestions": []
+      }
+    },
+    {
+      "case_id": "WHERE_017",
+      "title": "WHERE LIKE inside string literal no suggestions",
+      "sql": "SELECT * FROM users WHERE name LIKE '|'",
+      "dialect": "generic",
+      "current_table": null,
+      "schema_variant": "small",
+      "expected": {
+        "mode": "CONTEXT",
+        "context": "WHERE_STRING_LITERAL",
+        "prefix": null,
+        "comment": "Cursor inside WHERE LIKE string literal should not suggest anything",
+        "suggestions": []
+      }
     }
   ]
 }

@@ -6,6 +6,8 @@ from gettext import gettext as _
 
 import pymysql
 
+from pymysql.constants import FIELD_TYPE
+
 from helpers.logger import logger
 from structures.connection import Connection
 
@@ -44,6 +46,8 @@ class MariaDBContext(AbstractContext):
     IDENTIFIER_QUOTE_CHAR = "`"
     DEFAULT_STATEMENT_SEPARATOR = ";"
 
+    ROW_FORMATS: list[str] = ["DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT"]
+
     def __init__(self, connection: Connection):
         super().__init__(connection)
 
@@ -66,9 +70,9 @@ class MariaDBContext(AbstractContext):
         self.execute("""SHOW ENGINES;""")
         self.ENGINES = [dict(row).get("Engine") for row in self.fetchall()]
 
-        server_version = self.get_server_version()
+        self.server_version = self.get_server_version()
         self.KEYWORDS, builtin_functions = self.get_engine_vocabulary(
-            "mariadb", server_version
+            "mariadb", self.server_version
         )
 
         self.execute("""
@@ -81,6 +85,12 @@ class MariaDBContext(AbstractContext):
         self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
     def _parse_type(self, column_type: str):
+        """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
+
+        Used in get_columns() to extract length, precision, scale, set values, and flags
+        from DDL-style strings such as 'varchar(255)', 'decimal(10,2)', or 'enum('a','b')'.
+        Returns an empty dict when no pattern matches.
+        """
         types = MariaDBDataType.get_all()
         type_set = [
             x.lower()
@@ -116,13 +126,72 @@ class MariaDBContext(AbstractContext):
 
         return dict()
 
-    def connect(self, **connect_kwargs) -> None:
-        if self._connection is None:
-            self.before_connect()
+    def _get_field_type_name(self, type_code: Optional[int]) -> Optional[str]:
+        """Resolve a pymysql FIELD_TYPE integer code to its constant name.
 
-            use_tls_enabled = bool(
-                getattr(self.connection.configuration, "use_tls_enabled", False)
+        Used in get_result_column_datatypes() to bridge the driver's numeric type
+        representation to a named string (e.g. 253 -> 'VAR_STRING').
+        Returns None when the code is absent or unrecognised.
+        """
+        if type_code is None:
+            return None
+
+        for name, value in vars(FIELD_TYPE).items():
+            if not name.isupper() or not isinstance(value, int):
+                continue
+
+            if value == type_code:
+                return name
+
+        return None
+
+    def get_result_column_datatypes(
+        self, cursor: pymysql.cursors.Cursor
+    ) -> list[Optional[SQLDataType]]:
+        """Map each result column to its SQLDataType using the pymysql cursor description.
+
+        Resolves the driver's numeric type code via _get_field_type_name(), then looks up
+        the matching SQLDataType by name. Returns None for columns whose type cannot be resolved.
+        Unlike _parse_type(), this operates on query result metadata, not on DDL column strings.
+        """
+        datatypes: list[Optional[SQLDataType]] = []
+
+        for description in cursor.description or []:
+            type_code = description[1] if len(description) > 1 else None
+            datatype_name = self._get_field_type_name(type_code)
+
+            if datatype_name is None:
+                datatypes.append(None)
+                continue
+
+            try:
+                datatypes.append(self.DATATYPE.get_by_name(datatype_name))
+            except Exception:
+                datatypes.append(None)
+
+        return datatypes
+
+    def connect(self, **connect_kwargs) -> None:
+        skip_after_connect = bool(connect_kwargs.pop("skip_after_connect", False))
+        skip_before_connect = bool(connect_kwargs.pop("skip_before_connect", False))
+
+        if self._connection is None:
+            if not skip_before_connect:
+                self.before_connect()
+
+            connect_timeout_override = connect_kwargs.pop("connect_timeout", None)
+            compressed_protocol_override = connect_kwargs.pop("compress", None)
+            compressed_protocol = bool(
+                compressed_protocol_override
+                if compressed_protocol_override is not None
+                else getattr(self.connection.configuration, "compressed_protocol", False)
             )
+            connect_timeout = (
+                int(connect_timeout_override)
+                if connect_timeout_override is not None
+                else int(getattr(self.connection.configuration, "connect_timeout", 10))
+            )
+            use_tls = bool(getattr(self.connection.configuration, "use_tls", False))
 
             try:
                 base_kwargs = dict(
@@ -131,37 +200,24 @@ class MariaDBContext(AbstractContext):
                     password=self.password,
                     cursorclass=pymysql.cursors.DictCursor,
                     port=self.port,
+                    connect_timeout=connect_timeout,
+                    compress=compressed_protocol,
                     **connect_kwargs,
                 )
-                if use_tls_enabled:
+                if use_tls:
                     base_kwargs["ssl"] = {
                         "cert_reqs": ssl.CERT_NONE,
                         "check_hostname": False,
                     }
                 logger.debug(
-                    "MariaDB connect target host=%s port=%s user=%s use_tls_enabled=%s",
+                    "MariaDB connect target host=%s port=%s user=%s compressed_protocol=%s connect_timeout=%s use_tls=%s",
                     base_kwargs.get("host"),
                     base_kwargs.get("port"),
                     base_kwargs.get("user"),
-                    use_tls_enabled,
+                    compressed_protocol,
+                    connect_timeout,
+                    use_tls,
                 )
-                #
-                # # SSH tunnel support via connection configuration
-                # if hasattr(self.connection, 'ssh_tunnel') and self.connection.ssh_tunnel:
-                #     ssh_config = self.connection.ssh_tunnel
-                #     self._ssh_tunnel = SSHTunnel(
-                #         ssh_config.hostname, int(ssh_config.port),
-                #         ssh_username=ssh_config.username,
-                #         ssh_password=ssh_config.password,
-                #         remote_port=self.port,
-                #         local_bind_address=(self.host, int(getattr(ssh_config, 'local_port', 0))),
-                #         extra_args=ssh_config.extra_args
-                #     )
-                #     self._ssh_tunnel.start()
-                #     base_kwargs.update(
-                #         host=self.host,
-                #         port=self._ssh_tunnel.local_port,
-                #     )
 
                 self._connection = pymysql.connect(**base_kwargs)
                 self._cursor = self._connection.cursor()
@@ -190,7 +246,7 @@ class MariaDBContext(AbstractContext):
 
                 if hasattr(self.connection, "configuration"):
                     self.connection.configuration = (
-                        self.connection.configuration._replace(use_tls_enabled=True)
+                        self.connection.configuration._replace(use_tls=True)
                     )
                 logger.info(
                     "MariaDB connection succeeded after enabling TLS automatically."
@@ -199,32 +255,8 @@ class MariaDBContext(AbstractContext):
                 logger.error(f"Failed to connect to MariaDB: {e}", exc_info=True)
                 raise
 
-            if self._cursor is not None:
+            if self._cursor is not None and not skip_after_connect:
                 self.after_connect()
-
-    def disconnect(self) -> None:
-        """Disconnect from database and stop SSH tunnel if active."""
-        try:
-            if self._cursor:
-                self._cursor.close()
-        except Exception:
-            pass
-
-        try:
-            if self._connection:
-                self._connection.close()
-        except Exception:
-            pass
-
-        try:
-            if self._ssh_tunnel:
-                self._ssh_tunnel.stop()
-                self._ssh_tunnel = None
-        except Exception:
-            pass
-
-        self._cursor = None
-        self._connection = None
 
     def set_database(self, database: SQLDatabase) -> None:
         self.execute(f"USE {database.quoted_name}")
@@ -336,7 +368,7 @@ class MariaDBContext(AbstractContext):
         QUERY_LOGS.append(f"/* get_tables for database={database.name} */")
 
         self.execute(f"""
-            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT,
+            SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, AUTO_INCREMENT, ROW_FORMAT,
             CREATE_TIME, UPDATE_TIME, ROUND(DATA_LENGTH + INDEX_LENGTH, 2) as total_bytes
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = '{database.name}'
@@ -353,6 +385,7 @@ class MariaDBContext(AbstractContext):
                     database=database,
                     engine=row["ENGINE"],
                     collation_name=row["TABLE_COLLATION"],
+                    row_format=row["ROW_FORMAT"],
                     auto_increment=int(row["AUTO_INCREMENT"] or 0),
                     total_bytes=row["total_bytes"],
                     total_rows=row["TABLE_ROWS"],
@@ -575,7 +608,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(database.tables)
 
         if name is None:
-            name = _(f"Table{str(id * -1):03}")
+            name = _("Table{table_index:03}").format(table_index=id * -1)
 
         default_values.setdefault("engine", "InnoDB")
         default_values.setdefault("collation_name", "utf8mb4_general_ci")
@@ -603,7 +636,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(table.columns)
 
         if name is None:
-            name = _(f"Column{str(id * -1):03}")
+            name = _("Column{column_index:03}").format(column_index=id * -1)
 
         return MariaDBColumn(
             id=id, name=name, table=table, datatype=datatype, **default_values
@@ -621,7 +654,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(table.indexes)
 
         if name is None:
-            name = _(f"Index{str(id * -1):03}")
+            name = _("Index{index_number:03}").format(index_number=id * -1)
 
         return MariaDBIndex(
             id=id,
@@ -661,7 +694,9 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(table.foreign_keys)
 
         if name is None:
-            name = _(f"ForeignKey{str(id * -1):03}")
+            name = _("ForeignKey{foreign_key_number:03}").format(
+                foreign_key_number=id * -1
+            )
 
         reference_table = default_values.get("reference_table", "")
         reference_columns = default_values.get("reference_columns", [])
@@ -692,7 +727,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(database.views)
 
         if name is None:
-            name = _(f"View{str(id * -1):03}")
+            name = _("View{view_index:03}").format(view_index=id * -1)
 
         return MariaDBView(
             id=id,
@@ -743,7 +778,7 @@ class MariaDBContext(AbstractContext):
         id = MariaDBContext.get_temporary_id(database.triggers)
 
         if name is None:
-            name = _(f"Trigger{str(id * -1):03}")
+            name = _("Trigger{trigger_index:03}").format(trigger_index=id * -1)
 
         return MariaDBTrigger(
             id=id,
