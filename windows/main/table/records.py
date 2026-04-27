@@ -1,7 +1,9 @@
 import datetime
 
+from gettext import gettext as _
 from typing import Optional
 
+import wx
 import wx.dataview
 import wx.stc
 
@@ -316,6 +318,37 @@ class TableRecordsController:
         self.list_ctrl_records.Select(new_empty_item)
 
         self._do_edit(new_empty_item, 1)
+
+    def do_apply_records(self):
+        """Save all pending records from NEW_RECORDS."""
+        records = list(NEW_RECORDS)
+        if not records:
+            return
+
+        errors = []
+        for record in records:
+            try:
+                record.save()
+            except Exception as ex:
+                logger.error(f"Error saving record: {ex}", exc_info=True)
+                errors.append(str(ex))
+
+        NEW_RECORDS.clear()
+
+        if errors:
+            wx.MessageBox(
+                "\n".join(errors),
+                _("Error saving records"),
+                wx.OK | wx.ICON_ERROR,
+            )
+
+        self.load_records_async()
+
+    def do_cancel_records(self):
+        """Discard all pending changes in NEW_RECORDS."""
+        NEW_RECORDS.clear()
+        if self.table:
+            self.load_model()
 
     def do_refresh_records(self):
         """Refresh records from database."""

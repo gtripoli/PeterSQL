@@ -840,12 +840,16 @@ class MainFrameController(MainFrameView):
         context.execute(query)
 
         row = context.fetchone() or {}
-        try :
+        total_rows = None
+        try:
             total_rows = dict(row).get("total_rows")
-        except Exception as ex :
+        except Exception as ex:
             logger.error(ex)
         if total_rows is None and row:
-            total_rows = next(iter(row.values()), 0)
+            try:
+                total_rows = next(iter(row.values()), 0)
+            except Exception:
+                total_rows = 0
 
         return int(total_rows or 0)
 
@@ -1028,11 +1032,17 @@ class MainFrameController(MainFrameView):
 
         if self._records_offset > last_offset:
             self._records_offset = last_offset
-            self._load_records_page()
+            try:
+                self._load_records_page()
+            except Exception as ex:
+                logger.error(f"Error reloading records page after count: {ex}", exc_info=True)
             return
 
-        self._update_records_label(table)
-        self._set_records_paging_buttons(table)
+        try:
+            self._update_records_label(table)
+            self._set_records_paging_buttons(table)
+        except Exception as ex:
+            logger.error(f"Error updating records label: {ex}", exc_info=True)
 
     def _get_records_last_offset(self, limit: int) -> int:
         total_rows = int(self._records_total_rows or 0)
@@ -1551,6 +1561,12 @@ class MainFrameController(MainFrameView):
         # Enable/disable duplicate and delete tools based on record selection
         self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), len(records) == 1)
         self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), len(records) > 0)
+
+    def on_apply_record(self, event):
+        self.controller_list_table_records.do_apply_records()
+
+    def on_cancel_record(self, event):
+        self.controller_list_table_records.do_cancel_records()
 
     def on_insert_record(self, event):
         self.controller_list_table_records.do_insert_record()
