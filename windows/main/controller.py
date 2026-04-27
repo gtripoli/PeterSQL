@@ -840,7 +840,10 @@ class MainFrameController(MainFrameView):
         context.execute(query)
 
         row = context.fetchone() or {}
-        total_rows = row.get("total_rows")
+        try :
+            total_rows = dict(row).get("total_rows")
+        except Exception as ex :
+            logger.error(ex)
         if total_rows is None and row:
             total_rows = next(iter(row.values()), 0)
 
