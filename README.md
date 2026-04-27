@@ -35,15 +35,14 @@ Use at your own risk and **do not rely on this project in production environment
 For a detailed status snapshot, see:
 
 - [PROJECT_STATUS.md](PROJECT_STATUS.md)
-- [ROADMAP.md](ROADMAP.md)
 
 ### Recent updates
 
-- PostgreSQL engine now includes **Function** and **Procedure** classes with CRUD-style operations.
-- Check constraint support was added for **MySQL**, **MariaDB**, and **PostgreSQL** engine layers.
-- Connection manager now tracks **persistent connection statistics** (attempts, success/failure, timing).
-- Empty database passwords are now accepted for local setups.
-- MySQL/MariaDB connections can auto-retry by enabling TLS when required by the server.
+- SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
+- Table execution flow updated in the records UI.
+- `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
+- `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`).
+- Advanced cell editor replaced with a dedicated `ColumnContentDialog` for large content.
 
 ---
 

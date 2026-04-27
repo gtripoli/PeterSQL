@@ -1,6 +1,6 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-03-16
+> **Last Updated:** 2026-04-27
 > **Status Rule:** newly implemented features are tracked as **PARTIAL** until validated across supported versions.
 > **Definition of DONE:** engine methods implemented, integration tests pass on target versions, UI workflow exists (if user-facing), no known regressions, documentation updated.
 
@@ -181,6 +181,13 @@
 
 ## 6. Recently Added
 
+- SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
+- Table execution flow updated in the records UI.
+- `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
+- `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`) for better separation of concerns.
+- Advanced cell editor replaced with a dedicated `ColumnContentDialog` for displaying and editing large cell content.
+- Database options action buttons now update live when options change.
+- Tree explorer preserves expanded state after a failed connection attempt.
 - Multi-tab query editor with per-tab dirty tracking, autosave before execution, and close/save confirmation dialogs.
 - Cancelable query execution with background thread, per-statement result rendering, and execution summary.
 - Configurable keyboard shortcuts for all query editor actions (execute, stop, new tab, close tab, save, save-as).
