@@ -1295,7 +1295,18 @@ class MainFrameController(MainFrameView):
     def _on_current_view(self, current: SQLView):
         self.toggle_panel(current)
 
-        self.btn_delete_view.Enable(current is not None)
+        self.btn_delete_view.Enable(current is not None and not current.is_new)
+
+    def on_insert_view(self, event):
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not session or not database:
+            return
+        CURRENT_VIEW.set_value(None)
+        new_view = session.context.build_empty_view(database)
+        CURRENT_VIEW.set_value(new_view)
+        self._toggle_panel(3, True)
+        self.MainFrameNotebook.SetSelection(3)
 
     # TRIGGER
     def _on_current_trigger(self, current: SQLTrigger):

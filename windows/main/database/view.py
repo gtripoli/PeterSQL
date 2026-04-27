@@ -247,10 +247,18 @@ class ViewEditorController:
         if not session:
             return
 
+        is_new = view.is_new
         try:
             view.save()
-            message = _("View created successfully") if view.is_new else _("View updated successfully")
+            message = _("View created successfully") if is_new else _("View updated successfully")
             wx.MessageBox(message, _("Success"), wx.OK | wx.ICON_INFORMATION)
+            if is_new:
+                database = CURRENT_DATABASE.get_value()
+                saved = next((v for v in database.views if v.name == view.name), None)
+                if saved:
+                    CURRENT_VIEW.set_value(None)
+                    CURRENT_VIEW.set_value(saved)
+                    return
             self.update_button_states()
         except Exception as e:
             wx.MessageBox(_("Error saving view: {}").format(str(e)), _("Error"), wx.OK | wx.ICON_ERROR)
