@@ -1,11 +1,11 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-56%25-brightgreen)
-![Tests](https://img.shields.io/badge/tests-2495-blue)
+![Coverage](https://img.shields.io/badge/coverage-54%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-3114-blue)
 
-![SQLite](https://img.shields.io/badge/SQLite-tested-lightgrey)
-![MySQL](https://img.shields.io/badge/MySQL-5.7%20%7C%208.0%20%7C%20latest-lightgrey)
-![MariaDB](https://img.shields.io/badge/MariaDB-5.5%20%7C%2010.11%20%7C%2011.8%20%7C%20latest-lightgrey)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%20latest-lightgrey)
+![SQLite](https://img.shields.io/badge/SQLite-3.45.1-green)
+![MySQL](https://img.shields.io/badge/MySQL-8%20%7C%209-green)
+![MariaDB](https://img.shields.io/badge/MariaDB-5%20%7C%2010%20%7C%2011%20%7C%2012-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%2017%20%7C%2018-lightgrey)
 
 # PeterSQL
 
@@ -124,13 +124,13 @@ For detailed test coverage matrix, statistics, and architecture, see **[tests/RE
 
 | Suite | Passed | Skipped |
 |-------|--------|---------|
-| autocomplete | ![passed](https://img.shields.io/badge/passed-1944-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| autocomplete | ![passed](https://img.shields.io/badge/passed-2540-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
 | core | ![passed](https://img.shields.io/badge/passed-122-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
 | ui | ![passed](https://img.shields.io/badge/passed-57-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| mysql | ![passed](https://img.shields.io/badge/passed-59-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-1-lightgrey) |
-| mariadb | ![passed](https://img.shields.io/badge/passed-115-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-3-lightgrey) |
-| postgresql | ![passed](https://img.shields.io/badge/passed-132-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| sqlite | ![passed](https://img.shields.io/badge/passed-21-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-5-lightgrey) |
+| mysql | ![passed](https://img.shields.io/badge/passed-63-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-1-lightgrey) |
+| mariadb | ![passed](https://img.shields.io/badge/passed-123-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-3-lightgrey) |
+| postgresql | ![passed](https://img.shields.io/badge/passed-140-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| sqlite | ![passed](https://img.shields.io/badge/passed-24-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-5-lightgrey) |
 
 <!-- SUITE_BADGES_END -->
 
