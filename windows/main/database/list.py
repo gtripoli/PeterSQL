@@ -109,6 +109,7 @@ class ListDatabaseTable:
             return
 
         if table := self.model.get_data_by_item(item):
+            CURRENT_VIEW.set_value(None)
             CURRENT_TABLE.set_value(table.copy())
 
     def _on_item_activated(self, event: wx.dataview.DataViewEvent):
@@ -117,6 +118,7 @@ class ListDatabaseTable:
             return
 
         if table := self.model.get_data_by_item(item):
+            CURRENT_VIEW.set_value(None)
             CURRENT_TABLE.set_value(table.copy())
 
 
@@ -193,6 +195,7 @@ class ListDatabaseView:
             return
 
         if view := self.model.get_data_by_item(item):
+            CURRENT_TABLE.set_value(None)
             CURRENT_VIEW.set_value(view.copy())
 
     def _on_item_activated(self, event: wx.dataview.DataViewEvent):
@@ -201,4 +204,5 @@ class ListDatabaseView:
             return
 
         if view := self.model.get_data_by_item(item):
+            CURRENT_TABLE.set_value(None)
             CURRENT_VIEW.set_value(view.copy())
