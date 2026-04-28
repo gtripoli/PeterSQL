@@ -37,7 +37,7 @@ from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, 
 
 from windows.main.explorer import TreeExplorerController
 
-from windows.main.database.list import ListDatabaseTable
+from windows.main.database.list import ListDatabaseTable, ListDatabaseView
 from windows.main.database.view import ViewEditorController
 from windows.main.database.options import DatabaseOptionsController
 
@@ -75,6 +75,7 @@ class MainFrameController(MainFrameView):
         )
 
         self.list_database_tables = ListDatabaseTable(self.list_ctrl_database_tables)
+        self.list_database_views = ListDatabaseView(self.list_ctrl_database_views)
         self.controller_database_options = DatabaseOptionsController(self)
 
         self.controller_tree_connections = TreeExplorerController(self.tree_ctrl_explorer)
@@ -117,6 +118,13 @@ class MainFrameController(MainFrameView):
 
         self.Bind(wx.EVT_SYS_COLOUR_CHANGED, self.on_sys_colour_changed)
 
+        self.sql_query_filters.Bind(wx.EVT_KEY_DOWN, self._on_filters_key_down)
+
+        self._id_f5_refresh = wx.NewIdRef()
+        accel = wx.AcceleratorTable([(wx.ACCEL_NORMAL, wx.WXK_F5, self._id_f5_refresh)])
+        self.SetAcceleratorTable(accel)
+        self.Bind(wx.EVT_MENU, self._on_f5_refresh, id=self._id_f5_refresh)
+
     def _setup_database_action_buttons_bindings(self) -> None:
         model = self.controller_database_options.model
 
@@ -143,6 +151,7 @@ class MainFrameController(MainFrameView):
         CURRENT_SESSION.subscribe(self._on_database_options_changed)
 
     def _on_database_options_changed(self, _=None) -> None:
+        logger.debug("ui trace: _on_database_options_changed")
         self._update_database_action_buttons()
 
     @staticmethod
@@ -184,6 +193,12 @@ class MainFrameController(MainFrameView):
         self.btn_apply_database.Enable(has_database and has_changes)
         self.btn_cancel_database.Enable(is_persisted and has_changes)
         self.btn_delete_database.Enable(is_persisted)
+        logger.debug(
+            "ui trace: _update_database_action_buttons has_database=%s has_changes=%s is_persisted=%s",
+            has_database,
+            has_changes,
+            is_persisted,
+        )
 
     def on_sys_colour_changed(self, event):
         self._setup_query_editors()
@@ -752,6 +767,10 @@ class MainFrameController(MainFrameView):
 
     def toggle_panel(self, current: Optional[Union[SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
         # self.MainFrameNotebook.SetSelection(0)
+        logger.debug(
+            "ui trace: toggle_panel current=%s",
+            type(current).__name__ if current is not None else "None",
+        )
 
         current_session = CURRENT_SESSION.get_value()
         current_database = CURRENT_DATABASE.get_value()
@@ -1066,12 +1085,24 @@ class MainFrameController(MainFrameView):
 
         self._records_offset = min(max(self._records_offset, 0), last_offset)
 
+        logger.debug(
+            "ui trace: records._load_records_page start table=%s limit=%s offset=%s filters=%s",
+            table.name,
+            limit,
+            self._records_offset,
+            filters,
+        )
         with Loader.cursor_wait():
+            logger.debug("ui trace: records._load_records_page before table.load_records table=%s", table.name)
             table.load_records(filters=filters, limit=limit, offset=self._records_offset)
+            logger.debug("ui trace: records._load_records_page after table.load_records table=%s", table.name)
+            logger.debug("ui trace: records._load_records_page before controller.load_model table=%s", table.name)
             self.controller_list_table_records.load_model()
+            logger.debug("ui trace: records._load_records_page after controller.load_model table=%s", table.name)
 
         self._update_records_label(table)
         self._set_records_paging_buttons(table)
+        logger.debug("ui trace: records._load_records_page end table=%s", table.name)
 
     def _update_records_label(self, table: SQLTable):
         rows_count = self._get_loaded_records_count(table)
@@ -1122,6 +1153,11 @@ class MainFrameController(MainFrameView):
                 self._load_records_page()
 
     def _on_current_session(self, session: Session):
+        if not wx.IsMainThread():
+            logger.debug("ui trace: _on_current_session rescheduled to main thread")
+            wx.CallAfter(self._on_current_session, session)
+            return
+
         from structures.session import Session
 
         self.toggle_panel(session.connection if session else None)
@@ -1154,6 +1190,15 @@ class MainFrameController(MainFrameView):
                 stc_ctrl.Colourise(0, -1)
 
     def _on_current_database(self, database: SQLDatabase):
+        if not wx.IsMainThread():
+            logger.debug("ui trace: _on_current_database rescheduled to main thread")
+            wx.CallAfter(self._on_current_database, database)
+            return
+
+        logger.debug(
+            "ui trace: _on_current_database database=%s",
+            getattr(database, "name", None) if database is not None else None,
+        )
         self.toggle_panel(database)
 
         self._update_database_action_buttons()
@@ -1293,6 +1338,11 @@ class MainFrameController(MainFrameView):
 
     # VIEW
     def _on_current_view(self, current: SQLView):
+        logger.debug(
+            "ui trace: _on_current_view view=%s is_new=%s",
+            getattr(current, "name", None) if current is not None else None,
+            getattr(current, "is_new", None) if current is not None else None,
+        )
         self.toggle_panel(current)
 
         self.btn_delete_view.Enable(current is not None and not current.is_new)
@@ -1310,10 +1360,18 @@ class MainFrameController(MainFrameView):
 
     # TRIGGER
     def _on_current_trigger(self, current: SQLTrigger):
+        logger.debug(
+            "ui trace: _on_current_trigger trigger=%s",
+            getattr(current, "name", None) if current is not None else None,
+        )
         self.toggle_panel(current)
 
     # TABLE
     def _on_current_table(self, table: SQLTable):
+        logger.debug(
+            "ui trace: _on_current_table table=%s",
+            getattr(table, "name", None) if table is not None else None,
+        )
         if NEW_TABLE.get_value() and not self.on_cancel_table(None):
             return
 
@@ -1323,6 +1381,7 @@ class MainFrameController(MainFrameView):
             self._records_total_rows = 0
             self._records_total_key = None
             self._records_total_is_loading = False
+            self.sql_query_filters.ClearAll()
             self._update_records_label(table)
 
             self.toggle_panel(table)
@@ -1345,8 +1404,8 @@ class MainFrameController(MainFrameView):
             if self.MainFrameNotebook.GetSelection() == 5:
                 self._load_records_page()
 
-        self.btn_clone_table.Enable(table is not None)
-        self.btn_delete_table.Enable(table is not None)
+        self.tool_clone_table.Enable(table is not None)
+        self.tool_delete_table.Enable(table is not None)
 
     def _on_new_table(self, table: SQLTable):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
@@ -1358,7 +1417,7 @@ class MainFrameController(MainFrameView):
             )
 
     # def _on_selected_table(self, table : SQLTable):
-    #     self.btn_delete_table.Enable(table is not None)
+    #     self.tool_delete_table.Enable(table is not None)
 
     def on_insert_table(self, event):
         session = CURRENT_SESSION.get_value()
@@ -1584,6 +1643,22 @@ class MainFrameController(MainFrameView):
 
     def on_refresh_records(self, event):
         self.controller_list_table_records.do_refresh_records()
+
+    def _on_filters_key_down(self, event: wx.KeyEvent):
+        if event.ControlDown() and event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._load_records_page()
+        else:
+            event.Skip()
+
+    def _on_f5_refresh(self, event):
+        logger.debug("F5 refresh triggered, page=%s", self.MainFrameNotebook.GetSelection())
+        with Loader.cursor_wait():
+            self.controller_tree_connections.refresh_current_database()
+            page = self.MainFrameNotebook.GetSelection()
+            if page == 2:
+                self.controller_list_table_columns.do_refresh_columns()
+            elif page == 5:
+                self.controller_list_table_records.do_refresh_records()
 
     def on_duplicate_record(self, event):
         self.controller_list_table_records.do_duplicate_record()

@@ -7,10 +7,11 @@ from gettext import gettext as _
 
 from helpers import bytes_to_human
 from helpers.dataview import BaseObservableDataViewListModel, ColumnField
+from helpers.logger import logger
 
-from structures.engines.database import SQLTable, SQLDatabase
+from structures.engines.database import SQLTable, SQLDatabase, SQLView
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW
 
 
 class ModelDatabaseTable(BaseObservableDataViewListModel):
@@ -52,6 +53,11 @@ class ListDatabaseTable:
         CURRENT_TABLE.subscribe(self._select_table)
 
     def _load_database(self, database: SQLDatabase):
+        if not wx.IsMainThread():
+            logger.debug("ui trace: list._load_database rescheduled to main thread")
+            wx.CallAfter(self._load_database, database)
+            return
+
         if not database:
             return
 
@@ -87,6 +93,11 @@ class ListDatabaseTable:
                     )
 
     def _select_table(self, table: SQLTable):
+        if not wx.IsMainThread():
+            logger.debug("ui trace: list._select_table rescheduled to main thread")
+            wx.CallAfter(self._select_table, table)
+            return
+
         if table:
             database = CURRENT_DATABASE.get_value()
             if index := database.tables.index(table):
@@ -107,3 +118,87 @@ class ListDatabaseTable:
 
         if table := self.model.get_data_by_item(item):
             CURRENT_TABLE.set_value(table.copy())
+
+
+def _truncate_statement(value: str) -> str:
+    if not value:
+        return ""
+    value = " ".join(value.split())
+    return value[:120] + "…" if len(value) > 120 else value
+
+
+class ModelDatabaseView(BaseObservableDataViewListModel):
+    MAP_COLUMN_FIELDS = {
+        0: ColumnField("name", str),
+        1: ColumnField("statement", _truncate_statement),
+    }
+
+    def __init__(self):
+        super().__init__(2)
+
+    def GetValueByRow(self, row, col):
+        if not len(self.data):
+            return None
+        view: SQLView = self.get_data_by_row(row)
+        return self.MAP_COLUMN_FIELDS[col].get_value(view)
+
+
+class ListDatabaseView:
+    _app = wx.GetApp()
+
+    def __init__(self, list_ctrl: wx.dataview.DataViewCtrl):
+        self.list_ctrl = list_ctrl
+        self.list_ctrl.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+        self.list_ctrl.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
+
+        self.model = ModelDatabaseView()
+        self.list_ctrl.AssociateModel(self.model)
+
+        CURRENT_DATABASE.subscribe(self._load_database)
+        CURRENT_VIEW.subscribe(self._select_view)
+
+    def _load_database(self, database: SQLDatabase):
+        if not wx.IsMainThread():
+            wx.CallAfter(self._load_database, database)
+            return
+
+        if not database:
+            return
+
+        try:
+            self.model.set_observable(database.views)
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+
+    def _select_view(self, view: SQLView):
+        if not wx.IsMainThread():
+            wx.CallAfter(self._select_view, view)
+            return
+
+        if not view or view.is_new:
+            return
+
+        database = CURRENT_DATABASE.get_value()
+        if not database:
+            return
+
+        views = database.views.get_value()
+        index = next((i for i, v in enumerate(views) if v.id == view.id), None)
+        if index is not None:
+            self.list_ctrl.Select(self.model.GetItem(index))
+
+    def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        if view := self.model.get_data_by_item(item):
+            CURRENT_VIEW.set_value(view.copy())
+
+    def _on_item_activated(self, event: wx.dataview.DataViewEvent):
+        item = event.GetItem()
+        if not item.IsOk():
+            return
+
+        if view := self.model.get_data_by_item(item):
+            CURRENT_VIEW.set_value(view.copy())
