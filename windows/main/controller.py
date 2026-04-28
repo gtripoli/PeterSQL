@@ -1345,7 +1345,21 @@ class MainFrameController(MainFrameView):
         )
         self.toggle_panel(current)
 
-        self.btn_delete_view.Enable(current is not None and not current.is_new)
+        can_act = current is not None and not current.is_new
+        self.btn_delete_view.Enable(can_act)
+        self.m_toolBar5.EnableTool(self.tool_clone_view.GetId(), can_act)
+
+    def on_clone_view(self, event):
+        view = CURRENT_VIEW.get_value()
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not view or not session or not database:
+            return
+        clone = session.context.build_empty_view(database, name=f"{view.name}_copy", statement=view.statement)
+        CURRENT_VIEW.set_value(None)
+        CURRENT_VIEW.set_value(clone)
+        self._toggle_panel(3, True)
+        self.MainFrameNotebook.SetSelection(3)
 
     def on_insert_view(self, event):
         session = CURRENT_SESSION.get_value()
