@@ -127,7 +127,7 @@ jobs:
           fi
 
       - name: Run tests (--all)
-        run: xvfb-run -a uv run ./scripts/runtest.py --all
+        run: xvfb-run -a uv run ./scripts/runtest.py --suite all
 
   update:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
@@ -236,7 +236,7 @@ jobs:
           fi
 
       - name: Run tests and update README (--update)
-        run: xvfb-run -a uv run ./scripts/runtest.py --update
+        run: xvfb-run -a uv run ./scripts/runtest.py --suite all --update
 
       - name: Commit and push updated README
         run: |
