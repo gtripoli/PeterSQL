@@ -130,6 +130,7 @@ class ConnectionsRepository(
             configuration=configuration,
             comments=comments,
             ssh_tunnel=ssh_config,
+            read_only=bool(data.get("read_only", False)),
             parent=parent,
             created_at=data.get("created_at"),
             last_connection_at=data.get("last_connection_at"),

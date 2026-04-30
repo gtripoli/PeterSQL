@@ -48,6 +48,7 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_tree_controller.on_item_activated = (
             lambda connection: self.on_connect(None)
         )
+        self.connections_tree_controller.on_item_renamed = self._on_item_renamed
 
         self.connections_model = ConnectionModel()
         self.connections_model.bind_controls(
@@ -71,6 +72,7 @@ class ConnectionsManager(ConnectionsDialog):
             total_connection_attempts=self.total_connection_attempts,
             average_connection_time=self.average_connection_time,
             most_recent_connection_duration=self.most_recent_connection_duration,
+            read_only=self.read_only,
             ssh_tunnel_enabled=self.ssh_tunnel_enabled,
             ssh_tunnel_executable=self.ssh_tunnel_executable,
             ssh_tunnel_hostname=self.ssh_tunnel_hostname,
@@ -715,6 +717,16 @@ class ConnectionsManager(ConnectionsDialog):
         PENDING_CONNECTION(None)
         wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
         wx.CallAfter(self._select_connection_in_tree, refreshed_connection)
+
+    def _on_item_renamed(self, obj):
+        expanded_paths = self._capture_expanded_directory_paths()
+        if isinstance(obj, ConnectionDirectory):
+            self._repository.save_directory(obj)
+            CURRENT_DIRECTORY(obj)
+        elif isinstance(obj, Connection):
+            self._repository.save_connection(obj)
+            CURRENT_CONNECTION(obj)
+        wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def on_rename(self, event):
         selected_item = self._get_action_item()

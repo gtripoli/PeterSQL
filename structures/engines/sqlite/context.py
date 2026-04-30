@@ -103,7 +103,12 @@ class SQLiteContext(AbstractContext):
             try:
                 if not skip_before_connect:
                     self.before_connect()
-                self._connection = sqlite3.connect(self.filename)
+                if self.connection.read_only and self.filename not in (":memory:", ""):
+                    self._connection = sqlite3.connect(
+                        f"file:{self.filename}?mode=ro", uri=True
+                    )
+                else:
+                    self._connection = sqlite3.connect(self.filename)
 
             except Exception as e:
                 logger.error(f"Failed to connect to SQLite: {e}")
@@ -481,6 +486,27 @@ class SQLiteContext(AbstractContext):
             results.append(SQLiteRecord(id=i, table=table, values=dict(record)))
         return results
 
+    def get_view_columns(self, view) -> list[SQLiteColumn]:
+        results = []
+        if view is None or view.is_new:
+            return results
+        try:
+            self.execute(f"PRAGMA table_info(`{view.name}`)")
+            for i, row in enumerate(self.fetchall()):
+                results.append(
+                    SQLiteColumn(
+                        id=i,
+                        name=row["name"],
+                        datatype=SQLiteDataType.get_by_name(row["type"] or "TEXT"),
+                        is_nullable=row["notnull"] == 0,
+                        table=view,
+                        server_default=row["dflt_value"],
+                    )
+                )
+        except Exception:
+            pass
+        return results
+
     def get_views(self, database: SQLDatabase):
         results: list[SQLiteView] = []
         self.execute(
@@ -493,6 +519,8 @@ class SQLiteContext(AbstractContext):
                     name=result["name"],
                     database=database,
                     statement=result["sql"],
+                    get_columns_handler=self.get_view_columns,
+                    get_records_handler=self.get_records,
                 )
             )
 
@@ -596,8 +624,6 @@ class SQLiteContext(AbstractContext):
         self,
         table: SQLiteTable,
         columns: list[str],
-        reference_table: str,
-        reference_columns: list[str],
         /,
         name: Optional[str] = None,
         **default_values,
@@ -614,10 +640,10 @@ class SQLiteContext(AbstractContext):
             name=name,
             table=table,
             columns=columns,
-            reference_table="",
-            reference_columns=[],
-            on_update="",
-            on_delete="",
+            reference_table=default_values.get("reference_table", ""),
+            reference_columns=default_values.get("reference_columns", []),
+            on_update=default_values.get("on_update", "NO ACTION"),
+            on_delete=default_values.get("on_delete", "NO ACTION"),
         )
 
     def build_empty_record(
@@ -640,6 +666,8 @@ class SQLiteContext(AbstractContext):
             name=name,
             database=database,
             statement=default_values.get("statement", ""),
+            get_columns_handler=self.get_view_columns,
+            get_records_handler=self.get_records,
         )
 
     def build_empty_function(

@@ -364,7 +364,6 @@ class SQLiteIndex(SQLIndex):
             return False  # sqlite_ UNIQUE is handled in table creation
 
 
-        print(f"DROP INDEX IF EXISTS {self.fully_qualified_name}")
         return self.table.database.context.execute(
             f"DROP INDEX IF EXISTS {self.fully_qualified_name}"
         )
@@ -377,7 +376,15 @@ class SQLiteIndex(SQLIndex):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteForeignKey(SQLForeignKey):
-    pass
+    def create(self) -> bool:
+        raise NotImplementedError("SQLite does not support adding Foreign Keys constraints after table creation")
+
+    def drop(self) -> bool:
+        raise NotImplementedError("SQLite does not support dropping Foreign Keys constraints")
+
+    def alter(self) -> bool:
+        raise NotImplementedError("SQLite does not support altering Foreign Keys constraints")
+
 
 
 class SQLiteRecord(SQLRecord):
@@ -445,6 +452,8 @@ class SQLiteRecord(SQLRecord):
             if raw_insert_record := self.raw_insert_record():
                 try:
                     return transaction.execute(raw_insert_record)
+                except PermissionError:
+                    raise
                 except:
                     return False
 
@@ -455,6 +464,8 @@ class SQLiteRecord(SQLRecord):
             if raw_update_record := self.raw_update_record():
                 try:
                     return transaction.execute(raw_update_record)
+                except PermissionError:
+                    raise
                 except:
                     return False
 
@@ -465,6 +476,8 @@ class SQLiteRecord(SQLRecord):
             if raw_delete_record := self.raw_delete_record():
                 try:
                     return transaction.execute(raw_delete_record)
+                except PermissionError:
+                    raise
                 except:
                     return False
 
@@ -472,12 +485,12 @@ class SQLiteRecord(SQLRecord):
 
 
 class SQLiteView(SQLView):
-    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str):
+    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str, **kwargs):
         match = re.search(r'CREATE\s+VIEW\s+.*?\s+AS\s+(.*)', statement, re.IGNORECASE | re.DOTALL)
         if match:
             statement = match.group(1).strip()
 
-        super().__init__(id=id, name=name, database=database, statement=statement)
+        super().__init__(id=id, name=name, database=database, statement=statement, **kwargs)
 
     def raw_create(self) -> str:
         return f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}"

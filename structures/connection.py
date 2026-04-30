@@ -70,6 +70,7 @@ class Connection:
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
     comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None
+    read_only: bool = False
     parent: Optional["ConnectionDirectory"] = dataclasses.field(
         default=None,
         compare=False,
@@ -112,6 +113,7 @@ class Connection:
             else None,
             "comments": self.comments,
             "ssh_tunnel": self.ssh_tunnel._asdict() if self.ssh_tunnel else None,
+            "read_only": self.read_only,
             "created_at": self.created_at,
             "last_connection_at": self.last_connection_at,
             "last_successful_connection_at": self.last_successful_connection_at,

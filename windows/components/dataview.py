@@ -17,7 +17,7 @@ from windows.components import BaseDataViewCtrl
 from windows.components.popup import PopupColumnDatatype, PopupColumnDefault, PopupCheckList, PopupChoice, PopupCalendar, PopupCalendarTime
 from windows.components.renders import PopupRenderer, LengthSetRender, TimeRenderer, FloatRenderer, IntegerRenderer, TextRenderer, AdvancedTextRenderer
 
-from windows.state import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, NEW_TABLE
+from windows.state import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_VIEW, NEW_TABLE
 
 
 class _SQLiteTableColumnsDataViewCtrl:
@@ -103,6 +103,8 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
 
     on_finish_editing: Callable[[...], Optional[bool]] = None
 
+    _BASE_COLUMN_COUNT = 4
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -129,17 +131,29 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
             _MariaDBMySQLTableColumnsDataViewCtrl,
             _PostgreSQLTableColumnsDataViewCtrl
         ] = None
+        self._current_engine = None
 
         CURRENT_SESSION.subscribe(self._load_session)
 
     def _load_session(self, session: Session):
-        if not self._current_dataview and session:
-            if session.engine == ConnectionEngine.SQLITE:
-                self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
-            elif session.engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
-                self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
-            elif session.engine == ConnectionEngine.POSTGRESQL:
-                self._current_dataview = _PostgreSQLTableColumnsDataViewCtrl(self)
+        if session is None:
+            return
+
+        engine = session.engine
+        if engine == self._current_engine:
+            return
+
+        while self.GetColumnCount() > self._BASE_COLUMN_COUNT:
+            self.DeleteColumn(self.GetColumn(self.GetColumnCount() - 1))
+
+        self._current_engine = engine
+
+        if engine == ConnectionEngine.SQLITE:
+            self._current_dataview = _SQLiteTableColumnsDataViewCtrl(self)
+        elif engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
+            self._current_dataview = _MariaDBMySQLTableColumnsDataViewCtrl(self)
+        elif engine == ConnectionEngine.POSTGRESQL:
+            self._current_dataview = _PostgreSQLTableColumnsDataViewCtrl(self)
 
     def _on_context_menu(self, event):
         session = CURRENT_SESSION()
@@ -153,13 +167,13 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         menu = wx.Menu()
 
         add_item = wx.MenuItem(menu, wx.ID_ANY, _("Add column\tCTRL+INS"), wx.EmptyString, wx.ITEM_NORMAL)
-        add_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ADD))
+        add_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.ADD))
         menu.Append(add_item)
 
         self.Bind(wx.EVT_MENU, lambda e: wx.CallAfter(self.on_column_insert, e), add_item)
 
         delete_item = wx.MenuItem(menu, wx.ID_ANY, _("Remove column\tCTRL+DEL"), wx.EmptyString, wx.ITEM_NORMAL)
-        delete_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.DELETE))
+        delete_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.DELETE))
         # delete_item.Enable(selected.IsOk())
         menu.Append(delete_item)
         menu.Enable(delete_item.GetId(), selected.IsOk())
@@ -167,14 +181,14 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         self.Bind(wx.EVT_MENU, self.on_column_delete, delete_item)
 
         move_up_item = wx.MenuItem(menu, wx.ID_ANY, _("Move up\tCTRL+UP"), wx.EmptyString, wx.ITEM_NORMAL)
-        move_up_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ARROW_UP))
+        move_up_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.ARROW_UP))
         menu.Append(move_up_item)
         menu.Enable(move_up_item.GetId(), selected.IsOk())
 
         self.Bind(wx.EVT_MENU, self.on_column_move_up, move_up_item)
 
         move_down_item = wx.MenuItem(menu, wx.ID_ANY, _("Move down\tCTRL+D"), wx.EmptyString, wx.ITEM_NORMAL)
-        move_down_item.SetBitmap(wx.GetApp().icon_registry_16.get_bitmap(IconList.ARROW_DOWN))
+        move_down_item.SetBitmap(self.app.icon_registry_16.get_bitmap(IconList.ARROW_DOWN))
         menu.Append(move_down_item)
         menu.Enable(move_down_item.GetId(), selected.IsOk())
 
@@ -186,7 +200,8 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
 
         for index_type in session.context.INDEXTYPE.get_all():
             item = wx.MenuItem(create_index_menu, wx.ID_ANY, index_type.name, wx.EmptyString, wx.ITEM_NORMAL)
-            item.SetBitmap(index_type.bitmap)
+
+            item.SetBitmap(self.app.icon_registry_16.get_bitmap(index_type.bitmap))
             create_index_menu.Append(item)
 
             if index_type.name == "PRIMARY" and len([pk for pk in list(table.indexes) if pk.type == StandardIndexType.PRIMARY]) > 0:
@@ -202,7 +217,7 @@ class TableColumnsDataViewCtrl(BaseDataViewCtrl):
         for index in list(table.indexes):
             if column.name not in index.columns:
                 item = wx.MenuItem(append_index_menu, wx.ID_ANY, index.name, wx.EmptyString, wx.ITEM_NORMAL)
-                item.SetBitmap(index.type.bitmap)
+                item.SetBitmap(self.app.icon_registry_16.get_bitmap(index.type.bitmap))
                 append_index_menu.Append(item)
 
                 if not index.type.enable_append:
@@ -328,8 +343,9 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
         super().__init__(*args, **kwargs)
 
         CURRENT_TABLE.subscribe(self._load_table)
+        CURRENT_VIEW.subscribe(self._load_view)
 
-    def make_advanced_dialog(self, parent, value: str, read_only : bool = False):
+    def make_advanced_dialog(self, parent, value: str, read_only: bool = False):
         from windows.dialogs.column_content import ColumnContentDialogController  # Lazy import: unavoidable circular dependency
         return ColumnContentDialogController(parent, value, read_only)
 
@@ -408,38 +424,19 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
                 col = wx.dataview.DataViewColumn(column.name, renderer, i, width=self.measure_text(column.name), flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
                 self.AppendColumn(col)
 
-            wx.CallAfter(self.autosize_columns_from_content)
+    def _load_view(self, view):
+        while self.GetColumnCount() > 0:
+            self.DeleteColumn(self.GetColumn(0))
 
-    def autosize_columns_from_content(self, sample_rows: int = 30):
-        model = self.GetModel()
-        if not model:
-            return
+        if view is not None and not view.is_new:
+            for i, column in enumerate(view.columns):
+                renderer = TextRenderer(mode=wx.dataview.DATAVIEW_CELL_INERT)
+                col = wx.dataview.DataViewColumn(column.name, renderer, i, width=self.measure_text(column.name), flags=wx.dataview.DATAVIEW_COL_RESIZABLE)
+                self.AppendColumn(col)
 
-        n_cols = self.GetColumnCount()
-        n_rows = min(model.GetCount(), sample_rows)
-
-        dc = wx.ClientDC(self)
-        dc.SetFont(self.GetFont())
-
-        for col_idx in range(n_cols):
-            col = self.GetColumn(col_idx)
-
-            # header
-            max_w, _ = dc.GetTextExtent(col.GetTitle())
-
-            # sample rows
-            for row in range(n_rows):
-                v = model.GetValueByRow(row, col_idx)
-                if v is None:
-                    continue
-                w, _ = dc.GetTextExtent(str(v))
-                if w > max_w:
-                    max_w = w
-
-            # clamp
-            width = max_w + 24
-            width = max(60, min(width, 360))  # max 360 evita colonne infinite
-            col.SetWidth(width)
+    def AssociateModel(self, model):
+        super().AssociateModel(model)
+        wx.CallAfter(self.autosize_columns_from_content)
 
 
 class QueryEditorResultsDataViewCtrl(TableRecordsDataViewCtrl):

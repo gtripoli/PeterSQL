@@ -20,6 +20,8 @@ class PopupRenderer(BaseDataViewCustomRenderer):
 
     def GetSize(self):
         view = self.GetView()
+        if view is None:
+            return wx.Size(50, 20)
         value = self._value.strip() or getattr(self.popup_class, "default_value", "")
 
         if not value:

@@ -84,6 +84,9 @@ class MariaDBContext(AbstractContext):
 
         self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
+        if self.connection.read_only:
+            self.execute("SET SESSION TRANSACTION READ ONLY;")
+
     def _parse_type(self, column_type: str):
         """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
 
@@ -334,6 +337,8 @@ class MariaDBContext(AbstractContext):
                     name=result["TABLE_NAME"],
                     database=database,
                     statement=result["VIEW_DEFINITION"],
+                    get_columns_handler=self.get_columns,
+                    get_records_handler=self.get_records,
                 )
             )
 
@@ -734,6 +739,8 @@ class MariaDBContext(AbstractContext):
             name=name,
             database=database,
             statement=default_values.get("statement", ""),
+            get_columns_handler=self.get_columns,
+            get_records_handler=self.get_records,
         )
 
     def build_empty_function(

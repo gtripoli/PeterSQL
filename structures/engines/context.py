@@ -2,6 +2,7 @@ import abc
 import contextlib
 import re
 
+from gettext import gettext as _
 from typing import Any, Optional
 
 import yaml
@@ -30,6 +31,11 @@ from structures.engines.indextype import SQLIndexType, StandardIndexType
 QUERY_LOGS: ObservableList[str] = ObservableList()
 
 SQL_SAFE_NAME_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+_WRITE_QUERY_RE = re.compile(
+    r"^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE|RENAME|LOCK)\b",
+    re.IGNORECASE,
+)
 
 
 class AbstractContext(abc.ABC):
@@ -524,6 +530,10 @@ class AbstractContext(abc.ABC):
     def execute(self, query: str) -> bool:
         """Execute a SQL query and append it to query logs."""
         query_clean = re.sub(r"\s+", " ", str(query)).strip()
+
+        if self.connection.read_only and _WRITE_QUERY_RE.match(query_clean):
+            raise PermissionError(_("This connection is read-only."))
+
         logger.debug("execute query: %s", query_clean)
         QUERY_LOGS.append(query_clean)
 

@@ -141,6 +141,15 @@ class SQLTable(abc.ABC):
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
         self.checks = ObservableLazyList(lambda: self.get_checks_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
+        self.records = ObservableLazyList(
+            lambda: self.get_records_handler(
+                self,
+                filters=None,
+                limit=1000,
+                offset=0,
+                orders=None,
+            )
+        )
 
     def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
         self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters=filters, limit=limit, offset=offset, orders=orders))
@@ -361,11 +370,17 @@ class SQLColumn(abc.ABC):
 
     @property
     def is_primary_key(self):
-        return any([i.type == SQLiteIndexType.PRIMARY for i in list(self.table.indexes) if self.name in i.columns])
+        indexes = getattr(self.table, 'indexes', None)
+        if indexes is None:
+            return False
+        return any([i.type == SQLiteIndexType.PRIMARY for i in list(indexes) if self.name in i.columns])
 
     @property
     def is_unique_key(self):
-        return any([i.type == SQLiteIndexType.UNIQUE for i in list(self.table.indexes) if self.name in i.columns])
+        indexes = getattr(self.table, 'indexes', None)
+        if indexes is None:
+            return False
+        return any([i.type == SQLiteIndexType.UNIQUE for i in list(indexes) if self.name in i.columns])
 
     @property
     def is_valid(self):
@@ -562,7 +577,7 @@ class SQLForeignKey(abc.ABC):
 
     def copy(self):
         cls = self.__class__
-        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls) if f.init == True}
         return cls(**field_values)
 
 
@@ -681,6 +696,17 @@ class SQLView(abc.ABC):
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
     statement: str
+    total_rows: Optional[int] = None
+
+    get_columns_handler: Callable = dataclasses.field(compare=False, default_factory=lambda: lambda view: list())
+    get_records_handler: Callable = dataclasses.field(compare=False, default_factory=lambda: lambda view, **kw: list())
+
+    def __post_init__(self):
+        self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
+        self.records = ObservableLazyList(lambda: [])
+
+    def load_records(self, filters=None, limit=1000, offset=0, orders=None):
+        self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters=filters, limit=limit, offset=offset, orders=orders))
 
     @property
     def is_new(self) -> bool:

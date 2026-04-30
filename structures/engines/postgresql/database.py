@@ -398,9 +398,11 @@ class PostgreSQLRecord(SQLRecord):
 
 @dataclasses.dataclass
 class PostgreSQLView(SQLView):
+    schema: str = "public"
+
     @property
     def fully_qualified_name(self):
-        return self.database.context.qualify('public', self.name)
+        return self.database.context.qualify(self.schema, self.name)
     
     def raw_create(self) -> str:
         return f'CREATE VIEW {self.fully_qualified_name} AS {self.statement};'

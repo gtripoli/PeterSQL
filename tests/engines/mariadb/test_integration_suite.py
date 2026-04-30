@@ -11,7 +11,17 @@ from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
 from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
-from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests, BaseViewDefinerTests
+from tests.engines.base_readonly_tests import BaseReadOnlyTests
+from tests.engines.base_view_tests import (
+    BaseViewCreateDropTests,
+    BaseViewAlterTests,
+    BaseViewSaveTests,
+    BaseViewIsNewTests,
+    BaseViewColumnsTests,
+    BaseViewRecordsTests,
+    BaseViewCopyTests,
+    BaseViewDefinerTests,
+)
 
 
 @pytest.mark.integration
@@ -79,8 +89,27 @@ class TestMariaDBTrigger(BaseTriggerTests):
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("mariadb")
+class TestMariaDBViewCreateDrop(BaseViewCreateDropTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id, 'test' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBViewAlter(BaseViewAlterTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+    def get_updated_view_statement(self) -> str:
+        return "SELECT 1 as id, 'updated' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewSave(BaseViewSaveTests):
-    
+
     def get_view_statement(self) -> str:
         return "SELECT 1 as id, 'test' as name"
 
@@ -94,7 +123,31 @@ class TestMariaDBViewSave(BaseViewSaveTests):
 @pytest.mark.integration
 @pytest.mark.xdist_group("mariadb")
 class TestMariaDBViewIsNew(BaseViewIsNewTests):
-    
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBViewColumns(BaseViewColumnsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBViewRecords(BaseViewRecordsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBViewCopy(BaseViewCopyTests):
+
     def get_simple_view_statement(self) -> str:
         return "SELECT 1 as id"
 
@@ -120,3 +173,9 @@ class TestMariaDBDatabase(BaseDatabaseCreateAlterTests):
             "character_set": "utf8mb4",
             "default_collation": "utf8mb4_general_ci",
         }
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mariadb")
+class TestMariaDBReadOnly(BaseReadOnlyTests):
+    pass

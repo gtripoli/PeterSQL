@@ -74,6 +74,9 @@ class PostgreSQLContext(AbstractContext):
 
         self._load_custom_types()
 
+        if self.connection.read_only:
+            self.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;")
+
     def _load_custom_types(self) -> None:
         """Load user-defined enum types from the database."""
         self.execute("""
@@ -254,6 +257,40 @@ class PostgreSQLContext(AbstractContext):
             )
         return results
 
+    def get_view_columns(self, view) -> list:
+        results = []
+        if view is None or view.is_new:
+            return results
+        try:
+            QUERY_LOGS.append(f"/* get_view_columns for view={view.name} */")
+            schema = view.schema if view.schema else "public"
+            self.execute(f"""
+                SELECT column_name, data_type, character_maximum_length, numeric_precision, numeric_scale,
+                       is_nullable, column_default
+                FROM information_schema.columns
+                WHERE table_schema = '{schema}' AND table_name = '{view.name}'
+                ORDER BY ordinal_position
+            """)
+            for i, row in enumerate(self.cursor.fetchall()):
+                is_nullable = row["is_nullable"] == "YES"
+                datatype = PostgreSQLDataType.get_by_name(row["data_type"])
+                results.append(
+                    PostgreSQLColumn(
+                        id=i,
+                        name=row["column_name"],
+                        datatype=datatype,
+                        is_nullable=is_nullable,
+                        table=view,
+                        server_default=row["column_default"],
+                        length=row["character_maximum_length"],
+                        numeric_precision=row["numeric_precision"],
+                        numeric_scale=row["numeric_scale"],
+                    )
+                )
+        except Exception:
+            pass
+        return results
+
     def get_views(self, database: SQLDatabase) -> list[PostgreSQLView]:
         self.set_database(database)
         results = []
@@ -265,8 +302,11 @@ class PostgreSQLContext(AbstractContext):
                 PostgreSQLView(
                     id=i,
                     name=result["viewname"],
+                    schema=result["schemaname"],
                     database=database,
                     statement=result["definition"],
+                    get_columns_handler=self.get_view_columns,
+                    get_records_handler=self.get_records,
                 )
             )
 
@@ -760,8 +800,11 @@ class PostgreSQLContext(AbstractContext):
         return PostgreSQLView(
             id=id,
             name=name,
+            schema=default_values.get("schema", "public"),
             database=database,
             statement=default_values.get("statement", ""),
+            get_columns_handler=self.get_view_columns,
+            get_records_handler=self.get_records,
         )
 
     def build_empty_function(

@@ -37,6 +37,8 @@ class ConnectionModel(AbstractModel):
         self.average_connection_time = Observable[str]("")
         self.most_recent_connection_duration = Observable[str]("")
 
+        self.read_only = Observable[bool](initial=False)
+
         self.ssh_tunnel_enabled = Observable[bool](initial=False)
         self.ssh_tunnel_executable = Observable[str](initial="ssh")
         self.ssh_tunnel_hostname = Observable[str]()
@@ -63,6 +65,7 @@ class ConnectionModel(AbstractModel):
             self.port,
             self.filename,
             self.comments,
+            self.read_only,
             self.created_at,
             self.last_connection_at,
             self.successful_connected,
@@ -118,6 +121,7 @@ class ConnectionModel(AbstractModel):
             self.total_connection_attempts: "0",
             self.average_connection_time: "",
             self.most_recent_connection_duration: "",
+            self.read_only: False,
             self.ssh_tunnel_enabled: False,
             self.ssh_tunnel_executable: "ssh",
             self.ssh_tunnel_hostname: None,
@@ -144,6 +148,7 @@ class ConnectionModel(AbstractModel):
             self.engine(connection.engine.value.name)
 
         self.comments(connection.comments)
+        self.read_only(connection.read_only)
         self.created_at(connection.created_at or "")
         self.last_connection_at(connection.last_connection_at or "")
         self.successful_connected(str(connection.successful_connections))
@@ -234,6 +239,7 @@ class ConnectionModel(AbstractModel):
         pending_connection.name = self.name() or ""
         pending_connection.engine = connection_engine
         pending_connection.comments = self.comments()
+        pending_connection.read_only = bool(self.read_only.get_value())
 
         if connection_engine in [
             ConnectionEngine.MYSQL,

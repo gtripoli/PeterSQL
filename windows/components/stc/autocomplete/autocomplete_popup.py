@@ -6,7 +6,7 @@ from windows.components.stc.autocomplete.completion_types import CompletionItem,
 from windows.components.stc.theme_loader import ThemeLoader
 
 
-class AutoCompletePopup(wx.PopupWindow):
+class AutoCompletePopup(wx.PopupTransientWindow):
     def __init__(self, parent: wx.Window, settings: object = None, theme_loader: ThemeLoader = None) -> None:
         super().__init__(parent, wx.BORDER_SIMPLE)
 
