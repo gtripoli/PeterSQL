@@ -276,34 +276,54 @@ def update_badges():
 
 def main():
     parser = argparse.ArgumentParser(description='Unified test runner')
-    parser.add_argument('--all', action='store_true',
-                        help='Run all tests (unit + integration)')
+    parser.add_argument(
+        '--suite',
+        choices=['unit', 'integration', 'all'],
+        default='unit',
+        help='Select test suite: unit, integration, or all (default: unit)',
+    )
+    parser.add_argument(
+        '--engine',
+        choices=[engine.value.name.lower() for engine in ConnectionEngine],
+        help='Filter tests by engine suite (tests/engines/<engine>/)',
+    )
     parser.add_argument('--update', action='store_true',
                         help='Run all tests (unit + integration) and update README badges')
 
     args = parser.parse_args()
 
-    if args.all:
-        print("Running ALL tests (unit + integration)...")
-        result = subprocess.run(['uv', 'run', 'pytest', 'tests/', '--tb=no'])
-        exit_code = result.returncode
+    tests_target = f"tests/engines/{args.engine}/" if args.engine else 'tests/'
 
-    elif args.update:
+    pytest_command = ['uv', 'run', 'pytest', tests_target]
+
+    if args.suite == 'unit':
+        pytest_command.extend(['--tb=short', '-m', 'not integration'])
+    elif args.suite == 'integration':
+        pytest_command.extend(['--tb=short', '-m', 'integration'])
+    else:
+        pytest_command.extend(['--tb=no'])
+
+    if args.update and args.suite != 'all':
+        print("Error: --update requires --suite all")
+        return 2
+
+    if args.update:
         print("Running ALL tests (unit + integration) and updating badges...")
 
         # Run pytest with pipes to capture output in real-time
         try:
             with open(RESULTS_FILE, 'w') as f:
+                update_pytest_command = [
+                    'uv',
+                    'run',
+                    'pytest',
+                    tests_target,
+                    '--tb=no',
+                    '--junitxml',
+                    JUNIT_FILE,
+                ]
                 process = subprocess.Popen(
-                    [
-                        'uv',
-                        'run',
-                        'pytest',
-                        'tests/',
-                        '--tb=no',
-                        '--junitxml',
-                        JUNIT_FILE,
-                    ],
+                    update_pytest_command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True
@@ -324,14 +344,14 @@ def main():
             exit_code = 1
 
     else:
-        print("Running unit tests...")
-        result = subprocess.run([
-            'uv', 'run', 'pytest', 'tests/', '--tb=short', '-m', 'not integration'
-        ])
+        suite_name = args.suite.upper() if args.suite == 'all' else args.suite
+        engine_info = f" for engine '{args.engine}'" if args.engine else ""
+        print(f"Running {suite_name} tests{engine_info}...")
+        result = subprocess.run(pytest_command)
         exit_code = result.returncode
 
         print(f"\nLocal tests completed")
-        print("\nNote: Integration tests excluded. Run with --update for all tests with badge updates, or --all for full test suite.")
+        print("\nNote: Use --suite integration or --suite all to include integration tests. Use --update --suite all to update badges.")
 
     print(f"\nDone. Pytest exit code: {exit_code}")
     return exit_code
