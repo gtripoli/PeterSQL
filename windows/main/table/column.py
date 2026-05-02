@@ -159,8 +159,44 @@ class TableColumnsController:
     def _load_table(self, table: SQLTable):
         with Loader.cursor_wait():
             self.model.clear()
+            logger.debug(
+                "ui trace: columns._load_table clear table_arg=%s",
+                getattr(table, "name", None) if table is not None else None,
+            )
             if table := NEW_TABLE.get_value() or CURRENT_TABLE.get_value():
+                logger.debug(
+                    "ui trace: columns._load_table set_observable table=%s columns=%s",
+                    table.name,
+                    len(table.columns),
+                )
                 self.model.set_observable(table.columns)
+                logger.debug(
+                    "ui trace: columns._load_table bound rows=%s",
+                    len(self.model.data),
+                )
+
+    def do_refresh_columns(self):
+        table = CURRENT_TABLE.get_value()
+        if table is None:
+            logger.debug("ui trace: columns.do_refresh_columns skipped table=None")
+            return
+
+        logger.debug(
+            "ui trace: columns.do_refresh_columns start table=%s before=%s",
+            table.name,
+            len(table.columns),
+        )
+        table.columns.refresh()
+        logger.debug(
+            "ui trace: columns.do_refresh_columns after refresh table=%s count=%s",
+            table.name,
+            len(table.columns),
+        )
+        self.model.set_observable(table.columns)
+        logger.debug(
+            "ui trace: columns.do_refresh_columns bound rows=%s",
+            len(self.model.data),
+        )
 
     def _on_selection_change(self, event):
         item = event.GetItem()
@@ -332,7 +368,9 @@ class TableColumnsController:
         while (name := f"{index_type.prefix}{table.name}_{col.name}_{str(counter).zfill(3)}") in indexes:
             counter += 1
 
-        new_index = session.context.build_empty_index(name=name, table=table, type=index_type, columns=[col.name])
+        new_index = session.context.build_empty_index(
+            table, index_type, [col.name], name=name
+        )
 
         table.indexes.append(new_index)
 
