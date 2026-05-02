@@ -7,6 +7,7 @@ from gettext import gettext as _
 
 from helpers.sql import format_sql
 from helpers.bindings import AbstractModel, wx_call_after_debounce
+from helpers.logger import logger
 from helpers.observables import Observable
 
 from structures.connection import ConnectionEngine
@@ -216,9 +217,9 @@ class ViewEditorController:
         self.model.update_view(view)
         return view != original
 
-    def update_button_states(self):
+    def update_button_states(self, *args, **kwargs):
         view = CURRENT_VIEW.get_value()
-        
+
         if view is None:
             self.parent.btn_save_view.Enable(False)
             self.parent.btn_cancel_view.Enable(False)
@@ -252,6 +253,8 @@ class ViewEditorController:
             view.save()
             message = _("View created successfully") if is_new else _("View updated successfully")
             wx.MessageBox(message, _("Success"), wx.OK | wx.ICON_INFORMATION)
+            self.parent.controller_tree_connections.refresh_current_database()
+
             if is_new:
                 database = CURRENT_DATABASE.get_value()
                 saved = next((v for v in database.views if v.name == view.name), None)
@@ -286,6 +289,9 @@ class ViewEditorController:
             view.drop()
             wx.MessageBox(_("View deleted successfully"), _("Success"), wx.OK | wx.ICON_INFORMATION)
             CURRENT_VIEW.set_value(None)
+            database = CURRENT_DATABASE.get_value()
+            database.views.refresh()
+            self.parent.controller_tree_connections.refresh_current_database()
         except Exception as e:
             wx.MessageBox(_("Error deleting view: {}").format(str(e)), _("Error"), wx.OK | wx.ICON_ERROR)
 
