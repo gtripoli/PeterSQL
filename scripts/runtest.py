@@ -278,9 +278,9 @@ def main():
     parser = argparse.ArgumentParser(description='Unified test runner')
     parser.add_argument(
         '--suite',
-        choices=['unit', 'integration', 'all'],
+        choices=['unit', 'integration', 'ui', 'all'],
         default='unit',
-        help='Select test suite: unit, integration, or all (default: unit)',
+        help='Select test suite: unit, integration, ui, or all (default: unit)',
     )
     parser.add_argument(
         '--engine',
@@ -289,10 +289,18 @@ def main():
     )
     parser.add_argument('--update', action='store_true',
                         help='Run all tests (unit + integration) and update README badges')
+    parser.add_argument(
+        '--refresh-screenshots',
+        action='store_true',
+        help='Refresh UI scenario screenshots (available with --suite ui)',
+    )
 
     args = parser.parse_args()
 
-    tests_target = f"tests/engines/{args.engine}/" if args.engine else 'tests/'
+    if args.suite == 'ui':
+        tests_target = 'tests/ui/test_scenarios.py'
+    else:
+        tests_target = f"tests/engines/{args.engine}/" if args.engine else 'tests/'
 
     pytest_command = ['uv', 'run', 'pytest', tests_target]
 
@@ -300,8 +308,17 @@ def main():
         pytest_command.extend(['--tb=short', '-m', 'not integration'])
     elif args.suite == 'integration':
         pytest_command.extend(['--tb=short', '-m', 'integration'])
+    elif args.suite == 'ui':
+        pytest_command.extend(['--tb=short'])
     else:
         pytest_command.extend(['--tb=no'])
+
+    if args.refresh_screenshots and args.suite != 'ui':
+        print("Error: --refresh-screenshots requires --suite ui")
+        return 2
+
+    if args.refresh_screenshots:
+        pytest_command.append('--refresh-screenshots')
 
     if args.update and args.suite != 'all':
         print("Error: --update requires --suite all")

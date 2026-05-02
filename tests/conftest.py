@@ -56,6 +56,20 @@ def pytest_collection_modifyitems(config, items):
             )
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--refresh-screenshots",
+        action="store_true",
+        default=False,
+        help="Refresh UI scenario screenshots in screenshot/ directory",
+    )
+
+
+@pytest.fixture
+def refresh_screenshots(pytestconfig) -> bool:
+    return bool(pytestconfig.getoption("refresh_screenshots"))
+
+
 @pytest.fixture(scope="session", autouse=True)
 def wx_app():
     """Initialize wx.App for GUI tests"""
