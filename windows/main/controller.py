@@ -24,7 +24,7 @@ from helpers.observables import CallbackEvent
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLProcedure
 
 from windows.views import MainFrameView
 
@@ -33,12 +33,13 @@ from windows.components.stc.profiles import SQL
 from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
 from windows.components.stc.template_menu import SQLTemplateMenuController
 
-from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER
+from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE
 
 from windows.main.explorer import TreeExplorerController
 
-from windows.main.database.list import ListDatabaseTable, ListDatabaseView
+from windows.main.database.list import ListDatabaseTable, ListDatabaseView, ListDatabaseProcedure, ListDatabaseFunction, ListDatabaseTrigger, ListDatabaseEvent
 from windows.main.database.view import ViewEditorController
+from windows.main.database.procedure import ProcedureEditorController
 from windows.main.database.options import DatabaseOptionsController
 
 from windows.main.table.check import TableCheckController
@@ -49,6 +50,7 @@ from windows.main.table.options import EditTableModel, NEW_TABLE
 from windows.main.table.foreign_key import TableForeignKeyController
 
 from windows.main.query.controller import QueryResultsController
+from windows.main.query.history import QueryHistoryController
 
 
 class MainFrameController(MainFrameView):
@@ -61,6 +63,10 @@ class MainFrameController(MainFrameView):
         self._query_pages: list[wx.Panel] = []
         self._query_page_counter = 1
         self._query_page_meta: dict[wx.Panel, dict[str, Any]] = {}
+        self._query_history_controller = QueryHistoryController(
+            self.tree_ctrl_query_history,
+            on_open_query=self._open_query_history_file,
+        )
         self._query_shortcuts = self._load_query_shortcuts()
 
         self.edit_table_model = EditTableModel()
@@ -91,6 +97,11 @@ class MainFrameController(MainFrameView):
         self._setup_query_pages()
 
         self.controller_view_editor = ViewEditorController(self)
+        self.controller_procedure_editor = ProcedureEditorController(self)
+        self.list_database_procedures = ListDatabaseProcedure(self.list_ctrl_database_procedure)
+        self.list_database_functions = ListDatabaseFunction(self.list_ctrl_database_function)
+        self.list_database_triggers = ListDatabaseTrigger(self.list_ctrl_database_trigger)
+        self.list_database_events = ListDatabaseEvent(self.list_ctrl_database_event)
 
         records_limit = self._load_records_limit_from_settings()
         self.limit_records.SetValue(records_limit)
@@ -246,6 +257,20 @@ class MainFrameController(MainFrameView):
             get_current_table=lambda: CURRENT_TABLE.get_value(),
         )
 
+    @staticmethod
+    def _apply_sql_keywords_to_editor(
+            styled_text_ctrl: wx.stc.StyledTextCtrl,
+            keywords: str,
+            colors_datatypes: defaultdict,
+    ) -> None:
+        styled_text_ctrl.SetKeyWords(0, keywords)
+
+        for idx, (color, words) in enumerate(colors_datatypes.items(), start=1):
+            styled_text_ctrl.SetKeyWords(idx, " ".join(sorted(words)))
+            styled_text_ctrl.StyleSetForeground(wx.stc.STC_SQL_WORD + idx, wx.Colour(*color))
+
+        styled_text_ctrl.Colourise(0, -1)
+
     def _build_query_editor(self, parent: wx.Window) -> wx.stc.StyledTextCtrl:
         editor = wx.stc.StyledTextCtrl(parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         editor.SetUseTabs(True)
@@ -296,69 +321,6 @@ class MainFrameController(MainFrameView):
         toolbar.SetToolShortHelp(tool_ids["execute_all"], self._with_shortcut(_("Execute all"), "execute_all"))
         toolbar.SetToolShortHelp(tool_ids["stop"], self._with_shortcut(_("Stop"), "stop"))
         toolbar.SetToolShortHelp(tool_ids["save"], self._with_shortcut(_("Save"), "save"))
-
-    def _build_query_toolbar(self, parent: wx.Window) -> tuple[wx.ToolBar, dict[str, int]]:
-        toolbar = wx.ToolBar(parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORIZONTAL)
-        new_query = toolbar.AddTool(wx.ID_ANY, _("New query"), wx.Bitmap("icons/16x16/add.png", wx.BITMAP_TYPE_ANY),
-                                    wx.NullBitmap, wx.ITEM_NORMAL, _("New query"), wx.EmptyString, None)
-        close_query = toolbar.AddTool(wx.ID_ANY, _("Close query"), wx.Bitmap("icons/16x16/delete.png", wx.BITMAP_TYPE_ANY),
-                                      wx.NullBitmap, wx.ITEM_NORMAL, _("Close query"), wx.EmptyString, None)
-        toolbar.AddSeparator()
-        execute_statement = toolbar.AddTool(wx.ID_ANY, _("Execute"), wx.Bitmap("icons/16x16/arrow_right.png", wx.BITMAP_TYPE_ANY),
-                                            wx.NullBitmap, wx.ITEM_NORMAL, _("Execute"), wx.EmptyString, None)
-        execute_all = toolbar.AddTool(wx.ID_ANY, _("Execute all"), wx.Bitmap("icons/16x16/arrows_lefttoright.png", wx.BITMAP_TYPE_ANY),
-                                      wx.NullBitmap, wx.ITEM_NORMAL, _("Execute all statements"), wx.EmptyString, None)
-        toolbar.AddSeparator()
-        stop_statements = toolbar.AddTool(wx.ID_ANY, _("Stop"), wx.Bitmap("icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY),
-                                          wx.NullBitmap, wx.ITEM_NORMAL, _("Stop"), wx.EmptyString, None)
-        toolbar.AddSeparator()
-        save_query = toolbar.AddTool(wx.ID_ANY, _("Save"), wx.Bitmap("icons/16x16/disk.png", wx.BITMAP_TYPE_ANY),
-                                     wx.NullBitmap, wx.ITEM_NORMAL, _("Save"), wx.EmptyString, None)
-        toolbar.Realize()
-
-        tool_ids = {
-            "new": new_query.GetId(),
-            "close": close_query.GetId(),
-            "execute": execute_statement.GetId(),
-            "execute_all": execute_all.GetId(),
-            "stop": stop_statements.GetId(),
-            "save": save_query.GetId(),
-        }
-
-        self._apply_query_toolbar_shortcuts(toolbar, tool_ids)
-
-        toolbar.Bind(wx.EVT_TOOL, self.on_new_query, id=new_query.GetId())
-        toolbar.Bind(wx.EVT_TOOL, self.on_close_query, id=close_query.GetId())
-        toolbar.Bind(wx.EVT_TOOL, self.on_execute_statement, id=execute_statement.GetId())
-        toolbar.Bind(wx.EVT_TOOL, self.on_execute_statements, id=execute_all.GetId())
-        toolbar.Bind(wx.EVT_TOOL, self.on_stop_statements, id=stop_statements.GetId())
-        toolbar.Bind(wx.EVT_TOOL, self.on_save, id=save_query.GetId())
-        return toolbar, tool_ids
-
-    def _build_query_page(self) -> tuple[wx.Panel, wx.stc.StyledTextCtrl, wx.Window, wx.ToolBar, dict[str, int]]:
-        panel_query = wx.Panel(self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        query_sizer = wx.BoxSizer(wx.VERTICAL)
-        splitter = wx.SplitterWindow(panel_query, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D)
-
-        panel_top = wx.Panel(splitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        top_sizer = wx.BoxSizer(wx.VERTICAL)
-        toolbar, tool_ids = self._build_query_toolbar(panel_top)
-        editor = self._build_query_editor(panel_top)
-        top_sizer.Add(toolbar, 0, wx.EXPAND, 5)
-        top_sizer.Add(editor, 1, wx.EXPAND | wx.ALL, 5)
-        panel_top.SetSizer(top_sizer)
-
-        panel_bottom = wx.Panel(splitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        bottom_sizer = wx.BoxSizer(wx.VERTICAL)
-        results_notebook_class = self.notebook_sql_results.__class__
-        results_notebook = results_notebook_class(panel_bottom, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        bottom_sizer.Add(results_notebook, 1, wx.EXPAND | wx.ALL, 5)
-        panel_bottom.SetSizer(bottom_sizer)
-
-        splitter.SplitHorizontally(panel_top, panel_bottom, -300)
-        query_sizer.Add(splitter, 1, wx.EXPAND, 5)
-        panel_query.SetSizer(query_sizer)
-        return panel_query, editor, results_notebook, toolbar, tool_ids
 
     def _get_active_query_controller(self) -> Optional[QueryResultsController]:
         page = self.notebook_query_editor.GetCurrentPage()
@@ -459,14 +421,6 @@ class MainFrameController(MainFrameView):
 
         self.notebook_query_editor.SetPageText(page_index, title)
 
-    def _build_query_editor_panel(self) -> tuple[wx.Panel, wx.stc.StyledTextCtrl]:
-        panel = wx.Panel(self.notebook_query_editor, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        editor = self._build_query_editor(panel)
-        sizer.Add(editor, 1, wx.EXPAND | wx.ALL, 5)
-        panel.SetSizer(sizer)
-        return panel, editor
-
     def _on_notebook_query_tab_changed(self, event: wx.BookCtrlEvent) -> None:
         controller = self._get_active_query_controller()
         if controller is not None:
@@ -499,6 +453,7 @@ class MainFrameController(MainFrameView):
         self.controller_query_records = self._query_page_meta[self.m_panel63]["controller"]
         self.notebook_query_editor.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_notebook_query_tab_changed)
         self._update_query_close_tools_state()
+        self._query_history_controller.refresh()
 
     def _update_query_close_tools_state(self) -> None:
         can_close = self.notebook_query_editor.GetPageCount() > 1
@@ -511,7 +466,12 @@ class MainFrameController(MainFrameView):
         self._query_page_counter += 1
         label = _("Query ({query_number})").format(query_number=self._query_page_counter)
 
-        panel, editor = self._build_query_editor_panel()
+        panel = wx.Panel(self.notebook_query_editor, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        editor = self._build_query_editor(panel)
+        sizer.Add(editor, 1, wx.EXPAND | wx.ALL, 5)
+        panel.SetSizer(sizer)
+
         self.notebook_query_editor.AddPage(panel, label, select=True)
 
         shared_tool_ids = {
@@ -533,6 +493,17 @@ class MainFrameController(MainFrameView):
         )
 
         self._setup_sql_editor(editor)
+
+        if session := CURRENT_SESSION.get_value():
+            keywords = " ".join(k.lower() for k in session.context.KEYWORDS)
+            colors_datatypes = defaultdict(list)
+
+            for datatype in session.context.DATATYPE.get_all():
+                colors_datatypes[datatype.category.value.color].append(datatype.name.lower())
+                colors_datatypes[datatype.category.value.color].extend([d.lower() for d in datatype.alias])
+
+            self._apply_sql_keywords_to_editor(editor, keywords, colors_datatypes)
+
         self._update_query_close_tools_state()
 
     def _confirm_close_query_page(self, page: wx.Panel) -> bool:
@@ -605,10 +576,32 @@ class MainFrameController(MainFrameView):
         with open(file_path, "w", encoding="utf-8") as file_obj:
             file_obj.write(content)
 
+    def _open_query_history_file(self, file_path: str) -> None:
+        page = self.notebook_query_editor.GetCurrentPage()
+        if page is None:
+            return
+
+        meta = self._query_page_meta.get(page)
+        if meta is None:
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as file_obj:
+                content = file_obj.read()
+        except Exception as ex:
+            logger.error(str(ex), exc_info=True)
+            wx.MessageDialog(None, str(ex), _("Error"), wx.OK | wx.ICON_ERROR).ShowModal()
+            return
+
+        editor = meta["editor"]
+        editor.SetText(content)
+        meta["file_path"] = file_path
+        meta["display_name"] = os.path.basename(file_path)
+        self._set_query_dirty(page, is_dirty=False)
+
     @staticmethod
     def _get_query_autosave_path() -> str:
-        query_dir = os.path.join(os.getcwd(), ".queries")
-        os.makedirs(query_dir, exist_ok=True)
+        query_dir = QueryHistoryController.get_query_history_directory()
         return os.path.join(query_dir, f"query_{time.strftime('%Y%m%d_%H%M%S')}_{time.time_ns()}.sql")
 
     def _save_query_page(self, page: wx.Panel, force_save_as: bool) -> bool:
@@ -634,6 +627,7 @@ class MainFrameController(MainFrameView):
         meta["file_path"] = file_path
         meta["display_name"] = os.path.basename(file_path)
         self._set_query_dirty(page, is_dirty=False)
+        self._query_history_controller.refresh()
         QUERY_LOGS.append(_("-- Saved query to {file_path}").format(file_path=file_path))
         return True
 
@@ -659,6 +653,7 @@ class MainFrameController(MainFrameView):
 
         meta["file_path"] = file_path
         self._set_query_dirty(page, is_dirty=False)
+        self._query_history_controller.refresh()
         QUERY_LOGS.append(_("-- Autosaved query to {file_path}").format(file_path=file_path))
         return True
 
@@ -674,6 +669,8 @@ class MainFrameController(MainFrameView):
         CURRENT_DATABASE.subscribe(self._on_current_database)
 
         CURRENT_VIEW.subscribe(self._on_current_view)
+
+        CURRENT_PROCEDURE.subscribe(self._on_current_procedure)
 
         CURRENT_TRIGGER.subscribe(self._on_current_trigger)
 
@@ -700,6 +697,9 @@ class MainFrameController(MainFrameView):
         self._initialize_column_toolbar_states()
 
     def _write_query_log(self, text: str):
+        wx.CallAfter(self._append_query_log, text)
+
+    def _append_query_log(self, text: str):
         self.sql_query_logs.AppendText(f"{text}\n")
         self.sql_query_logs.GotoLine(self.sql_query_logs.GetLineCount() - 1)
 
@@ -765,7 +765,7 @@ class MainFrameController(MainFrameView):
         if controller.show_modal() == wx.ID_OK:
             wx.MessageBox(_("Settings saved successfully"), _("Settings"), wx.OK | wx.ICON_INFORMATION)
 
-    def toggle_panel(self, current: Optional[Union[SQLDatabase, SQLTable, SQLView, SQLTrigger]] = None):
+    def toggle_panel(self, current: Optional[Union[SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure]] = None):
         # self.MainFrameNotebook.SetSelection(0)
         logger.debug(
             "ui trace: toggle_panel current=%s",
@@ -777,6 +777,8 @@ class MainFrameController(MainFrameView):
         current_table = CURRENT_TABLE.get_value()
         current_view = CURRENT_VIEW.get_value()
         current_trigger = CURRENT_TRIGGER.get_value()
+        current_procedure = CURRENT_PROCEDURE.get_value()
+        procedure_page_index = self.controller_procedure_editor.page_index
 
         total_pages = self.MainFrameNotebook.GetPageCount()
 
@@ -799,6 +801,9 @@ class MainFrameController(MainFrameView):
 
             if not current_trigger:
                 self.MainFrameNotebook.GetPage(4).Hide()
+
+            if not current_procedure:
+                self.MainFrameNotebook.GetPage(procedure_page_index).Hide()
 
             return
 
@@ -823,6 +828,7 @@ class MainFrameController(MainFrameView):
                     self.MainFrameNotebook.SetSelection(3)
 
             self.MainFrameNotebook.GetPage(5).Show()
+            logger.debug("ui trace: toggle_panel records page shown (load disabled isolation)")
             self.MainFrameNotebook.GetPage(6).Show()
 
         elif isinstance(current, SQLTrigger):
@@ -830,6 +836,12 @@ class MainFrameController(MainFrameView):
             self.MainFrameNotebook.GetPage(6).Show()
             if self.MainFrameNotebook.GetSelection() < 4:
                 self.MainFrameNotebook.SetSelection(3)
+
+        elif isinstance(current, SQLProcedure):
+            self.MainFrameNotebook.GetPage(procedure_page_index).Show()
+            self.MainFrameNotebook.GetPage(6).Show()
+            if self.MainFrameNotebook.GetSelection() != procedure_page_index:
+                self.MainFrameNotebook.SetSelection(procedure_page_index)
 
     def _get_records_filters(self) -> str:
         return (self.sql_query_filters.GetSelectedText() or self.sql_query_filters.GetText()).strip()
@@ -1026,13 +1038,26 @@ class MainFrameController(MainFrameView):
             total_rows: int,
             error: Optional[str],
     ) -> None:
+        logger.debug(
+            "ui trace: records._on_records_count_complete start request_id=%s expected_request_id=%s total_key=%s total_rows=%s error=%s",
+            request_id,
+            self._records_total_request_id,
+            total_key,
+            total_rows,
+            error,
+        )
         if request_id != self._records_total_request_id:
+            logger.debug("ui trace: records._on_records_count_complete stale request ignored")
             return
 
         self._records_total_is_loading = False
 
         if error:
             table = CURRENT_TABLE.get_value()
+            logger.debug(
+                "ui trace: records._on_records_count_complete error branch table=%s",
+                getattr(table, "name", None) if table is not None else None,
+            )
             if table is not None:
                 self._update_records_label(table)
                 self._set_records_paging_buttons(table)
@@ -1040,10 +1065,17 @@ class MainFrameController(MainFrameView):
 
         table = CURRENT_TABLE.get_value()
         if table is None:
+            logger.debug("ui trace: records._on_records_count_complete skip table=None")
             return
 
         filters = self._get_records_filters()
         if self._build_records_total_key(table, filters) != total_key:
+            logger.debug(
+                "ui trace: records._on_records_count_complete key mismatch table=%s current_key=%s callback_key=%s",
+                table.name,
+                self._build_records_total_key(table, filters),
+                total_key,
+            )
             return
 
         self._records_total_rows = max(int(total_rows), 0)
@@ -1051,6 +1083,12 @@ class MainFrameController(MainFrameView):
 
         if self._records_offset > last_offset:
             self._records_offset = last_offset
+            logger.debug(
+                "ui trace: records._on_records_count_complete offset clamp reload table=%s offset=%s last_offset=%s",
+                table.name,
+                self._records_offset,
+                last_offset,
+            )
             try:
                 self._load_records_page()
             except Exception as ex:
@@ -1060,6 +1098,12 @@ class MainFrameController(MainFrameView):
         try:
             self._update_records_label(table)
             self._set_records_paging_buttons(table)
+            logger.debug(
+                "ui trace: records._on_records_count_complete end table=%s total_rows=%s offset=%s",
+                table.name,
+                self._records_total_rows,
+                self._records_offset,
+            )
         except Exception as ex:
             logger.error(f"Error updating records label: {ex}", exc_info=True)
 
@@ -1072,37 +1116,39 @@ class MainFrameController(MainFrameView):
 
     def _load_records_page(self):
         table = CURRENT_TABLE.get_value()
-        if table is None:
+        view = CURRENT_VIEW.get_value() if table is None else None
+        obj = table or view
+        if obj is None:
             return
 
         limit = max(1, self.limit_records.GetValue())
         self._records_limit = limit
 
         filters = self._get_records_filters()
-        self._refresh_records_total_rows(table, filters)
+        self._refresh_records_total_rows(obj, filters)
 
         last_offset = self._get_records_last_offset(limit)
 
         self._records_offset = min(max(self._records_offset, 0), last_offset)
 
         logger.debug(
-            "ui trace: records._load_records_page start table=%s limit=%s offset=%s filters=%s",
-            table.name,
+            "ui trace: records._load_records_page start obj=%s limit=%s offset=%s filters=%s",
+            obj.name,
             limit,
             self._records_offset,
             filters,
         )
         with Loader.cursor_wait():
-            logger.debug("ui trace: records._load_records_page before table.load_records table=%s", table.name)
-            table.load_records(filters=filters, limit=limit, offset=self._records_offset)
-            logger.debug("ui trace: records._load_records_page after table.load_records table=%s", table.name)
-            logger.debug("ui trace: records._load_records_page before controller.load_model table=%s", table.name)
-            self.controller_list_table_records.load_model()
-            logger.debug("ui trace: records._load_records_page after controller.load_model table=%s", table.name)
+            logger.debug("ui trace: records._load_records_page before obj.load_records obj=%s", obj.name)
+            obj.load_records(filters=filters, limit=limit, offset=self._records_offset)
+            logger.debug("ui trace: records._load_records_page after obj.load_records obj=%s", obj.name)
+            logger.debug("ui trace: records._load_records_page before controller.load_model_for obj=%s", obj.name)
+            self.controller_list_table_records.load_model_for(obj)
+            logger.debug("ui trace: records._load_records_page after controller.load_model_for obj=%s", obj.name)
 
-        self._update_records_label(table)
-        self._set_records_paging_buttons(table)
-        logger.debug("ui trace: records._load_records_page end table=%s", table.name)
+        self._update_records_label(obj)
+        self._set_records_paging_buttons(obj)
+        logger.debug("ui trace: records._load_records_page end obj=%s", obj.name)
 
     def _update_records_label(self, table: SQLTable):
         rows_count = self._get_loaded_records_count(table)
@@ -1148,7 +1194,7 @@ class MainFrameController(MainFrameView):
 
     def on_page_chaged(self, event):
         if int(event.Selection) == 5:
-            if table := CURRENT_TABLE.get_value():
+            if CURRENT_TABLE.get_value() or CURRENT_VIEW.get_value():
                 self._records_offset = 0
                 self._load_records_page()
 
@@ -1179,15 +1225,11 @@ class MainFrameController(MainFrameView):
 
             for stc_name in self.styled_text_ctrls_name:
                 stc_ctrl = getattr(self, stc_name)
+                self._apply_sql_keywords_to_editor(stc_ctrl, keywords, colors_datatypes)
 
-                stc_ctrl.SetKeyWords(0, keywords)
-
-                for idx, (color, words) in enumerate(colors_datatypes.items(), start=1):
-                    stc_ctrl.SetKeyWords(idx, " ".join(sorted(words)))
-
-                    stc_ctrl.StyleSetForeground(wx.stc.STC_SQL_WORD + idx, wx.Colour(*color))
-
-                stc_ctrl.Colourise(0, -1)
+            for meta in self._query_page_meta.values():
+                stc_ctrl = meta["editor"]
+                self._apply_sql_keywords_to_editor(stc_ctrl, keywords, colors_datatypes)
 
     def _on_current_database(self, database: SQLDatabase):
         if not wx.IsMainThread():
@@ -1345,6 +1387,17 @@ class MainFrameController(MainFrameView):
         )
         self.toggle_panel(current)
 
+        if current and not current.is_new:
+            self._records_offset = 0
+            self._records_limit = max(1, self.limit_records.GetValue())
+            self._records_total_rows = 0
+            self._records_total_key = None
+            self._records_total_is_loading = False
+            self._update_records_label(current)
+            self._set_records_paging_buttons(current)
+            if self.MainFrameNotebook.GetSelection() == 5:
+                self._load_records_page()
+
         can_act = current is not None and not current.is_new
         self.btn_delete_view.Enable(can_act)
         self.m_toolBar5.EnableTool(self.tool_clone_view.GetId(), can_act)
@@ -1380,6 +1433,48 @@ class MainFrameController(MainFrameView):
         )
         self.toggle_panel(current)
 
+    # PROCEDURE
+    def _on_current_procedure(self, current: SQLProcedure):
+        logger.debug(
+            "ui trace: _on_current_procedure procedure=%s is_new=%s",
+            getattr(current, "name", None) if current is not None else None,
+            getattr(current, "is_new", None) if current is not None else None,
+        )
+        self.toggle_panel(current)
+
+        can_act = current is not None and not current.is_new
+        self.controller_procedure_editor.btn_delete_procedure.Enable(can_act)
+
+    def on_insert_procedure(self):
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not session or not database:
+            return
+        CURRENT_PROCEDURE.set_value(None)
+        new_proc = session.context.build_empty_procedure(database)
+        CURRENT_PROCEDURE.set_value(new_proc)
+        procedure_page_index = self.controller_procedure_editor.page_index
+        self._toggle_panel(procedure_page_index, True)
+        self.MainFrameNotebook.SetSelection(procedure_page_index)
+
+    def on_clone_procedure(self):
+        procedure = CURRENT_PROCEDURE.get_value()
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not procedure or not session or not database:
+            return
+        clone = session.context.build_empty_procedure(
+            database,
+            name=f"{procedure.name}_copy",
+            parameters=getattr(procedure, "parameters", ""),
+            statement=getattr(procedure, "statement", ""),
+        )
+        CURRENT_PROCEDURE.set_value(None)
+        CURRENT_PROCEDURE.set_value(clone)
+        procedure_page_index = self.controller_procedure_editor.page_index
+        self._toggle_panel(procedure_page_index, True)
+        self.MainFrameNotebook.SetSelection(procedure_page_index)
+
     # TABLE
     def _on_current_table(self, table: SQLTable):
         logger.debug(
@@ -1390,6 +1485,11 @@ class MainFrameController(MainFrameView):
             return
 
         if table:
+            logger.debug(
+                "ui trace: _on_current_table reset records state table=%s selected_page=%s",
+                table.name,
+                self.MainFrameNotebook.GetSelection(),
+            )
             self._records_offset = 0
             self._records_limit = max(1, self.limit_records.GetValue())
             self._records_total_rows = 0
@@ -1400,6 +1500,11 @@ class MainFrameController(MainFrameView):
 
             self.toggle_panel(table)
             self._set_records_paging_buttons(table)
+            logger.debug(
+                "ui trace: _on_current_table panel updated table=%s selected_page=%s",
+                table.name,
+                self.MainFrameNotebook.GetSelection(),
+            )
 
             CURRENT_COLUMN.set_value(None)
             CURRENT_RECORDS.set_value([])
@@ -1416,7 +1521,17 @@ class MainFrameController(MainFrameView):
                 )
 
             if self.MainFrameNotebook.GetSelection() == 5:
+                logger.debug(
+                    "ui trace: _on_current_table triggering records page load table=%s",
+                    table.name,
+                )
                 self._load_records_page()
+            else:
+                logger.debug(
+                    "ui trace: _on_current_table skip records page load table=%s selected_page=%s",
+                    table.name,
+                    self.MainFrameNotebook.GetSelection(),
+                )
 
         self.tool_clone_table.Enable(table is not None)
         self.tool_delete_table.Enable(table is not None)
@@ -1695,8 +1810,7 @@ class MainFrameController(MainFrameView):
         self._load_records_page()
 
     def on_next_records(self, event):
-        table = CURRENT_TABLE.get_value()
-        if table is None:
+        if CURRENT_TABLE.get_value() is None and CURRENT_VIEW.get_value() is None:
             return
 
         self._records_offset = min(
@@ -1706,8 +1820,7 @@ class MainFrameController(MainFrameView):
         self._load_records_page()
 
     def on_last_records(self, event):
-        table = CURRENT_TABLE.get_value()
-        if table is None:
+        if CURRENT_TABLE.get_value() is None and CURRENT_VIEW.get_value() is None:
             return
 
         self._records_offset = self._get_records_last_offset(self._records_limit)

@@ -2363,7 +2363,14 @@ class MainFrameView ( wx.Frame ):
 
         bSizer150 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.notebook_query_editor = wx.Notebook( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_splitter8 = wx.SplitterWindow( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter8.SetSashGravity( 1 )
+        self.m_splitter8.Bind( wx.EVT_IDLE, self.m_splitter8OnIdle )
+
+        self.m_panel70 = wx.Panel( self.m_splitter8, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer157 = wx.BoxSizer( wx.VERTICAL )
+
+        self.notebook_query_editor = wx.Notebook( self.m_panel70, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_panel63 = wx.Panel( self.notebook_query_editor, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer146 = wx.BoxSizer( wx.VERTICAL )
 
@@ -2411,12 +2418,26 @@ class MainFrameView ( wx.Frame ):
         bSizer146.Fit( self.m_panel63 )
         self.notebook_query_editor.AddPage( self.m_panel63, _(u"a page"), False )
 
-        bSizer150.Add( self.notebook_query_editor, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer157.Add( self.notebook_query_editor, 1, wx.EXPAND | wx.ALL, 5 )
 
-        self.m_dataViewTreeCtrl1 = wx.dataview.DataViewTreeCtrl( self.m_panel52, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_NO_HEADER|wx.dataview.DV_ROW_LINES )
-        self.m_dataViewTreeCtrl1.SetMinSize( wx.Size( 200,-1 ) )
 
-        bSizer150.Add( self.m_dataViewTreeCtrl1, 0, wx.ALL|wx.EXPAND, 5 )
+        self.m_panel70.SetSizer( bSizer157 )
+        self.m_panel70.Layout()
+        bSizer157.Fit( self.m_panel70 )
+        self.m_panel71 = wx.Panel( self.m_splitter8, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer1581 = wx.BoxSizer( wx.VERTICAL )
+
+        self.tree_ctrl_query_history = wx.dataview.DataViewTreeCtrl( self.m_panel71, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_NO_HEADER|wx.dataview.DV_ROW_LINES )
+        self.tree_ctrl_query_history.SetMinSize( wx.Size( 200,-1 ) )
+
+        bSizer1581.Add( self.tree_ctrl_query_history, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+        self.m_panel71.SetSizer( bSizer1581 )
+        self.m_panel71.Layout()
+        bSizer1581.Fit( self.m_panel71 )
+        self.m_splitter8.SplitVertically( self.m_panel70, self.m_panel71, -480 )
+        bSizer150.Add( self.m_splitter8, 1, wx.EXPAND, 5 )
 
 
         bSizer125.Add( bSizer150, 1, wx.EXPAND, 5 )
@@ -2777,6 +2798,10 @@ class MainFrameView ( wx.Frame ):
         self.m_splitter6.SetSashPosition( -300 )
         self.m_splitter6.Unbind( wx.EVT_IDLE )
 
+    def m_splitter8OnIdle( self, event ):
+        self.m_splitter8.SetSashPosition( -480 )
+        self.m_splitter8.Unbind( wx.EVT_IDLE )
+
 
 ###########################################################################
 ## Class Trash
@@ -2965,6 +2990,11 @@ class Trash ( wx.Panel ):
 
 
         bSizer144.Add( bSizer531, 0, wx.EXPAND, 5 )
+
+        bSizer156 = wx.BoxSizer( wx.VERTICAL )
+
+
+        bSizer144.Add( bSizer156, 1, wx.EXPAND, 5 )
 
 
         self.SetSizer( bSizer144 )
