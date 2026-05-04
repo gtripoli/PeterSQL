@@ -309,7 +309,7 @@ def main():
     elif args.suite == 'integration':
         pytest_command.extend(['--tb=short', '-m', 'integration'])
     elif args.suite == 'ui':
-        pytest_command.extend(['--tb=short'])
+        pytest_command.extend(['--tb=short', '-n', '1'])
     else:
         pytest_command.extend(['--tb=no'])
 

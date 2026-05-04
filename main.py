@@ -3,6 +3,7 @@ import locale
 import os
 
 from pathlib import Path
+from typing import Optional
 
 import wx
 
@@ -23,9 +24,6 @@ from windows.components.stc.theme_loader import ThemeLoader
 class PeterSQL(wx.App):
     locale: wx.Locale = wx.Locale()
 
-    settings_repository = SettingsRepository(WORKDIR / "settings.yml")
-    settings: Settings = settings_repository.load()
-
     main_frame: wx.Frame = None
 
     icon_registry_16: IconRegistry
@@ -33,6 +31,19 @@ class PeterSQL(wx.App):
     syntax_registry: SyntaxRegistry
     
     theme_loader: ThemeLoader
+
+    def __init__(
+        self,
+        *args,
+        settings_path: Optional[Path] = None,
+        **kwargs,
+    ):
+        if settings_path is None:
+            settings_path = WORKDIR / "settings.yml"
+
+        self.settings_repository = SettingsRepository(settings_path)
+        self.settings = self.settings_repository.load()
+        super().__init__(*args, **kwargs)
 
     def OnInit(self) -> bool:
         Loader.loading.subscribe(self._on_loading_change)
