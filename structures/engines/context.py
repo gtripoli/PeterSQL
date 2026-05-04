@@ -367,6 +367,11 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def build_empty_database(self, /, name: str = "") -> SQLDatabase:
+        """Build a new in-memory database model with default values."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def build_empty_table(
             self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLTable:

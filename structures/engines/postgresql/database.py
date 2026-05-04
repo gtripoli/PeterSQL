@@ -35,17 +35,23 @@ class PostgreSQLDatabase(SQLDatabase):
 
         return self.context.execute(query)
 
+    def __post_init__(self):
+        super().__post_init__()
+        self._changed_fields: set[str] = set()
+
     def alter(self) -> bool:
         statements: list[str] = []
 
-        if self.tablespace:
+        name = getattr(self, "_original_name", self.name)
+
+        if "tablespace" in self._changed_fields and self.tablespace:
             statements.append(
-                f"ALTER DATABASE {self.context.quote_identifier(self.name)} SET TABLESPACE {self.context.quote_identifier(self.tablespace)}"
+                f"ALTER DATABASE {self.context.quote_identifier(name)} SET TABLESPACE {self.context.quote_identifier(self.tablespace)}"
             )
 
-        if self.connection_limit is not None:
+        if "connection_limit" in self._changed_fields and self.connection_limit is not None:
             statements.append(
-                f"ALTER DATABASE {self.context.quote_identifier(self.name)} CONNECTION LIMIT {int(self.connection_limit)}"
+                f"ALTER DATABASE {self.context.quote_identifier(name)} CONNECTION LIMIT {int(self.connection_limit)}"
             )
 
         if not statements:

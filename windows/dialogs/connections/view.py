@@ -646,6 +646,20 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_tree_ctrl.Select(item)
         self.connections_tree_ctrl.EnsureVisible(item)
 
+    def _select_directory_in_tree(self, directory_id: int) -> None:
+        directory = self._find_directory_by_id(directory_id)
+        if directory is None:
+            return
+
+        item = self.connections_tree_controller.model.ObjectToItem(directory)
+        if item is None or not item.IsOk():
+            return
+
+        self._expand_item_parents(item)
+        self.connections_tree_ctrl.Select(item)
+        self.connections_tree_ctrl.EnsureVisible(item)
+        CURRENT_DIRECTORY(directory)
+
     def on_create_directory(self, event):
         if not self._confirm_save_pending_changes():
             return
@@ -655,10 +669,7 @@ class ConnectionsManager(ConnectionsDialog):
         new_dir = ConnectionDirectory(id=-1, name=_("New directory"))
         self._repository.add_directory(new_dir, parent)
 
-        item = self.connections_tree_controller.model.ObjectToItem(new_dir)
-        if item.IsOk():
-            self.connections_tree_ctrl.Select(item)
-            self.connections_tree_controller.edit_item(item)
+        wx.CallAfter(self._select_directory_in_tree, new_dir.id)
 
         if parent:
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)

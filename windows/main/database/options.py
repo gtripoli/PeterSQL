@@ -2,146 +2,134 @@ from typing import Optional
 
 import wx
 
-from helpers.bindings import AbstractModel
-from helpers.observables import CallbackEvent, Observable, debounce
+from helpers.bindings import AbstractModel, wx_call_after_debounce
+from helpers.logger import logger
+from helpers.observables import Observable, debounce
 
 from structures.connection import ConnectionEngine
 
 from windows.main import CURRENT_DATABASE, CURRENT_SESSION
+from windows.state import NEW_DATABASE
 
 
-class EditDatabaseOptionsModel(AbstractModel):
+class EditDatabaseModel(AbstractModel):
     def __init__(self):
-        self.database_name = Observable()
-        self.database_collation = Observable()
-        self.database_encryption = Observable(False)
-        self.database_read_only = Observable(False)
-        self.database_tablespace = Observable()
-        self.database_connection_limit = Observable(0)
-        self.database_password = Observable()
-        self.database_profile = Observable()
-        self.database_default_tablespace = Observable()
-        self.database_temporary_tablespace = Observable()
-        self.database_quota = Observable()
-        self.database_unlimited_quota = Observable(False)
-        self.database_account_status = Observable()
-        self.database_password_expire = Observable(False)
+        super().__init__()
 
-        debounce(
-            self.database_name,
-            self.database_collation,
-            self.database_encryption,
-            self.database_read_only,
-            self.database_tablespace,
-            self.database_connection_limit,
-            self.database_password,
-            self.database_profile,
-            self.database_default_tablespace,
-            self.database_temporary_tablespace,
-            self.database_quota,
-            self.database_unlimited_quota,
-            self.database_account_status,
-            self.database_password_expire,
-            callback=self._update_database,
+        self.name = Observable()
+        self.collation = Observable()
+        self.encryption = Observable(False)
+        self.tablespace = Observable()
+        self.connection_limit = Observable(0)
+
+        wx_call_after_debounce(
+            self.name,
+            self.collation,
+            self.encryption,
+            self.tablespace,
+            self.connection_limit,
+            callback=self.update_database,
         )
 
         CURRENT_DATABASE.subscribe(self._load_database)
 
     @staticmethod
-    def _first_attr(source, names: list[str], default=None):
-        if source is None:
-            return default
-
-        for name in names:
-            if hasattr(source, name):
-                value = getattr(source, name)
-                if value is not None:
-                    return value
-
-        return default
-
-    @staticmethod
     def _encryption_to_bool(value) -> bool:
         if isinstance(value, bool):
             return value
-
         if value is None:
             return False
-
-        return str(value).strip().upper() in ["Y", "YES", "TRUE", "1", "ON"]
+        return str(value).strip().upper() in ("Y", "YES", "TRUE", "1", "ON")
 
     def _load_database(self, database) -> None:
-        self.database_name.set_initial(self._first_attr(database, ["name"], ""))
-        self.database_collation.set_initial(
-            self._first_attr(database, ["default_collation", "collation", "collation_name"], "")
-        )
+        NEW_DATABASE.set_value(None)
 
-        self.database_encryption.set_initial(
-            self._encryption_to_bool(self._first_attr(database, ["encryption"], None))
-        )
-        self.database_read_only.set_initial(bool(self._first_attr(database, ["read_only", "is_read_only"], False)))
-        self.database_tablespace.set_initial(self._first_attr(database, ["tablespace", "default_tablespace"], ""))
-        self.database_connection_limit.set_initial(int(self._first_attr(database, ["connection_limit"], 0) or 0))
-        self.database_password.set_initial(self._first_attr(database, ["password"], ""))
-        self.database_profile.set_initial(self._first_attr(database, ["profile"], ""))
-        self.database_default_tablespace.set_initial(self._first_attr(database, ["default_tablespace"], ""))
-        self.database_temporary_tablespace.set_initial(self._first_attr(database, ["temporary_tablespace"], ""))
-        self.database_quota.set_initial(self._first_attr(database, ["quota"], ""))
-        self.database_unlimited_quota.set_initial(bool(self._first_attr(database, ["unlimited_quota"], False)))
-        self.database_account_status.set_initial(self._first_attr(database, ["account_status"], ""))
-        self.database_password_expire.set_initial(bool(self._first_attr(database, ["password_expire"], False)))
-
-    def _update_database(self, *args) -> None:
-        if not any(arg is not None for arg in args):
+        if database is None:
             return
 
-        database = CURRENT_DATABASE.get_value()
+        self.name.set_initial(database.name or "")
+        self.collation.set_initial(getattr(database, "default_collation", None) or "")
+        self.encryption.set_initial(self._encryption_to_bool(getattr(database, "encryption", None)))
+        self.tablespace.set_initial(getattr(database, "tablespace", None) or "")
+        self.connection_limit.set_initial(int(getattr(database, "connection_limit", None) or 0))
+
+    def update_database(self, *args) -> None:
+        if not any(args):
+            return
+
+        database = NEW_DATABASE.get_value() or CURRENT_DATABASE.get_value()
         if database is None:
             return
 
         session = CURRENT_SESSION.get_value()
         engine = session.engine if session else None
 
-        encryption_value = self.database_encryption.get_value()
-        if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
-            encryption_value = "Y" if bool(encryption_value) else "N"
+        new_name = self.name.get_value() or ""
+        new_collation = self.collation.get_value() or None
+        new_tablespace = self.tablespace.get_value() or None
+        new_connection_limit = int(self.connection_limit.get_value() or 0)
 
-        if hasattr(database, "name"):
-            database.name = self.database_name.get_value()
+        is_mysql = engine == ConnectionEngine.MYSQL
+        new_encryption = ("Y" if self.encryption.get_value() else "N") if is_mysql else None
 
-        mapping = {
-            "default_collation": self.database_collation.get_value(),
-            "collation": self.database_collation.get_value(),
-            "collation_name": self.database_collation.get_value(),
-            "encryption": encryption_value,
-            "read_only": self.database_read_only.get_value(),
-            "is_read_only": self.database_read_only.get_value(),
-            "tablespace": self.database_tablespace.get_value(),
-            "default_tablespace": self.database_default_tablespace.get_value(),
-            "temporary_tablespace": self.database_temporary_tablespace.get_value(),
-            "connection_limit": self.database_connection_limit.get_value(),
-            "password": self.database_password.get_value(),
-            "profile": self.database_profile.get_value(),
-            "quota": self.database_quota.get_value(),
-            "unlimited_quota": self.database_unlimited_quota.get_value(),
-            "account_status": self.database_account_status.get_value(),
-            "password_expire": self.database_password_expire.get_value(),
-        }
+        name_changed = new_name != (database.name or "")
+        collation_changed = new_collation != getattr(database, "default_collation", None)
+        encryption_changed = new_encryption != getattr(database, "encryption", None)
+        tablespace_changed = new_tablespace != getattr(database, "tablespace", None)
+        connection_limit_changed = new_connection_limit != int(getattr(database, "connection_limit", None) or 0)
 
-        for attr, value in mapping.items():
-            if hasattr(database, attr):
-                setattr(database, attr, value)
+        if not any([name_changed, collation_changed, encryption_changed, tablespace_changed, connection_limit_changed]):
+            return
 
-        CURRENT_DATABASE.execute_callback(CallbackEvent.AFTER_CHANGE)
+        logger.debug(
+            "ui trace: update_database db_id=%s old_name=%r new_name=%r obs_name=%r name_changed=%s",
+            getattr(database, "id", None),
+            getattr(database, "name", None),
+            new_name,
+            self.name.get_value(),
+            name_changed,
+        )
+
+        if name_changed:
+            if not hasattr(database, "_original_name"):
+                database._original_name = database.name
+            database.name = new_name
+            logger.debug(
+                "ui trace: update_database applied name db_id=%s name=%r",
+                getattr(database, "id", None),
+                database.name,
+            )
+
+        changed_fields: set[str] = getattr(database, "_changed_fields", set())
+
+        if collation_changed and hasattr(database, "default_collation"):
+            database.default_collation = new_collation
+            changed_fields.add("default_collation")
+            if hasattr(database, "character_set") and new_collation:
+                collations = getattr(database.context, "COLLATIONS", {}) or {}
+                if charset := collations.get(new_collation):
+                    database.character_set = charset
+                    changed_fields.add("character_set")
+
+        if encryption_changed and hasattr(database, "encryption"):
+            database.encryption = new_encryption
+            changed_fields.add("encryption")
+
+        if tablespace_changed and hasattr(database, "tablespace"):
+            database.tablespace = new_tablespace
+            changed_fields.add("tablespace")
+
+        if connection_limit_changed and hasattr(database, "connection_limit"):
+            database.connection_limit = new_connection_limit or None
+            changed_fields.add("connection_limit")
+
+        NEW_DATABASE.set_value(database)
 
 
 class DatabaseOptionsController:
     def __init__(self, parent):
         self.parent = parent
-        self._is_updating_choices = False
-        self._is_apply_scheduled = False
-        self._last_applied_state: Optional[tuple[Optional[ConnectionEngine], Optional[int], Optional[str]]] = None
-        self.model = EditDatabaseOptionsModel()
+        self.model = EditDatabaseModel()
         self._panel_by_name = self._build_panel_by_name()
         self._panels_all = list(self._panel_by_name.values())
         self._controls_all = self._build_controls_all()
@@ -151,123 +139,74 @@ class DatabaseOptionsController:
         CURRENT_SESSION.subscribe(self._on_current_session)
         CURRENT_DATABASE.subscribe(self._on_current_database)
 
-        self._schedule_apply_for_current_state()
+    def _on_current_database(self, _=None) -> None:
+        wx.CallAfter(self._apply_current_state)
 
-    def _schedule_apply_for_current_state(self) -> None:
-        if self._is_apply_scheduled:
-            return
+    def _on_current_session(self, _=None) -> None:
+        wx.CallAfter(self._apply_current_state)
 
-        self._is_apply_scheduled = True
+    def _apply_current_state(self) -> None:
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        engine = session.engine if session else None
+        self._populate_choices(database, engine)
+        self._apply_engine(engine)
 
-        def _run():
-            self._is_apply_scheduled = False
-            self.apply_for_current_state()
+    def _apply_choice(self, choice: wx.Choice, items: list, selected: Optional[str]) -> None:
+        normalized = [str(item) for item in items if item is not None and str(item)]
+        selected_str = str(selected) if selected else ""
 
-        wx.CallAfter(_run)
-
-    @staticmethod
-    def _first_attr(source, names: list[str], default=None):
-        if source is None:
-            return default
-
-        for name in names:
-            if hasattr(source, name):
-                value = getattr(source, name)
-                if value is not None:
-                    return value
-
-        return default
-
-    @staticmethod
-    def _safe_text(value) -> str:
-        if value is None:
-            return ""
-
-        if isinstance(value, bytes):
-            return value.decode("utf-8", errors="replace")
-
-        text = str(value)
-        return text.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-
-    def _apply_choice(self, choice: wx.Choice, items: list[str], selected: Optional[str]) -> None:
-        normalized = [self._safe_text(item) for item in items if item is not None and self._safe_text(item)]
-        selected_text = self._safe_text(selected)
-
-        if selected_text and selected_text not in normalized:
-            normalized.append(selected_text)
+        if selected_str and selected_str not in normalized:
+            normalized.append(selected_str)
 
         if not normalized:
-            if choice.GetCount() > 0:
-                choice.Clear()
-
+            choice.Clear()
             return
 
         choice.SetItems(normalized)
-
-        if selected_text and choice.SetStringSelection(selected_text):
+        if selected_str and choice.SetStringSelection(selected_str):
             return
         choice.SetSelection(0)
 
     def _apply_engine(self, engine: Optional[ConnectionEngine]) -> None:
         panel_names = self._get_panel_names_for_engine(engine)
-        visible_panels = [self._panel_by_name[name] for name in panel_names]
-
-        self._batch_show_hide(show=visible_panels, hide=self._panels_all)
+        visible = {self._panel_by_name[name] for name in panel_names}
+        for panel in self._panels_all:
+            panel.Show(panel in visible)
         self._apply_readonly_rules(engine)
         self._layout_database_options()
 
     def _apply_readonly_rules(self, engine: Optional[ConnectionEngine]) -> None:
         is_sqlite = engine == ConnectionEngine.SQLITE
-
+        database = CURRENT_DATABASE.get_value()
+        is_new = database is not None and database.is_new
+        name_readonly = not is_new and engine in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.SQLITE)
         self.parent.database_name.Enable(True)
-        self.parent.database_name.SetEditable(not is_sqlite)
-        self._set_controls_enabled(enabled=not is_sqlite)
-
-    def _batch_show_hide(self, show: list[wx.Window], hide: list[wx.Window]) -> None:
-        show_set = set(show)
-        for panel in hide:
-            panel.Show(panel in show_set)
+        self.parent.database_name.SetEditable(not name_readonly)
+        for control in self._controls_all:
+            control.Enable(not is_sqlite)
 
     def _bind_controls(self) -> None:
         self.model.bind_controls(
-            database_name=self.parent.database_name,
-            database_collation=self.parent.database_collation,
-            database_encryption=self.parent.database_encryption,
-            database_read_only=self.parent.database_read_only,
-            database_tablespace=self.parent.database_tablespace,
-            database_connection_limit=self.parent.database_connection_limit,
-            database_password=self.parent.m_textCtrl36,
-            database_profile=self.parent.database_profile,
-            database_default_tablespace=self.parent.database_default_tablespace,
-            database_temporary_tablespace=self.parent.database_temporary_tablespace,
-            database_quota=self.parent.database_quota,
-            database_unlimited_quota=self.parent.database_unlimited_quota,
-            database_account_status=self.parent.database_account_status,
-            database_password_expire=self.parent.database_password_expire,
+            name=self.parent.database_name,
+            collation=self.parent.database_collation,
+            encryption=self.parent.database_encryption,
+            tablespace=self.parent.database_tablespace,
+            connection_limit=self.parent.database_connection_limit,
         )
 
     def _build_controls_all(self) -> list[wx.Window]:
         return [
             self.parent.database_collation,
             self.parent.database_encryption,
-            self.parent.database_read_only,
             self.parent.database_tablespace,
             self.parent.database_connection_limit,
-            self.parent.m_textCtrl36,
-            self.parent.database_profile,
-            self.parent.database_default_tablespace,
-            self.parent.database_temporary_tablespace,
-            self.parent.database_quota,
-            self.parent.database_unlimited_quota,
-            self.parent.database_account_status,
-            self.parent.database_password_expire,
         ]
 
     def _build_panel_by_name(self) -> dict[str, wx.Window]:
         return {
             "database_collation_panel": self.parent.database_collation_panel,
             "database_encryption_panel": self.parent.database_encryption_panel,
-            "database_read_only_panel": self.parent.database_read_only_panel,
             "database_tablespace_panel": self.parent.database_tablespace_panel,
             "database_connection_limit_panel": self.parent.database_connection_limit_panel,
             "database_password_panel": self.parent.database_password_panel,
@@ -280,11 +219,17 @@ class DatabaseOptionsController:
             "database_password_expire_panel": self.parent.database_password_expire_panel,
         }
 
-    def _get_panel_names_for_engine(self, engine: Optional[ConnectionEngine]) -> list[str]:
-        if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB]:
+    @staticmethod
+    def _get_panel_names_for_engine(engine: Optional[ConnectionEngine]) -> list[str]:
+        if engine == ConnectionEngine.MYSQL:
             return [
                 "database_collation_panel",
                 "database_encryption_panel",
+            ]
+
+        if engine == ConnectionEngine.MARIADB:
+            return [
+                "database_collation_panel",
             ]
 
         if engine == ConnectionEngine.POSTGRESQL:
@@ -313,93 +258,27 @@ class DatabaseOptionsController:
         if parent := self.parent.m_panel54.GetParent():
             parent.Layout()
 
-    def _on_current_database(self, database) -> None:
-        self._schedule_apply_for_current_state()
-
-    def _on_current_session(self, session) -> None:
-        self._schedule_apply_for_current_state()
-
     def _populate_choices(self, database, engine: Optional[ConnectionEngine]) -> None:
         if database is None:
             return
 
         context = database.context if database else None
-
-        collations = []
         collations_source = getattr(context, "COLLATIONS", None) if context else None
-
+        collations = []
         if isinstance(collations_source, dict):
-            collations = sorted(
-                str(key)
-                for key in collations_source.keys()
-                if key is not None and str(key)
-            )
+            collations = sorted(str(k) for k in collations_source if k is not None and str(k))
 
-        if engine in [ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL]:
+        if engine in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB, ConnectionEngine.POSTGRESQL):
             self._apply_choice(
                 self.parent.database_collation,
                 collations,
-                self.model.database_collation.get_value(),
+                self.model.collation.get_value(),
             )
 
         if engine == ConnectionEngine.POSTGRESQL:
+            tablespace = getattr(database, "tablespace", None)
             self._apply_choice(
                 self.parent.database_tablespace,
-                [self._first_attr(database, ["tablespace", "default_tablespace"])],
-                self.model.database_tablespace.get_value(),
+                [tablespace] if tablespace else [],
+                self.model.tablespace.get_value(),
             )
-
-        if engine == ConnectionEngine.ORACLE:
-            self._apply_choice(
-                self.parent.database_profile,
-                [self._first_attr(database, ["profile"])],
-                self.model.database_profile.get_value(),
-            )
-            self._apply_choice(
-                self.parent.database_default_tablespace,
-                [self._first_attr(database, ["default_tablespace"])],
-                self.model.database_default_tablespace.get_value(),
-            )
-            self._apply_choice(
-                self.parent.database_temporary_tablespace,
-                [self._first_attr(database, ["temporary_tablespace"])],
-                self.model.database_temporary_tablespace.get_value(),
-            )
-            self._apply_choice(
-                self.parent.database_account_status,
-                [self._first_attr(database, ["account_status"])],
-                self.model.database_account_status.get_value(),
-            )
-
-    def _set_controls_enabled(self, enabled: bool) -> None:
-        for control in self._controls_all:
-            control.Enable(enabled)
-
-    def apply_for_current_state(self) -> None:
-        if self._is_updating_choices:
-            return
-
-        session = CURRENT_SESSION.get_value()
-        database = CURRENT_DATABASE.get_value()
-        engine = session.engine if session else None
-
-        if database is None:
-            self._last_applied_state = None
-            return
-
-        current_state = (
-            engine,
-            getattr(database, "id", None),
-            getattr(database, "name", None),
-        )
-
-        if current_state == self._last_applied_state:
-            return
-
-        self._is_updating_choices = True
-        try:
-            self._populate_choices(database, engine)
-            self._apply_engine(engine)
-            self._last_applied_state = current_state
-        finally:
-            self._is_updating_choices = False

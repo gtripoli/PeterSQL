@@ -543,6 +543,9 @@ class SQLiteContext(AbstractContext):
 
         return results
 
+    def build_empty_database(self, /, name: str = "") -> SQLiteDatabase:
+        raise NotImplementedError("SQLite does not support creating databases")
+
     def build_empty_table(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLiteTable:

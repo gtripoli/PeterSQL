@@ -69,9 +69,9 @@ class ModelDatabaseTable(BaseObservableDataViewListModel):
 
 
 class ListDatabaseTable:
-    _app = wx.GetApp()
-
     def __init__(self, list_ctrl_database_tables: wx.dataview.DataViewCtrl):
+        self._app = wx.GetApp()
+
         self.list_ctrl_database_tables = list_ctrl_database_tables
         self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
 
@@ -175,9 +175,9 @@ class ModelDatabaseView(BaseObservableDataViewListModel):
 
 
 class ListDatabaseView:
-    _app = wx.GetApp()
-
     def __init__(self, list_ctrl: wx.dataview.DataViewCtrl):
+        self._app = wx.GetApp()
+
         self.list_ctrl = list_ctrl
         self.list_ctrl.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
         self.list_ctrl.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)

@@ -607,6 +607,17 @@ class MariaDBContext(AbstractContext):
 
         return results
 
+    def build_empty_database(self, /, name: str = "") -> MariaDBDatabase:
+        return MariaDBDatabase(
+            id=MariaDBContext.get_temporary_id(self.databases),
+            name=name,
+            context=self,
+            get_tables_handler=self.get_tables,
+            get_procedures_handler=self.get_procedures,
+            get_views_handler=self.get_views,
+            get_triggers_handler=self.get_triggers,
+        )
+
     def build_empty_table(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> MariaDBTable:

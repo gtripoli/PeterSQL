@@ -915,7 +915,7 @@ class MainFrameView ( wx.Frame ):
 
         self.m_toolBar1.AddSeparator()
 
-        self.database_add = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Add"), wx.Bitmap( u"icons/16x16/database_add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
+        self.tool_add_database = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Add"), wx.Bitmap( u"icons/16x16/database_add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
         self.database_delete = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Add"), wx.Bitmap( u"icons/16x16/database_delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
@@ -2324,7 +2324,7 @@ class MainFrameView ( wx.Frame ):
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
+        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2550,6 +2550,7 @@ class MainFrameView ( wx.Frame ):
         self.Bind( wx.EVT_TOOL, self.do_open_connection_manager, id = self.m_tool5.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_database_disconnect, id = self.m_tool4.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_database_refresh, id = self.database_refresh.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_add_database, id = self.tool_add_database.GetId() )
         self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
         self.Bind( wx.EVT_TOOL, self.on_insert_table, id = self.tool_insert_table.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_clone_table, id = self.tool_clone_table.GetId() )
@@ -2628,6 +2629,9 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def on_database_refresh( self, event ):
+        event.Skip()
+
+    def on_add_database( self, event ):
         event.Skip()
 
     def on_page_chaged( self, event ):

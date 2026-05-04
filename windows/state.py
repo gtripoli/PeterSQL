@@ -20,6 +20,7 @@ CURRENT_INDEX: Observable[SQLIndex] = Observable()
 CURRENT_FOREIGN_KEY: Observable[SQLForeignKey] = Observable()
 CURRENT_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
+NEW_DATABASE: Observable[SQLDatabase] = Observable()
 NEW_TABLE: Observable[SQLTable] = Observable()
 
 AUTO_APPLY: Observable[bool] = Observable(True)

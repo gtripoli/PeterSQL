@@ -1,4 +1,4 @@
-from helpers.bindings import AbstractModel
+from helpers.bindings import AbstractModel, wx_call_after_debounce
 from helpers.observables import Observable, debounce, ObservableList
 
 from structures.engines.database import SQLTable
@@ -8,6 +8,8 @@ from windows.state import CURRENT_TABLE, CURRENT_DATABASE, NEW_TABLE
 
 class EditTableModel(AbstractModel):
     def __init__(self):
+        super().__init__()
+
         self.name = Observable()
         self.comment = Observable()
         self.columns = ObservableList()
@@ -18,7 +20,7 @@ class EditTableModel(AbstractModel):
         self.engine = Observable()
         self.row_format = Observable()
 
-        debounce(
+        wx_call_after_debounce(
             self.name, self.comment, self.auto_increment, self.collation, self.convert_data,
             self.engine, self.row_format,
             callback=self.update_table

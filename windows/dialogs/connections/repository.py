@@ -227,6 +227,7 @@ class ConnectionsRepository(
             self.connections.append(directory)
 
         self._write()
+        self.connections.refresh()
 
     def delete_directory(self, directory: ConnectionDirectory):
         self.connections.get_value()

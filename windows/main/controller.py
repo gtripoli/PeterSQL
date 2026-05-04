@@ -47,6 +47,7 @@ from windows.main.table.index import TableIndexController
 from windows.main.table.column import TableColumnsController
 from windows.main.table.records import TableRecordsController
 from windows.main.table.options import EditTableModel, NEW_TABLE
+from windows.main.database.options import DatabaseOptionsController, NEW_DATABASE
 from windows.main.table.foreign_key import TableForeignKeyController
 
 from windows.main.query.controller import QueryResultsController
@@ -140,20 +141,11 @@ class MainFrameController(MainFrameView):
         model = self.controller_database_options.model
 
         database_observables = [
-            model.database_name,
-            model.database_collation,
-            model.database_encryption,
-            model.database_read_only,
-            model.database_tablespace,
-            model.database_connection_limit,
-            model.database_password,
-            model.database_profile,
-            model.database_default_tablespace,
-            model.database_temporary_tablespace,
-            model.database_quota,
-            model.database_unlimited_quota,
-            model.database_account_status,
-            model.database_password_expire,
+            model.name,
+            model.collation,
+            model.encryption,
+            model.tablespace,
+            model.connection_limit,
         ]
 
         for observable in database_observables:
@@ -198,7 +190,7 @@ class MainFrameController(MainFrameView):
         database = CURRENT_DATABASE.get_value()
 
         has_database = database is not None
-        has_changes = self._database_has_changes(database)
+        has_changes = self._database_has_changes(database) or NEW_DATABASE.get_value() is not None
         is_persisted = bool(database is not None and not database.is_new)
 
         self.btn_apply_database.Enable(has_database and has_changes)
@@ -687,6 +679,7 @@ class MainFrameController(MainFrameView):
         # SELECTED_TABLE.subscribe(self._on_selected_table)
 
         NEW_TABLE.subscribe(self._on_new_table)
+        NEW_DATABASE.subscribe(self._on_new_database)
 
         AUTO_APPLY.subscribe(self._on_auto_apply)
 
@@ -1263,6 +1256,17 @@ class MainFrameController(MainFrameView):
             self.convert_data_collation.Enable(False)
             self.table_row_format.Enable(False)
 
+    def on_add_database(self, event):
+        session = CURRENT_SESSION.get_value()
+        if session is None:
+            return
+
+        new_db = session.context.build_empty_database()
+        CURRENT_DATABASE.set_value(new_db)
+        self._toggle_panel(1, True)
+        self.MainFrameNotebook.SetSelection(1)
+        self.database_name.SetFocus()
+
     def on_apply_database(self, event: wx.Event):
         database = CURRENT_DATABASE.get_value()
         session = CURRENT_SESSION.get_value()
@@ -1270,14 +1274,55 @@ class MainFrameController(MainFrameView):
         if database is None or session is None:
             return
 
+        logger.debug(
+            "ui trace: on_apply_database before_sync db_id=%s db_name=%r input_name=%r model_name=%r",
+            getattr(database, "id", None),
+            getattr(database, "name", None),
+            self.database_name.GetValue(),
+            self.controller_database_options.model.name.get_value(),
+        )
+
+        self.controller_database_options.model.sync()
+        database = CURRENT_DATABASE.get_value()
+        if database is None:
+            return
+
+        logger.debug(
+            "ui trace: on_apply_database after_sync db_id=%s db_name=%r model_name=%r",
+            getattr(database, "id", None),
+            getattr(database, "name", None),
+            self.controller_database_options.model.name.get_value(),
+        )
+
         try:
+            db_name = database.name
+
+            logger.debug(
+                "ui trace: on_apply_database before_save db_id=%s db_name=%r",
+                getattr(database, "id", None),
+                db_name,
+            )
+
             database.save()
+
+            logger.debug(
+                "ui trace: on_apply_database after_save db_id=%s db_name=%r",
+                getattr(database, "id", None),
+                getattr(database, "name", None),
+            )
+
             session.context.databases.refresh()
 
-            database = next(
-                (d for d in session.context.databases.get_value() if d.id == database.id),
-                None,
-            )
+            if database.is_new:
+                database = next(
+                    (d for d in session.context.databases.get_value() if d.name == db_name),
+                    None,
+                )
+            else:
+                database = next(
+                    (d for d in session.context.databases.get_value() if d.id == database.id),
+                    None,
+                )
 
             if database is not None:
                 CURRENT_DATABASE.set_value(None).set_value(database)
@@ -1535,6 +1580,9 @@ class MainFrameController(MainFrameView):
 
         self.tool_clone_table.Enable(table is not None)
         self.tool_delete_table.Enable(table is not None)
+
+    def _on_new_database(self, database) -> None:
+        self._update_database_action_buttons()
 
     def _on_new_table(self, table: SQLTable):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))

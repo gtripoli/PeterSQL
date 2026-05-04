@@ -2326,7 +2326,7 @@
                         <property name="bitmap"></property>
                         <property name="label">SSH Tunnel</property>
                         <property name="select">0</property>
-                        <object class="wxPanel" expanded="true">
+                        <object class="wxPanel" expanded="false">
                           <property name="BottomDockable">1</property>
                           <property name="LeftDockable">1</property>
                           <property name="RightDockable">1</property>
@@ -2378,7 +2378,7 @@
                           <property name="window_extra_style"></property>
                           <property name="window_name"></property>
                           <property name="window_style">wxTAB_TRAVERSAL</property>
-                          <object class="wxBoxSizer" expanded="true">
+                          <object class="wxBoxSizer" expanded="false">
                             <property name="minimum_size"></property>
                             <property name="name">bSizer102</property>
                             <property name="orient">wxVERTICAL</property>
@@ -6487,7 +6487,7 @@
       <property name="window_style">wxTAB_TRAVERSAL</property>
       <property name="xrc_skip_sizer">1</property>
       <event name="OnClose">do_close</event>
-      <object class="wxMenuBar" expanded="true">
+      <object class="wxMenuBar" expanded="false">
         <property name="bg"></property>
         <property name="context_help"></property>
         <property name="context_menu">1</property>
@@ -6548,7 +6548,7 @@
           </object>
         </object>
       </object>
-      <object class="wxToolBar" expanded="true">
+      <object class="wxToolBar" expanded="false">
         <property name="BottomDockable">1</property>
         <property name="LeftDockable">1</property>
         <property name="RightDockable">1</property>
@@ -6653,10 +6653,11 @@
           <property name="id">wxID_ANY</property>
           <property name="kind">wxITEM_NORMAL</property>
           <property name="label">Add</property>
-          <property name="name">database_add</property>
+          <property name="name">tool_add_database</property>
           <property name="permission">protected</property>
           <property name="statusbar"></property>
           <property name="tooltip"></property>
+          <event name="OnToolClicked">on_add_database</event>
         </object>
         <object class="tool" expanded="false">
           <property name="bitmap">Load From File; icons/16x16/database_delete.png</property>
@@ -7656,8 +7657,8 @@
                                                           <property name="window_extra_style"></property>
                                                           <property name="window_name"></property>
                                                           <property name="window_style"></property>
-                                                          <object class="splitteritem" expanded="false">
-                                                            <object class="wxPanel" expanded="false">
+                                                          <object class="splitteritem" expanded="true">
+                                                            <object class="wxPanel" expanded="true">
                                                               <property name="BottomDockable">1</property>
                                                               <property name="LeftDockable">1</property>
                                                               <property name="RightDockable">1</property>
@@ -7709,16 +7710,16 @@
                                                               <property name="window_extra_style"></property>
                                                               <property name="window_name"></property>
                                                               <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                              <object class="wxBoxSizer" expanded="false">
+                                                              <object class="wxBoxSizer" expanded="true">
                                                                 <property name="minimum_size"></property>
                                                                 <property name="name">bSizer158</property>
                                                                 <property name="orient">wxVERTICAL</property>
                                                                 <property name="permission">none</property>
-                                                                <object class="sizeritem" expanded="false">
+                                                                <object class="sizeritem" expanded="true">
                                                                   <property name="border">5</property>
                                                                   <property name="flag">wxEXPAND</property>
                                                                   <property name="proportion">0</property>
-                                                                  <object class="wxBoxSizer" expanded="false">
+                                                                  <object class="wxBoxSizer" expanded="true">
                                                                     <property name="minimum_size"></property>
                                                                     <property name="name">bSizer159</property>
                                                                     <property name="orient">wxHORIZONTAL</property>
@@ -7863,11 +7864,11 @@
                                                                     <property name="permission">none</property>
                                                                   </object>
                                                                 </object>
-                                                                <object class="sizeritem" expanded="false">
+                                                                <object class="sizeritem" expanded="true">
                                                                   <property name="border">5</property>
                                                                   <property name="flag">wxEXPAND</property>
                                                                   <property name="proportion">0</property>
-                                                                  <object class="wxBoxSizer" expanded="false">
+                                                                  <object class="wxBoxSizer" expanded="true">
                                                                     <property name="minimum_size"></property>
                                                                     <property name="name">bSizer142</property>
                                                                     <property name="orient">wxHORIZONTAL</property>
@@ -10876,11 +10877,11 @@
                                                                           <property name="name">bSizer14821</property>
                                                                           <property name="orient">wxVERTICAL</property>
                                                                           <property name="permission">none</property>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxEXPAND</property>
                                                                             <property name="proportion">0</property>
-                                                                            <object class="wxToolBar" expanded="true">
+                                                                            <object class="wxToolBar" expanded="false">
                                                                               <property name="BottomDockable">1</property>
                                                                               <property name="LeftDockable">1</property>
                                                                               <property name="RightDockable">1</property>
@@ -10937,7 +10938,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/add.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -10949,7 +10950,7 @@
                                                                                 <property name="tooltip">Add new procedure</property>
                                                                                 <event name="OnToolClicked">on_insert_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/page_copy.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -10961,7 +10962,7 @@
                                                                                 <property name="tooltip">Clone procedure</property>
                                                                                 <event name="OnToolClicked">on_clone_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/delete.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -10975,11 +10976,11 @@
                                                                               </object>
                                                                             </object>
                                                                           </object>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxALL|wxEXPAND</property>
                                                                             <property name="proportion">1</property>
-                                                                            <object class="wxDataViewCtrl" expanded="true">
+                                                                            <object class="wxDataViewCtrl" expanded="false">
                                                                               <property name="bg"></property>
                                                                               <property name="context_help"></property>
                                                                               <property name="context_menu">1</property>
@@ -11001,7 +11002,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align">wxALIGN_LEFT</property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11013,7 +11014,7 @@
                                                                                 <property name="type">Text</property>
                                                                                 <property name="width">-1</property>
                                                                               </object>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align"></property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11030,11 +11031,11 @@
                                                                         </object>
                                                                       </object>
                                                                     </object>
-                                                                    <object class="notebookpage" expanded="true">
+                                                                    <object class="notebookpage" expanded="false">
                                                                       <property name="bitmap"></property>
                                                                       <property name="label">Functions</property>
                                                                       <property name="select">0</property>
-                                                                      <object class="wxPanel" expanded="true">
+                                                                      <object class="wxPanel" expanded="false">
                                                                         <property name="BottomDockable">1</property>
                                                                         <property name="LeftDockable">1</property>
                                                                         <property name="RightDockable">1</property>
@@ -11086,16 +11087,16 @@
                                                                         <property name="window_extra_style"></property>
                                                                         <property name="window_name"></property>
                                                                         <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                                        <object class="wxBoxSizer" expanded="true">
+                                                                        <object class="wxBoxSizer" expanded="false">
                                                                           <property name="minimum_size"></property>
                                                                           <property name="name">bSizer148211</property>
                                                                           <property name="orient">wxVERTICAL</property>
                                                                           <property name="permission">none</property>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxEXPAND</property>
                                                                             <property name="proportion">0</property>
-                                                                            <object class="wxToolBar" expanded="true">
+                                                                            <object class="wxToolBar" expanded="false">
                                                                               <property name="BottomDockable">1</property>
                                                                               <property name="LeftDockable">1</property>
                                                                               <property name="RightDockable">1</property>
@@ -11152,7 +11153,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/add.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11164,7 +11165,7 @@
                                                                                 <property name="tooltip">Add new function</property>
                                                                                 <event name="OnToolClicked">on_insert_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/page_copy.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11176,7 +11177,7 @@
                                                                                 <property name="tooltip">Clone function</property>
                                                                                 <event name="OnToolClicked">on_clone_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/delete.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11190,11 +11191,11 @@
                                                                               </object>
                                                                             </object>
                                                                           </object>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxALL|wxEXPAND</property>
                                                                             <property name="proportion">1</property>
-                                                                            <object class="wxDataViewCtrl" expanded="true">
+                                                                            <object class="wxDataViewCtrl" expanded="false">
                                                                               <property name="bg"></property>
                                                                               <property name="context_help"></property>
                                                                               <property name="context_menu">1</property>
@@ -11216,7 +11217,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align">wxALIGN_LEFT</property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11228,7 +11229,7 @@
                                                                                 <property name="type">Text</property>
                                                                                 <property name="width">-1</property>
                                                                               </object>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align"></property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11245,11 +11246,11 @@
                                                                         </object>
                                                                       </object>
                                                                     </object>
-                                                                    <object class="notebookpage" expanded="true">
+                                                                    <object class="notebookpage" expanded="false">
                                                                       <property name="bitmap"></property>
                                                                       <property name="label">Triggers</property>
                                                                       <property name="select">0</property>
-                                                                      <object class="wxPanel" expanded="true">
+                                                                      <object class="wxPanel" expanded="false">
                                                                         <property name="BottomDockable">1</property>
                                                                         <property name="LeftDockable">1</property>
                                                                         <property name="RightDockable">1</property>
@@ -11301,16 +11302,16 @@
                                                                         <property name="window_extra_style"></property>
                                                                         <property name="window_name"></property>
                                                                         <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                                        <object class="wxBoxSizer" expanded="true">
+                                                                        <object class="wxBoxSizer" expanded="false">
                                                                           <property name="minimum_size"></property>
                                                                           <property name="name">bSizer1482111</property>
                                                                           <property name="orient">wxVERTICAL</property>
                                                                           <property name="permission">none</property>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxEXPAND</property>
                                                                             <property name="proportion">0</property>
-                                                                            <object class="wxToolBar" expanded="true">
+                                                                            <object class="wxToolBar" expanded="false">
                                                                               <property name="BottomDockable">1</property>
                                                                               <property name="LeftDockable">1</property>
                                                                               <property name="RightDockable">1</property>
@@ -11367,7 +11368,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/add.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11379,7 +11380,7 @@
                                                                                 <property name="tooltip">Add new trigger</property>
                                                                                 <event name="OnToolClicked">on_insert_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/page_copy.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11391,7 +11392,7 @@
                                                                                 <property name="tooltip">Clone trigger</property>
                                                                                 <event name="OnToolClicked">on_clone_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/delete.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11405,11 +11406,11 @@
                                                                               </object>
                                                                             </object>
                                                                           </object>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxALL|wxEXPAND</property>
                                                                             <property name="proportion">1</property>
-                                                                            <object class="wxDataViewCtrl" expanded="true">
+                                                                            <object class="wxDataViewCtrl" expanded="false">
                                                                               <property name="bg"></property>
                                                                               <property name="context_help"></property>
                                                                               <property name="context_menu">1</property>
@@ -11431,7 +11432,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align">wxALIGN_LEFT</property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11443,7 +11444,7 @@
                                                                                 <property name="type">Text</property>
                                                                                 <property name="width">-1</property>
                                                                               </object>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align"></property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11460,11 +11461,11 @@
                                                                         </object>
                                                                       </object>
                                                                     </object>
-                                                                    <object class="notebookpage" expanded="true">
+                                                                    <object class="notebookpage" expanded="false">
                                                                       <property name="bitmap"></property>
                                                                       <property name="label">Events</property>
                                                                       <property name="select">0</property>
-                                                                      <object class="wxPanel" expanded="true">
+                                                                      <object class="wxPanel" expanded="false">
                                                                         <property name="BottomDockable">1</property>
                                                                         <property name="LeftDockable">1</property>
                                                                         <property name="RightDockable">1</property>
@@ -11516,16 +11517,16 @@
                                                                         <property name="window_extra_style"></property>
                                                                         <property name="window_name"></property>
                                                                         <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                                        <object class="wxBoxSizer" expanded="true">
+                                                                        <object class="wxBoxSizer" expanded="false">
                                                                           <property name="minimum_size"></property>
                                                                           <property name="name">bSizer14821111</property>
                                                                           <property name="orient">wxVERTICAL</property>
                                                                           <property name="permission">none</property>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxEXPAND</property>
                                                                             <property name="proportion">0</property>
-                                                                            <object class="wxToolBar" expanded="true">
+                                                                            <object class="wxToolBar" expanded="false">
                                                                               <property name="BottomDockable">1</property>
                                                                               <property name="LeftDockable">1</property>
                                                                               <property name="RightDockable">1</property>
@@ -11582,7 +11583,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/add.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11594,7 +11595,7 @@
                                                                                 <property name="tooltip">Add new event</property>
                                                                                 <event name="OnToolClicked">on_insert_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/page_copy.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11606,7 +11607,7 @@
                                                                                 <property name="tooltip">Clone event</property>
                                                                                 <event name="OnToolClicked">on_clone_view</event>
                                                                               </object>
-                                                                              <object class="tool" expanded="true">
+                                                                              <object class="tool" expanded="false">
                                                                                 <property name="bitmap">Load From File; icons/16x16/delete.png</property>
                                                                                 <property name="context_menu">0</property>
                                                                                 <property name="id">wxID_ANY</property>
@@ -11620,11 +11621,11 @@
                                                                               </object>
                                                                             </object>
                                                                           </object>
-                                                                          <object class="sizeritem" expanded="true">
+                                                                          <object class="sizeritem" expanded="false">
                                                                             <property name="border">5</property>
                                                                             <property name="flag">wxALL|wxEXPAND</property>
                                                                             <property name="proportion">1</property>
-                                                                            <object class="wxDataViewCtrl" expanded="true">
+                                                                            <object class="wxDataViewCtrl" expanded="false">
                                                                               <property name="bg"></property>
                                                                               <property name="context_help"></property>
                                                                               <property name="context_menu">1</property>
@@ -11646,7 +11647,7 @@
                                                                               <property name="window_extra_style"></property>
                                                                               <property name="window_name"></property>
                                                                               <property name="window_style"></property>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align">wxALIGN_LEFT</property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11658,7 +11659,7 @@
                                                                                 <property name="type">Text</property>
                                                                                 <property name="width">-1</property>
                                                                               </object>
-                                                                              <object class="dataViewColumn" expanded="true">
+                                                                              <object class="dataViewColumn" expanded="false">
                                                                                 <property name="align"></property>
                                                                                 <property name="ellipsize"></property>
                                                                                 <property name="flags">wxDATAVIEW_COL_RESIZABLE|wxDATAVIEW_COL_SORTABLE</property>
@@ -11932,11 +11933,11 @@
                                                     </object>
                                                   </object>
                                                 </object>
-                                                <object class="notebookpage" expanded="true">
+                                                <object class="notebookpage" expanded="false">
                                                   <property name="bitmap"></property>
                                                   <property name="label">Diagram</property>
                                                   <property name="select">0</property>
-                                                  <object class="wxPanel" expanded="true">
+                                                  <object class="wxPanel" expanded="false">
                                                     <property name="BottomDockable">1</property>
                                                     <property name="LeftDockable">1</property>
                                                     <property name="RightDockable">1</property>
@@ -11988,7 +11989,7 @@
                                                     <property name="window_extra_style"></property>
                                                     <property name="window_name"></property>
                                                     <property name="window_style">wxTAB_TRAVERSAL</property>
-                                                    <object class="wxBoxSizer" expanded="true">
+                                                    <object class="wxBoxSizer" expanded="false">
                                                       <property name="minimum_size"></property>
                                                       <property name="name">bSizer82</property>
                                                       <property name="orient">wxVERTICAL</property>
@@ -17292,7 +17293,7 @@
                                       <object class="notebookpage" expanded="false">
                                         <property name="bitmap">Load From File; icons/16x16/text_columns.png</property>
                                         <property name="label">Data</property>
-                                        <property name="select">1</property>
+                                        <property name="select">0</property>
                                         <object class="wxPanel" expanded="false">
                                           <property name="BottomDockable">1</property>
                                           <property name="LeftDockable">1</property>

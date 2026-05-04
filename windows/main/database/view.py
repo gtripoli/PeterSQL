@@ -18,6 +18,7 @@ from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_VIEW
 
 class EditViewModel(AbstractModel):
     def __init__(self):
+        super().__init__()
         self.name = Observable()
         self.schema = Observable()
         self.definer = Observable()

@@ -17,6 +17,8 @@ from windows.main import CURRENT_SESSION, CURRENT_DATABASE, CURRENT_PROCEDURE
 
 class EditViewModel(AbstractModel):
     def __init__(self):
+        super().__init__()
+
         self.name = Observable()
         self.parameters = Observable()
         self.language = Observable()

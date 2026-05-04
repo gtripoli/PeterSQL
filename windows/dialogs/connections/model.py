@@ -15,6 +15,7 @@ from . import CURRENT_CONNECTION, PENDING_CONNECTION
 
 class ConnectionModel(AbstractModel):
     def __init__(self):
+        super().__init__()
         self.name = Observable[str]()
         self.engine = Observable[str](initial=ConnectionEngine.MYSQL.value.name)
         self.hostname = Observable[str]()
@@ -45,7 +46,7 @@ class ConnectionModel(AbstractModel):
         self.ssh_tunnel_port = Observable[int](initial=22)
         self.ssh_tunnel_username = Observable[str]()
         self.ssh_tunnel_password = Observable[str]()
-        self.ssh_tunnel_local_port = Observable[int](initial=3307)
+        self.ssh_tunnel_local_port = Observable[int](initial=0)
         self.ssh_tunnel_identity_file = Observable[str]()
         self.ssh_tunnel_remote_hostname = Observable[str]()
         self.ssh_tunnel_remote_port = Observable[int](initial=3306)
@@ -128,7 +129,7 @@ class ConnectionModel(AbstractModel):
             self.ssh_tunnel_port: 22,
             self.ssh_tunnel_username: None,
             self.ssh_tunnel_password: None,
-            self.ssh_tunnel_local_port: 3307,
+            self.ssh_tunnel_local_port: 0,
             self.ssh_tunnel_identity_file: None,
             self.ssh_tunnel_remote_hostname: None,
             self.ssh_tunnel_remote_port: 3306,
