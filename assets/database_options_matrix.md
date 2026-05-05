@@ -14,34 +14,34 @@
   ------------------- ------- --------- ------------ --------
   Charset             ✅      ✅        ❌           ❌
   Collation           ✅      ✅        ⚠️           ❌
-  Encoding            ❌      ❌        ✅           ❌
-  Locale (LC\_\*)     ❌      ❌        ✅           ❌
-  Owner               ❌      ❌        ✅           ❌
-  Template DB         ❌      ❌        ✅           ❌
+  Encryption          ✅      ❌        ❌           ❌
+  Tablespace          ❌      ❌        ✅           ❌
   Connection limit    ❌      ❌        ✅           ❌
-  Allow connections   ❌      ❌        ✅           ❌
-  Is template flag    ❌      ❌        ✅           ❌
-  Default engine      ✅      ✅        ❌           ❌
 
 ------------------------------------------------------------------------
 
 ## Notes
 
-### MySQL / MariaDB
+### MySQL
 
 -   Focus on:
     -   charset
     -   collation
-    -   default engine
+    -   encryption (Y/N)
+
+### MariaDB
+
+-   Focus on:
+    -   charset
+    -   collation
+-   Encryption NOT supported (MySQL-only syntax)
 
 ### PostgreSQL
 
 -   Different model:
-    -   encoding
-    -   locale (LC_COLLATE, LC_CTYPE)
-    -   owner
-    -   template database
-    -   connection rules
+    -   tablespace
+    -   connection limit
+-   Collation: shown in UI but `PostgreSQLDatabase` has no `default_collation` field — not functional yet
 
 ### SQLite
 
@@ -52,5 +52,6 @@
 
 ## Important Caveat
 
-Collation in PostgreSQL is NOT equivalent to MySQL: - Derived from
-locale (LC_COLLATE) - Not freely alterable like in MySQL/MariaDB
+Collation in PostgreSQL is NOT equivalent to MySQL:
+-   Derived from locale (LC_COLLATE) — not freely alterable like in MySQL/MariaDB
+-   Currently not implemented in the app model
