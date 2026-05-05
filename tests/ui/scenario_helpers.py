@@ -158,16 +158,6 @@ def _trim_black_edges(bitmap: wx.Bitmap) -> wx.Bitmap:
 
 
 def capture_window_screenshot(window: wx.TopLevelWindow, target_path: Path) -> None:
-    # window.Show()
-    # window.Raise()
-    # window.Layout()
-    # window.Refresh()
-    # window.Update()
-    # pump_ui(20)
-    #
-    # target_path.parent.mkdir(parents=True, exist_ok=True)
-    # bitmap = capture_window_bitmap(window)
-    # bitmap.SaveFile(str(target_path), wx.BITMAP_TYPE_PNG)
     window.Show()
     window.Raise()
     window.SetFocus()
@@ -175,18 +165,20 @@ def capture_window_screenshot(window: wx.TopLevelWindow, target_path: Path) -> N
     window.Refresh()
     window.Update()
 
-    for _ in range(10):
+    for _ in range(20):
         wx.GetApp().ProcessPendingEvents()
         wx.YieldIfNeeded()
-        time.sleep(0.05)
+        wx.MilliSleep(50)
 
-    rect = window.GetScreenRect()
+    width, height = window.GetClientSize()
 
-    image = pyautogui.screenshot(region=(
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height,
-    ))
+    bitmap = wx.Bitmap(width, height)
+    memory_dc = wx.MemoryDC(bitmap)
 
-    image.save(target_path)
+    try:
+        source_dc = wx.ClientDC(window)
+        memory_dc.Blit(0, 0, width, height, source_dc, 0, 0)
+    finally:
+        memory_dc.SelectObject(wx.NullBitmap)
+
+    bitmap.SaveFile(target_path, wx.BITMAP_TYPE_PNG)
