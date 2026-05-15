@@ -14,6 +14,8 @@ from windows.components.stc.autocomplete.completion_types import (
     CompletionResult,
 )
 from windows.components.stc.autocomplete.context_detector import ContextDetector
+from windows.components.stc.autocomplete.query_scope import TableReference
+from windows.components.stc.autocomplete.sql_context import SQLContext
 from windows.components.stc.autocomplete.dot_completion_handler import (
     DotCompletionHandler,
 )
@@ -75,6 +77,15 @@ class SQLCompletionProvider:
                 statement, relative_pos, database
             )
             scope.current_table = self._get_current_table()
+
+            if self._is_filter_editor:
+                context = SQLContext.WHERE_CLAUSE
+                if scope.current_table and not scope.from_tables:
+                    scope.from_tables = [TableReference(
+                        name=scope.current_table.name,
+                        alias=None,
+                        table=scope.current_table,
+                    )]
 
             if self._dot_handler:
                 self._dot_handler.refresh(database, scope)
@@ -152,6 +163,10 @@ class SQLAutoCompleteController:
 
         self._editor.Bind(wx.stc.EVT_STC_CHARADDED, self._on_char_added)
         self._editor.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
+        self._editor.Bind(wx.EVT_KILL_FOCUS, self._on_editor_kill_focus)
+
+        top_level = wx.GetTopLevelParent(editor)
+        top_level.Bind(wx.EVT_MOVE, self._on_parent_move)
 
     def set_enabled(self, is_enabled: bool) -> None:
         self._is_enabled = is_enabled
@@ -335,6 +350,41 @@ class SQLAutoCompleteController:
                 self._on_item_completed(selected_item)
             return
 
+        if key_code == wx.WXK_UP and self._popup and self._popup.IsShown():
+            self._popup.select_prev()
+            return
+
+        if key_code == wx.WXK_DOWN and self._popup and self._popup.IsShown():
+            self._popup.select_next()
+            return
+
+        if key_code == wx.WXK_PAGEUP and self._popup and self._popup.IsShown():
+            self._popup.select_prev_page()
+            return
+
+        if key_code == wx.WXK_PAGEDOWN and self._popup and self._popup.IsShown():
+            self._popup.select_next_page()
+            return
+
+        event.Skip()
+
+    def _on_editor_kill_focus(self, event: wx.FocusEvent) -> None:
+        wx.CallAfter(self._hide_if_focus_outside_popup)
+        event.Skip()
+
+    def _hide_if_focus_outside_popup(self) -> None:
+        if not (self._popup and self._popup.IsShown()):
+            return
+        focused = wx.Window.FindFocus()
+        current = focused
+        while current is not None:
+            if current is self._popup:
+                return
+            current = current.GetParent()
+        self._hide_popup()
+
+    def _on_parent_move(self, event: wx.MoveEvent) -> None:
+        self._hide_popup()
         event.Skip()
 
     def _on_char_added(self, event: wx.stc.StyledTextEvent) -> None:

@@ -6,7 +6,7 @@ from windows.components.stc.autocomplete.completion_types import CompletionItem,
 from windows.components.stc.theme_loader import ThemeLoader
 
 
-class AutoCompletePopup(wx.PopupTransientWindow):
+class AutoCompletePopup(wx.PopupWindow):
     def __init__(self, parent: wx.Window, settings: object = None, theme_loader: ThemeLoader = None) -> None:
         super().__init__(parent, wx.BORDER_SIMPLE)
 
@@ -50,7 +50,6 @@ class AutoCompletePopup(wx.PopupTransientWindow):
     def _bind_events(self) -> None:
         self._list_ctrl.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_item_activated)
         self._list_ctrl.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
-        self.Bind(wx.EVT_KILL_FOCUS, self._on_kill_focus)
 
     def show_items(self, items: list[CompletionItem], position: wx.Point) -> None:
         self._items = items
@@ -80,7 +79,6 @@ class AutoCompletePopup(wx.PopupTransientWindow):
         self.SetSize((self._popup_width, height))
 
         self.Show()
-        self._list_ctrl.SetFocus()
 
     def _get_bitmap_for_type(self, item_type: CompletionItemType) -> wx.Bitmap:
         icon_map = {
@@ -146,27 +144,43 @@ class AutoCompletePopup(wx.PopupTransientWindow):
 
         event.Skip()
 
-    def _owns_window(self, window: Optional[wx.Window]) -> bool:
-        current = window
-        while current is not None:
-            if current is self:
-                return True
-            current = current.GetParent()
-        return False
-
-    def _on_kill_focus(self, event: wx.FocusEvent) -> None:
-        next_focus = event.GetWindow() if hasattr(event, "GetWindow") else None
-        if self._owns_window(next_focus):
-            event.Skip()
-            return
-
-        self.Hide()
-        event.Skip()
-
     def _complete_with_item(self, item: CompletionItem) -> None:
         if self._on_item_selected:
             self._on_item_selected(item)
         self.Hide()
+
+    def select_next(self) -> None:
+        current = self._list_ctrl.GetFirstSelected()
+        new_index = (current + 1) if current != wx.NOT_FOUND else 0
+        new_index = min(new_index, len(self._items) - 1)
+        self._list_ctrl.Select(new_index)
+        self._list_ctrl.Focus(new_index)
+        self._list_ctrl.EnsureVisible(new_index)
+
+    def select_prev(self) -> None:
+        current = self._list_ctrl.GetFirstSelected()
+        if current == wx.NOT_FOUND:
+            return
+        new_index = max(current - 1, 0)
+        self._list_ctrl.Select(new_index)
+        self._list_ctrl.Focus(new_index)
+        self._list_ctrl.EnsureVisible(new_index)
+
+    def select_next_page(self) -> None:
+        current = self._list_ctrl.GetFirstSelected()
+        if current != wx.NOT_FOUND:
+            new_index = min(current + self._popup_max_height, len(self._items) - 1)
+            self._list_ctrl.Select(new_index)
+            self._list_ctrl.Focus(new_index)
+            self._list_ctrl.EnsureVisible(new_index)
+
+    def select_prev_page(self) -> None:
+        current = self._list_ctrl.GetFirstSelected()
+        if current != wx.NOT_FOUND:
+            new_index = max(current - self._popup_max_height, 0)
+            self._list_ctrl.Select(new_index)
+            self._list_ctrl.Focus(new_index)
+            self._list_ctrl.EnsureVisible(new_index)
 
     def set_on_item_selected(self, callback: Callable) -> None:
         self._on_item_selected = callback
