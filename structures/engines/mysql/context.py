@@ -88,6 +88,10 @@ class MySQLContext(AbstractContext):
         if self.connection.read_only:
             self.execute("SET SESSION TRANSACTION READ ONLY;")
 
+    def set_write_mode(self, enabled: bool) -> None:
+        mode = "READ WRITE" if enabled else "READ ONLY"
+        self.execute(f"SET SESSION TRANSACTION {mode};")
+
     def _parse_type(self, column_type: str):
         """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
 
@@ -205,6 +209,7 @@ class MySQLContext(AbstractContext):
                 cursorclass=pymysql.cursors.DictCursor,
                 connect_timeout=connect_timeout,
                 compress=compressed_protocol,
+                autocommit=True,
                 **connect_kwargs,
             )
             if use_tls:

@@ -19,7 +19,7 @@ import wx.stc
 from helpers import bytes_to_human
 from helpers.loader import Loader
 from helpers.logger import logger
-from helpers.observables import CallbackEvent
+from helpers.observables import CallbackEvent, ObservableList
 
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
@@ -33,7 +33,7 @@ from windows.components.stc.profiles import SQL
 from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
 from windows.components.stc.template_menu import SQLTemplateMenuController
 
-from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE
+from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE, WRITE_OVERRIDE
 
 from windows.main.explorer import TreeExplorerController
 
@@ -120,6 +120,12 @@ class MainFrameController(MainFrameView):
         self._setup_query_editors()
 
         self._setup_database_action_buttons_bindings()
+
+        # Write override state — must be initialized before _setup_subscribers() fires
+        self._write_override_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._on_write_override_tick, self._write_override_timer)
+        self._override_remaining_seconds: int = 0
+        self._overridden_connection: Optional[Connection] = None
 
         self._setup_subscribers()
 
@@ -214,7 +220,8 @@ class MainFrameController(MainFrameView):
 
         for styled_text_ctrl_name in self.styled_text_ctrls_name:
             styled_text_ctrl = getattr(self, styled_text_ctrl_name)
-            self._setup_sql_editor(styled_text_ctrl)
+            is_filter = styled_text_ctrl_name == "sql_query_filters"
+            self._setup_sql_editor(styled_text_ctrl, is_filter_editor=is_filter)
             editors.add(styled_text_ctrl)
 
         for meta in self._query_page_meta.values():
@@ -224,7 +231,7 @@ class MainFrameController(MainFrameView):
 
             self._setup_sql_editor(styled_text_ctrl)
 
-    def _setup_sql_editor(self, styled_text_ctrl: wx.stc.StyledTextCtrl) -> None:
+    def _setup_sql_editor(self, styled_text_ctrl: wx.stc.StyledTextCtrl, *, is_filter_editor: bool = False) -> None:
         styled_text_ctrl.EmptyUndoBuffer()
 
         wx.GetApp().theme_manager.register(styled_text_ctrl, lambda: wx.GetApp().syntax_registry.get("sql"))
@@ -234,6 +241,7 @@ class MainFrameController(MainFrameView):
         sql_completion_provider = SQLCompletionProvider(
             get_database=lambda: CURRENT_DATABASE.get_value(),
             get_current_table=lambda: CURRENT_TABLE.get_value(),
+            is_filter_editor=is_filter_editor,
         )
 
         SQLAutoCompleteController(
@@ -683,6 +691,8 @@ class MainFrameController(MainFrameView):
 
         AUTO_APPLY.subscribe(self._on_auto_apply)
 
+        WRITE_OVERRIDE.subscribe(self._on_write_override)
+
         # Initialize record toolbar states
         self._initialize_record_toolbar_states()
         
@@ -1131,13 +1141,14 @@ class MainFrameController(MainFrameView):
             self._records_offset,
             filters,
         )
-        with Loader.cursor_wait():
-            logger.debug("ui trace: records._load_records_page before obj.load_records obj=%s", obj.name)
-            obj.load_records(filters=filters, limit=limit, offset=self._records_offset)
-            logger.debug("ui trace: records._load_records_page after obj.load_records obj=%s", obj.name)
-            logger.debug("ui trace: records._load_records_page before controller.load_model_for obj=%s", obj.name)
-            self.controller_list_table_records.load_model_for(obj)
-            logger.debug("ui trace: records._load_records_page after controller.load_model_for obj=%s", obj.name)
+        obj.records = ObservableList()
+        self.controller_list_table_records.load_model_for(obj)
+        self.controller_list_table_records.load_records_async(
+            obj=obj,
+            filters=filters,
+            limit=limit,
+            offset=self._records_offset,
+        )
 
         self._update_records_label(obj)
         self._set_records_paging_buttons(obj)
@@ -1191,6 +1202,62 @@ class MainFrameController(MainFrameView):
                 self._records_offset = 0
                 self._load_records_page()
 
+    def on_toggle_read_only(self, event):
+        session = CURRENT_SESSION.get_value()
+        if not session:
+            self.m_toggleBtn1.SetValue(False)
+            return
+        WRITE_OVERRIDE.set_value(self.m_toggleBtn1.GetValue())
+
+    def _on_write_override(self, active: bool):
+        session = CURRENT_SESSION.get_value()
+        if not session:
+            return
+
+        if active:
+            # 1. Python-level: allow execute() to pass write queries
+            self._overridden_connection = session.connection
+            session.connection.read_only = False
+            # 2. DB-level: SET SESSION TRANSACTION READ WRITE (MySQL/MariaDB/PG)
+            #              or reconnect without ?mode=ro (SQLite)
+            try:
+                session.context.set_write_mode(True)
+            except Exception as ex:
+                logger.warning("set_write_mode(True) failed: %s", ex)
+            self._override_remaining_seconds = 120
+            self._write_override_timer.Start(1000)
+            self.m_toggleBtn1.SetValue(True)
+            self.m_toggleBtn1.SetLabel(_("Write Mode (2:00)"))
+        else:
+            self._cancel_write_override()
+
+    def _on_write_override_tick(self, event):
+        self._override_remaining_seconds -= 1
+        if self._override_remaining_seconds <= 0:
+            WRITE_OVERRIDE.set_value(False)
+        else:
+            mins = self._override_remaining_seconds // 60
+            secs = self._override_remaining_seconds % 60
+            self.m_toggleBtn1.SetLabel(_(f"Write Mode ({mins}:{secs:02d})"))
+
+    def _cancel_write_override(self):
+        self._write_override_timer.Stop()
+        if self._overridden_connection:
+            # 1. Python-level restored first — SQLite connect() needs this to pick ?mode=ro URI
+            self._overridden_connection.read_only = True
+            try:
+                session = CURRENT_SESSION.get_value()
+                if session and session.connection is self._overridden_connection:
+                    # 2. DB-level: SET SESSION TRANSACTION READ ONLY (MySQL/MariaDB/PG)
+                    #              or reconnect with ?mode=ro (SQLite)
+                    session.context.set_write_mode(False)
+            except Exception as ex:
+                logger.warning("set_write_mode(False) failed: %s", ex)
+            self._overridden_connection = None
+        self._override_remaining_seconds = 0
+        self.m_toggleBtn1.SetValue(False)
+        self.m_toggleBtn1.SetLabel(_("Read Only"))
+
     def _on_current_session(self, session: Session):
         if not wx.IsMainThread():
             logger.debug("ui trace: _on_current_session rescheduled to main thread")
@@ -1199,14 +1266,32 @@ class MainFrameController(MainFrameView):
 
         from structures.session import Session
 
+        # Cancel any active write override when switching connections
+        if self._overridden_connection and (
+            not session or session.connection is not self._overridden_connection
+        ):
+            self._cancel_write_override()
+            WRITE_OVERRIDE.set_value(False)
+
+        # Sync toggle button state to the incoming session
+        if session:
+            is_read_only = session.connection.read_only
+            self.m_toggleBtn1.Enable(is_read_only)
+            self.m_toggleBtn1.SetValue(not is_read_only)
+            self.m_toggleBtn1.SetLabel(_("Read Only") if is_read_only else _("Write Mode"))
+        else:
+            self.m_toggleBtn1.Enable(False)
+            self.m_toggleBtn1.SetValue(False)
+            self.m_toggleBtn1.SetLabel(_("Read Only"))
+
         self.toggle_panel(session.connection if session else None)
 
         if session:
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {session.name}", 0)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {session.name}", 1)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.server_version}", 1)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Version')}: {session.context.server_version}", 2)
 
-            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 2)
+            wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 3)
 
             keywords = " ".join(k.lower() for k in session.context.KEYWORDS)
 
@@ -1447,6 +1532,9 @@ class MainFrameController(MainFrameView):
         self.btn_delete_view.Enable(can_act)
         self.m_toolBar5.EnableTool(self.tool_clone_view.GetId(), can_act)
 
+        if current:
+            self._set_record_write_tools_enabled(False)
+
     def on_clone_view(self, event):
         view = CURRENT_VIEW.get_value()
         session = CURRENT_SESSION.get_value()
@@ -1545,6 +1633,7 @@ class MainFrameController(MainFrameView):
 
             self.toggle_panel(table)
             self._set_records_paging_buttons(table)
+            self._set_record_write_tools_enabled(True)
             logger.debug(
                 "ui trace: _on_current_table panel updated table=%s selected_page=%s",
                 table.name,
@@ -1773,11 +1862,25 @@ class MainFrameController(MainFrameView):
 
     # RECORDS
     def _on_auto_apply(self, value: bool):
+        if CURRENT_VIEW.get_value() is not None:
+            return
         auto_apply_enabled = self.chb_auto_apply.GetValue()
-        
-        # Enable/disable apply and cancel tools based on auto-apply state
         self.m_toolBar3.EnableTool(self.tool_apply_record.GetId(), not auto_apply_enabled)
         self.m_toolBar3.EnableTool(self.tool_cancel_record.GetId(), not auto_apply_enabled)
+
+    def _set_record_write_tools_enabled(self, enabled: bool):
+        self.m_toolBar3.EnableTool(self.tool_insert_record.GetId(), enabled)
+        self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), False)
+        self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), False)
+        self.chb_auto_apply.Enable(enabled)
+        if enabled:
+            auto_apply = self.chb_auto_apply.GetValue()
+            self.m_toolBar3.EnableTool(self.tool_apply_record.GetId(), not auto_apply)
+            self.m_toolBar3.EnableTool(self.tool_cancel_record.GetId(), not auto_apply)
+        else:
+            self.m_toolBar3.EnableTool(self.tool_apply_record.GetId(), False)
+            self.m_toolBar3.EnableTool(self.tool_cancel_record.GetId(), False)
+        self.m_toolBar3.Refresh()
 
     def _initialize_record_toolbar_states(self):
         """Initialize toolbar states to ensure proper default behavior."""
@@ -1805,9 +1908,9 @@ class MainFrameController(MainFrameView):
         event.Skip()
 
     def _on_current_records(self, records: list[SQLRecord]):
-        # Enable/disable duplicate and delete tools based on record selection
-        self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), len(records) == 1)
-        self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), len(records) > 0)
+        if CURRENT_VIEW.get_value() is None:
+            self.m_toolBar3.EnableTool(self.tool_duplicate_record.GetId(), len(records) == 1)
+            self.m_toolBar3.EnableTool(self.tool_delete_record.GetId(), len(records) > 0)
 
     def on_apply_record(self, event):
         self.controller_list_table_records.do_apply_records()
@@ -1883,6 +1986,13 @@ class MainFrameController(MainFrameView):
         self._load_records_page()
 
     def on_apply_filters(self, event):
+        self._records_offset = 0
+        self._load_records_page()
+
+    def on_clear_filters(self, event):
+        self.sql_query_filters.ClearAll()
+        self.m_collapsiblePane1.Collapse(True)
+        self.panel_records.Layout()
         self._records_offset = 0
         self._load_records_page()
 

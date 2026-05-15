@@ -77,6 +77,10 @@ class PostgreSQLContext(AbstractContext):
         if self.connection.read_only:
             self.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;")
 
+    def set_write_mode(self, enabled: bool) -> None:
+        mode = "READ WRITE" if enabled else "READ ONLY"
+        self.execute(f"SET SESSION CHARACTERISTICS AS TRANSACTION {mode};")
+
     def _load_custom_types(self) -> None:
         """Load user-defined enum types from the database."""
         self.execute("""

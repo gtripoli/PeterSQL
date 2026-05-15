@@ -106,6 +106,10 @@ class TreeExplorerController:
             if isinstance(obj, Session):
                 self.select_session(obj, event)
             elif isinstance(obj, SQLDatabase):
+                parent_item = self.tree_ctrl_explorer.GetItemParent(item)
+                parent_session = self.tree_ctrl_explorer.GetItemPyData(parent_item)
+                if isinstance(parent_session, Session):
+                    self.select_session(parent_session, event)
                 self.select_database(obj, item, event)
             elif isinstance(
                     obj,
@@ -199,6 +203,7 @@ class TreeExplorerController:
 
     def select_session(self, session: Session, event):
         if session == CURRENT_SESSION.get_value() and CURRENT_DATABASE.get_value():
+            CURRENT_SESSION.execute_callback(CallbackEvent.AFTER_CHANGE)
             event.Skip()
             return
         CURRENT_SESSION.set_value(session)

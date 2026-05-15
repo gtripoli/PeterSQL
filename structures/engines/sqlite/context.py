@@ -119,6 +119,15 @@ class SQLiteContext(AbstractContext):
                 if not skip_after_connect:
                     self.after_connect()
 
+    def set_write_mode(self, enabled: bool) -> None:
+        # SQLite read_only is URI-level (?mode=ro) — must reconnect
+        # connection.read_only is already updated by the caller before this is invoked
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+            self._cursor = None
+        self.connect()
+
     def set_database(self, database: SQLDatabase) -> None:
         pass
 

@@ -120,6 +120,10 @@ class AbstractContext(abc.ABC):
         """Run engine-specific setup right after a successful connection."""
         pass
 
+    def set_write_mode(self, enabled: bool) -> None:
+        """Override the DB-level read-only session setting. No-op by default."""
+        pass
+
     def before_disconnect(self, *args, **kwargs):
         """Release pre-disconnect resources and restore base host settings."""
         if self._ssh_tunnel is not None:

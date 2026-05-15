@@ -24,3 +24,5 @@ NEW_DATABASE: Observable[SQLDatabase] = Observable()
 NEW_TABLE: Observable[SQLTable] = Observable()
 
 AUTO_APPLY: Observable[bool] = Observable(True)
+
+WRITE_OVERRIDE: Observable[bool] = Observable(False)

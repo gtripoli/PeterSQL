@@ -147,28 +147,30 @@ class TableRecordsController:
         selected_records = self.get_selected_records()
         self._update_toolbar_states(selected_records)
 
-    def load_records_async(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
+    def load_records_async(self, obj=None, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
         """Load records asynchronously using RecordsExecutor."""
-        if not self.executor or not self.table:
+        target = obj or self.table
+        if not self.executor or not target:
             return
 
         self.executor.load_records(
-            table=self.table,
-            on_complete=self._on_records_loaded,
+            table=target,
+            on_complete=lambda result: self._on_records_loaded(result, target),
             filters=filters,
             limit=limit,
             offset=offset,
             orders=orders
         )
 
-    def _on_records_loaded(self, result: RecordsOperationResult):
+    def _on_records_loaded(self, result: RecordsOperationResult, obj=None):
         """Handle completion of records loading."""
+        target = obj or self.table
         if result.success and result.records is not None:
-            self.table.records.set_value(result.records)
+            target.records.set_value(result.records)
         else:
             logger.error(f"Failed to load records: {result.error}")
             try:
-                self.table.load_records()
+                target.load_records()
             except Exception as ex:
                 logger.error(f"Fallback loading also failed: {ex}", exc_info=True)
 
@@ -186,7 +188,6 @@ class TableRecordsController:
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
         logger.debug(f"{'#' * 10} ON RECORD EDITING DONE {'#' * 10}")
-        table: SQLTable = CURRENT_TABLE.get_value()
 
         item = event.GetItem()
 
@@ -195,19 +196,16 @@ class TableRecordsController:
             return
 
         current_record = self.model.data[self.model.GetRow(item)]
-        original_record = next((r for r in list(table.records) if r.id == current_record.id), None)
 
-        if current_record.id == -1 or current_record != original_record:
-            if AUTO_APPLY.get_value() and current_record.is_valid():
-                try:
-                    current_record.save()
-                except Exception as ex:
-                    logger.error(f"Error saving record: {ex}", exc_info=True)
-                else:
-                    # Refresh records after successful save
-                    self.load_records_async()
+        if AUTO_APPLY.get_value() and current_record.is_valid():
+            try:
+                current_record.save()
+            except Exception as ex:
+                logger.error(f"Error saving record: {ex}", exc_info=True)
             else:
-                NEW_RECORDS.append(current_record, replace_existing=True)
+                self.load_records_async()
+        else:
+            NEW_RECORDS.append(current_record, replace_existing=True)
 
         event.Skip()
 

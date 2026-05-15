@@ -69,12 +69,19 @@ class MariaDBTable(SQLTable):
 
         columns_and_indexes = columns + indexes
 
+        clauses: list[str] = []
+
+        if self.collation_name:
+            clauses.append(f"COLLATE='{self.collation_name}'")
+
+        if self.engine:
+            clauses.append(f"ENGINE={self.engine}")
+
         return f"""
             CREATE TABLE {self.fully_qualified_name} (
                 {', '.join(columns_and_indexes)}
             )
-            COLLATE='{self.collation_name}'
-            ENGINE={self.engine};
+            {' '.join(clauses)};
             """
 
     def alter_auto_increment(self, auto_increment: int):

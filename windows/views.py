@@ -911,7 +911,7 @@ class MainFrameView ( wx.Frame ):
 
         self.m_tool4 = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Disconnect from server"), wx.Bitmap( u"icons/16x16/disconnect.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.database_refresh = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"tool"), wx.Bitmap( u"icons/16x16/database_refresh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Refresh"), _(u"Refresh"), None )
+        self.tool_refresh_database = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"tool"), wx.Bitmap( u"icons/16x16/database_refresh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Refresh"), _(u"Refresh"), None )
 
         self.m_toolBar1.AddSeparator()
 
@@ -919,6 +919,14 @@ class MainFrameView ( wx.Frame ):
 
         self.database_delete = self.m_toolBar1.AddTool( wx.ID_ANY, _(u"Add"), wx.Bitmap( u"icons/16x16/database_delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
+        self.m_toolBar1.AddSeparator()
+
+
+        self.m_toggleBtn1 = wx.ToggleButton( self.m_toolBar1, wx.ID_ANY, _(u"{mode}"), wx.DefaultPosition, wx.DefaultSize, 0 )
+
+        self.m_toggleBtn1.SetBitmap( wx.Bitmap( u"icons/16x16/lock.png", wx.BITMAP_TYPE_ANY ) )
+        self.m_toggleBtn1.SetBitmapPressed( wx.Bitmap( u"icons/16x16/bullet_green.png", wx.BITMAP_TYPE_ANY ) )
+        self.m_toolBar1.AddControl( self.m_toggleBtn1 )
         self.m_toolBar1.Realize()
 
         bSizer19 = wx.BoxSizer( wx.VERTICAL )
@@ -2257,7 +2265,7 @@ class MainFrameView ( wx.Frame ):
         bSizer61.Add( bSizer94, 0, wx.EXPAND, 5 )
 
         self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE|wx.FULL_REPAINT_ON_RESIZE )
-        self.m_collapsiblePane1.Collapse( True )
+        self.m_collapsiblePane1.Collapse( False )
 
         bSizer831 = wx.BoxSizer( wx.VERTICAL )
 
@@ -2293,12 +2301,23 @@ class MainFrameView ( wx.Frame ):
         self.sql_query_filters.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
         bSizer831.Add( self.sql_query_filters, 1, wx.EXPAND | wx.ALL, 5 )
 
+        bSizer1591 = wx.BoxSizer( wx.HORIZONTAL )
+
         self.m_button41 = wx.Button( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
 
         self.m_button41.SetBitmap( wx.Bitmap( u"icons/16x16/tick.png", wx.BITMAP_TYPE_ANY ) )
+        self.m_button41.SetToolTip( _(u"Apply filters in data\nCTRL+ENTER") )
         self.m_button41.SetHelpText( _(u"CTRL+ENTER") )
 
-        bSizer831.Add( self.m_button41, 0, wx.ALL, 5 )
+        bSizer1591.Add( self.m_button41, 0, wx.ALL, 5 )
+
+        self.m_button56 = wx.Button( self.m_collapsiblePane1.GetPane(), wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+
+        self.m_button56.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
+        bSizer1591.Add( self.m_button56, 0, wx.ALL, 5 )
+
+
+        bSizer831.Add( bSizer1591, 0, wx.EXPAND, 5 )
 
 
         self.m_collapsiblePane1.GetPane().SetSizer( bSizer831 )
@@ -2324,7 +2343,7 @@ class MainFrameView ( wx.Frame ):
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
+        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2527,7 +2546,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_sql_log.SetSizer( sizer_log_sql )
         self.panel_sql_log.Layout()
         sizer_log_sql.Fit( self.panel_sql_log )
-        self.m_splitter51.SplitHorizontally( self.m_panel22, self.panel_sql_log, -150 )
+        self.m_splitter51.SplitHorizontally( self.m_panel22, self.panel_sql_log, -200 )
         bSizer21.Add( self.m_splitter51, 1, wx.EXPAND, 5 )
 
 
@@ -2549,8 +2568,9 @@ class MainFrameView ( wx.Frame ):
         self.Bind( wx.EVT_MENU, self.on_menu_about, id = self.m_menuItem15.GetId() )
         self.Bind( wx.EVT_TOOL, self.do_open_connection_manager, id = self.m_tool5.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_database_disconnect, id = self.m_tool4.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_database_refresh, id = self.database_refresh.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_refresh_database, id = self.tool_refresh_database.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_add_database, id = self.tool_add_database.GetId() )
+        self.m_toggleBtn1.Bind( wx.EVT_TOGGLEBUTTON, self.on_toggle_read_only )
         self.MainFrameNotebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_chaged )
         self.Bind( wx.EVT_TOOL, self.on_insert_table, id = self.tool_insert_table.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_clone_table, id = self.tool_clone_table.GetId() )
@@ -2601,6 +2621,7 @@ class MainFrameView ( wx.Frame ):
         self.btn_last_records.Bind( wx.EVT_BUTTON, self.on_last_records )
         self.m_collapsiblePane1.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_collapsible_pane_changed )
         self.m_button41.Bind( wx.EVT_BUTTON, self.on_apply_filters )
+        self.m_button56.Bind( wx.EVT_BUTTON, self.on_clear_filters )
         self.Bind( wx.EVT_TOOL, self.on_new_query, id = self.new_query.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_close_query, id = self.close_query.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_execute_statement, id = self.execute_statement.GetId() )
@@ -2628,10 +2649,13 @@ class MainFrameView ( wx.Frame ):
     def on_database_disconnect( self, event ):
         event.Skip()
 
-    def on_database_refresh( self, event ):
+    def on_refresh_database( self, event ):
         event.Skip()
 
     def on_add_database( self, event ):
+        event.Skip()
+
+    def on_toggle_read_only( self, event ):
         event.Skip()
 
     def on_page_chaged( self, event ):
@@ -2752,6 +2776,9 @@ class MainFrameView ( wx.Frame ):
     def on_apply_filters( self, event ):
         event.Skip()
 
+    def on_clear_filters( self, event ):
+        event.Skip()
+
     def on_new_query( self, event ):
         event.Skip()
 
@@ -2771,7 +2798,7 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def m_splitter51OnIdle( self, event ):
-        self.m_splitter51.SetSashPosition( -150 )
+        self.m_splitter51.SetSashPosition( -200 )
         self.m_splitter51.Unbind( wx.EVT_IDLE )
 
     def m_splitter4OnIdle( self, event ):
@@ -2999,6 +3026,9 @@ class Trash ( wx.Panel ):
 
 
         bSizer144.Add( bSizer156, 1, wx.EXPAND, 5 )
+
+        self.m_button57 = wx.Button( self, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer144.Add( self.m_button57, 0, wx.ALL, 5 )
 
 
         self.SetSizer( bSizer144 )
