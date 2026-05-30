@@ -2182,15 +2182,120 @@ class MainFrameView ( wx.Frame ):
         self.panel_views.SetSizer( bSizer84 )
         self.panel_views.Layout()
         bSizer84.Fit( self.panel_views )
-        self.MainFrameNotebook.AddPage( self.panel_views, _(u"Views"), False )
+        self.MainFrameNotebook.AddPage( self.panel_views, _(u"View"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/view.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
             self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
             MainFrameNotebookIndex += 1
 
+        self.panel_procedures = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer160 = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_splitter9 = wx.SplitterWindow( self.panel_procedures, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter9.SetSashGravity( 0 )
+        self.m_splitter9.Bind( wx.EVT_IDLE, self.m_splitter9OnIdle )
+
+        self.m_panel73 = wx.Panel( self.m_splitter9, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer166 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer871 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText401 = wx.StaticText( self.m_panel73, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText401.Wrap( -1 )
+
+        self.m_staticText401.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer871.Add( self.m_staticText401, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.txt_name_procedure = wx.TextCtrl( self.m_panel73, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer871.Add( self.txt_name_procedure, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer166.Add( bSizer871, 0, wx.EXPAND, 5 )
+
+
+        self.m_panel73.SetSizer( bSizer166 )
+        self.m_panel73.Layout()
+        bSizer166.Fit( self.m_panel73 )
+        self.m_panel74 = wx.Panel( self.m_splitter9, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer161 = wx.BoxSizer( wx.VERTICAL )
+
+        self.stc_procedure = wx.stc.StyledTextCtrl( self.m_panel74, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
+        self.stc_procedure.SetUseTabs ( True )
+        self.stc_procedure.SetTabWidth ( 4 )
+        self.stc_procedure.SetIndent ( 4 )
+        self.stc_procedure.SetTabIndents( True )
+        self.stc_procedure.SetBackSpaceUnIndents( True )
+        self.stc_procedure.SetViewEOL( False )
+        self.stc_procedure.SetViewWhiteSpace( False )
+        self.stc_procedure.SetMarginWidth( 2, 0 )
+        self.stc_procedure.SetIndentationGuides( True )
+        self.stc_procedure.SetReadOnly( False )
+        self.stc_procedure.SetMarginWidth( 1, 0 )
+        self.stc_procedure.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.stc_procedure.SetMarginWidth( 0, self.stc_procedure.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.stc_procedure.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.stc_procedure.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        self.stc_procedure.SetMinSize( wx.Size( -1,200 ) )
+
+        bSizer161.Add( self.stc_procedure, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_panel74.SetSizer( bSizer161 )
+        self.m_panel74.Layout()
+        bSizer161.Fit( self.m_panel74 )
+        self.m_splitter9.SplitHorizontally( self.m_panel73, self.m_panel74, 0 )
+        bSizer160.Add( self.m_splitter9, 1, wx.EXPAND, 5 )
+
+        bSizer911 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.btn_delete_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_delete_procedure.Enable( False )
+
+        bSizer911.Add( self.btn_delete_procedure, 0, wx.ALL, 5 )
+
+        self.btn_cancel_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_cancel_procedure.Enable( False )
+
+        bSizer911.Add( self.btn_cancel_procedure, 0, wx.ALL, 5 )
+
+        self.btn_save_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_save_procedure.Enable( False )
+
+        bSizer911.Add( self.btn_save_procedure, 0, wx.ALL, 5 )
+
+
+        bSizer160.Add( bSizer911, 0, wx.EXPAND, 5 )
+
+
+        self.panel_procedures.SetSizer( bSizer160 )
+        self.panel_procedures.Layout()
+        bSizer160.Fit( self.panel_procedures )
+        self.MainFrameNotebook.AddPage( self.panel_procedures, _(u"Procedure"), False )
+        MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/code-folding.png", wx.BITMAP_TYPE_ANY )
+        if ( MainFrameNotebookBitmap.IsOk() ):
+            MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
+            self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
+            MainFrameNotebookIndex += 1
+
         self.panel_triggers = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.MainFrameNotebook.AddPage( self.panel_triggers, _(u"Triggers"), False )
+        self.MainFrameNotebook.AddPage( self.panel_triggers, _(u"Trigger"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/cog.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2265,7 +2370,7 @@ class MainFrameView ( wx.Frame ):
         bSizer61.Add( bSizer94, 0, wx.EXPAND, 5 )
 
         self.m_collapsiblePane1 = wx.CollapsiblePane( self.panel_records, wx.ID_ANY, _(u"Filters"), wx.DefaultPosition, wx.DefaultSize, wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE|wx.FULL_REPAINT_ON_RESIZE )
-        self.m_collapsiblePane1.Collapse( False )
+        self.m_collapsiblePane1.Collapse( True )
 
         bSizer831 = wx.BoxSizer( wx.VERTICAL )
 
@@ -2334,12 +2439,23 @@ class MainFrameView ( wx.Frame ):
         self.panel_records.SetSizer( bSizer61 )
         self.panel_records.Layout()
         bSizer61.Fit( self.panel_records )
-        self.m_menu10 = wx.Menu()
-        self.m_menuItem13 = wx.MenuItem( self.m_menu10, wx.ID_ANY, _(u"Insert row")+ u"\t" + u"Ins", wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu10.Append( self.m_menuItem13 )
+        self.menu_table_records = wx.Menu()
+        self.m_menuItem13 = wx.MenuItem( self.menu_table_records, wx.ID_ANY, _(u"Insert row")+ u"\t" + u"Ins", wx.EmptyString, wx.ITEM_NORMAL )
+        self.menu_table_records.Append( self.m_menuItem13 )
 
-        self.m_menuItem14 = wx.MenuItem( self.m_menu10, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu10.Append( self.m_menuItem14 )
+        self.m_menuItem14 = wx.MenuItem( self.menu_table_records, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.menu_table_records.Append( self.m_menuItem14 )
+
+        self.menu_table_records.AppendSeparator()
+
+        self.m_menuItem20 = wx.MenuItem( self.menu_table_records, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.menu_table_records.Append( self.m_menuItem20 )
+
+        self.m_menu41 = wx.Menu()
+        self.m_menuItem21 = wx.MenuItem( self.m_menu41, wx.ID_ANY, _(u"NULL"), wx.EmptyString, wx.ITEM_NORMAL )
+        self.m_menu41.Append( self.m_menuItem21 )
+
+        self.menu_table_records.AppendSubMenu( self.m_menu41, _(u"MyMenu") )
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
@@ -2822,8 +2938,12 @@ class MainFrameView ( wx.Frame ):
     def panel_table_columnsOnContextMenu( self, event ):
         self.panel_table_columns.PopupMenu( self.menu_table_columns, event.GetPosition() )
 
+    def m_splitter9OnIdle( self, event ):
+        self.m_splitter9.SetSashPosition( 0 )
+        self.m_splitter9.Unbind( wx.EVT_IDLE )
+
     def panel_recordsOnContextMenu( self, event ):
-        self.panel_records.PopupMenu( self.m_menu10, event.GetPosition() )
+        self.panel_records.PopupMenu( self.menu_table_records, event.GetPosition() )
 
     def m_splitter6OnIdle( self, event ):
         self.m_splitter6.SetSashPosition( -300 )

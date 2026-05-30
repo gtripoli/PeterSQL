@@ -1,7 +1,6 @@
 from typing import Optional
 
 import wx
-import wx.stc
 
 from gettext import gettext as _
 
@@ -94,7 +93,15 @@ class EditViewModel(AbstractModel):
 class ProcedureEditorController:
     def __init__(self, parent):
         self.parent = parent
-        self._build_panel(parent)
+
+        try:
+            from windows.components.stc.styles import apply_stc_theme
+            from windows.components.stc.profiles import SQL
+            apply_stc_theme(self.parent.stc_procedure)
+            SQL.apply(self.parent.stc_procedure)
+        except Exception:
+            pass
+
         self.model = EditViewModel()
         self._bind_controls()
         self._bind_buttons()
@@ -108,116 +115,19 @@ class ProcedureEditorController:
         CURRENT_PROCEDURE.subscribe(self.on_current_procedure_changed)
 
     # ------------------------------------------------------------------
-    # Panel construction
-    # ------------------------------------------------------------------
-
-    def _build_panel(self, parent):
-        self.panel = wx.Panel(parent.MainFrameNotebook, wx.ID_ANY)
-        parent.MainFrameNotebook.AddPage(self.panel, _("Procedure"), False)
-        self.page_index = parent.MainFrameNotebook.GetPageCount() - 1
-
-        outer = wx.BoxSizer(wx.VERTICAL)
-
-        # --- Options notebook (mirrors m_notebook7 in views) ---
-        self.options_notebook = wx.Notebook(self.panel, wx.ID_ANY)
-        self.pnl_options_root = wx.Panel(self.options_notebook, wx.ID_ANY)
-        self.options_notebook.AddPage(self.pnl_options_root, _("Options"), False)
-
-        options_vsizer = wx.BoxSizer(wx.VERTICAL)
-
-        # Name row (always visible)
-        pnl_name = wx.Panel(self.pnl_options_root, wx.ID_ANY)
-        name_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_name = wx.StaticText(pnl_name, label=_("Name"))
-        lbl_name.SetMinSize(wx.Size(150, -1))
-        name_sizer.Add(lbl_name, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.txt_procedure_name = wx.TextCtrl(pnl_name, wx.ID_ANY)
-        name_sizer.Add(self.txt_procedure_name, 1, wx.ALIGN_CENTER | wx.ALL, 5)
-        pnl_name.SetSizer(name_sizer)
-        options_vsizer.Add(pnl_name, 0, wx.EXPAND | wx.ALL, 2)
-
-        # Definer row (MySQL/MariaDB)
-        self.pnl_row_definer = wx.Panel(self.pnl_options_root, wx.ID_ANY)
-        definer_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_def = wx.StaticText(self.pnl_row_definer, label=_("Definer"))
-        lbl_def.SetMinSize(wx.Size(150, -1))
-        definer_sizer.Add(lbl_def, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.cmb_procedure_definer = wx.ComboBox(self.pnl_row_definer, wx.ID_ANY, style=wx.CB_DROPDOWN)
-        definer_sizer.Add(self.cmb_procedure_definer, 1, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.pnl_row_definer.SetSizer(definer_sizer)
-        options_vsizer.Add(self.pnl_row_definer, 0, wx.EXPAND | wx.ALL, 2)
-
-        # Parameters row (always visible)
-        pnl_params = wx.Panel(self.pnl_options_root, wx.ID_ANY)
-        params_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_params = wx.StaticText(pnl_params, label=_("Parameters"))
-        lbl_params.SetMinSize(wx.Size(150, -1))
-        params_sizer.Add(lbl_params, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.txt_procedure_parameters = wx.TextCtrl(pnl_params, wx.ID_ANY)
-        params_sizer.Add(self.txt_procedure_parameters, 1, wx.ALIGN_CENTER | wx.ALL, 5)
-        pnl_params.SetSizer(params_sizer)
-        options_vsizer.Add(pnl_params, 0, wx.EXPAND | wx.ALL, 2)
-
-        # Language row (PostgreSQL)
-        self.pnl_row_language = wx.Panel(self.pnl_options_root, wx.ID_ANY)
-        lang_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_lang = wx.StaticText(self.pnl_row_language, label=_("Language"))
-        lbl_lang.SetMinSize(wx.Size(150, -1))
-        lang_sizer.Add(lbl_lang, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.cho_procedure_language = wx.Choice(self.pnl_row_language, wx.ID_ANY, choices=["plpgsql", "sql"])
-        self.cho_procedure_language.SetSelection(0)
-        lang_sizer.Add(self.cho_procedure_language, 1, wx.ALIGN_CENTER | wx.ALL, 5)
-        self.pnl_row_language.SetSizer(lang_sizer)
-        options_vsizer.Add(self.pnl_row_language, 0, wx.EXPAND | wx.ALL, 2)
-
-        self.pnl_options_root.SetSizer(options_vsizer)
-        self.pnl_options_root.Layout()
-
-        outer.Add(self.options_notebook, 0, wx.ALL | wx.EXPAND, 5)
-
-        # --- Body editor ---
-        self.stc_procedure_body = wx.stc.StyledTextCtrl(self.panel, wx.ID_ANY, size=wx.Size(-1, -1))
-        self.stc_procedure_body.SetMinSize(wx.Size(-1, 120))
-        outer.Add(self.stc_procedure_body, 1, wx.ALL | wx.EXPAND, 5)
-
-        # --- Buttons ---
-        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.btn_delete_procedure = wx.Button(self.panel, wx.ID_ANY, _("Delete"))
-        self.btn_cancel_procedure = wx.Button(self.panel, wx.ID_ANY, _("Cancel"))
-        self.btn_save_procedure = wx.Button(self.panel, wx.ID_ANY, _("Save"))
-        btn_sizer.Add(self.btn_delete_procedure, 0, wx.RIGHT, 5)
-        btn_sizer.AddStretchSpacer()
-        btn_sizer.Add(self.btn_cancel_procedure, 0, wx.RIGHT, 5)
-        btn_sizer.Add(self.btn_save_procedure, 0)
-        outer.Add(btn_sizer, 0, wx.ALL | wx.EXPAND, 5)
-
-        self.panel.SetSizer(outer)
-
-        try:
-            from windows.components.stc.styles import apply_stc_theme
-            from windows.components.stc.profiles import SQL
-            apply_stc_theme(self.stc_procedure_body)
-            SQL.apply(self.stc_procedure_body)
-        except Exception:
-            pass
-
-    # ------------------------------------------------------------------
     # Bindings
     # ------------------------------------------------------------------
 
     def _bind_controls(self):
         self.model.bind_controls(
-            name=self.txt_procedure_name,
-            parameters=self.txt_procedure_parameters,
-            language=self.cho_procedure_language,
-            definer=self.cmb_procedure_definer,
-            body=self.stc_procedure_body,
+            name=self.parent.txt_name_procedure,
+            body=self.parent.stc_procedure,
         )
 
     def _bind_buttons(self):
-        self.btn_save_procedure.Bind(wx.EVT_BUTTON, self.on_save_procedure)
-        self.btn_delete_procedure.Bind(wx.EVT_BUTTON, self.on_delete_procedure)
-        self.btn_cancel_procedure.Bind(wx.EVT_BUTTON, self.on_cancel_procedure)
+        self.parent.btn_save_procedure.Bind(wx.EVT_BUTTON, self.on_save_procedure)
+        self.parent.btn_delete_procedure.Bind(wx.EVT_BUTTON, self.on_delete_procedure)
+        self.parent.btn_cancel_procedure.Bind(wx.EVT_BUTTON, self.on_cancel_procedure)
 
     # ------------------------------------------------------------------
     # Button state
@@ -248,14 +158,14 @@ class ProcedureEditorController:
             getattr(procedure, "is_new", None) if procedure is not None else None,
         )
         if procedure is None:
-            self.btn_save_procedure.Enable(False)
-            self.btn_cancel_procedure.Enable(False)
-            self.btn_delete_procedure.Enable(False)
+            self.parent.btn_save_procedure.Enable(False)
+            self.parent.btn_cancel_procedure.Enable(False)
+            self.parent.btn_delete_procedure.Enable(False)
         else:
             has_changes = self._has_changes(procedure)
-            self.btn_save_procedure.Enable(has_changes)
-            self.btn_cancel_procedure.Enable(has_changes)
-            self.btn_delete_procedure.Enable(not procedure.is_new)
+            self.parent.btn_save_procedure.Enable(has_changes)
+            self.parent.btn_cancel_procedure.Enable(has_changes)
+            self.parent.btn_delete_procedure.Enable(not procedure.is_new)
 
     # ------------------------------------------------------------------
     # Actions
@@ -353,12 +263,15 @@ class ProcedureEditorController:
     def _populate_definers(self, engine: ConnectionEngine, session):
         if engine not in (ConnectionEngine.MYSQL, ConnectionEngine.MARIADB):
             return
+        cmb = getattr(self.parent, 'cmb_procedure_definer', None)
+        if cmb is None:
+            return
         try:
             logger.debug("ui trace: procedure._populate_definers start engine=%s", engine.name)
             definers = session.context.get_definers()
-            self.cmb_procedure_definer.Clear()
+            cmb.Clear()
             for definer in definers:
-                self.cmb_procedure_definer.Append(definer)
+                cmb.Append(definer)
             logger.debug("ui trace: procedure._populate_definers done count=%s", len(definers))
         except Exception:
             pass
@@ -372,27 +285,31 @@ class ProcedureEditorController:
         else:
             self._apply_default_visibility()
 
-        self.pnl_options_root.GetSizer().Layout()
-        self.options_notebook.SetMinSize(wx.Size(-1, -1))
-        self.options_notebook.Fit()
-        self.panel.Layout()
+        self.parent.m_panel73.GetSizer().Layout()
+        self.parent.panel_procedures.Layout()
 
     def _apply_mysql_visibility(self):
+        definer = getattr(self.parent, 'pnl_procedure_row_definer', None)
+        language = getattr(self.parent, 'pnl_procedure_row_language', None)
         self._batch_show_hide(
-            show=[self.pnl_row_definer],
-            hide=[self.pnl_row_language],
+            show=[w for w in [definer] if w],
+            hide=[w for w in [language] if w],
         )
 
     def _apply_postgresql_visibility(self):
+        definer = getattr(self.parent, 'pnl_procedure_row_definer', None)
+        language = getattr(self.parent, 'pnl_procedure_row_language', None)
         self._batch_show_hide(
-            show=[self.pnl_row_language],
-            hide=[self.pnl_row_definer],
+            show=[w for w in [language] if w],
+            hide=[w for w in [definer] if w],
         )
 
     def _apply_default_visibility(self):
+        definer = getattr(self.parent, 'pnl_procedure_row_definer', None)
+        language = getattr(self.parent, 'pnl_procedure_row_language', None)
         self._batch_show_hide(
             show=[],
-            hide=[self.pnl_row_definer, self.pnl_row_language],
+            hide=[w for w in [definer, language] if w],
         )
 
     def _batch_show_hide(self, show: list[wx.Window], hide: list[wx.Window]):
