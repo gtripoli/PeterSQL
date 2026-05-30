@@ -221,6 +221,7 @@ class TreeExplorerController:
                                    message="not connected").ShowModal() == wx.ID_OK:
                     session.connect()
 
+            self.reset_current_objects()
             CURRENT_DATABASE.set_value(database)
             CURRENT_SESSION.get_value().context.set_database(database)
 

@@ -781,7 +781,7 @@ class MainFrameController(MainFrameView):
         current_view = CURRENT_VIEW.get_value()
         current_trigger = CURRENT_TRIGGER.get_value()
         current_procedure = CURRENT_PROCEDURE.get_value()
-        procedure_page_index = self.controller_procedure_editor.page_index
+        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
 
         total_pages = self.MainFrameNotebook.GetPageCount()
 
@@ -796,14 +796,14 @@ class MainFrameController(MainFrameView):
 
             if not current_table:
                 self.MainFrameNotebook.GetPage(2).Hide()
-                self.MainFrameNotebook.GetPage(5).Hide()
+                self.MainFrameNotebook.GetPage(6).Hide()
 
             if not current_view:
                 self.MainFrameNotebook.GetPage(3).Hide()
-                self.MainFrameNotebook.GetPage(5).Hide()
+                self.MainFrameNotebook.GetPage(6).Hide()
 
             if not current_trigger:
-                self.MainFrameNotebook.GetPage(4).Hide()
+                self.MainFrameNotebook.GetPage(5).Hide()
 
             if not current_procedure:
                 self.MainFrameNotebook.GetPage(procedure_page_index).Hide()
@@ -816,7 +816,7 @@ class MainFrameController(MainFrameView):
 
         elif isinstance(current, SQLDatabase):
             self.MainFrameNotebook.GetPage(1).Show()
-            self.MainFrameNotebook.GetPage(6).Show()
+            self.MainFrameNotebook.GetPage(7).Show()
             self.MainFrameNotebook.SetSelection(1)
 
         elif isinstance(current, SQLTable) or isinstance(current, SQLView):
@@ -830,19 +830,19 @@ class MainFrameController(MainFrameView):
                 if self.MainFrameNotebook.GetSelection() < 3:
                     self.MainFrameNotebook.SetSelection(3)
 
-            self.MainFrameNotebook.GetPage(5).Show()
-            logger.debug("ui trace: toggle_panel records page shown (load disabled isolation)")
             self.MainFrameNotebook.GetPage(6).Show()
+            logger.debug("ui trace: toggle_panel records page shown (load disabled isolation)")
+            self.MainFrameNotebook.GetPage(7).Show()
 
         elif isinstance(current, SQLTrigger):
-            self.MainFrameNotebook.GetPage(4).Show()
-            self.MainFrameNotebook.GetPage(6).Show()
-            if self.MainFrameNotebook.GetSelection() < 4:
+            self.MainFrameNotebook.GetPage(5).Show()
+            self.MainFrameNotebook.GetPage(7).Show()
+            if self.MainFrameNotebook.GetSelection() < 5:
                 self.MainFrameNotebook.SetSelection(3)
 
         elif isinstance(current, SQLProcedure):
             self.MainFrameNotebook.GetPage(procedure_page_index).Show()
-            self.MainFrameNotebook.GetPage(6).Show()
+            self.MainFrameNotebook.GetPage(7).Show()
             if self.MainFrameNotebook.GetSelection() != procedure_page_index:
                 self.MainFrameNotebook.SetSelection(procedure_page_index)
 
@@ -1197,7 +1197,7 @@ class MainFrameController(MainFrameView):
         self.btn_last_records.Enable(has_rows and not at_last_page)
 
     def on_page_chaged(self, event):
-        if int(event.Selection) == 5:
+        if int(event.Selection) == 6:
             if CURRENT_TABLE.get_value() or CURRENT_VIEW.get_value():
                 self._records_offset = 0
                 self._load_records_page()
@@ -1525,7 +1525,7 @@ class MainFrameController(MainFrameView):
             self._records_total_is_loading = False
             self._update_records_label(current)
             self._set_records_paging_buttons(current)
-            if self.MainFrameNotebook.GetSelection() == 5:
+            if self.MainFrameNotebook.GetSelection() == 6:
                 self._load_records_page()
 
         can_act = current is not None and not current.is_new
@@ -1576,7 +1576,7 @@ class MainFrameController(MainFrameView):
         self.toggle_panel(current)
 
         can_act = current is not None and not current.is_new
-        self.controller_procedure_editor.btn_delete_procedure.Enable(can_act)
+        self.btn_delete_procedure.Enable(can_act)
 
     def on_insert_procedure(self):
         session = CURRENT_SESSION.get_value()
@@ -1586,7 +1586,7 @@ class MainFrameController(MainFrameView):
         CURRENT_PROCEDURE.set_value(None)
         new_proc = session.context.build_empty_procedure(database)
         CURRENT_PROCEDURE.set_value(new_proc)
-        procedure_page_index = self.controller_procedure_editor.page_index
+        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
         self._toggle_panel(procedure_page_index, True)
         self.MainFrameNotebook.SetSelection(procedure_page_index)
 
@@ -1604,7 +1604,7 @@ class MainFrameController(MainFrameView):
         )
         CURRENT_PROCEDURE.set_value(None)
         CURRENT_PROCEDURE.set_value(clone)
-        procedure_page_index = self.controller_procedure_editor.page_index
+        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
         self._toggle_panel(procedure_page_index, True)
         self.MainFrameNotebook.SetSelection(procedure_page_index)
 
@@ -1654,7 +1654,7 @@ class MainFrameController(MainFrameView):
                     table.raw_create()
                 )
 
-            if self.MainFrameNotebook.GetSelection() == 5:
+            if self.MainFrameNotebook.GetSelection() == 6:
                 logger.debug(
                     "ui trace: _on_current_table triggering records page load table=%s",
                     table.name,
@@ -1937,7 +1937,7 @@ class MainFrameController(MainFrameView):
             page = self.MainFrameNotebook.GetSelection()
             if page == 2:
                 self.controller_list_table_columns.do_refresh_columns()
-            elif page == 5:
+            elif page == 6:
                 self.controller_list_table_records.do_refresh_records()
 
     def on_duplicate_record(self, event):
