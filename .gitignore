@@ -17,3 +17,5 @@ PeterSQL.png
 
 # Unready build scripts
 scripts/build/nix/
+assets/
+screenshot/
