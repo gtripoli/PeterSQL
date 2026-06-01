@@ -18,7 +18,6 @@ import wx.xrc
 import wx.dataview
 import wx.stc
 import wx.lib.agw.hypertreelist
-import wx.adv
 
 import gettext
 _ = gettext.gettext
@@ -1381,7 +1380,7 @@ class MainFrameView ( wx.Frame ):
         self.m_toolBar52 = wx.ToolBar( self.m_panel652, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORIZONTAL|wx.TB_HORZ_TEXT )
         self.tool_insert_procedure = self.m_toolBar52.AddTool( wx.ID_ANY, _(u"Add new procedure"), wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Add new procedure"), _(u"Add new procedure"), None )
 
-        self.tool_clone_procedure = self.m_toolBar52.AddTool( wx.ID_ANY, _(u"Clone view"), wx.Bitmap( u"icons/16x16/page_copy.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Clone procedure"), _(u"Clone procedure"), None )
+        self.tool_clone_procedure = self.m_toolBar52.AddTool( wx.ID_ANY, _(u"Clone procedure"), wx.Bitmap( u"icons/16x16/page_copy.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Clone procedure"), _(u"Clone procedure"), None )
 
         self.tool_delete_procedure = self.m_toolBar52.AddTool( wx.ID_ANY, _(u"Delete procedure"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Delete procedure"), _(u"Delete procedure"), None )
 
@@ -1422,7 +1421,7 @@ class MainFrameView ( wx.Frame ):
         self.m_panel6521.SetSizer( bSizer148211 )
         self.m_panel6521.Layout()
         bSizer148211.Fit( self.m_panel6521 )
-        self.m_notebook10.AddPage( self.m_panel6521, _(u"Functions"), False )
+        self.m_notebook10.AddPage( self.m_panel6521, _(u"Functions"), True )
         self.m_panel65211 = wx.Panel( self.m_notebook10, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1482111 = wx.BoxSizer( wx.VERTICAL )
 
@@ -1699,22 +1698,14 @@ class MainFrameView ( wx.Frame ):
         self.PanelTableIndex = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
 
-        bSizer791 = wx.BoxSizer( wx.VERTICAL )
+        self.m_toolBar12 = wx.ToolBar( self.PanelTableIndex, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORZ_TEXT|wx.TB_TEXT|wx.TB_VERTICAL )
+        self.m_tool43 = self.m_toolBar12.AddTool( wx.ID_ANY, _(u"Remove"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_delete_index = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+        self.m_tool44 = self.m_toolBar12.AddTool( wx.ID_ANY, _(u"Clear"), wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_delete_index.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_index.Enable( False )
+        self.m_toolBar12.Realize()
 
-        bSizer791.Add( self.btn_delete_index, 0, wx.ALL|wx.EXPAND, 5 )
-
-        self.btn_clear_index = wx.Button( self.PanelTableIndex, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_clear_index.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer791.Add( self.btn_clear_index, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer28.Add( bSizer791, 0, wx.ALIGN_CENTER, 5 )
+        bSizer28.Add( self.m_toolBar12, 0, wx.EXPAND, 5 )
 
         self.dv_table_indexes = TableIndexesDataViewCtrl( self.PanelTableIndex, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
         bSizer28.Add( self.dv_table_indexes, 1, wx.ALL|wx.EXPAND, 0 )
@@ -1731,37 +1722,21 @@ class MainFrameView ( wx.Frame ):
             m_notebook3Index += 1
 
         self.PanelTableFK = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer77 = wx.BoxSizer( wx.VERTICAL )
+        bSizer77 = wx.BoxSizer( wx.HORIZONTAL )
 
-        bSizer78 = wx.BoxSizer( wx.HORIZONTAL )
+        self.m_toolBar121 = wx.ToolBar( self.PanelTableFK, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORZ_TEXT|wx.TB_TEXT|wx.TB_VERTICAL )
+        self.m_tool49 = self.m_toolBar121.AddTool( wx.ID_ANY, _(u"Insert"), wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        bSizer79 = wx.BoxSizer( wx.VERTICAL )
+        self.m_tool431 = self.m_toolBar121.AddTool( wx.ID_ANY, _(u"Remove"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_insert_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+        self.m_tool441 = self.m_toolBar121.AddTool( wx.ID_ANY, _(u"Clear"), wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_insert_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer79.Add( self.btn_insert_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
+        self.m_toolBar121.Realize()
 
-        self.btn_delete_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_delete_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_foreign_key.Enable( False )
-
-        bSizer79.Add( self.btn_delete_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
-
-        self.btn_clear_foreign_key = wx.Button( self.PanelTableFK, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_clear_foreign_key.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer79.Add( self.btn_clear_foreign_key, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer78.Add( bSizer79, 0, wx.ALIGN_CENTER, 5 )
+        bSizer77.Add( self.m_toolBar121, 0, wx.EXPAND, 5 )
 
         self.dv_table_foreign_keys = TableForeignKeysDataViewCtrl( self.PanelTableFK, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer78.Add( self.dv_table_foreign_keys, 1, wx.ALL|wx.EXPAND, 0 )
-
-
-        bSizer77.Add( bSizer78, 1, wx.EXPAND, 5 )
+        bSizer77.Add( self.dv_table_foreign_keys, 1, wx.ALL|wx.EXPAND, 0 )
 
 
         self.PanelTableFK.SetSizer( bSizer77 )
@@ -1775,37 +1750,21 @@ class MainFrameView ( wx.Frame ):
             m_notebook3Index += 1
 
         self.PanelTableCheck = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer771 = wx.BoxSizer( wx.VERTICAL )
+        bSizer771 = wx.BoxSizer( wx.HORIZONTAL )
 
-        bSizer781 = wx.BoxSizer( wx.HORIZONTAL )
+        self.m_toolBar1211 = wx.ToolBar( self.PanelTableCheck, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORZ_TEXT|wx.TB_TEXT|wx.TB_VERTICAL )
+        self.m_tool491 = self.m_toolBar1211.AddTool( wx.ID_ANY, _(u"Insert"), wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        bSizer792 = wx.BoxSizer( wx.VERTICAL )
+        self.m_tool4311 = self.m_toolBar1211.AddTool( wx.ID_ANY, _(u"Remove"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_insert_check = wx.Button( self.PanelTableCheck, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
+        self.m_tool4411 = self.m_toolBar1211.AddTool( wx.ID_ANY, _(u"Clear"), wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
 
-        self.btn_insert_check.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer792.Add( self.btn_insert_check, 0, wx.ALL|wx.EXPAND, 5 )
+        self.m_toolBar1211.Realize()
 
-        self.btn_delete_check = wx.Button( self.PanelTableCheck, wx.ID_ANY, _(u"Remove"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_delete_check.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_check.Enable( False )
-
-        bSizer792.Add( self.btn_delete_check, 0, wx.ALL|wx.EXPAND, 5 )
-
-        self.btn_clear_check = wx.Button( self.PanelTableCheck, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_clear_check.SetBitmap( wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer792.Add( self.btn_clear_check, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer781.Add( bSizer792, 0, wx.ALIGN_CENTER, 5 )
+        bSizer771.Add( self.m_toolBar1211, 0, wx.EXPAND, 5 )
 
         self.dv_table_checks = TableCheckDataViewCtrl( self.PanelTableCheck, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer781.Add( self.dv_table_checks, 1, wx.ALL|wx.EXPAND, 0 )
-
-
-        bSizer771.Add( bSizer781, 1, wx.EXPAND, 5 )
+        bSizer771.Add( self.dv_table_checks, 1, wx.ALL|wx.EXPAND, 0 )
 
 
         self.PanelTableCheck.SetSizer( bSizer771 )
@@ -1953,7 +1912,13 @@ class MainFrameView ( wx.Frame ):
         self.panel_views = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer84 = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_notebook7 = wx.Notebook( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_splitter11 = wx.SplitterWindow( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter11.Bind( wx.EVT_IDLE, self.m_splitter11OnIdle )
+
+        self.m_panel79 = wx.Panel( self.m_splitter11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer170 = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_notebook7 = wx.Notebook( self.m_panel79, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.pnl_view_editor_root = wx.Panel( self.m_notebook7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer85 = wx.BoxSizer( wx.VERTICAL )
 
@@ -1975,26 +1940,6 @@ class MainFrameView ( wx.Frame ):
         bSizer89 = wx.BoxSizer( wx.HORIZONTAL )
 
         bSizer116 = wx.BoxSizer( wx.VERTICAL )
-
-        self.pnl_row_definer = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        szr_view_definer = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.lbl_view_definer = wx.StaticText( self.pnl_row_definer, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lbl_view_definer.Wrap( -1 )
-
-        self.lbl_view_definer.SetMinSize( wx.Size( 150,-1 ) )
-
-        szr_view_definer.Add( self.lbl_view_definer, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        cmb_view_definerChoices = []
-        self.cmb_view_definer = wx.ComboBox( self.pnl_row_definer, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, cmb_view_definerChoices, 0 )
-        szr_view_definer.Add( self.cmb_view_definer, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-
-        self.pnl_row_definer.SetSizer( szr_view_definer )
-        self.pnl_row_definer.Layout()
-        szr_view_definer.Fit( self.pnl_row_definer )
-        bSizer116.Add( self.pnl_row_definer, 0, wx.EXPAND | wx.ALL, 5 )
 
         self.pnl_row_schema = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         szr_view_schema = wx.BoxSizer( wx.HORIZONTAL )
@@ -2020,31 +1965,19 @@ class MainFrameView ( wx.Frame ):
 
         bSizer89.Add( bSizer116, 1, wx.EXPAND, 5 )
 
-        bSizer8711 = wx.BoxSizer( wx.VERTICAL )
 
-        self.pnl_row_sql_security = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        szr_view_sql_security = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.lbl_view_sql_security = wx.StaticText( self.pnl_row_sql_security, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lbl_view_sql_security.Wrap( -1 )
-
-        self.lbl_view_sql_security.SetMinSize( wx.Size( 150,-1 ) )
-
-        szr_view_sql_security.Add( self.lbl_view_sql_security, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        cho_view_sql_securityChoices = [ _(u"DEFINER"), _(u"INVOKER") ]
-        self.cho_view_sql_security = wx.Choice( self.pnl_row_sql_security, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_sql_securityChoices, 0 )
-        self.cho_view_sql_security.SetSelection( 0 )
-        szr_view_sql_security.Add( self.cho_view_sql_security, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+        bSizer85.Add( bSizer89, 0, wx.EXPAND, 5 )
 
 
-        self.pnl_row_sql_security.SetSizer( szr_view_sql_security )
-        self.pnl_row_sql_security.Layout()
-        szr_view_sql_security.Fit( self.pnl_row_sql_security )
-        bSizer8711.Add( self.pnl_row_sql_security, 0, wx.EXPAND | wx.ALL, 5 )
+        self.pnl_view_editor_root.SetSizer( bSizer85 )
+        self.pnl_view_editor_root.Layout()
+        bSizer85.Fit( self.pnl_view_editor_root )
+        self.m_notebook7.AddPage( self.pnl_view_editor_root, _(u"General"), False )
+        self.m_panel76 = wx.Panel( self.m_notebook7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer1661 = wx.BoxSizer( wx.VERTICAL )
 
-        self.pnl_row_algorithm = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        szr_view_algorithm = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_row_algorithm, _(u"Algorithm") )
+        self.pnl_row_algorithm = wx.Panel( self.m_panel76, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_algorithm = wx.StaticBoxSizer( wx.HORIZONTAL, self.pnl_row_algorithm, _(u"Algorithm") )
 
         self.rad_view_algorithm_undefined = wx.RadioButton( szr_view_algorithm.GetStaticBox(), wx.ID_ANY, _(u"UNDEFINED"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
         szr_view_algorithm.Add( self.rad_view_algorithm_undefined, 0, wx.ALL, 5 )
@@ -2059,9 +1992,9 @@ class MainFrameView ( wx.Frame ):
         self.pnl_row_algorithm.SetSizer( szr_view_algorithm )
         self.pnl_row_algorithm.Layout()
         szr_view_algorithm.Fit( self.pnl_row_algorithm )
-        bSizer8711.Add( self.pnl_row_algorithm, 0, wx.ALL|wx.EXPAND, 5 )
+        bSizer1661.Add( self.pnl_row_algorithm, 0, wx.ALL|wx.EXPAND, 5 )
 
-        self.pnl_row_constraint = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.pnl_row_constraint = wx.Panel( self.m_panel76, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         szr_view_constraint = wx.StaticBoxSizer( wx.VERTICAL, self.pnl_row_constraint, _(u"View constraint") )
 
         self.rad_view_constraint_none = wx.RadioButton( szr_view_constraint.GetStaticBox(), wx.ID_ANY, _(u"None"), wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
@@ -2083,9 +2016,58 @@ class MainFrameView ( wx.Frame ):
         self.pnl_row_constraint.SetSizer( szr_view_constraint )
         self.pnl_row_constraint.Layout()
         szr_view_constraint.Fit( self.pnl_row_constraint )
-        bSizer8711.Add( self.pnl_row_constraint, 0, wx.ALL|wx.EXPAND, 5 )
+        bSizer1661.Add( self.pnl_row_constraint, 0, wx.ALL|wx.EXPAND, 5 )
 
-        self.pnl_row_security_barrier = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+        self.m_panel76.SetSizer( bSizer1661 )
+        self.m_panel76.Layout()
+        bSizer1661.Fit( self.m_panel76 )
+        self.m_notebook7.AddPage( self.m_panel76, _(u"Behavior"), False )
+        self.m_panel75 = wx.Panel( self.m_notebook7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer165 = wx.BoxSizer( wx.VERTICAL )
+
+        self.pnl_row_definer = wx.Panel( self.m_panel75, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_definer = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_definer = wx.StaticText( self.pnl_row_definer, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_definer.Wrap( -1 )
+
+        self.lbl_view_definer.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_definer.Add( self.lbl_view_definer, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cmb_view_definerChoices = []
+        self.cmb_view_definer = wx.ComboBox( self.pnl_row_definer, wx.ID_ANY, _(u"*"), wx.DefaultPosition, wx.DefaultSize, cmb_view_definerChoices, 0 )
+        szr_view_definer.Add( self.cmb_view_definer, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.pnl_row_definer.SetSizer( szr_view_definer )
+        self.pnl_row_definer.Layout()
+        szr_view_definer.Fit( self.pnl_row_definer )
+        bSizer165.Add( self.pnl_row_definer, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.pnl_row_sql_security = wx.Panel( self.m_panel75, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_sql_security = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_sql_security = wx.StaticText( self.pnl_row_sql_security, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_sql_security.Wrap( -1 )
+
+        self.lbl_view_sql_security.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_sql_security.Add( self.lbl_view_sql_security, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        cho_view_sql_securityChoices = [ _(u"DEFINER"), _(u"INVOKER") ]
+        self.cho_view_sql_security = wx.Choice( self.pnl_row_sql_security, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cho_view_sql_securityChoices, 0 )
+        self.cho_view_sql_security.SetSelection( 0 )
+        szr_view_sql_security.Add( self.cho_view_sql_security, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.pnl_row_sql_security.SetSizer( szr_view_sql_security )
+        self.pnl_row_sql_security.Layout()
+        szr_view_sql_security.Fit( self.pnl_row_sql_security )
+        bSizer165.Add( self.pnl_row_sql_security, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.pnl_row_security_barrier = wx.Panel( self.m_panel75, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer126 = wx.BoxSizer( wx.VERTICAL )
 
         self.chk_view_force = wx.CheckBox( self.pnl_row_security_barrier, wx.ID_ANY, _(u"Force"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -2095,9 +2077,9 @@ class MainFrameView ( wx.Frame ):
         self.pnl_row_security_barrier.SetSizer( bSizer126 )
         self.pnl_row_security_barrier.Layout()
         bSizer126.Fit( self.pnl_row_security_barrier )
-        bSizer8711.Add( self.pnl_row_security_barrier, 0, wx.EXPAND, 5 )
+        bSizer165.Add( self.pnl_row_security_barrier, 0, wx.EXPAND, 5 )
 
-        self.pnl_row_force = wx.Panel( self.pnl_view_editor_root, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.pnl_row_force = wx.Panel( self.m_panel75, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer127 = wx.BoxSizer( wx.VERTICAL )
 
         self.chk_view_security_barrier = wx.CheckBox( self.pnl_row_force, wx.ID_ANY, _(u"Security barrier"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -2107,23 +2089,24 @@ class MainFrameView ( wx.Frame ):
         self.pnl_row_force.SetSizer( bSizer127 )
         self.pnl_row_force.Layout()
         bSizer127.Fit( self.pnl_row_force )
-        bSizer8711.Add( self.pnl_row_force, 0, wx.EXPAND, 5 )
+        bSizer165.Add( self.pnl_row_force, 0, wx.EXPAND, 5 )
 
 
-        bSizer89.Add( bSizer8711, 1, wx.EXPAND, 5 )
+        self.m_panel75.SetSizer( bSizer165 )
+        self.m_panel75.Layout()
+        bSizer165.Fit( self.m_panel75 )
+        self.m_notebook7.AddPage( self.m_panel75, _(u"Security"), True )
+
+        bSizer170.Add( self.m_notebook7, 0, wx.EXPAND | wx.ALL, 5 )
 
 
-        bSizer85.Add( bSizer89, 0, wx.EXPAND, 5 )
+        self.m_panel79.SetSizer( bSizer170 )
+        self.m_panel79.Layout()
+        bSizer170.Fit( self.m_panel79 )
+        self.m_panel80 = wx.Panel( self.m_splitter11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer168 = wx.BoxSizer( wx.VERTICAL )
 
-
-        self.pnl_view_editor_root.SetSizer( bSizer85 )
-        self.pnl_view_editor_root.Layout()
-        bSizer85.Fit( self.pnl_view_editor_root )
-        self.m_notebook7.AddPage( self.pnl_view_editor_root, _(u"Options"), False )
-
-        bSizer84.Add( self.m_notebook7, 0, wx.EXPAND | wx.ALL, 5 )
-
-        self.stc_view_select = wx.stc.StyledTextCtrl( self.panel_views, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
+        self.stc_view_select = wx.stc.StyledTextCtrl( self.m_panel80, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
         self.stc_view_select.SetUseTabs ( True )
         self.stc_view_select.SetTabWidth ( 4 )
         self.stc_view_select.SetIndent ( 4 )
@@ -2156,7 +2139,14 @@ class MainFrameView ( wx.Frame ):
         self.stc_view_select.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
         self.stc_view_select.SetMinSize( wx.Size( -1,200 ) )
 
-        bSizer84.Add( self.stc_view_select, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer168.Add( self.stc_view_select, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_panel80.SetSizer( bSizer168 )
+        self.m_panel80.Layout()
+        bSizer168.Fit( self.m_panel80 )
+        self.m_splitter11.SplitHorizontally( self.m_panel79, self.m_panel80, 0 )
+        bSizer84.Add( self.m_splitter11, 1, wx.EXPAND, 5 )
 
         bSizer91 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -2189,30 +2179,329 @@ class MainFrameView ( wx.Frame ):
             self.MainFrameNotebook.SetPageImage( MainFrameNotebookIndex, MainFrameNotebookIndex )
             MainFrameNotebookIndex += 1
 
-        self.panel_procedures = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.panel_routine = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer160 = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_splitter9 = wx.SplitterWindow( self.panel_procedures, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter9 = wx.SplitterWindow( self.panel_routine, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
         self.m_splitter9.SetSashGravity( 0 )
         self.m_splitter9.Bind( wx.EVT_IDLE, self.m_splitter9OnIdle )
 
         self.m_panel73 = wx.Panel( self.m_splitter9, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer166 = wx.BoxSizer( wx.VERTICAL )
 
+        self.m_notebook11 = wx.Notebook( self.m_panel73, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_panel81 = wx.Panel( self.m_notebook11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer1701 = wx.BoxSizer( wx.VERTICAL )
+
         bSizer871 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText401 = wx.StaticText( self.m_panel73, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText401 = wx.StaticText( self.m_panel81, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText401.Wrap( -1 )
 
         self.m_staticText401.SetMinSize( wx.Size( 150,-1 ) )
 
         bSizer871.Add( self.m_staticText401, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.txt_name_procedure = wx.TextCtrl( self.m_panel73, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer871.Add( self.txt_name_procedure, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+        self.routine_name = wx.TextCtrl( self.m_panel81, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer871.Add( self.routine_name, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 
-        bSizer166.Add( bSizer871, 0, wx.EXPAND, 5 )
+        bSizer1701.Add( bSizer871, 0, wx.EXPAND, 5 )
+
+        szr_view_schema1 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_schema1 = wx.StaticText( self.m_panel81, wx.ID_ANY, _(u"Schema"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_schema1.Wrap( -1 )
+
+        self.lbl_view_schema1.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_schema1.Add( self.lbl_view_schema1, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        routine_schemaChoices = []
+        self.routine_schema = wx.Choice( self.m_panel81, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, routine_schemaChoices, 0 )
+        self.routine_schema.SetSelection( 0 )
+        szr_view_schema1.Add( self.routine_schema, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        bSizer1701.Add( szr_view_schema1, 0, wx.EXPAND, 5 )
+
+        bSizer181 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer891 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText77 = wx.StaticText( self.m_panel81, wx.ID_ANY, _(u"Type"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText77.Wrap( -1 )
+
+        self.m_staticText77.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer891.Add( self.m_staticText77, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        routine_typeChoices = [ _(u"Procedure (doesn't return a result)"), _(u"Function (return a result)") ]
+        self.routine_type = wx.Choice( self.m_panel81, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, routine_typeChoices, 0 )
+        self.routine_type.SetSelection( 0 )
+        bSizer891.Add( self.routine_type, 1, wx.ALL, 5 )
+
+
+        bSizer181.Add( bSizer891, 1, wx.EXPAND, 5 )
+
+        bSizer1161 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText78 = wx.StaticText( self.m_panel81, wx.ID_ANY, _(u"Return type"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText78.Wrap( -1 )
+
+        bSizer1161.Add( self.m_staticText78, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        routine_return_typeChoices = []
+        self.routine_return_type = wx.Choice( self.m_panel81, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, routine_return_typeChoices, 0 )
+        self.routine_return_type.SetSelection( 0 )
+        self.routine_return_type.Enable( False )
+
+        bSizer1161.Add( self.routine_return_type, 1, wx.ALL, 5 )
+
+
+        bSizer181.Add( bSizer1161, 1, wx.EXPAND, 5 )
+
+
+        bSizer1701.Add( bSizer181, 0, wx.EXPAND, 5 )
+
+        bSizer182 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText79 = wx.StaticText( self.m_panel81, wx.ID_ANY, _(u"Comment"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText79.Wrap( -1 )
+
+        bSizer182.Add( self.m_staticText79, 0, wx.ALL, 5 )
+
+        self.routine_comment = wx.TextCtrl( self.m_panel81, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+        bSizer182.Add( self.routine_comment, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+        bSizer1701.Add( bSizer182, 1, wx.EXPAND, 5 )
+
+
+        self.m_panel81.SetSizer( bSizer1701 )
+        self.m_panel81.Layout()
+        bSizer1701.Fit( self.m_panel81 )
+        self.m_notebook11.AddPage( self.m_panel81, _(u"General"), True )
+        self.m_panel82 = wx.Panel( self.m_notebook11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer178 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer185 = wx.BoxSizer( wx.VERTICAL )
+
+
+        bSizer178.Add( bSizer185, 1, wx.EXPAND, 5 )
+
+        self.m_toolBar11 = wx.ToolBar( self.m_panel82, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_HORZ_TEXT|wx.TB_RIGHT|wx.TB_TEXT|wx.TB_VERTICAL )
+        self.m_tool40 = self.m_toolBar11.AddTool( wx.ID_ANY, _(u"Insert"), wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Insert"), wx.EmptyString, None )
+
+        self.m_tool41 = self.m_toolBar11.AddTool( wx.ID_ANY, _(u"Remove"), wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
+
+        self.m_tool42 = self.m_toolBar11.AddTool( wx.ID_ANY, _(u"Clear"), wx.Bitmap( u"icons/16x16/cross.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None )
+
+        self.m_toolBar11.Realize()
+
+        bSizer178.Add( self.m_toolBar11, 0, wx.EXPAND, 5 )
+
+        self.routine_parameters = wx.dataview.DataViewCtrl( self.m_panel82, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_dataViewColumn27 = self.routine_parameters.AppendTextColumn( _(u"#"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.m_dataViewColumn28 = self.routine_parameters.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, 600, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.m_dataViewColumn29 = self.routine_parameters.AppendTextColumn( _(u"Datatype"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        self.m_dataViewColumn30 = self.routine_parameters.AppendTextColumn( _(u"Context"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE )
+        bSizer178.Add( self.routine_parameters, 1, wx.ALL|wx.EXPAND, 5 )
+
+
+        self.m_panel82.SetSizer( bSizer178 )
+        self.m_panel82.Layout()
+        bSizer178.Fit( self.m_panel82 )
+        self.m_notebook11.AddPage( self.m_panel82, _(u"Parameters"), False )
+        self.m_panel86 = wx.Panel( self.m_notebook11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer183 = wx.BoxSizer( wx.VERTICAL )
+
+        self.panel_behavior_mysql_mariadb = wx.Panel( self.m_panel86, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer184 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer186 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText80 = wx.StaticText( self.panel_behavior_mysql_mariadb, wx.ID_ANY, _(u"Data access"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText80.Wrap( -1 )
+
+        self.m_staticText80.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer186.Add( self.m_staticText80, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        behavior_data_accessChoices = [ _(u"CONTAINS SQL"), _(u"NO SQL"), _(u"READS SQL DATA"), _(u"MODIFIES SQL DATA"), wx.EmptyString, wx.EmptyString ]
+        self.behavior_data_access = wx.Choice( self.panel_behavior_mysql_mariadb, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, behavior_data_accessChoices, 0 )
+        self.behavior_data_access.SetSelection( 0 )
+        bSizer186.Add( self.behavior_data_access, 0, wx.ALL, 5 )
+
+
+        bSizer184.Add( bSizer186, 1, wx.EXPAND, 5 )
+
+        bSizer1851 = wx.BoxSizer( wx.VERTICAL )
+
+        self.behavior_deterministic = wx.CheckBox( self.panel_behavior_mysql_mariadb, wx.ID_ANY, _(u"Deterministic"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer1851.Add( self.behavior_deterministic, 1, wx.ALL, 5 )
+
+
+        bSizer184.Add( bSizer1851, 1, wx.EXPAND, 5 )
+
+
+        self.panel_behavior_mysql_mariadb.SetSizer( bSizer184 )
+        self.panel_behavior_mysql_mariadb.Layout()
+        bSizer184.Fit( self.panel_behavior_mysql_mariadb )
+        bSizer183.Add( self.panel_behavior_mysql_mariadb, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.panel_behavior_postgresql = wx.Panel( self.m_panel86, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer187 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer188 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText81 = wx.StaticText( self.panel_behavior_postgresql, wx.ID_ANY, _(u"Language"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText81.Wrap( -1 )
+
+        self.m_staticText81.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer188.Add( self.m_staticText81, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        behavior_postgresql_languageChoices = [ _(u"SQL"), _(u"PLPGSQL") ]
+        self.behavior_postgresql_language = wx.Choice( self.panel_behavior_postgresql, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, behavior_postgresql_languageChoices, 0 )
+        self.behavior_postgresql_language.SetSelection( 0 )
+        bSizer188.Add( self.behavior_postgresql_language, 1, wx.ALL, 5 )
+
+
+        bSizer187.Add( bSizer188, 1, wx.EXPAND, 5 )
+
+        bSizer1881 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText811 = wx.StaticText( self.panel_behavior_postgresql, wx.ID_ANY, _(u"Volatility"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText811.Wrap( -1 )
+
+        self.m_staticText811.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer1881.Add( self.m_staticText811, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        behavior_postgresql_volatilityChoices = [ _(u"VOLATILE"), _(u"STABLE"), _(u"IMMUTABLE"), wx.EmptyString ]
+        self.behavior_postgresql_volatility = wx.Choice( self.panel_behavior_postgresql, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, behavior_postgresql_volatilityChoices, 0 )
+        self.behavior_postgresql_volatility.SetSelection( 0 )
+        bSizer1881.Add( self.behavior_postgresql_volatility, 1, wx.ALL, 5 )
+
+
+        bSizer187.Add( bSizer1881, 1, wx.EXPAND, 5 )
+
+        bSizer18811 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText8112 = wx.StaticText( self.panel_behavior_postgresql, wx.ID_ANY, _(u"Parallel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText8112.Wrap( -1 )
+
+        self.m_staticText8112.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer18811.Add( self.m_staticText8112, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        behavior_postgresql_parallelChoices = [ _(u"UNSAFE"), _(u"RESTRICTED"), _(u"SAFE") ]
+        self.behavior_postgresql_parallel = wx.Choice( self.panel_behavior_postgresql, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, behavior_postgresql_parallelChoices, 0 )
+        self.behavior_postgresql_parallel.SetSelection( 0 )
+        bSizer18811.Add( self.behavior_postgresql_parallel, 1, wx.ALL, 5 )
+
+
+        bSizer187.Add( bSizer18811, 1, wx.EXPAND, 5 )
+
+        bSizer192 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer196 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText87 = wx.StaticText( self.panel_behavior_postgresql, wx.ID_ANY, _(u"Cost"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText87.Wrap( -1 )
+
+        self.m_staticText87.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer196.Add( self.m_staticText87, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.behavior_postgresql_cost = wx.SpinCtrlDouble( self.panel_behavior_postgresql, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 100, 0, 1 )
+        self.behavior_postgresql_cost.SetDigits( 0 )
+        bSizer196.Add( self.behavior_postgresql_cost, 1, wx.ALL, 5 )
+
+
+        bSizer192.Add( bSizer196, 1, wx.EXPAND, 5 )
+
+        bSizer193 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText85 = wx.StaticText( self.panel_behavior_postgresql, wx.ID_ANY, _(u"Rows"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
+        self.m_staticText85.Wrap( -1 )
+
+        bSizer193.Add( self.m_staticText85, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.behavior_postgresql_rows = wx.SpinCtrl( self.panel_behavior_postgresql, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 10, 0 )
+        self.behavior_postgresql_rows.Enable( False )
+
+        bSizer193.Add( self.behavior_postgresql_rows, 0, wx.ALL, 5 )
+
+
+        bSizer192.Add( bSizer193, 1, wx.EXPAND, 5 )
+
+
+        bSizer187.Add( bSizer192, 1, wx.EXPAND, 5 )
+
+
+        self.panel_behavior_postgresql.SetSizer( bSizer187 )
+        self.panel_behavior_postgresql.Layout()
+        bSizer187.Fit( self.panel_behavior_postgresql )
+        bSizer183.Add( self.panel_behavior_postgresql, 1, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_panel86.SetSizer( bSizer183 )
+        self.m_panel86.Layout()
+        bSizer183.Fit( self.m_panel86 )
+        self.m_notebook11.AddPage( self.m_panel86, _(u"Behavior"), False )
+        self.m_panel83 = wx.Panel( self.m_notebook11, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        Security = wx.BoxSizer( wx.VERTICAL )
+
+        self.routine_definer_panel = wx.Panel( self.m_panel83, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_definer1 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_definer1 = wx.StaticText( self.routine_definer_panel, wx.ID_ANY, _(u"Definer"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_definer1.Wrap( -1 )
+
+        self.lbl_view_definer1.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_definer1.Add( self.lbl_view_definer1, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        routine_definerChoices = []
+        self.routine_definer = wx.ComboBox( self.routine_definer_panel, wx.ID_ANY, _(u"*"), wx.DefaultPosition, wx.DefaultSize, routine_definerChoices, 0 )
+        szr_view_definer1.Add( self.routine_definer, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.routine_definer_panel.SetSizer( szr_view_definer1 )
+        self.routine_definer_panel.Layout()
+        szr_view_definer1.Fit( self.routine_definer_panel )
+        Security.Add( self.routine_definer_panel, 0, wx.EXPAND | wx.ALL, 5 )
+
+        self.routine_security_panel = wx.Panel( self.m_panel83, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        szr_view_sql_security1 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.lbl_view_sql_security1 = wx.StaticText( self.routine_security_panel, wx.ID_ANY, _(u"SQL security"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.lbl_view_sql_security1.Wrap( -1 )
+
+        self.lbl_view_sql_security1.SetMinSize( wx.Size( 150,-1 ) )
+
+        szr_view_sql_security1.Add( self.lbl_view_sql_security1, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        routine_security_sqlChoices = [ _(u"DEFINER"), _(u"INVOKER") ]
+        self.routine_security_sql = wx.Choice( self.routine_security_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, routine_security_sqlChoices, 0 )
+        self.routine_security_sql.SetSelection( 0 )
+        szr_view_sql_security1.Add( self.routine_security_sql, 1, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.routine_security_panel.SetSizer( szr_view_sql_security1 )
+        self.routine_security_panel.Layout()
+        szr_view_sql_security1.Fit( self.routine_security_panel )
+        Security.Add( self.routine_security_panel, 0, wx.EXPAND | wx.ALL, 5 )
+
+
+        self.m_panel83.SetSizer( Security )
+        self.m_panel83.Layout()
+        Security.Fit( self.m_panel83 )
+        self.m_notebook11.AddPage( self.m_panel83, _(u"Security"), False )
+
+        bSizer166.Add( self.m_notebook11, 1, wx.EXPAND | wx.ALL, 5 )
 
 
         self.m_panel73.SetSizer( bSizer166 )
@@ -2221,40 +2510,40 @@ class MainFrameView ( wx.Frame ):
         self.m_panel74 = wx.Panel( self.m_splitter9, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer161 = wx.BoxSizer( wx.VERTICAL )
 
-        self.stc_procedure = wx.stc.StyledTextCtrl( self.m_panel74, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
-        self.stc_procedure.SetUseTabs ( True )
-        self.stc_procedure.SetTabWidth ( 4 )
-        self.stc_procedure.SetIndent ( 4 )
-        self.stc_procedure.SetTabIndents( True )
-        self.stc_procedure.SetBackSpaceUnIndents( True )
-        self.stc_procedure.SetViewEOL( False )
-        self.stc_procedure.SetViewWhiteSpace( False )
-        self.stc_procedure.SetMarginWidth( 2, 0 )
-        self.stc_procedure.SetIndentationGuides( True )
-        self.stc_procedure.SetReadOnly( False )
-        self.stc_procedure.SetMarginWidth( 1, 0 )
-        self.stc_procedure.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
-        self.stc_procedure.SetMarginWidth( 0, self.stc_procedure.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
-        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
-        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
-        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
-        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
-        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
-        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
-        self.stc_procedure.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
-        self.stc_procedure.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
-        self.stc_procedure.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
-        self.stc_procedure.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
-        self.stc_procedure.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
-        self.stc_procedure.SetMinSize( wx.Size( -1,200 ) )
+        self.routine_stc = wx.stc.StyledTextCtrl( self.m_panel74, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), 0)
+        self.routine_stc.SetUseTabs ( True )
+        self.routine_stc.SetTabWidth ( 4 )
+        self.routine_stc.SetIndent ( 4 )
+        self.routine_stc.SetTabIndents( True )
+        self.routine_stc.SetBackSpaceUnIndents( True )
+        self.routine_stc.SetViewEOL( False )
+        self.routine_stc.SetViewWhiteSpace( False )
+        self.routine_stc.SetMarginWidth( 2, 0 )
+        self.routine_stc.SetIndentationGuides( True )
+        self.routine_stc.SetReadOnly( False )
+        self.routine_stc.SetMarginWidth( 1, 0 )
+        self.routine_stc.SetMarginType( 0, wx.stc.STC_MARGIN_NUMBER )
+        self.routine_stc.SetMarginWidth( 0, self.routine_stc.TextWidth( wx.stc.STC_STYLE_LINENUMBER, "_99999" ) )
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDER, wx.stc.STC_MARK_BOXPLUS )
+        self.routine_stc.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDER, wx.BLACK)
+        self.routine_stc.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDER, wx.WHITE)
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.stc.STC_MARK_BOXMINUS )
+        self.routine_stc.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.BLACK )
+        self.routine_stc.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPEN, wx.WHITE )
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERSUB, wx.stc.STC_MARK_EMPTY )
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEREND, wx.stc.STC_MARK_BOXPLUS )
+        self.routine_stc.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEREND, wx.BLACK )
+        self.routine_stc.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEREND, wx.WHITE )
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.stc.STC_MARK_BOXMINUS )
+        self.routine_stc.MarkerSetBackground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.BLACK)
+        self.routine_stc.MarkerSetForeground( wx.stc.STC_MARKNUM_FOLDEROPENMID, wx.WHITE)
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERMIDTAIL, wx.stc.STC_MARK_EMPTY )
+        self.routine_stc.MarkerDefine( wx.stc.STC_MARKNUM_FOLDERTAIL, wx.stc.STC_MARK_EMPTY )
+        self.routine_stc.SetSelBackground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT ) )
+        self.routine_stc.SetSelForeground( True, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT ) )
+        self.routine_stc.SetMinSize( wx.Size( -1,200 ) )
 
-        bSizer161.Add( self.stc_procedure, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer161.Add( self.routine_stc, 1, wx.EXPAND | wx.ALL, 5 )
 
 
         self.m_panel74.SetSizer( bSizer161 )
@@ -2265,29 +2554,29 @@ class MainFrameView ( wx.Frame ):
 
         bSizer911 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.btn_delete_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_delete_procedure.Enable( False )
+        self.btn_routine_delete = wx.Button( self.panel_routine, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_routine_delete.Enable( False )
 
-        bSizer911.Add( self.btn_delete_procedure, 0, wx.ALL, 5 )
+        bSizer911.Add( self.btn_routine_delete, 0, wx.ALL, 5 )
 
-        self.btn_cancel_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_cancel_procedure.Enable( False )
+        self.btn_routine_cancel = wx.Button( self.panel_routine, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_routine_cancel.Enable( False )
 
-        bSizer911.Add( self.btn_cancel_procedure, 0, wx.ALL, 5 )
+        bSizer911.Add( self.btn_routine_cancel, 0, wx.ALL, 5 )
 
-        self.btn_save_procedure = wx.Button( self.panel_procedures, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_save_procedure.Enable( False )
+        self.btn_routine_save = wx.Button( self.panel_routine, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_routine_save.Enable( False )
 
-        bSizer911.Add( self.btn_save_procedure, 0, wx.ALL, 5 )
+        bSizer911.Add( self.btn_routine_save, 0, wx.ALL, 5 )
 
 
         bSizer160.Add( bSizer911, 0, wx.EXPAND, 5 )
 
 
-        self.panel_procedures.SetSizer( bSizer160 )
-        self.panel_procedures.Layout()
-        bSizer160.Fit( self.panel_procedures )
-        self.MainFrameNotebook.AddPage( self.panel_procedures, _(u"Procedure"), False )
+        self.panel_routine.SetSizer( bSizer160 )
+        self.panel_routine.Layout()
+        bSizer160.Fit( self.panel_routine )
+        self.MainFrameNotebook.AddPage( self.panel_routine, _(u"Routine"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/code-folding.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2459,7 +2748,7 @@ class MainFrameView ( wx.Frame ):
 
         self.panel_records.Bind( wx.EVT_RIGHT_DOWN, self.panel_recordsOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), True )
+        self.MainFrameNotebook.AddPage( self.panel_records, _(u"Data"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/text_columns.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2609,7 +2898,7 @@ class MainFrameView ( wx.Frame ):
             MainFrameNotebookIndex += 1
 
 
-        bSizer25.Add( self.MainFrameNotebook, 1, wx.ALL|wx.EXPAND, 5 )
+        bSizer25.Add( self.MainFrameNotebook, 0, wx.ALL|wx.EXPAND, 5 )
 
 
         self.m_panel15.SetSizer( bSizer25 )
@@ -2694,12 +2983,12 @@ class MainFrameView ( wx.Frame ):
         self.Bind( wx.EVT_TOOL, self.on_insert_view, id = self.tool_insert_view.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_clone_view, id = self.tool_clone_view.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_delete_view, id = self.tool_delete_view.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_insert_view, id = self.tool_insert_procedure.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_clone_view, id = self.tool_clone_procedure.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_delete_view, id = self.tool_delete_procedure.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_insert_view, id = self.tool_insert_function.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_clone_view, id = self.tool_clone_function.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_delete_view, id = self.tool_delete_function.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_insert_procedure, id = self.tool_insert_procedure.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_clone_procedure, id = self.tool_clone_procedure.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_delete_procedure, id = self.tool_delete_procedure.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_insert_function, id = self.tool_insert_function.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_clone_function, id = self.tool_clone_function.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_delete_function, id = self.tool_delete_function.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_insert_view, id = self.tool_insert_trigger.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_clone_view, id = self.tool_clone_trigger.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_delete_view, id = self.tool_delete_trigger.GetId() )
@@ -2709,14 +2998,14 @@ class MainFrameView ( wx.Frame ):
         self.btn_cancel_database.Bind( wx.EVT_BUTTON, self.on_cancel_database )
         self.btn_delete_database.Bind( wx.EVT_BUTTON, self.on_delete_database )
         self.btn_apply_database.Bind( wx.EVT_BUTTON, self.on_apply_database )
-        self.btn_delete_index.Bind( wx.EVT_BUTTON, self.on_delete_index )
-        self.btn_clear_index.Bind( wx.EVT_BUTTON, self.on_clear_index )
-        self.btn_insert_foreign_key.Bind( wx.EVT_BUTTON, self.on_insert_foreign_key )
-        self.btn_delete_foreign_key.Bind( wx.EVT_BUTTON, self.on_delete_foreign_key )
-        self.btn_clear_foreign_key.Bind( wx.EVT_BUTTON, self.on_clear_foreign_key )
-        self.btn_insert_check.Bind( wx.EVT_BUTTON, self.on_insert_foreign_key )
-        self.btn_delete_check.Bind( wx.EVT_BUTTON, self.on_delete_foreign_key )
-        self.btn_clear_check.Bind( wx.EVT_BUTTON, self.on_clear_foreign_key )
+        self.Bind( wx.EVT_TOOL, self.on_delete_index, id = self.m_tool43.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_clear_index, id = self.m_tool44.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_insert_foreign_key, id = self.m_tool49.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_delete_foreign_key, id = self.m_tool431.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_clear_foreign_key, id = self.m_tool441.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_insert_check, id = self.m_tool491.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_delete_check, id = self.m_tool4311.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_clear_check, id = self.m_tool4411.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_insert_column, id = self.tool_add_column.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_delete_column, id = self.tool_remove_column.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_move_up_column, id = self.tool_move_up_column.GetId() )
@@ -2724,6 +3013,12 @@ class MainFrameView ( wx.Frame ):
         self.btn_delete_table.Bind( wx.EVT_BUTTON, self.on_delete_table )
         self.btn_cancel_table.Bind( wx.EVT_BUTTON, self.on_cancel_table )
         self.btn_apply_table.Bind( wx.EVT_BUTTON, self.do_apply_table )
+        self.Bind( wx.EVT_TOOL, self.on_routine_parameters_insert, id = self.m_tool40.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_routine_parameters_delete, id = self.m_tool41.GetId() )
+        self.Bind( wx.EVT_TOOL, self.on_routine_parameters_clear, id = self.m_tool42.GetId() )
+        self.btn_routine_delete.Bind( wx.EVT_BUTTON, self.on_routine_delete )
+        self.btn_routine_cancel.Bind( wx.EVT_BUTTON, self.on_routine_cancel )
+        self.btn_routine_save.Bind( wx.EVT_BUTTON, self.on_routine_save )
         self.Bind( wx.EVT_TOOL, self.on_refresh_records, id = self.tool_refresh_records.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_insert_record, id = self.tool_insert_record.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_duplicate_record, id = self.tool_duplicate_record.GetId() )
@@ -2795,11 +3090,23 @@ class MainFrameView ( wx.Frame ):
     def on_delete_view( self, event ):
         event.Skip()
 
+    def on_insert_procedure( self, event ):
+        event.Skip()
 
+    def on_clone_procedure( self, event ):
+        event.Skip()
 
+    def on_delete_procedure( self, event ):
+        event.Skip()
 
+    def on_insert_function( self, event ):
+        event.Skip()
 
+    def on_clone_function( self, event ):
+        event.Skip()
 
+    def on_delete_function( self, event ):
+        event.Skip()
 
 
 
@@ -2831,8 +3138,14 @@ class MainFrameView ( wx.Frame ):
     def on_clear_foreign_key( self, event ):
         event.Skip()
 
+    def on_insert_check( self, event ):
+        event.Skip()
 
+    def on_delete_check( self, event ):
+        event.Skip()
 
+    def on_clear_check( self, event ):
+        event.Skip()
 
     def on_insert_column( self, event ):
         event.Skip()
@@ -2851,6 +3164,24 @@ class MainFrameView ( wx.Frame ):
         event.Skip()
 
     def do_apply_table( self, event ):
+        event.Skip()
+
+    def on_routine_parameters_insert( self, event ):
+        event.Skip()
+
+    def on_routine_parameters_delete( self, event ):
+        event.Skip()
+
+    def on_routine_parameters_clear( self, event ):
+        event.Skip()
+
+    def on_routine_delete( self, event ):
+        event.Skip()
+
+    def on_routine_cancel( self, event ):
+        event.Skip()
+
+    def on_routine_save( self, event ):
         event.Skip()
 
     def on_refresh_records( self, event ):
@@ -2938,6 +3269,10 @@ class MainFrameView ( wx.Frame ):
     def panel_table_columnsOnContextMenu( self, event ):
         self.panel_table_columns.PopupMenu( self.menu_table_columns, event.GetPosition() )
 
+    def m_splitter11OnIdle( self, event ):
+        self.m_splitter11.SetSashPosition( 0 )
+        self.m_splitter11.Unbind( wx.EVT_IDLE )
+
     def m_splitter9OnIdle( self, event ):
         self.m_splitter9.SetSashPosition( 0 )
         self.m_splitter9.Unbind( wx.EVT_IDLE )
@@ -2952,612 +3287,5 @@ class MainFrameView ( wx.Frame ):
     def m_splitter8OnIdle( self, event ):
         self.m_splitter8.SetSashPosition( -480 )
         self.m_splitter8.Unbind( wx.EVT_IDLE )
-
-
-###########################################################################
-## Class Trash
-###########################################################################
-
-class Trash ( wx.Panel ):
-
-    def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
-        wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
-
-        bSizer144 = wx.BoxSizer( wx.VERTICAL )
-
-        self.database_character_set_panel = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer139 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText70 = wx.StaticText( self.database_character_set_panel, wx.ID_ANY, _(u"Character set"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText70.Wrap( -1 )
-
-        self.m_staticText70.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer139.Add( self.m_staticText70, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        database_character_setChoices = []
-        self.database_character_set = wx.Choice( self.database_character_set_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, database_character_setChoices, 0 )
-        self.database_character_set.SetSelection( 0 )
-        bSizer139.Add( self.database_character_set, 1, wx.ALL, 5 )
-
-
-        self.database_character_set_panel.SetSizer( bSizer139 )
-        self.database_character_set_panel.Layout()
-        bSizer139.Fit( self.database_character_set_panel )
-        bSizer144.Add( self.database_character_set_panel, 1, wx.ALIGN_CENTER, 5 )
-
-        self.m_dataViewListCtrl2 = wx.dataview.DataViewListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.dataview.DV_ROW_LINES )
-        bSizer144.Add( self.m_dataViewListCtrl2, 0, wx.ALL, 5 )
-
-        self.m_dataViewCtrl10 = wx.dataview.DataViewCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_dataViewColumn181 = self.m_dataViewCtrl10.AppendTextColumn( _(u"Comments"), 7, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        self.m_dataViewColumn191 = self.m_dataViewCtrl10.AppendTextColumn( _(u"Collation"), 6, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        self.m_dataViewColumn171 = self.m_dataViewCtrl10.AppendTextColumn( _(u"Engine"), 5, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        self.m_dataViewColumn161 = self.m_dataViewCtrl10.AppendDateColumn( _(u"Updated at"), 4, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        self.m_dataViewColumn151 = self.m_dataViewCtrl10.AppendDateColumn( _(u"Created at"), 3, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        self.m_dataViewColumn141 = self.m_dataViewCtrl10.AppendTextColumn( _(u"Size"), 2, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        bSizer144.Add( self.m_dataViewCtrl10, 0, wx.ALL, 5 )
-
-        self.m_button12 = wx.Button( self, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer144.Add( self.m_button12, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
-
-        self.QueryPanelTpl = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.QueryPanelTpl.Hide()
-
-        bSizer263 = wx.BoxSizer( wx.VERTICAL )
-
-        self.m_textCtrl101 = wx.TextCtrl( self.QueryPanelTpl, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2 )
-        bSizer263.Add( self.m_textCtrl101, 1, wx.ALL|wx.EXPAND, 5 )
-
-        bSizer49 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        bSizer49.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-        self.m_button17 = wx.Button( self.QueryPanelTpl, wx.ID_ANY, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer49.Add( self.m_button17, 0, wx.ALL, 5 )
-
-        self.m_button121 = wx.Button( self.QueryPanelTpl, wx.ID_ANY, _(u"New"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer49.Add( self.m_button121, 0, wx.ALL, 5 )
-
-
-        bSizer263.Add( bSizer49, 0, wx.EXPAND, 5 )
-
-
-        self.QueryPanelTpl.SetSizer( bSizer263 )
-        self.QueryPanelTpl.Layout()
-        bSizer263.Fit( self.QueryPanelTpl )
-        bSizer144.Add( self.QueryPanelTpl, 1, wx.EXPAND | wx.ALL, 5 )
-
-        bSizer83 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticline3 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
-        bSizer83.Add( self.m_staticline3, 0, wx.EXPAND | wx.ALL, 5 )
-
-
-        bSizer144.Add( bSizer83, 0, wx.EXPAND, 5 )
-
-        self.btn_insert_record = wx.Button( self, wx.ID_ANY, _(u"Insert record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_insert_record.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer144.Add( self.btn_insert_record, 0, wx.ALL, 5 )
-
-        self.btn_duplicate_record = wx.Button( self, wx.ID_ANY, _(u"Duplicate record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_duplicate_record.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_duplicate_record.Enable( False )
-
-        bSizer144.Add( self.btn_duplicate_record, 0, wx.ALL, 5 )
-
-        self.btn_delete_record = wx.Button( self, wx.ID_ANY, _(u"Delete record"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_delete_record.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_record.Enable( False )
-
-        bSizer144.Add( self.btn_delete_record, 0, wx.ALL, 5 )
-
-        self.btn_cancel_record = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_cancel_record.SetBitmap( wx.Bitmap( u"icons/16x16/cancel.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_cancel_record.Enable( False )
-
-        bSizer144.Add( self.btn_cancel_record, 0, wx.ALL, 5 )
-
-        self.btn_apply_record = wx.Button( self, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_apply_record.SetBitmap( wx.Bitmap( u"icons/16x16/disk.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_apply_record.Enable( False )
-
-        bSizer144.Add( self.btn_apply_record, 0, wx.ALL, 5 )
-
-        bSizer53 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        bSizer53.Add( ( 100, 0), 0, wx.EXPAND, 5 )
-
-        self.btn_insert_column = wx.Button( self, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_insert_column.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer53.Add( self.btn_insert_column, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_delete_column = wx.Button( self, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_delete_column.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_column.Enable( False )
-
-        bSizer53.Add( self.btn_delete_column, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_move_up_column = wx.Button( self, wx.ID_ANY, _(u"Up"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_move_up_column.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_up.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_move_up_column.Enable( False )
-
-        bSizer53.Add( self.btn_move_up_column, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_move_down_column = wx.Button( self, wx.ID_ANY, _(u"Down"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_move_down_column.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_down.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_move_down_column.Enable( False )
-
-        bSizer53.Add( self.btn_move_down_column, 0, wx.LEFT|wx.RIGHT, 2 )
-
-
-        bSizer53.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-
-        bSizer144.Add( bSizer53, 0, wx.ALL|wx.EXPAND, 5 )
-
-        bSizer531 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText391 = wx.StaticText( self, wx.ID_ANY, _(u"Table:"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText391.Wrap( -1 )
-
-        bSizer531.Add( self.m_staticText391, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
-
-
-        bSizer531.Add( ( 100, 0), 0, wx.EXPAND, 5 )
-
-        self.btn_insert_table = wx.Button( self, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_insert_table.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer531.Add( self.btn_insert_table, 0, wx.ALL|wx.EXPAND, 2 )
-
-        self.btn_clone_table = wx.Button( self, wx.ID_ANY, _(u"Clone"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_clone_table.SetBitmap( wx.Bitmap( u"icons/16x16/table_multiple.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_clone_table.Enable( False )
-
-        bSizer531.Add( self.btn_clone_table, 0, wx.ALL|wx.EXPAND, 5 )
-
-        self.btn_delete_table1 = wx.Button( self, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_delete_table1.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_delete_table1.Enable( False )
-
-        bSizer531.Add( self.btn_delete_table1, 0, wx.ALL|wx.EXPAND, 2 )
-
-
-        bSizer531.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-
-        bSizer144.Add( bSizer531, 0, wx.EXPAND, 5 )
-
-        bSizer156 = wx.BoxSizer( wx.VERTICAL )
-
-
-        bSizer144.Add( bSizer156, 1, wx.EXPAND, 5 )
-
-        self.m_button57 = wx.Button( self, wx.ID_ANY, _(u"MyButton"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer144.Add( self.m_button57, 0, wx.ALL, 5 )
-
-
-        self.SetSizer( bSizer144 )
-        self.Layout()
-
-        # Connect Events
-        self.btn_insert_record.Bind( wx.EVT_BUTTON, self.on_insert_record )
-        self.btn_duplicate_record.Bind( wx.EVT_BUTTON, self.on_duplicate_record )
-        self.btn_delete_record.Bind( wx.EVT_BUTTON, self.on_delete_record )
-        self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_insert_column )
-        self.btn_delete_column.Bind( wx.EVT_BUTTON, self.on_delete_column )
-        self.btn_move_up_column.Bind( wx.EVT_BUTTON, self.on_move_up_column )
-        self.btn_move_down_column.Bind( wx.EVT_BUTTON, self.on_move_down_column )
-        self.btn_insert_table.Bind( wx.EVT_BUTTON, self.on_insert_table )
-        self.btn_clone_table.Bind( wx.EVT_BUTTON, self.on_clone_table )
-        self.btn_delete_table1.Bind( wx.EVT_BUTTON, self.on_delete_table )
-
-    def __del__( self ):
-        pass
-
-
-    # Virtual event handlers, override them in your derived class
-    def on_insert_record( self, event ):
-        event.Skip()
-
-    def on_duplicate_record( self, event ):
-        event.Skip()
-
-    def on_delete_record( self, event ):
-        event.Skip()
-
-    def on_insert_column( self, event ):
-        event.Skip()
-
-    def on_delete_column( self, event ):
-        event.Skip()
-
-    def on_move_up_column( self, event ):
-        event.Skip()
-
-    def on_move_down_column( self, event ):
-        event.Skip()
-
-    def on_insert_table( self, event ):
-        event.Skip()
-
-    def on_clone_table( self, event ):
-        event.Skip()
-
-    def on_delete_table( self, event ):
-        event.Skip()
-
-
-###########################################################################
-## Class TablePanel
-###########################################################################
-
-class TablePanel ( wx.Panel ):
-
-    def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 640,480 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
-        wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
-
-        bSizer251 = wx.BoxSizer( wx.VERTICAL )
-
-        self.m_splitter41 = wx.SplitterWindow( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_LIVE_UPDATE )
-        self.m_splitter41.Bind( wx.EVT_IDLE, self.m_splitter41OnIdle )
-        self.m_splitter41.SetMinimumPaneSize( 200 )
-
-        self.m_panel19 = wx.Panel( self.m_splitter41, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer55 = wx.BoxSizer( wx.VERTICAL )
-
-        self.m_notebook3 = wx.Notebook( self.m_panel19, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.NB_FIXEDWIDTH )
-        m_notebook3ImageSize = wx.Size( 16,16 )
-        m_notebook3Index = 0
-        m_notebook3Images = wx.ImageList( m_notebook3ImageSize.GetWidth(), m_notebook3ImageSize.GetHeight() )
-        self.m_notebook3.AssignImageList( m_notebook3Images )
-        self.PanelTableBase = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer262 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer271 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText8 = wx.StaticText( self.PanelTableBase, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText8.Wrap( -1 )
-
-        bSizer271.Add( self.m_staticText8, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.table_name = wx.TextCtrl( self.PanelTableBase, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer271.Add( self.table_name, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer262.Add( bSizer271, 0, wx.EXPAND, 5 )
-
-        bSizer273 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText83 = wx.StaticText( self.PanelTableBase, wx.ID_ANY, _(u"Comments"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText83.Wrap( -1 )
-
-        bSizer273.Add( self.m_staticText83, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.table_comment = wx.TextCtrl( self.PanelTableBase, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
-        bSizer273.Add( self.table_comment, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer262.Add( bSizer273, 1, wx.EXPAND, 5 )
-
-
-        self.PanelTableBase.SetSizer( bSizer262 )
-        self.PanelTableBase.Layout()
-        bSizer262.Fit( self.PanelTableBase )
-        self.m_notebook3.AddPage( self.PanelTableBase, _(u"Base"), True )
-        m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/table.png", wx.BITMAP_TYPE_ANY )
-        if ( m_notebook3Bitmap.IsOk() ):
-            m_notebook3Images.Add( m_notebook3Bitmap )
-            self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
-            m_notebook3Index += 1
-
-        self.PanelTableOptions = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer261 = wx.BoxSizer( wx.VERTICAL )
-
-        gSizer11 = wx.GridSizer( 0, 2, 0, 0 )
-
-        bSizer27111 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText8111 = wx.StaticText( self.PanelTableOptions, wx.ID_ANY, _(u"Auto Increment"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText8111.Wrap( -1 )
-
-        bSizer27111.Add( self.m_staticText8111, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.table_auto_increment = wx.TextCtrl( self.PanelTableOptions, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer27111.Add( self.table_auto_increment, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        gSizer11.Add( bSizer27111, 1, wx.EXPAND, 5 )
-
-        bSizer2712 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText812 = wx.StaticText( self.PanelTableOptions, wx.ID_ANY, _(u"Engine"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText812.Wrap( -1 )
-
-        bSizer2712.Add( self.m_staticText812, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        table_engineChoices = [ wx.EmptyString ]
-        self.table_engine = wx.Choice( self.PanelTableOptions, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, table_engineChoices, 0 )
-        self.table_engine.SetSelection( 1 )
-        bSizer2712.Add( self.table_engine, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        gSizer11.Add( bSizer2712, 0, wx.EXPAND, 5 )
-
-        bSizer2721 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText821 = wx.StaticText( self.PanelTableOptions, wx.ID_ANY, _(u"Default Collation"), wx.DefaultPosition, wx.Size( 150,-1 ), 0 )
-        self.m_staticText821.Wrap( -1 )
-
-        bSizer2721.Add( self.m_staticText821, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.table_collation = wx.TextCtrl( self.PanelTableOptions, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer2721.Add( self.table_collation, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        gSizer11.Add( bSizer2721, 0, wx.EXPAND, 5 )
-
-
-        bSizer261.Add( gSizer11, 0, wx.EXPAND, 5 )
-
-
-        self.PanelTableOptions.SetSizer( bSizer261 )
-        self.PanelTableOptions.Layout()
-        bSizer261.Fit( self.PanelTableOptions )
-        self.m_notebook3.AddPage( self.PanelTableOptions, _(u"Options"), False )
-        m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/wrench.png", wx.BITMAP_TYPE_ANY )
-        if ( m_notebook3Bitmap.IsOk() ):
-            m_notebook3Images.Add( m_notebook3Bitmap )
-            self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
-            m_notebook3Index += 1
-
-        self.PanelTableIndex = wx.Panel( self.m_notebook3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        self.PanelTableIndex.SetSizer( bSizer28 )
-        self.PanelTableIndex.Layout()
-        bSizer28.Fit( self.PanelTableIndex )
-        self.m_notebook3.AddPage( self.PanelTableIndex, _(u"Indexes"), False )
-        m_notebook3Bitmap = wx.Bitmap( u"icons/16x16/lightning.png", wx.BITMAP_TYPE_ANY )
-        if ( m_notebook3Bitmap.IsOk() ):
-            m_notebook3Images.Add( m_notebook3Bitmap )
-            self.m_notebook3.SetPageImage( m_notebook3Index, m_notebook3Index )
-            m_notebook3Index += 1
-
-
-        bSizer55.Add( self.m_notebook3, 1, wx.EXPAND | wx.ALL, 5 )
-
-
-        self.m_panel19.SetSizer( bSizer55 )
-        self.m_panel19.Layout()
-        bSizer55.Fit( self.m_panel19 )
-        self.panel_table_columns = wx.Panel( self.m_splitter41, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.panel_table_columns.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) )
-
-        bSizer54 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer53 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText39 = wx.StaticText( self.panel_table_columns, wx.ID_ANY, _(u"Columns:"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText39.Wrap( -1 )
-
-        bSizer53.Add( self.m_staticText39, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
-
-
-        bSizer53.Add( ( 100, 0), 0, wx.EXPAND, 5 )
-
-        self.btn_insert_column = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Insert"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_insert_column.SetBitmap( wx.Bitmap( u"icons/16x16/add.png", wx.BITMAP_TYPE_ANY ) )
-        bSizer53.Add( self.btn_insert_column, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_column_delete = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_column_delete.SetBitmap( wx.Bitmap( u"icons/16x16/delete.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_column_delete.Enable( False )
-
-        bSizer53.Add( self.btn_column_delete, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_column_move_up = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Up"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_column_move_up.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_up.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_column_move_up.Enable( False )
-
-        bSizer53.Add( self.btn_column_move_up, 0, wx.LEFT|wx.RIGHT, 2 )
-
-        self.btn_column_move_down = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Down"), wx.DefaultPosition, wx.DefaultSize, wx.BORDER_NONE )
-
-        self.btn_column_move_down.SetBitmap( wx.Bitmap( u"icons/16x16/arrow_down.png", wx.BITMAP_TYPE_ANY ) )
-        self.btn_column_move_down.Enable( False )
-
-        bSizer53.Add( self.btn_column_move_down, 0, wx.LEFT|wx.RIGHT, 2 )
-
-
-        bSizer53.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-
-        bSizer54.Add( bSizer53, 0, wx.ALL|wx.EXPAND, 5 )
-
-        self.list_ctrl_table_columns = TableColumnsDataViewCtrl( self.panel_table_columns, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer54.Add( self.list_ctrl_table_columns, 1, wx.ALL|wx.EXPAND, 5 )
-
-        bSizer52 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.btn_table_delete = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer52.Add( self.btn_table_delete, 0, wx.ALL, 5 )
-
-        self.btn_table_cancel = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_table_cancel.Enable( False )
-
-        bSizer52.Add( self.btn_table_cancel, 0, wx.ALL, 5 )
-
-        self.btn_table_save = wx.Button( self.panel_table_columns, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_table_save.Enable( False )
-
-        bSizer52.Add( self.btn_table_save, 0, wx.ALL, 5 )
-
-
-        bSizer54.Add( bSizer52, 0, wx.EXPAND, 5 )
-
-
-        self.panel_table_columns.SetSizer( bSizer54 )
-        self.panel_table_columns.Layout()
-        bSizer54.Fit( self.panel_table_columns )
-        self.menu_table_columns = wx.Menu()
-        self.add_index = wx.MenuItem( self.menu_table_columns, wx.ID_ANY, _(u"Add Index"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.menu_table_columns.Append( self.add_index )
-
-        self.m_menu21 = wx.Menu()
-        self.m_menuItem8 = wx.MenuItem( self.m_menu21, wx.ID_ANY, _(u"Add PrimaryKey"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu21.Append( self.m_menuItem8 )
-
-        self.m_menuItem9 = wx.MenuItem( self.m_menu21, wx.ID_ANY, _(u"Add Index"), wx.EmptyString, wx.ITEM_NORMAL )
-        self.m_menu21.Append( self.m_menuItem9 )
-
-        self.menu_table_columns.AppendSubMenu( self.m_menu21, _(u"MyMenu") )
-
-        self.panel_table_columns.Bind( wx.EVT_RIGHT_DOWN, self.panel_table_columnsOnContextMenu )
-
-        self.m_splitter41.SplitHorizontally( self.m_panel19, self.panel_table_columns, 200 )
-        bSizer251.Add( self.m_splitter41, 1, wx.EXPAND, 0 )
-
-
-        self.SetSizer( bSizer251 )
-        self.Layout()
-
-        # Connect Events
-        self.btn_insert_column.Bind( wx.EVT_BUTTON, self.on_column_insert )
-        self.btn_column_delete.Bind( wx.EVT_BUTTON, self.on_column_delete )
-        self.btn_column_move_up.Bind( wx.EVT_BUTTON, self.on_column_move_up )
-        self.btn_column_move_down.Bind( wx.EVT_BUTTON, self.on_column_move_down )
-        self.btn_table_delete.Bind( wx.EVT_BUTTON, self.on_delete_table )
-        self.btn_table_cancel.Bind( wx.EVT_BUTTON, self.do_cancel_table )
-        self.btn_table_save.Bind( wx.EVT_BUTTON, self.do_save_table )
-
-    def __del__( self ):
-        pass
-
-
-    # Virtual event handlers, override them in your derived class
-    def on_column_insert( self, event ):
-        event.Skip()
-
-    def on_column_delete( self, event ):
-        event.Skip()
-
-    def on_column_move_up( self, event ):
-        event.Skip()
-
-    def on_column_move_down( self, event ):
-        event.Skip()
-
-    def on_delete_table( self, event ):
-        event.Skip()
-
-    def do_cancel_table( self, event ):
-        event.Skip()
-
-    def do_save_table( self, event ):
-        event.Skip()
-
-    def m_splitter41OnIdle( self, event ):
-        self.m_splitter41.SetSashPosition( 200 )
-        self.m_splitter41.Unbind( wx.EVT_IDLE )
-
-    def panel_table_columnsOnContextMenu( self, event ):
-        self.panel_table_columns.PopupMenu( self.menu_table_columns, event.GetPosition() )
-
-
-###########################################################################
-## Class MyWizard1
-###########################################################################
-
-class MyWizard1 ( wx.adv.Wizard ):
-
-    def __init__( self, parent ):
-        wx.adv.Wizard.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, bitmap = wx.NullBitmap, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE )
-
-        self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
-        self.m_pages = []
-
-        self.Centre( wx.BOTH )
-
-
-    def __del__( self ):
-        pass
-
-
-###########################################################################
-## Class SaveStatments
-###########################################################################
-
-class SaveStatments ( wx.Dialog ):
-
-    def __init__( self, parent ):
-        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Save Starments"), pos = wx.DefaultPosition, size = wx.DefaultSize, style = wx.DEFAULT_DIALOG_STYLE )
-
-        self.SetSizeHints( wx.Size( 320,200 ), wx.DefaultSize )
-
-        bSizer163 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer164 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText86 = wx.StaticText( self, wx.ID_ANY, _(u"Location"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText86.Wrap( -1 )
-
-        self.m_staticText86.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer164.Add( self.m_staticText86, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.m_filePicker5 = wx.FilePickerCtrl( self, wx.ID_ANY, wx.EmptyString, _(u"Select a file"), _(u"*.sql"), wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SAVE|wx.FLP_SMALL|wx.FLP_USE_TEXTCTRL )
-        bSizer164.Add( self.m_filePicker5, 1, wx.ALL, 5 )
-
-
-        bSizer163.Add( bSizer164, 0, wx.EXPAND, 5 )
-
-
-        bSizer163.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-        self.m_staticline7 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-        bSizer163.Add( self.m_staticline7, 0, wx.EXPAND | wx.ALL, 5 )
-
-        bSizer165 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_button57 = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer165.Add( self.m_button57, 0, wx.ALL, 5 )
-
-
-        bSizer165.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-        self.m_button58 = wx.Button( self, wx.ID_ANY, _(u"Save"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer165.Add( self.m_button58, 0, wx.ALL, 5 )
-
-
-        bSizer163.Add( bSizer165, 0, wx.EXPAND, 5 )
-
-
-        self.SetSizer( bSizer163 )
-        self.Layout()
-        bSizer163.Fit( self )
-
-        self.Centre( wx.BOTH )
-
-    def __del__( self ):
-        pass
 
 

@@ -24,7 +24,7 @@ from helpers.observables import CallbackEvent, ObservableList
 from structures.session import Session
 from structures.connection import Connection, ConnectionEngine
 from structures.engines.context import QUERY_LOGS
-from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLProcedure
+from structures.engines.database import SQLTable, SQLColumn, SQLIndex, SQLForeignKey, SQLRecord, SQLView, SQLTrigger, SQLDatabase, SQLProcedure, SQLFunction
 
 from windows.views import MainFrameView
 
@@ -33,13 +33,13 @@ from windows.components.stc.profiles import SQL
 from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteController, SQLCompletionProvider
 from windows.components.stc.template_menu import SQLTemplateMenuController
 
-from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE, WRITE_OVERRIDE
+from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE, CURRENT_FUNCTION, WRITE_OVERRIDE
 
 from windows.main.explorer import TreeExplorerController
 
 from windows.main.database.list import ListDatabaseTable, ListDatabaseView, ListDatabaseProcedure, ListDatabaseFunction, ListDatabaseTrigger, ListDatabaseEvent
 from windows.main.database.view import ViewEditorController
-from windows.main.database.procedure import ProcedureEditorController
+from windows.main.database.routine import RoutineController
 from windows.main.database.options import DatabaseOptionsController
 
 from windows.main.table.check import TableCheckController
@@ -98,7 +98,7 @@ class MainFrameController(MainFrameView):
         self._setup_query_pages()
 
         self.controller_view_editor = ViewEditorController(self)
-        self.controller_procedure_editor = ProcedureEditorController(self)
+        self.controller_routine_editor = RoutineController(self)
         self.list_database_procedures = ListDatabaseProcedure(self.list_ctrl_database_procedure)
         self.list_database_functions = ListDatabaseFunction(self.list_ctrl_database_function)
         self.list_database_triggers = ListDatabaseTrigger(self.list_ctrl_database_trigger)
@@ -671,6 +671,7 @@ class MainFrameController(MainFrameView):
         CURRENT_VIEW.subscribe(self._on_current_view)
 
         CURRENT_PROCEDURE.subscribe(self._on_current_procedure)
+        CURRENT_FUNCTION.subscribe(self._on_current_function)
 
         CURRENT_TRIGGER.subscribe(self._on_current_trigger)
 
@@ -768,7 +769,7 @@ class MainFrameController(MainFrameView):
         if controller.show_modal() == wx.ID_OK:
             wx.MessageBox(_("Settings saved successfully"), _("Settings"), wx.OK | wx.ICON_INFORMATION)
 
-    def toggle_panel(self, current: Optional[Union[SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure]] = None):
+    def toggle_panel(self, current: Optional[Union[SQLDatabase, SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction]] = None):
         # self.MainFrameNotebook.SetSelection(0)
         logger.debug(
             "ui trace: toggle_panel current=%s",
@@ -781,7 +782,8 @@ class MainFrameController(MainFrameView):
         current_view = CURRENT_VIEW.get_value()
         current_trigger = CURRENT_TRIGGER.get_value()
         current_procedure = CURRENT_PROCEDURE.get_value()
-        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
+        current_function = CURRENT_FUNCTION.get_value()
+        routine_page_index = self.MainFrameNotebook.FindPage(self.panel_routine)
 
         total_pages = self.MainFrameNotebook.GetPageCount()
 
@@ -806,7 +808,10 @@ class MainFrameController(MainFrameView):
                 self.MainFrameNotebook.GetPage(5).Hide()
 
             if not current_procedure:
-                self.MainFrameNotebook.GetPage(procedure_page_index).Hide()
+                self.MainFrameNotebook.GetPage(routine_page_index).Hide()
+
+            if not current_function:
+                self.MainFrameNotebook.GetPage(routine_page_index).Hide()
 
             return
 
@@ -841,10 +846,16 @@ class MainFrameController(MainFrameView):
                 self.MainFrameNotebook.SetSelection(3)
 
         elif isinstance(current, SQLProcedure):
-            self.MainFrameNotebook.GetPage(procedure_page_index).Show()
+            self.MainFrameNotebook.GetPage(routine_page_index).Show()
             self.MainFrameNotebook.GetPage(7).Show()
-            if self.MainFrameNotebook.GetSelection() != procedure_page_index:
-                self.MainFrameNotebook.SetSelection(procedure_page_index)
+            if self.MainFrameNotebook.GetSelection() != routine_page_index:
+                self.MainFrameNotebook.SetSelection(routine_page_index)
+
+        elif isinstance(current, SQLFunction):
+            self.MainFrameNotebook.GetPage(routine_page_index).Show()
+            self.MainFrameNotebook.GetPage(7).Show()
+            if self.MainFrameNotebook.GetSelection() != routine_page_index:
+                self.MainFrameNotebook.SetSelection(routine_page_index)
 
     def _get_records_filters(self) -> str:
         return (self.sql_query_filters.GetSelectedText() or self.sql_query_filters.GetText()).strip()
@@ -1284,7 +1295,7 @@ class MainFrameController(MainFrameView):
             self.m_toggleBtn1.SetValue(False)
             self.m_toggleBtn1.SetLabel(_("Read Only"))
 
-        self.toggle_panel(session.connection if session else None)
+        self.toggle_panel(session if session else None)
 
         if session:
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Connection')}: {session.name}", 1)
@@ -1586,9 +1597,48 @@ class MainFrameController(MainFrameView):
         CURRENT_PROCEDURE.set_value(None)
         new_proc = session.context.build_empty_procedure(database)
         CURRENT_PROCEDURE.set_value(new_proc)
-        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
-        self._toggle_panel(procedure_page_index, True)
-        self.MainFrameNotebook.SetSelection(procedure_page_index)
+        routine_page_index = self.MainFrameNotebook.FindPage(self.panel_routine)
+        self._toggle_panel(routine_page_index, True)
+        self.MainFrameNotebook.SetSelection(routine_page_index)
+
+    # FUNCTION
+    def _on_current_function(self, current: SQLFunction):
+        logger.debug(
+            "ui trace: _on_current_function function=%s is_new=%s",
+            getattr(current, "name", None) if current is not None else None,
+            getattr(current, "is_new", None) if current is not None else None,
+        )
+        self.toggle_panel(current)
+
+    def on_routine_save(self, event):
+        self.controller_routine_editor.do_save()
+
+    def on_routine_delete(self, event):
+        self.controller_routine_editor.do_delete()
+
+    def on_routine_cancel(self, event):
+        self.controller_routine_editor.do_cancel()
+
+    def on_routine_parameters_insert(self, event):
+        self.controller_routine_editor.on_parameter_insert(event)
+
+    def on_routine_parameters_delete(self, event):
+        self.controller_routine_editor.on_parameter_remove(event)
+
+    def on_routine_parameters_clear(self, event):
+        self.controller_routine_editor.on_parameter_clear(event)
+
+    def on_insert_function(self):
+        session = CURRENT_SESSION.get_value()
+        database = CURRENT_DATABASE.get_value()
+        if not session or not database:
+            return
+        CURRENT_FUNCTION.set_value(None)
+        new_func = session.context.build_empty_function(database)
+        CURRENT_FUNCTION.set_value(new_func)
+        routine_page_index = self.MainFrameNotebook.FindPage(self.panel_routine)
+        self._toggle_panel(routine_page_index, True)
+        self.MainFrameNotebook.SetSelection(routine_page_index)
 
     def on_clone_procedure(self):
         procedure = CURRENT_PROCEDURE.get_value()
@@ -1604,9 +1654,9 @@ class MainFrameController(MainFrameView):
         )
         CURRENT_PROCEDURE.set_value(None)
         CURRENT_PROCEDURE.set_value(clone)
-        procedure_page_index = self.MainFrameNotebook.FindPage(self.panel_procedures)
-        self._toggle_panel(procedure_page_index, True)
-        self.MainFrameNotebook.SetSelection(procedure_page_index)
+        routine_page_index = self.MainFrameNotebook.FindPage(self.panel_routine)
+        self._toggle_panel(routine_page_index, True)
+        self.MainFrameNotebook.SetSelection(routine_page_index)
 
     # TABLE
     def _on_current_table(self, table: SQLTable):

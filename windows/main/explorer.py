@@ -208,7 +208,7 @@ class TreeExplorerController:
             return
         CURRENT_SESSION.set_value(session)
         CURRENT_CONNECTION.set_value(session.connection)
-        # CURRENT_DATABASE.set_value(None)
+        CURRENT_DATABASE.set_value(None)
 
     def select_database(self, database: SQLDatabase, item, event):
         if database != CURRENT_DATABASE.get_value():

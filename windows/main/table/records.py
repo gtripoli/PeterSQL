@@ -339,9 +339,12 @@ class TableRecordsController:
 
     def do_cancel_records(self):
         """Discard all pending changes in NEW_RECORDS."""
+        # BUG FIX: was load_model() which recreates the model from in-memory table.records
+        # (already modified by SetValueByRow), so edits were never actually discarded.
+        # load_records_async() fetches fresh data from the DB, properly reversing edits.
         NEW_RECORDS.clear()
         if self.table:
-            self.load_model()
+            self.load_records_async()
 
     def do_refresh_records(self):
         """Refresh records from database."""
