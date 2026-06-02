@@ -37,13 +37,13 @@ For a detailed status snapshot, see:
 - [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ### Recent updates
-
-- SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
-- Table execution flow updated in the records UI.
-- `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
-- `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`).
-- Advanced cell editor replaced with a dedicated `ColumnContentDialog` for large content.
-
+ 
+ - SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
+ - Table execution flow updated in the records UI.
+ - `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
+ - `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`).
+ - Advanced cell editor replaced with a dedicated `ColumnContentDialog` for large content.
+ - Added stored function support with deterministic flag handling for MySQL and MariaDB engines.
 ---
 
 ## 🧭 Why PeterSQL?
