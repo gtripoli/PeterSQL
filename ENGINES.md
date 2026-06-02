@@ -7,6 +7,7 @@ This project stores SQL autocomplete vocabulary in normalized engine specificati
 The specification model uses a **base + delta** strategy:
 
 - `common.functions` and `common.keywords` contain the shared baseline for that engine.
+- Added support for stored functions in MySQL and MariaDB contexts, including deterministic flag handling.
 - `versions.<major>.functions_remove` and `versions.<major>.keywords_remove` remove entries that are not valid for an older major version.
 
 We intentionally keep newer capabilities in `common` and apply only removals for older majors.
