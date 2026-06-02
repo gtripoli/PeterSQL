@@ -439,7 +439,7 @@ class MySQLFunction(SQLFunction):
     parameters: str = ""
     returns: str = ""
     deterministic: bool = False
-    sql: str = ""
+    statement: str = ""
 
     def _show_create_function(self) -> str:
         context = self.database.context
@@ -451,7 +451,7 @@ class MySQLFunction(SQLFunction):
         return self.database.context.execute(self.raw_create())
 
     def raw_create(self) -> str:
-        if not self.sql.strip() or not self.returns.strip():
+        if not self.statement.strip() or not self.returns.strip():
             return self._show_create_function()
 
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
@@ -460,7 +460,7 @@ class MySQLFunction(SQLFunction):
             RETURNS {self.returns}
             {deterministic}
             BEGIN
-                {self.sql};
+                {self.statement};
             END
         """
 

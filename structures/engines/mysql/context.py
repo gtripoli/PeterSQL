@@ -311,6 +311,7 @@ class MySQLContext(AbstractContext):
                     context=self,
                     get_tables_handler=self.get_tables,
                     get_procedures_handler=self.get_procedures,
+                    get_functions_handler=self.get_functions,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
@@ -338,6 +339,31 @@ class MySQLContext(AbstractContext):
                 )
             )
 
+        return results
+
+    def get_functions(self, database: SQLDatabase) -> list["MySQLFunction"]:
+        from structures.engines.mysql.database import MySQLFunction
+
+        results: list[MySQLFunction] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MySQLFunction(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    returns="",
+                    statement="",
+                )
+            )
         return results
 
     def get_views(self, database: SQLDatabase):
@@ -630,6 +656,7 @@ class MySQLContext(AbstractContext):
             context=self,
             get_tables_handler=self.get_tables,
             get_procedures_handler=self.get_procedures,
+            get_functions_handler=self.get_functions,
             get_views_handler=self.get_views,
             get_triggers_handler=self.get_triggers,
         )
@@ -783,7 +810,7 @@ class MySQLContext(AbstractContext):
             parameters=default_values.get("parameters", ""),
             returns=default_values.get("returns", "INT"),
             deterministic=default_values.get("deterministic", False),
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_procedure(

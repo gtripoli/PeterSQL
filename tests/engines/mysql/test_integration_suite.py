@@ -9,6 +9,7 @@ from tests.engines.base_column_tests import BaseColumnTests
 from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
+from tests.engines.base_function_tests import BaseFunctionTests
 from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_readonly_tests import BaseReadOnlyTests
@@ -66,6 +67,26 @@ class TestMySQLForeignKey(BaseForeignKeyTests):
 @pytest.mark.xdist_group("mysql")
 class TestMySQLCheck(BaseCheckTests):
     pass
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLFunction(BaseFunctionTests):
+
+    def get_function_parameters(self) -> str:
+        return "x INT"
+
+    def get_function_returns(self) -> str:
+        return "INT"
+
+    def get_function_deterministic(self) -> bool:
+        return True
+
+    def get_function_statement(self) -> str:
+        return "RETURN x + 1"
+
+    def get_updated_function_statement(self) -> str:
+        return "RETURN x + 2"
 
 
 @pytest.mark.integration

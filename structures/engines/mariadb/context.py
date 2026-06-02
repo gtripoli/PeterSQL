@@ -301,6 +301,7 @@ class MariaDBContext(AbstractContext):
                     context=self,
                     get_tables_handler=self.get_tables,
                     get_procedures_handler=self.get_procedures,
+                    get_functions_handler=self.get_functions,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
@@ -328,6 +329,31 @@ class MariaDBContext(AbstractContext):
                 )
             )
 
+        return results
+
+    def get_functions(self, database: SQLDatabase) -> list["MariaDBFunction"]:
+        from structures.engines.mariadb.database import MariaDBFunction
+
+        results: list[MariaDBFunction] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MariaDBFunction(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    returns="",
+                    statement="",
+                )
+            )
         return results
 
     def get_views(self, database: SQLDatabase):
