@@ -54,14 +54,22 @@ class SQLDatabase(abc.ABC):
             return False
 
         if not all([
-            getattr(self, field.name) != getattr(other, field.name)
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.compare and not isinstance(field, ObservableLazyList)
         ]):
             return False
 
         for observable_lazy_list in ["tables", "views", "procedures", "functions", "triggers", "events"]:
-            if not all([oll1 != oll2 for oll1, oll2 in zip(getattr(self, observable_lazy_list, None), getattr(other, observable_lazy_list, None))]):
+            self_list = getattr(self, observable_lazy_list, None)
+            other_list = getattr(other, observable_lazy_list, None)
+            if self_list is None:
+                self_list = []
+            if other_list is None:
+                other_list = []
+            if len(self_list) != len(other_list):
+                return False
+            if not all([oll1 == oll2 for oll1, oll2 in zip(self_list, other_list)]):
                 return False
 
         return True
@@ -548,7 +556,7 @@ class SQLForeignKey(abc.ABC):
             return False
 
         if not all([
-            getattr(self, field.name) != getattr(other, field.name)
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.compare
         ]):

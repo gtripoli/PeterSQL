@@ -117,3 +117,23 @@ class BaseDatabaseUnsupportedTests:
 
     def test_database_alter_returns_false(self, database):
         assert database.alter() is False
+
+    def test_database_equality_same(self, session):
+        """Test that two databases with same attributes are equal."""
+        db1 = self._build_new_database(None, session, "test_db")
+        db2 = self._build_new_database(None, session, "test_db")
+        assert db1 == db2
+
+    def test_database_equality_different_name(self, session):
+        """Test that two databases with different names are not equal."""
+        db1 = self._build_new_database(None, session, "test_db_1")
+        db2 = self._build_new_database(None, session, "test_db_2")
+        assert db1 != db2
+
+    def test_database_equality_different_id(self, session):
+        """Test that two databases with different IDs are not equal."""
+        db1 = self._build_new_database(None, session, "test_db")
+        db1.id = 1
+        db2 = self._build_new_database(None, session, "test_db")
+        db2.id = 2
+        assert db1 != db2

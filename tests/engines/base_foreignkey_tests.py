@@ -74,3 +74,105 @@ class BaseForeignKeyTests:
 
     def get_primary_key_name(self) -> str:
         raise NotImplementedError("Subclasses must implement get_primary_key_name()")
+
+    def test_foreignkey_equality_same(self, session, database, create_users_table):
+        """Test that two foreign keys with same attributes are equal."""
+        users_table = create_users_table(database, session)
+        posts_table = session.context.build_empty_table(database, name="posts")
+        
+        user_id_column = session.context.build_empty_column(
+            posts_table,
+            self.get_datatype_class().INTEGER,
+            name="user_id",
+            is_nullable=False,
+        )
+        
+        fk1 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["user_id"],
+            name="fk_posts_users",
+        )
+        fk1.reference_table = "users"
+        fk1.reference_columns = ["id"]
+        fk1.on_delete = "CASCADE"
+        fk1.on_update = "CASCADE"
+        
+        fk2 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["user_id"],
+            name="fk_posts_users",
+        )
+        fk2.reference_table = "users"
+        fk2.reference_columns = ["id"]
+        fk2.on_delete = "CASCADE"
+        fk2.on_update = "CASCADE"
+        
+        assert fk1 == fk2
+
+    def test_foreignkey_equality_different_name(self, session, database, create_users_table):
+        """Test that two foreign keys with different names are not equal."""
+        users_table = create_users_table(database, session)
+        posts_table = session.context.build_empty_table(database, name="posts")
+        
+        user_id_column = session.context.build_empty_column(
+            posts_table,
+            self.get_datatype_class().INTEGER,
+            name="user_id",
+            is_nullable=False,
+        )
+        
+        fk1 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["user_id"],
+            name="fk_posts_users_1",
+        )
+        fk1.reference_table = "users"
+        fk1.reference_columns = ["id"]
+        fk1.on_delete = "CASCADE"
+        fk1.on_update = "CASCADE"
+        
+        fk2 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["user_id"],
+            name="fk_posts_users_2",
+        )
+        fk2.reference_table = "users"
+        fk2.reference_columns = ["id"]
+        fk2.on_delete = "CASCADE"
+        fk2.on_update = "CASCADE"
+        
+        assert fk1 != fk2
+
+    def test_foreignkey_equality_different_columns(self, session, database, create_users_table):
+        """Test that two foreign keys with different columns are not equal."""
+        users_table = create_users_table(database, session)
+        posts_table = session.context.build_empty_table(database, name="posts")
+        
+        user_id_column = session.context.build_empty_column(
+            posts_table,
+            self.get_datatype_class().INTEGER,
+            name="user_id",
+            is_nullable=False,
+        )
+        
+        fk1 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["user_id"],
+            name="fk_posts_users",
+        )
+        fk1.reference_table = "users"
+        fk1.reference_columns = ["id"]
+        fk1.on_delete = "CASCADE"
+        fk1.on_update = "CASCADE"
+        
+        fk2 = session.context.build_empty_foreign_key(
+            posts_table,
+            ["other_id"],
+            name="fk_posts_users",
+        )
+        fk2.reference_table = "users"
+        fk2.reference_columns = ["id"]
+        fk2.on_delete = "CASCADE"
+        fk2.on_update = "CASCADE"
+        
+        assert fk1 != fk2
