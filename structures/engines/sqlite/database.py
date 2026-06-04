@@ -323,8 +323,8 @@ class SQLiteColumn(SQLColumn):
 
             transaction.execute(f"DROP TABLE {sql_safe_new_name};")
 
-    def drop(self, table: SQLTable, column: SQLColumn) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
+    def drop(self) -> bool:
+         return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
 
 
 @dataclasses.dataclass(eq=False)
