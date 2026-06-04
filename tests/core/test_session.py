@@ -88,3 +88,34 @@ class TestSession:
         session = Session(connection=conn)
 
         assert session.has_enabled_tunnel() is False
+
+    def test_session_with_comments(self):
+        config = SourceConfiguration(filename="test.db")
+        conn = Connection(id=4, name="session_with_comments", engine=ConnectionEngine.SQLITE,
+                          configuration=config, comments="Test session")
+        session = Session(connection=conn)
+
+        assert session.connection.comments == "Test session"
+
+    def test_session_with_ssh_tunnel(self):
+        from structures.configurations import SSHTunnelConfiguration
+
+        config = SourceConfiguration(filename="test.db")
+        ssh_config = SSHTunnelConfiguration(
+            enabled=True, executable="ssh", hostname="remote.host",
+            port=22, username="sshuser", password="sshpwd", local_port=3307,
+        )
+        conn = Connection(id=5, name="session_with_ssh", engine=ConnectionEngine.SQLITE,
+                          configuration=config, ssh_tunnel=ssh_config)
+        session = Session(connection=conn)
+
+        assert session.connection.ssh_tunnel == ssh_config
+
+    def test_session_repr(self):
+        config = SourceConfiguration(filename="test.db")
+        conn = Connection(id=1, name="test", engine=ConnectionEngine.SQLITE, configuration=config)
+        session = Session(connection=conn)
+
+        repr_str = repr(session)
+        assert "Session" in repr_str
+        assert "test" in repr_str
