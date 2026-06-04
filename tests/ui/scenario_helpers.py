@@ -181,4 +181,4 @@ def capture_window_screenshot(window: wx.TopLevelWindow, target_path: Path) -> N
     finally:
         memory_dc.SelectObject(wx.NullBitmap)
 
-    bitmap.SaveFile(target_path, wx.BITMAP_TYPE_PNG)
+    bitmap.SaveFile(str(target_path), wx.BITMAP_TYPE_PNG)

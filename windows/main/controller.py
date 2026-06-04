@@ -1586,9 +1586,6 @@ class MainFrameController(MainFrameView):
         )
         self.toggle_panel(current)
 
-        can_act = current is not None and not current.is_new
-        self.btn_delete_procedure.Enable(can_act)
-
     def on_insert_procedure(self):
         session = CURRENT_SESSION.get_value()
         database = CURRENT_DATABASE.get_value()
@@ -1889,7 +1886,7 @@ class MainFrameController(MainFrameView):
 
     # INDEXES
     def _on_current_index(self, index: SQLIndex):
-        self.btn_delete_index.Enable(index is not None)
+        self.m_toolBar12.EnableTool(self.m_tool43.GetId(), index is not None)
 
     def on_delete_index(self, event):
         self.controller_list_table_index.on_index_delete()
@@ -1899,7 +1896,7 @@ class MainFrameController(MainFrameView):
 
     # FOREIGN KEYS
     def _on_current_foreign_key(self, foreign_key: SQLForeignKey):
-        self.btn_delete_foreign_key.Enable(foreign_key is not None)
+        self.m_toolBar121.EnableTool(self.m_tool431.GetId(), foreign_key is not None)
 
     def on_insert_foreign_key(self, event: wx.Event):
         self.controller_list_table_foreign_key.on_foreign_key_insert(event)
