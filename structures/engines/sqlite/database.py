@@ -306,12 +306,12 @@ class SQLiteColumn(SQLColumn):
     def rename(self, new_name: str) -> bool:
         return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} RENAME COLUMN {self.quoted_name} TO `{new_name}`")
 
-    def modify(self):
+    def modify(self, current: Self):
         sql_safe_new_name = self.table.database.context.quote_identifier(f"_{self.table.name}_{self.generate_uuid()}")
 
         for i, c in enumerate(self.table.columns):
             if c.name == self.name:
-                self.table.columns[i] = self
+                self.table.columns[i] = current
                 break
 
         with self.table.database.context.transaction() as transaction:
