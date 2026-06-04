@@ -41,7 +41,8 @@ class MariaDBDatabase(SQLDatabase):
         return self.context.execute(query)
 
     def alter(self) -> bool:
-        clauses = self._build_database_clauses(self._changed_fields)
+        fields = self._changed_fields or None
+        clauses = self._build_database_clauses(fields)
 
         if not clauses:
             return False
