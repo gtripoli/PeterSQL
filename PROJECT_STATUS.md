@@ -1,6 +1,6 @@
 # PeterSQL — Project Status
 
-> **Last Updated:** 2026-04-27
+> **Last Updated:** 2026-06-05
 > **Status Rule:** newly implemented features are tracked as **PARTIAL** until validated across supported versions.
 > **Definition of DONE:** engine methods implemented, integration tests pass on target versions, UI workflow exists (if user-facing), no known regressions, documentation updated.
 
@@ -172,8 +172,9 @@
 
 ## 5. Progress Snapshot
 
-- **P0 implemented (partial):** 5/5
-- **P1 gaps closed:** 2/3
+- **P0 implemented (partial):** 5/5 — all resolved
+- **P1 gaps closed:** 3/3 — all resolved
+- **P2 technical audit items:** 2/2 — resolved (PostgreSQL import/type hints, ABC enforcement)
 - **P2 UI tasks complete:** 4/8
 - **P3 advanced tasks complete:** 0/6
 
@@ -181,6 +182,7 @@
 
 ## 6. Recently Added
 
+- Audit fixes completed: PostgreSQL alter diff handling, equality comparisons, SQLite column/drop/modify signatures, SQLite database lifecycle errors, SQLite record exception safety, VERSION sync, PostgreSQL import/type hints, and ABC enforcement for `SQLColumn`/`SQLIndex`.
 - SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
 - Table execution flow updated in the records UI.
 - `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
