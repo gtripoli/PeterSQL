@@ -404,7 +404,7 @@ class SQLiteRecord(SQLRecord):
             # elif column. :
 
         if not columns_values:
-            assert False, "No columns values"
+            raise ValueError("No column values provided for insert operation")
 
         return f"""INSERT INTO `{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
@@ -418,7 +418,7 @@ class SQLiteRecord(SQLRecord):
 
         if not (existing_record := self.table.database.context.fetchone()):
             logger.warning(f"Record not found for update: {identifier_columns}")
-            assert False, "Record not found for update with identifier columns"
+            raise ValueError("Record not found for update with identifier columns")
 
         changed_columns = []
 
@@ -454,7 +454,7 @@ class SQLiteRecord(SQLRecord):
                     return transaction.execute(raw_insert_record)
                 except PermissionError:
                     raise
-                except:
+                except Exception:
                     return False
 
         return False
@@ -466,7 +466,7 @@ class SQLiteRecord(SQLRecord):
                     return transaction.execute(raw_update_record)
                 except PermissionError:
                     raise
-                except:
+                except Exception:
                     return False
 
             return False
@@ -478,7 +478,7 @@ class SQLiteRecord(SQLRecord):
                     return transaction.execute(raw_delete_record)
                 except PermissionError:
                     raise
-                except:
+                except Exception:
                     return False
 
         return False
