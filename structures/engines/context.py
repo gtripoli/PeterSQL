@@ -1,9 +1,10 @@
 import abc
 import contextlib
 import re
+import threading
 
 from gettext import gettext as _
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import pymysql
 import psycopg2
@@ -72,6 +73,8 @@ class AbstractContext(abc.ABC):
         self.connection = connection
 
         self.databases = ObservableLazyList(self.get_databases)
+        self._connection_lost_handler: Optional[Callable[["AbstractContext", str], None]] = None
+        self._connection_lost_lock = threading.Lock()
 
     def __del__(self):
         """Ensure resources are released during object destruction."""
@@ -560,12 +563,28 @@ class AbstractContext(abc.ABC):
             logger.error(query)
             QUERY_LOGS.append(f"/* {str(ex)} */")
             if self._is_connection_lost(ex):
-                raise ConnectionLostError(
-                    _("Database connection lost: {error}").format(error=str(ex))
-                ) from ex
+                error_message = _("Database connection lost: {error}").format(error=str(ex))
+                self._handle_connection_lost(error_message)
+                raise ConnectionLostError(error_message) from ex
             raise
 
         return True
+
+    def set_connection_lost_handler(self, handler: Optional[Callable[["AbstractContext", str], None]]) -> None:
+        """Register a callback invoked when a lost connection is detected during execute()."""
+        with self._connection_lost_lock:
+            self._connection_lost_handler = handler
+
+    def _handle_connection_lost(self, error_message: str) -> None:
+        handler = None
+        with self._connection_lost_lock:
+            handler = self._connection_lost_handler
+
+        if callable(handler):
+            try:
+                handler(self, error_message)
+            except Exception as ex:
+                logger.error("Connection lost handler failed: %s", ex, exc_info=True)
 
     @staticmethod
     def _is_connection_lost(exc: Exception) -> bool:

@@ -1306,6 +1306,8 @@ class MainFrameController(MainFrameView):
 
             wx.CallAfter(self.status_bar.SetStatusText, f"{_('Uptime')}: {self._format_server_uptime(session.context.get_server_uptime())}", 3)
 
+            session.context.set_connection_lost_handler(self._on_global_connection_lost)
+
             keywords = " ".join(k.lower() for k in session.context.KEYWORDS)
 
             colors_datatypes = defaultdict(list)
@@ -2090,8 +2092,11 @@ class MainFrameController(MainFrameView):
             controller.cancel_execution(event)
 
     def _on_query_connection_lost(self, session: Session, error: str) -> None:
+        self._on_global_connection_lost(session, error)
+
+    def _on_global_connection_lost(self, session: Session, error: str) -> None:
         if not wx.IsMainThread():
-            wx.CallAfter(self._on_query_connection_lost, session, error)
+            wx.CallAfter(self._on_global_connection_lost, session, error)
             return
 
         choice = wx.MessageDialog(
