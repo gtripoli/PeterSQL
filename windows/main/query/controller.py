@@ -27,6 +27,7 @@ class QueryEditorController:
             on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
             on_stop_state_changed: Optional[Callable[[bool], None]] = None,
             on_before_execute: Optional[Callable[[], bool]] = None,
+            on_connection_lost: Optional[Callable[['Session', str], None]] = None,
     ):
         self.editor = stc_editor
         self.notebook = results_notebook
@@ -39,6 +40,7 @@ class QueryEditorController:
         self.on_save_as_query = on_save_as_query
         self.on_stop_state_changed = on_stop_state_changed
         self.on_before_execute = on_before_execute
+        self.on_connection_lost = on_connection_lost
 
         self.parser: Optional[SQLStatementParser] = None
         self.selector = StatementSelector(stc_editor)
@@ -216,6 +218,11 @@ class QueryEditorController:
         if result.cancelled:
             return
 
+        if result.connection_lost and self.on_connection_lost is not None:
+            session = self.get_session()
+            if session is not None:
+                self.on_connection_lost(session, result.error or _("Database connection lost"))
+
         if self.renderer:
             self.renderer.create_result_tab(result)
 
@@ -256,6 +263,7 @@ class QueryResultsController(QueryEditorController):
             on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
             on_stop_state_changed: Optional[Callable[[bool], None]] = None,
             on_before_execute: Optional[Callable[[], bool]] = None,
+            on_connection_lost: Optional[Callable[['Session', str], None]] = None,
     ):
         from windows.main import CURRENT_DATABASE, CURRENT_SESSION  # Lazy import: unavoidable circular dependency.
 
@@ -271,4 +279,5 @@ class QueryResultsController(QueryEditorController):
             on_save_as_query=on_save_as_query,
             on_stop_state_changed=on_stop_state_changed,
             on_before_execute=on_before_execute,
+            on_connection_lost=on_connection_lost,
         )

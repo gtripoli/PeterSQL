@@ -29,6 +29,7 @@ class ExecutionResult:
     error: Optional[str] = None
     cancelled: bool = False
     warnings: list[str] = dataclasses.field(default_factory=list)
+    connection_lost: bool = False
 
 
 @dataclasses.dataclass
@@ -176,12 +177,16 @@ class QueryExecutor:
             elapsed_ms = (time.time() - start_time) * 1000
             is_cancelled = self._cancel_requested
 
+            from structures.engines.context import ConnectionLostError
+            connection_lost = isinstance(ex, ConnectionLostError)
+
             return ExecutionResult(
                 statement=statement,
                 success=False,
                 error=str(ex),
                 cancelled=is_cancelled,
-                elapsed_ms=elapsed_ms
+                elapsed_ms=elapsed_ms,
+                connection_lost=connection_lost,
             )
 
     def _build_worker_connection(self) -> Connection:

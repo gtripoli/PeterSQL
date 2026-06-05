@@ -5,6 +5,9 @@ import re
 from gettext import gettext as _
 from typing import Any, Optional
 
+import pymysql
+import psycopg2
+import sqlite3
 import yaml
 
 from constants import WORKDIR
@@ -31,6 +34,11 @@ from structures.engines.indextype import SQLIndexType, StandardIndexType
 QUERY_LOGS: ObservableList[str] = ObservableList()
 
 SQL_SAFE_NAME_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+class ConnectionLostError(Exception):
+    """Raised when the database connection has been lost and needs user intervention."""
+    pass
 
 _WRITE_QUERY_RE = re.compile(
     r"^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE|RENAME|LOCK)\b",
@@ -551,9 +559,36 @@ class AbstractContext(abc.ABC):
         except Exception as ex:
             logger.error(query)
             QUERY_LOGS.append(f"/* {str(ex)} */")
+            if self._is_connection_lost(ex):
+                raise ConnectionLostError(
+                    _("Database connection lost: {error}").format(error=str(ex))
+                ) from ex
             raise
 
         return True
+
+    @staticmethod
+    def _is_connection_lost(exc: Exception) -> bool:
+        """Return True when the exception indicates a lost DB connection."""
+        # PyMySQL / MySQL / MariaDB
+        if pymysql and isinstance(exc, pymysql.err.InterfaceError):
+            return True
+        if pymysql and isinstance(exc, pymysql.err.OperationalError):
+            return True
+
+        # PostgreSQL
+        if psycopg2 and isinstance(exc, psycopg2.OperationalError):
+            return True
+        if psycopg2 and isinstance(exc, psycopg2.InterfaceError):
+            return True
+
+        # SQLite
+        if sqlite3 and isinstance(exc, sqlite3.OperationalError):
+            message = str(exc).lower()
+            if any(token in message for token in ["database is locked", "disk i/o error", "unable to open"]):
+                return True
+
+        return False
 
     def fetchone(self) -> Any:
         """Fetch a single row from the active cursor."""

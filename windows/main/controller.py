@@ -34,6 +34,7 @@ from windows.components.stc.autocomplete.auto_complete import SQLAutoCompleteCon
 from windows.components.stc.template_menu import SQLTemplateMenuController
 
 from windows.main import CURRENT_CONNECTION, CURRENT_SESSION, CURRENT_DATABASE, CURRENT_TABLE, CURRENT_COLUMN, CURRENT_INDEX, CURRENT_FOREIGN_KEY, CURRENT_RECORDS, AUTO_APPLY, CURRENT_VIEW, CURRENT_TRIGGER, CURRENT_PROCEDURE, CURRENT_FUNCTION, WRITE_OVERRIDE
+from windows.state import SESSIONS_LIST
 
 from windows.main.explorer import TreeExplorerController
 
@@ -352,6 +353,7 @@ class MainFrameController(MainFrameView):
             on_save_as_query=self.on_save_as_query,
             on_stop_state_changed=lambda enabled: self._set_query_stop_enabled(panel, enabled),
             on_before_execute=lambda: self._autosave_query_page_before_execute(panel),
+            on_connection_lost=self._on_query_connection_lost,
         )
         self._query_pages.append(panel)
         self._query_page_meta[panel] = {
@@ -2086,6 +2088,50 @@ class MainFrameController(MainFrameView):
         if controller is not None:
             self.controller_query_records = controller
             controller.cancel_execution(event)
+
+    def _on_query_connection_lost(self, session: Session, error: str) -> None:
+        if not wx.IsMainThread():
+            wx.CallAfter(self._on_query_connection_lost, session, error)
+            return
+
+        choice = wx.MessageDialog(
+            None,
+            message=_("Database scollegato, vuoi ricollegarti?"),
+            caption=_("Connessione persa"),
+            style=wx.YES_NO | wx.ICON_QUESTION,
+        ).ShowModal()
+
+        if choice == wx.ID_YES:
+            try:
+                session.connect()
+                wx.MessageBox(
+                    _("Connessione ripristinata con successo."),
+                    _("Connessione ripristinata"),
+                    wx.OK | wx.ICON_INFORMATION,
+                )
+            except Exception as ex:
+                logger.error("Reconnection failed: %s", ex, exc_info=True)
+                wx.MessageBox(
+                    _("Impossibile ricollegarsi: {error}").format(error=str(ex)),
+                    _("Riconnessione fallita"),
+                    wx.OK | wx.ICON_ERROR,
+                )
+                self._remove_session_from_explorer(session)
+        else:
+            self._remove_session_from_explorer(session)
+
+    def _remove_session_from_explorer(self, session: Session) -> None:
+        try:
+            SESSIONS_LIST.remove(session)
+        except ValueError:
+            pass
+
+        if CURRENT_SESSION.get_value() is session:
+            CURRENT_SESSION.set_value(None)
+            CURRENT_CONNECTION.set_value(None)
+            CURRENT_DATABASE.set_value(None)
+
+        self.controller_tree_connections.populate_tree()
 
     # def on_clear_record(self, event):
     #     self.controller_list_table_records.on_row_clear()
