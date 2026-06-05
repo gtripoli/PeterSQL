@@ -1,4 +1,5 @@
 import dataclasses
+import re
 from typing import Self, Optional
 
 from helpers.logger import logger
@@ -71,7 +72,7 @@ class PostgreSQLDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class PostgreSQLTable(SQLTable):
-    schema: str = None
+    schema: Optional[str] = None
     
     @property
     def fully_qualified_name(self):
@@ -403,7 +404,7 @@ class PostgreSQLRecord(SQLRecord):
 
 @dataclasses.dataclass
 class PostgreSQLView(SQLView):
-    schema: str = "public"
+    schema: Optional[str] = "public"
 
     @property
     def fully_qualified_name(self):
