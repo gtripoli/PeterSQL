@@ -1,4 +1,5 @@
 import uuid
+import pytest
 
 
 class BaseDatabaseCreateAlterTests:
@@ -109,14 +110,26 @@ class BaseDatabaseUnsupportedTests:
         unique_name = str(uuid.uuid4()).replace("-", "")[:12]
         return f"db_{unique_name}"
 
-    def test_database_create_returns_false(self, session, database):
+    def test_database_create_raises_not_implemented(self, session, database):
         name = self._build_unique_database_name()
         new_database = self._build_new_database(database, session, name)
 
-        assert new_database.create() is False
+        with pytest.raises(NotImplementedError) as exc_info:
+            new_database.create()
 
-    def test_database_alter_returns_false(self, database):
-        assert database.alter() is False
+        assert "SQLite databases are files" in str(exc_info.value)
+
+    def test_database_alter_raises_not_implemented(self, database):
+        with pytest.raises(NotImplementedError) as exc_info:
+            database.alter()
+
+        assert "SQLite databases are files" in str(exc_info.value)
+
+    def test_database_drop_raises_not_implemented(self, database):
+        with pytest.raises(NotImplementedError) as exc_info:
+            database.drop()
+
+        assert "SQLite databases are files" in str(exc_info.value)
 
     def test_database_equality_same(self, session):
         """Test that two databases with same attributes are equal."""

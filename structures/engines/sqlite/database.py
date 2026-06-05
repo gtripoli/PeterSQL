@@ -16,13 +16,13 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 @dataclasses.dataclass
 class SQLiteDatabase(SQLDatabase):
     def create(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be created through SQL")
 
     def alter(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be altered through SQL")
 
     def drop(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be dropped through SQL")
 
 
 @dataclasses.dataclass(eq=False)
