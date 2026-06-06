@@ -46,6 +46,18 @@ _WRITE_QUERY_RE = re.compile(
     re.IGNORECASE,
 )
 
+# PyMySQL/MySQL/MariaDB disconnect error codes and message fragments
+_PYMYSQL_DISCONNECT_CODES: frozenset[int] = frozenset({
+    2006,   # CR_SERVER_GONE_ERROR
+    2013,   # CR_SERVER_LOST
+    2055,   # CR_SERVER_LOST_EXTENDED
+})
+_PYMYSQL_DISCONNECT_FRAGMENTS: tuple[str, ...] = (
+    "server has gone away",
+    "lost connection",
+    "can't connect",
+)
+
 
 class AbstractContext(abc.ABC):
     """Base context API for SQL engines."""
@@ -588,18 +600,33 @@ class AbstractContext(abc.ABC):
 
     @staticmethod
     def _is_connection_lost(exc: Exception) -> bool:
-        """Return True when the exception indicates a lost DB connection."""
+        """Return True when the exception indicates a lost DB connection.
+
+        Only disconnect-specific errors are classified as connection loss.
+        Ordinary SQL errors (missing table, syntax, access denied, etc.) are
+        not treated as lost connections so they propagate normally.
+        """
         # PyMySQL / MySQL / MariaDB
+        # InterfaceError is always connection-level in PyMySQL.
         if pymysql and isinstance(exc, pymysql.err.InterfaceError):
             return True
+        # OperationalError covers both SQL errors and network errors; only
+        # flag the ones with known disconnect codes or message fragments.
         if pymysql and isinstance(exc, pymysql.err.OperationalError):
-            return True
+            code = exc.args[0] if exc.args else 0
+            msg = str(exc).lower()
+            if code in _PYMYSQL_DISCONNECT_CODES or any(f in msg for f in _PYMYSQL_DISCONNECT_FRAGMENTS):
+                return True
 
         # PostgreSQL
-        if psycopg2 and isinstance(exc, psycopg2.OperationalError):
-            return True
+        # InterfaceError (e.g. "connection already closed") is always network-level.
         if psycopg2 and isinstance(exc, psycopg2.InterfaceError):
             return True
+        # OperationalError with pgcode=None is a connection-level error;
+        # OperationalError with a pgcode is a server-side SQL error.
+        if psycopg2 and isinstance(exc, psycopg2.OperationalError):
+            if getattr(exc, "pgcode", None) is None:
+                return True
 
         # SQLite
         if sqlite3 and isinstance(exc, sqlite3.OperationalError):

@@ -6,15 +6,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PeterSQL 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-31 12:36+0200\n"
+"POT-Creation-Date: 2026-06-06 10:58+0200\n"
 "PO-Revision-Date: 2026-03-10 18:21+0000\n"
 "Last-Translator: \n"
-"Language-Team: it_IT <LL@li.org>\n"
 "Language: it_IT\n"
+"Language-Team: it_IT <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.18.0\n"
 
 #: helpers/__init__.py:16
@@ -46,779 +46,886 @@ msgstr "TB"
 msgid "OpenSSH client not found."
 msgstr "Client OpenSSH non trovato."
 
-#: structures/engines/context.py:544
+#: structures/engines/context.py:567
 msgid "This connection is read-only."
 msgstr "Questa connessione è in sola lettura."
 
-#: structures/engines/mariadb/context.py:632
-#: structures/engines/mysql/context.py:643
+#: structures/engines/context.py:578
+#, fuzzy, python-brace-format
+msgid "Database connection lost: {error}"
+msgstr ""
+"Errore di connessione:\n"
+"{error}"
+
+#: structures/engines/mariadb/context.py:658
+#: structures/engines/mysql/context.py:670
 #: structures/engines/postgresql/context.py:701
 #: structures/engines/sqlite/context.py:564
 #, python-brace-format
 msgid "Table{table_index:03}"
 msgstr "Table{table_index:03}"
 
-#: structures/engines/mariadb/context.py:660
-#: structures/engines/mysql/context.py:671
+#: structures/engines/mariadb/context.py:686
+#: structures/engines/mysql/context.py:698
 #: structures/engines/postgresql/context.py:726
 #: structures/engines/sqlite/context.py:588
 #, python-brace-format
 msgid "Column{column_index:03}"
 msgstr "Column{column_index:03}"
 
-#: structures/engines/mariadb/context.py:678
-#: structures/engines/mysql/context.py:689
+#: structures/engines/mariadb/context.py:704
+#: structures/engines/mysql/context.py:716
 #: structures/engines/postgresql/context.py:744
 #: structures/engines/sqlite/context.py:606
 #, python-brace-format
 msgid "Index{index_number:03}"
 msgstr "Index{index_number:03}"
 
-#: structures/engines/mariadb/context.py:718
-#: structures/engines/mysql/context.py:727
+#: structures/engines/mariadb/context.py:744
+#: structures/engines/mysql/context.py:754
 #: structures/engines/postgresql/context.py:784
 #: structures/engines/sqlite/context.py:646
 #, python-brace-format
 msgid "ForeignKey{foreign_key_number:03}"
 msgstr "ForeignKey{foreign_key_number:03}"
 
-#: structures/engines/mariadb/context.py:751
-#: structures/engines/mysql/context.py:758
+#: structures/engines/mariadb/context.py:777
+#: structures/engines/mysql/context.py:785
 #: structures/engines/postgresql/context.py:814
 #: structures/engines/sqlite/context.py:674
 #, python-brace-format
 msgid "View{view_index:03}"
 msgstr "View{view_index:03}"
 
-#: structures/engines/mariadb/context.py:804
+#: structures/engines/mariadb/context.py:830
 #, python-brace-format
 msgid "Trigger{trigger_index:03}"
 msgstr "Trigger{trigger_index:03}"
 
 #: windows/dialogs/connections/view.py:417
-#: windows/dialogs/connections/view.py:775 windows/main/controller.py:1290
-#: windows/views.py:33
+#: windows/dialogs/connections/view.py:775 windows/main/controller.py:1303
+#: windows/views.py:62
 msgid "Connection"
 msgstr "Connessione"
 
 #: windows/components/dataview.py:115 windows/components/dataview.py:240
 #: windows/components/dataview.py:253 windows/components/dataview.py:268
-#: windows/views.py:47 windows/views.py:97 windows/views.py:1024
-#: windows/views.py:1336 windows/views.py:1369 windows/views.py:1393
-#: windows/views.py:1417 windows/views.py:1441 windows/views.py:1465
-#: windows/views.py:1582 windows/views.py:1928 windows/views.py:2199
-#: windows/views.py:3293 windows/views.py:3515
+#: windows/views.py:76 windows/views.py:126 windows/views.py:1053
+#: windows/views.py:1365 windows/views.py:1398 windows/views.py:1422
+#: windows/views.py:1446 windows/views.py:1470 windows/views.py:1494
+#: windows/views.py:1611 windows/views.py:1957 windows/views.py:2228
+#: windows/views.py:2336
 msgid "Name"
 msgstr "Nome"
 
-#: windows/views.py:48 windows/views.py:438
+#: windows/views.py:77 windows/views.py:467
 msgid "Last connection"
 msgstr "Ultima connessione"
 
-#: windows/dialogs/connections/view.py:669 windows/views.py:61
+#: windows/dialogs/connections/view.py:669 windows/views.py:90
 msgid "New directory"
 msgstr "Nuova directory"
 
 #: windows/dialogs/connections/model.py:212
-#: windows/dialogs/connections/view.py:615 windows/views.py:65
+#: windows/dialogs/connections/view.py:615 windows/views.py:94
 msgid "New connection"
 msgstr "Nuova connessione"
 
-#: windows/views.py:71
+#: windows/views.py:100
 msgid "Rename"
 msgstr "Rinomina"
 
-#: windows/views.py:76
+#: windows/views.py:105
 msgid "Clone connection"
 msgstr "Clona connessione"
 
-#: windows/views.py:81 windows/views.py:613 windows/views.py:1496
-#: windows/views.py:1864 windows/views.py:2154 windows/views.py:2378
-#: windows/views.py:3203 windows/views.py:3252 windows/views.py:3651
-#: windows/views.py:3683
+#: windows/views.py:110 windows/views.py:642 windows/views.py:1525
+#: windows/views.py:1893 windows/views.py:2183 windows/views.py:2587
 msgid "Delete"
 msgstr "Elimina"
 
-#: windows/views.py:111 windows/views.py:1341 windows/views.py:1637
-#: windows/views.py:3115 windows/views.py:3570
+#: windows/views.py:140 windows/views.py:1370 windows/views.py:1666
 msgid "Engine"
 msgstr "Motore"
 
-#: windows/views.py:132
+#: windows/views.py:161
 msgid "Host + port"
 msgstr "Host + porta"
 
-#: windows/views.py:148
+#: windows/views.py:177
 msgid "Username"
 msgstr "Nome utente"
 
-#: windows/views.py:161 windows/views.py:1150
+#: windows/views.py:190 windows/views.py:1179
 msgid "Password"
 msgstr "Password"
 
-#: windows/views.py:174
+#: windows/views.py:203
 msgid "Connection timeout"
 msgstr "Timeout connessione"
 
-#: windows/views.py:192
+#: windows/views.py:221
 msgid "Use TLS"
 msgstr "Usa TLS"
 
-#: windows/views.py:203
+#: windows/views.py:232
 msgid "Mark read only"
 msgstr "Segna come sola lettura"
 
-#: windows/views.py:214
+#: windows/views.py:243
 msgid "Use SSH tunnel"
 msgstr "Usa tunnel SSH"
 
-#: windows/views.py:225
+#: windows/views.py:254
 msgid "Compressed client/server protocol"
 msgstr "Protocollo client/server compresso"
 
-#: windows/views.py:244
+#: windows/views.py:273
 msgid "Filename"
 msgstr "Nome file"
 
-#: windows/views.py:249 windows/views.py:368 windows/views.py:3809
+#: windows/views.py:278 windows/views.py:397
 msgid "Select a file"
 msgstr "Seleziona un file"
 
-#: windows/views.py:249 windows/views.py:368
+#: windows/views.py:278 windows/views.py:397
 msgid "*.*"
 msgstr "*.*"
 
 #: windows/components/dataview.py:70 windows/components/dataview.py:92
-#: windows/views.py:266 windows/views.py:1343 windows/views.py:1595
-#: windows/views.py:3113 windows/views.py:3528
+#: windows/views.py:295 windows/views.py:1372 windows/views.py:1624
 msgid "Comments"
 msgstr "Commenti"
 
-#: windows/main/controller.py:769 windows/views.py:280 windows/views.py:740
-#: windows/views.py:894
+#: windows/main/controller.py:772 windows/views.py:309 windows/views.py:769
+#: windows/views.py:923
 msgid "Settings"
 msgstr "Impostazioni"
 
-#: windows/views.py:288
+#: windows/views.py:317
 msgid "SSH executable"
 msgstr "Eseguibile SSH"
 
-#: windows/views.py:293
+#: windows/views.py:322
 msgid "ssh"
 msgstr "ssh"
 
-#: windows/views.py:301
+#: windows/views.py:330
 msgid "SSH host + port"
 msgstr "Host SSH + porta"
 
-#: windows/views.py:313
+#: windows/views.py:342
 msgid "SSH host + port (the SSH server that forwards traffic to the DB)"
 msgstr "SSH host + port (the SSH server that forwards traffic to the DB)"
 
-#: windows/views.py:322
+#: windows/views.py:351
 msgid "SSH username"
 msgstr "Nome utente SSH"
 
-#: windows/views.py:335
+#: windows/views.py:364
 msgid "SSH password"
 msgstr "Password SSH"
 
-#: windows/views.py:348
+#: windows/views.py:377
 msgid "Local port"
 msgstr "Porta locale"
 
-#: windows/views.py:354
+#: windows/views.py:383
 msgid "if the value is set to 0, the first available port will be used"
-msgstr ""
-"se il valore è impostato a 0, verrà utilizzata la prima porta disponibile"
+msgstr "se il valore è impostato a 0, verrà utilizzata la prima porta disponibile"
 
-#: windows/views.py:363
+#: windows/views.py:392
 msgid "Identity file"
 msgstr "File identità"
 
-#: windows/views.py:379
+#: windows/views.py:408
 msgid "Remote host + port"
 msgstr "Host remoto + porta"
 
-#: windows/views.py:391
+#: windows/views.py:420
 msgid "Remote host/port is the real DB target (defaults to DB Host/Port)."
 msgstr "Host/porta remoto è il target reale del DB (predefinito a Host/Porta DB)."
 
-#: windows/views.py:400
+#: windows/views.py:429
 msgid "SSH extra args"
 msgstr "Argomenti extra SSH"
 
-#: windows/views.py:415
+#: windows/views.py:444
 msgid "SSH Tunnel"
 msgstr "Tunnel SSH"
 
-#: windows/views.py:421 windows/views.py:1339 windows/views.py:3117
+#: windows/views.py:450 windows/views.py:1368
 msgid "Created at"
 msgstr "Creato il"
 
-#: windows/views.py:455
+#: windows/views.py:484
 msgid "Successful connections"
 msgstr "Connessioni riuscite"
 
-#: windows/views.py:472
+#: windows/views.py:501
 msgid "Last successful connection"
 msgstr "Ultima connessione riuscita"
 
-#: windows/views.py:489
+#: windows/views.py:518
 msgid "Unsuccessful connections"
 msgstr "Connessioni non riuscite"
 
-#: windows/views.py:506
+#: windows/views.py:535
 msgid "Last failure reason"
 msgstr "Ultimo motivo di fallimento"
 
-#: windows/views.py:523
+#: windows/views.py:552
 msgid "Total connection attempts"
 msgstr "Totale connessioni"
 
-#: windows/views.py:540
+#: windows/views.py:569
 msgid "Average connection time (ms)"
 msgstr "Media in ms del tempo di connessione"
 
-#: windows/views.py:557
+#: windows/views.py:586
 msgid "Most recent connection duration"
 msgstr "Durata connessione più recente"
 
-#: windows/views.py:576
+#: windows/views.py:605
 msgid "Statistics"
 msgstr "Statistiche"
 
-#: windows/views.py:594 windows/views.py:1821
+#: windows/views.py:623 windows/views.py:1850
 msgid "Create"
 msgstr "Crea"
 
-#: windows/views.py:598
+#: windows/views.py:627
 msgid "Create connection"
 msgstr "Crea connessione"
 
-#: windows/views.py:601
+#: windows/views.py:630
 msgid "Create directory"
 msgstr "Crea directory"
 
-#: windows/views.py:630 windows/views.py:854 windows/views.py:1491
-#: windows/views.py:1867 windows/views.py:2159 windows/views.py:2383
-#: windows/views.py:2439 windows/views.py:3179 windows/views.py:3686
-#: windows/views.py:3823
+#: windows/views.py:659 windows/views.py:883 windows/views.py:1520
+#: windows/views.py:1896 windows/views.py:2188 windows/views.py:2592
+#: windows/views.py:2648
 msgid "Cancel"
 msgstr "Annulla"
 
-#: windows/main/controller.py:323 windows/views.py:635 windows/views.py:2164
-#: windows/views.py:2388 windows/views.py:2603 windows/views.py:3691
-#: windows/views.py:3829
+#: windows/main/controller.py:324 windows/views.py:664 windows/views.py:2193
+#: windows/views.py:2597 windows/views.py:2812
 msgid "Save"
 msgstr "Salva"
 
-#: windows/views.py:642
+#: windows/views.py:671
 msgid "Test"
 msgstr "Testa"
 
-#: windows/views.py:649
+#: windows/views.py:678
 msgid "Connect"
 msgstr "Connetti"
 
-#: windows/views.py:752
+#: windows/views.py:781 windows/views.py:2388
 msgid "Language"
 msgstr "Lingua"
 
-#: windows/views.py:757
+#: windows/views.py:786
 msgid "English"
 msgstr "Inglese"
 
-#: windows/views.py:757
+#: windows/views.py:786
 msgid "Italian"
 msgstr "Italiano"
 
-#: windows/views.py:757
+#: windows/views.py:786
 msgid "French"
 msgstr "Francese"
 
-#: windows/views.py:769
+#: windows/views.py:798
 msgid "Locale"
 msgstr "Localizzazione"
 
-#: windows/views.py:790
+#: windows/views.py:819
 msgid "Column content"
 msgstr "Contenuto colonna"
 
-#: windows/views.py:800
+#: windows/views.py:829
 msgid "Syntax"
 msgstr "Sintassi"
 
-#: windows/views.py:857
+#: windows/views.py:886
 msgid "Ok"
 msgstr "Ok"
 
-#: windows/views.py:888
+#: windows/views.py:917
 msgid "PeterSQL"
 msgstr "PeterSQL"
 
-#: windows/views.py:897
+#: windows/views.py:926
 msgid "File"
 msgstr "File"
 
-#: windows/views.py:900
+#: windows/views.py:929
 msgid "About"
 msgstr "Informazioni"
 
-#: windows/views.py:903
+#: windows/views.py:932
 msgid "Help"
 msgstr "Aiuto"
 
-#: windows/views.py:908
+#: windows/views.py:937
 msgid "Open connection manager"
 msgstr "Apri gestore connessioni"
 
-#: windows/views.py:912
+#: windows/views.py:941
 msgid "Disconnect from server"
 msgstr "Disconnetti dal server"
 
-#: windows/views.py:914
+#: windows/views.py:943
 msgid "tool"
 msgstr "strumento"
 
-#: windows/views.py:914 windows/views.py:2419
+#: windows/views.py:943 windows/views.py:2628
 msgid "Refresh"
 msgstr "Aggiorna"
 
-#: windows/views.py:918 windows/views.py:920 windows/views.py:1845
-#: windows/views.py:2423 windows/views.py:2589
+#: windows/views.py:947 windows/views.py:949 windows/views.py:1874
+#: windows/views.py:2632 windows/views.py:2798
 msgid "Add"
 msgstr "Aggiungi"
 
-#: windows/views.py:925
+#: windows/views.py:954
 #, python-brace-format
 msgid "{mode}"
 msgstr "{mode}"
 
-#: windows/views.py:962 windows/views.py:966 windows/views.py:2556
-#: windows/views.py:2561
+#: windows/views.py:991 windows/views.py:995 windows/views.py:2765
+#: windows/views.py:2770
 msgid "MyMenuItem"
 msgstr "IlMioElementoMenu"
 
-#: windows/views.py:969 windows/views.py:1895 windows/views.py:2568
-#: windows/views.py:3714
+#: windows/views.py:998 windows/views.py:1924 windows/views.py:2777
 msgid "MyMenu"
 msgstr "IlMioMenu"
 
-#: windows/views.py:984 windows/views.py:1519 windows/views.py:1526
-#: windows/views.py:1533
+#: windows/views.py:1013 windows/views.py:1548 windows/views.py:1555
+#: windows/views.py:1562
 msgid "MyLabel"
 msgstr "LaMiaEtichetta"
 
-#: windows/views.py:990
+#: windows/views.py:1019
 msgid "Databases"
 msgstr "Database"
 
-#: windows/views.py:991 windows/views.py:1338 windows/views.py:3118
+#: windows/views.py:1020 windows/views.py:1367
 msgid "Size"
 msgstr "Dimensione"
 
-#: windows/views.py:992
+#: windows/views.py:1021
 msgid "Elements"
 msgstr "Elementi"
 
-#: windows/views.py:993
+#: windows/views.py:1022
 msgid "Modified at"
 msgstr "Modificato il"
 
-#: windows/views.py:994 windows/views.py:1353
+#: windows/views.py:1023 windows/views.py:1382
 msgid "Tables"
 msgstr "Tabelle"
 
-#: windows/views.py:1001
+#: windows/views.py:1030
 msgid "System"
 msgstr "Sistema"
 
 #: windows/components/dataview.py:43 windows/components/dataview.py:67
-#: windows/components/dataview.py:89 windows/views.py:1047
-#: windows/views.py:1342 windows/views.py:3114
+#: windows/components/dataview.py:89 windows/views.py:1076
+#: windows/views.py:1371
 msgid "Collation"
 msgstr "Ordinamento"
 
-#: windows/views.py:1076
+#: windows/views.py:1105
 msgid "Encryption"
 msgstr "Crittografia"
 
-#: windows/main/controller.py:1259 windows/main/controller.py:1281
-#: windows/main/controller.py:1285 windows/views.py:1088
+#: windows/main/controller.py:1272 windows/main/controller.py:1294
+#: windows/main/controller.py:1298 windows/views.py:1117
 msgid "Read Only"
 msgstr "Sola lettura"
 
-#: windows/views.py:1105
+#: windows/views.py:1134
 msgid "Tablespace"
 msgstr "Tablespace"
 
-#: windows/views.py:1126
+#: windows/views.py:1155
 msgid "Connection limit"
 msgstr "Limite connessioni"
 
-#: windows/views.py:1169
+#: windows/views.py:1198
 msgid "Profile"
 msgstr "Profilo"
 
-#: windows/views.py:1195
+#: windows/views.py:1224
 msgid "Default tablespace"
 msgstr "Tablespace predefinito"
 
-#: windows/views.py:1216
+#: windows/views.py:1245
 msgid "Temporary tablespace"
 msgstr "Tablespace temporaneo"
 
-#: windows/views.py:1242
+#: windows/views.py:1271
 msgid "Quota"
 msgstr "Quota"
 
-#: windows/views.py:1261
+#: windows/views.py:1290
 msgid "Unlimited quota"
 msgstr "Quota illimitata"
 
-#: windows/views.py:1278
+#: windows/views.py:1307
 msgid "Account status"
 msgstr "Stato account"
 
-#: windows/views.py:1299
+#: windows/views.py:1328
 msgid "Password expire"
 msgstr "Scadenza password"
 
-#: windows/views.py:1323
+#: windows/views.py:1352
 msgid "Add new table"
 msgstr "Aggiungi nuova tabella"
 
-#: windows/views.py:1325
+#: windows/views.py:1354
 msgid "Clone table"
 msgstr "Clona tabella"
 
-#: windows/main/controller.py:1770 windows/views.py:1327
+#: windows/main/controller.py:1821 windows/views.py:1356
 msgid "Delete table"
 msgstr "Elimina tabella"
 
-#: windows/views.py:1337
+#: windows/views.py:1366 windows/views.py:2457
 msgid "Rows"
 msgstr "Righe"
 
-#: windows/views.py:1340 windows/views.py:3116
+#: windows/views.py:1369
 msgid "Updated at"
 msgstr "Aggiornato il"
 
-#: windows/views.py:1358
+#: windows/views.py:1387
 msgid "Add new view"
 msgstr "Aggiungi nuova vista"
 
-#: windows/views.py:1360 windows/views.py:1384
+#: windows/views.py:1389
 msgid "Clone view"
 msgstr "Clona"
 
-#: windows/views.py:1362
+#: windows/views.py:1391
 msgid "Delete view"
 msgstr "Elimina"
 
-#: windows/views.py:1370 windows/views.py:1394 windows/views.py:1418
-#: windows/views.py:1442 windows/views.py:1466
+#: windows/views.py:1399 windows/views.py:1423 windows/views.py:1447
+#: windows/views.py:1471 windows/views.py:1495
 msgid "Definition"
 msgstr "Definizione"
 
-#: windows/views.py:1377
+#: windows/views.py:1406
 msgid "Views"
 msgstr "Viste"
 
-#: windows/views.py:1382
+#: windows/views.py:1411
 msgid "Add new procedure"
 msgstr "Aggiungi nuova procedura"
 
-#: windows/views.py:1384
+#: windows/views.py:1413
 msgid "Clone procedure"
 msgstr "Clona procedura"
 
-#: windows/views.py:1386
+#: windows/views.py:1415
 msgid "Delete procedure"
 msgstr "Elimina procedura"
 
-#: windows/views.py:1401
+#: windows/views.py:1430
 msgid "Procedures"
 msgstr "Procedure"
 
-#: windows/views.py:1406
+#: windows/views.py:1435
 msgid "Add new function"
 msgstr "Aggiungi nuova funzione"
 
-#: windows/views.py:1408
+#: windows/views.py:1437
 msgid "Clone function"
 msgstr "Clona funzione"
 
-#: windows/views.py:1410
+#: windows/views.py:1439
 msgid "Delete function"
 msgstr "Elimina funzione"
 
-#: windows/views.py:1425
+#: windows/views.py:1454
 msgid "Functions"
 msgstr "Funzioni"
 
-#: windows/views.py:1430
+#: windows/views.py:1459
 msgid "Add new trigger"
 msgstr "Aggiungi nuovo trigger"
 
-#: windows/views.py:1432
+#: windows/views.py:1461
 msgid "Clone trigger"
 msgstr "Clona trigger"
 
-#: windows/views.py:1434
+#: windows/views.py:1463
 msgid "Delete trigger"
 msgstr "Elimina trigger"
 
-#: windows/views.py:1449
+#: windows/views.py:1478
 msgid "Triggers"
 msgstr "Trigger"
 
-#: windows/views.py:1454
+#: windows/views.py:1483
 msgid "Add new event"
 msgstr "Aggiungi nuovo evento"
 
-#: windows/views.py:1456
+#: windows/views.py:1485
 msgid "Clone event"
 msgstr "Clona"
 
-#: windows/views.py:1458
+#: windows/views.py:1487
 msgid "Delete event"
 msgstr "Elimina evento"
 
-#: windows/views.py:1473
+#: windows/views.py:1502
 msgid "Events"
 msgstr "Eventi"
 
-#: windows/views.py:1501 windows/views.py:1872 windows/views.py:2437
-#: windows/views.py:2521 windows/views.py:3186
+#: windows/views.py:1530 windows/views.py:1901 windows/views.py:2646
+#: windows/views.py:2730
 msgid "Apply"
 msgstr "Applica"
 
-#: windows/views.py:1513 windows/views.py:1692 windows/views.py:3603
+#: windows/views.py:1542 windows/views.py:1721
 msgid "Options"
 msgstr "Opzioni"
 
-#: windows/views.py:1544
+#: windows/views.py:1573
 msgid "Diagram"
 msgstr "Diagramma"
 
-#: windows/views.py:1555
+#: windows/views.py:1584
 msgid "Database"
 msgstr "Database"
 
-#: windows/views.py:1610 windows/views.py:3543
+#: windows/views.py:1639
 msgid "Base"
 msgstr "Base"
 
-#: windows/views.py:1624 windows/views.py:3557
+#: windows/views.py:1653
 msgid "Auto Increment"
 msgstr "Auto incremento"
 
-#: windows/views.py:1652 windows/views.py:3585
+#: windows/views.py:1681
 msgid "Default Collation"
 msgstr "Ordinamento predefinito"
 
-#: windows/views.py:1662
+#: windows/views.py:1691
 msgid "Convert data"
 msgstr "Converti dati"
 
-#: windows/views.py:1670
+#: windows/views.py:1699
 msgid "Row format"
 msgstr "Formato riga"
 
-#: windows/views.py:1703 windows/views.py:1731 windows/views.py:1759
-#: windows/views.py:1847 windows/views.py:2259 windows/views.py:2427
-#: windows/views.py:3313 windows/views.py:3330 windows/views.py:3354
-#: windows/views.py:3381
+#: windows/views.py:1732 windows/views.py:1760 windows/views.py:1788
+#: windows/views.py:1876 windows/views.py:2326 windows/views.py:2636
 msgid "Remove"
 msgstr "Rimuovi"
 
-#: windows/views.py:1705 windows/views.py:1733 windows/views.py:1761
-#: windows/views.py:2261 windows/views.py:2529 windows/views.py:3320
-#: windows/views.py:3337 windows/views.py:3361 windows/views.py:3388
+#: windows/views.py:1734 windows/views.py:1762 windows/views.py:1790
+#: windows/views.py:2328 windows/views.py:2738
 msgid "Clear"
 msgstr "Pulisci"
 
-#: windows/views.py:1718 windows/views.py:3617
+#: windows/views.py:1747
 msgid "Indexes"
 msgstr "Indici"
 
-#: windows/views.py:1729 windows/views.py:1757 windows/views.py:2257
-#: windows/views.py:3198 windows/views.py:3240 windows/views.py:3308
-#: windows/views.py:3349 windows/views.py:3376 windows/views.py:3646
+#: windows/views.py:1758 windows/views.py:1786 windows/views.py:2324
 msgid "Insert"
 msgstr "Inserisci"
 
-#: windows/views.py:1746
+#: windows/views.py:1775
 msgid "Foreign Keys"
 msgstr "Chiavi esterne"
 
-#: windows/views.py:1774
+#: windows/views.py:1803
 msgid "Checks"
 msgstr "Vincoli"
 
-#: windows/views.py:1841 windows/views.py:3638
+#: windows/views.py:1870
 msgid "Columns:"
 msgstr "Colonne:"
 
-#: windows/views.py:1851
+#: windows/views.py:1880
 msgid "Move Up"
 msgstr "Sposta su\tCTRL+UP"
 
-#: windows/views.py:1853
+#: windows/views.py:1882
 msgid "Move Down"
 msgstr "Sposta giù\tCTRL+D"
 
-#: windows/views.py:1885 windows/views.py:1892 windows/views.py:3704
-#: windows/views.py:3711
+#: windows/views.py:1914 windows/views.py:1921
 msgid "Add Index"
 msgstr "Aggiungi indice"
 
-#: windows/views.py:1889 windows/views.py:3708
+#: windows/views.py:1918
 msgid "Add PrimaryKey"
 msgstr "Aggiungi chiave primaria"
 
-#: windows/views.py:1906
+#: windows/views.py:1935
 msgid "Table"
 msgstr "Tabella"
 
-#: windows/views.py:1948 windows/views.py:2219
+#: windows/views.py:1977 windows/views.py:2243
 msgid "Schema"
 msgstr "Schema"
 
-#: windows/views.py:1976 windows/views.py:2247
+#: windows/views.py:2005 windows/views.py:2314
 msgid "General"
 msgstr "Generale"
 
-#: windows/views.py:1981
+#: windows/views.py:2010
 msgid "Algorithm"
 msgstr "Algoritmo"
 
-#: windows/views.py:1983
+#: windows/views.py:2012
 msgid "UNDEFINED"
 msgstr "Senza segno"
 
-#: windows/views.py:1986
+#: windows/views.py:2015
 msgid "MERGE"
 msgstr "MERGE"
 
-#: windows/views.py:1989
+#: windows/views.py:2018
 msgid "TEMPTABLE"
 msgstr "TEMPTABLE"
 
-#: windows/views.py:1999
+#: windows/views.py:2028
 msgid "View constraint"
 msgstr "Vincolo vista"
 
-#: windows/views.py:2001
+#: windows/views.py:2030
 msgid "None"
 msgstr "Nessuno"
 
-#: windows/views.py:2004
+#: windows/views.py:2033
 msgid "LOCAL"
 msgstr "LOCALE"
 
-#: windows/views.py:2007
+#: windows/views.py:2036
 msgid "CASCADE"
 msgstr "A CASCATA"
 
-#: windows/views.py:2010
+#: windows/views.py:2039
 msgid "CHECK ONLY"
 msgstr "SOLO VERIFICA"
 
-#: windows/views.py:2013
+#: windows/views.py:2042
 msgid "READ ONLY"
 msgstr "SOLA LETTURA"
 
-#: windows/views.py:2026
+#: windows/views.py:2055 windows/views.py:2483
 msgid "Behavior"
 msgstr "Comportamento"
 
-#: windows/views.py:2033 windows/views.py:2281
+#: windows/views.py:2062 windows/views.py:2490
 msgid "Definer"
 msgstr "Definitore"
 
-#: windows/views.py:2041 windows/views.py:2289
+#: windows/views.py:2070 windows/views.py:2498
 msgid "*"
 msgstr "*"
 
-#: windows/views.py:2053 windows/views.py:2301
+#: windows/views.py:2082 windows/views.py:2510
 msgid "SQL security"
 msgstr "Sicurezza SQL"
 
-#: windows/views.py:2060 windows/views.py:2308
+#: windows/views.py:2089 windows/views.py:2517
 msgid "DEFINER"
 msgstr "DEFINITORE"
 
-#: windows/views.py:2060 windows/views.py:2308
+#: windows/views.py:2089 windows/views.py:2517
 msgid "INVOKER"
 msgstr "INVOCATORE"
 
-#: windows/views.py:2074
+#: windows/views.py:2103
 msgid "Force"
 msgstr "Forza"
 
-#: windows/views.py:2086
+#: windows/views.py:2115
 msgid "Security barrier"
 msgstr "Barriera di sicurezza"
 
-#: windows/views.py:2099 windows/views.py:2323
+#: windows/views.py:2128 windows/views.py:2532
 msgid "Security"
 msgstr "Sicurezza"
 
-#: windows/views.py:2176
+#: windows/views.py:2205
 msgid "View"
 msgstr "Viste"
 
-#: windows/views.py:2274
+#: windows/views.py:2262
+#, fuzzy
+msgid "Type"
+msgstr "Tipo di dati"
+
+#: windows/views.py:2269
+msgid "Procedure (doesn't return a result)"
+msgstr ""
+
+#: windows/views.py:2269
+msgid "Function (return a result)"
+msgstr ""
+
+#: windows/views.py:2279
+#, fuzzy
+msgid "Return type"
+msgstr "Tipo di dati"
+
+#: windows/views.py:2299
+#, fuzzy
+msgid "Comment"
+msgstr "Commenti"
+
+#: windows/components/dataview.py:111 windows/views.py:2335
+msgid "#"
+msgstr "#"
+
+#: windows/views.py:2337
+#, fuzzy
+msgid "Datatype"
+msgstr "Tipo di dati"
+
+#: windows/views.py:2338
+#, fuzzy
+msgid "Context"
+msgstr "Connetti"
+
+#: windows/views.py:2345
 msgid "Parameters"
 msgstr "Parametri"
 
-#: windows/views.py:2400
-msgid "Procedure"
-msgstr "Procedure"
+#: windows/views.py:2354
+#, fuzzy
+msgid "Data access"
+msgstr "Database"
 
-#: windows/views.py:2408
+#: windows/views.py:2361
+msgid "CONTAINS SQL"
+msgstr ""
+
+#: windows/views.py:2361
+msgid "NO SQL"
+msgstr ""
+
+#: windows/views.py:2361
+msgid "READS SQL DATA"
+msgstr ""
+
+#: windows/views.py:2361
+#, fuzzy
+msgid "MODIFIES SQL DATA"
+msgstr "Modificato il"
+
+#: windows/views.py:2371
+#, fuzzy
+msgid "Deterministic"
+msgstr "Definizione"
+
+#: windows/views.py:2395
+#, fuzzy
+msgid "SQL"
+msgstr "*.sql"
+
+#: windows/views.py:2395
+msgid "PLPGSQL"
+msgstr ""
+
+#: windows/views.py:2405
+#, fuzzy
+msgid "Volatility"
+msgstr "Virtualità"
+
+#: windows/views.py:2412
+msgid "VOLATILE"
+msgstr ""
+
+#: windows/views.py:2412
+#, fuzzy
+msgid "STABLE"
+msgstr "Tabella"
+
+#: windows/views.py:2412
+#, fuzzy
+msgid "IMMUTABLE"
+msgstr "Tabella"
+
+#: windows/views.py:2422
+msgid "Parallel"
+msgstr ""
+
+#: windows/views.py:2429
+#, fuzzy
+msgid "UNSAFE"
+msgstr "Salva"
+
+#: windows/views.py:2429
+msgid "RESTRICTED"
+msgstr ""
+
+#: windows/views.py:2429
+#, fuzzy
+msgid "SAFE"
+msgstr "Salva"
+
+#: windows/views.py:2441
+#, fuzzy
+msgid "Cost"
+msgstr "Chiudi"
+
+#: windows/views.py:2609
+#, fuzzy
+msgid "Routine"
+msgstr "Tempo di attività"
+
+#: windows/views.py:2617
 msgid "Trigger"
 msgstr "Trigger"
 
-#: windows/views.py:2425
+#: windows/views.py:2634
 msgid "Duplicate"
 msgstr "Duplica"
 
-#: windows/views.py:2431
+#: windows/views.py:2640
 msgid "Apply changes automatically"
 msgstr "Applica modifiche automaticamente"
 
-#: windows/views.py:2433 windows/views.py:2434
+#: windows/views.py:2642 windows/views.py:2643
 msgid ""
-"If enabled, table edits are applied immediately without pressing Apply or "
-"Cancel"
+"If enabled, table edits are applied immediately without pressing Apply or"
+" Cancel"
 msgstr ""
 "Se abilitato, le modifiche alla tabella vengono applicate immediatamente "
 "senza premere Applica o Annulla"
 
-#: windows/views.py:2447
+#: windows/views.py:2656
 #, python-brace-format
-msgid ""
-"{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
-msgstr ""
-"{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
+msgid "{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
+msgstr "{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
 
-#: windows/views.py:2455
+#: windows/views.py:2664
 msgid "First"
 msgstr "Primo"
 
-#: windows/views.py:2473
+#: windows/views.py:2682
 msgid "Last"
 msgstr "Ultimo"
 
-#: windows/views.py:2482
+#: windows/views.py:2691
 msgid "Filters"
 msgstr "Filtri"
 
-#: windows/views.py:2524
+#: windows/views.py:2733
 msgid ""
 "Apply filters in data\n"
 "CTRL+ENTER"
@@ -826,113 +933,61 @@ msgstr ""
 "Applica filtri ai dati\n"
 "CTRL+ENTER"
 
-#: windows/views.py:2525
+#: windows/views.py:2734
 msgid "CTRL+ENTER"
 msgstr "CTRL+ENTER"
 
-#: windows/views.py:2553
+#: windows/views.py:2762
 msgid "Insert row"
 msgstr "Inserisci riga"
 
-#: windows/components/popup.py:31 windows/views.py:2565
+#: windows/components/popup.py:31 windows/views.py:2774
 msgid "NULL"
 msgstr "NULL"
 
-#: windows/views.py:2572
+#: windows/views.py:2781
 msgid "Data"
 msgstr "Dati"
 
-#: windows/main/controller.py:318 windows/views.py:2589
+#: windows/main/controller.py:319 windows/views.py:2798
 msgid "New query"
 msgstr "Query"
 
-#: windows/views.py:2591 windows/views.py:3137
+#: windows/views.py:2800
 msgid "Close"
 msgstr "Chiudi"
 
-#: windows/main/controller.py:319 windows/views.py:2591
+#: windows/main/controller.py:320 windows/views.py:2800
 msgid "Close query"
 msgstr "Query"
 
-#: windows/views.py:2595
+#: windows/views.py:2804
 msgid "Run"
 msgstr "Esegui"
 
-#: windows/main/controller.py:320 windows/views.py:2595
+#: windows/main/controller.py:321 windows/views.py:2804
 msgid "Execute"
 msgstr "Esegui"
 
-#: windows/views.py:2597
+#: windows/views.py:2806
 msgid "Run all"
 msgstr "Esegui tutto"
 
-#: windows/views.py:2597
+#: windows/views.py:2806
 msgid "Execute all statements"
 msgstr "Esegui tutte le istruzioni"
 
-#: windows/main/controller.py:322 windows/views.py:2599
+#: windows/main/controller.py:323 windows/views.py:2808
 msgid "Stop"
 msgstr "Ferma"
 
-#: windows/views.py:2664
+#: windows/views.py:2873
 msgid "a page"
 msgstr "una pagina"
 
-#: windows/views.py:2714
+#: windows/views.py:2923
 msgid "Query"
 msgstr "Query"
-
-#: windows/views.py:3091
-msgid "Character set"
-msgstr "Set di caratteri"
-
-#: windows/views.py:3121 windows/views.py:3140
-msgid "New"
-msgstr "Nuovo"
-
-#: windows/views.py:3160
-msgid "Insert record"
-msgstr "Inserisci record"
-
-#: windows/views.py:3165
-msgid "Duplicate record"
-msgstr "Duplica record"
-
-#: windows/views.py:3172
-msgid "Delete record"
-msgstr "Elimina record"
-
-#: windows/views.py:3210 windows/views.py:3658
-msgid "Up"
-msgstr "Su"
-
-#: windows/views.py:3217 windows/views.py:3665
-msgid "Down"
-msgstr "Giù"
-
-#: windows/views.py:3232
-msgid "Table:"
-msgstr "Tabella:"
-
-#: windows/views.py:3245
-msgid "Clone"
-msgstr "Clona"
-
-#: windows/views.py:3270
-msgid "MyButton"
-msgstr "IlMioPulsante"
-
-#: windows/views.py:3794
-msgid "Save Starments"
-msgstr "Salva istruzioni"
-
-#: windows/views.py:3802
-msgid "Location"
-msgstr "Posizione"
-
-#: windows/views.py:3809
-msgid "*.sql"
-msgstr "*.sql"
 
 #: windows/components/dataview.py:25 windows/components/dataview.py:52
 #: windows/components/dataview.py:75
@@ -965,10 +1020,6 @@ msgstr "Senza segno"
 #: windows/components/dataview.py:53
 msgid "Zerofill"
 msgstr "Riempimento zero"
-
-#: windows/components/dataview.py:111
-msgid "#"
-msgstr "#"
 
 #: windows/components/dataview.py:119
 msgid "Data type"
@@ -1077,9 +1128,11 @@ msgstr "Modifiche non salvate"
 
 #: windows/dialogs/connections/view.py:773
 msgid ""
-"This connection cannot work without TLS. TLS has been enabled automatically."
+"This connection cannot work without TLS. TLS has been enabled "
+"automatically."
 msgstr ""
-"Questa connessione non può funzionare senza TLS. TLS è stato abilitato automaticamente."
+"Questa connessione non può funzionare senza TLS. TLS è stato abilitato "
+"automaticamente."
 
 #: windows/dialogs/connections/view.py:798
 #, python-brace-format
@@ -1109,114 +1162,114 @@ msgstr "Conferma eliminazione"
 msgid "Do you want to delete the directory '{directory_name}'?"
 msgstr "Vuoi eliminare la directory '{directory_name}'?"
 
-#: windows/main/controller.py:315
+#: windows/main/controller.py:316
 #, python-brace-format
 msgid "{text} ({shortcut})"
 msgstr "{text} ({shortcut})"
 
-#: windows/main/controller.py:321
+#: windows/main/controller.py:322
 msgid "Execute all"
 msgstr "Esegui tutto"
 
-#: windows/main/controller.py:440 windows/main/controller.py:448
+#: windows/main/controller.py:442 windows/main/controller.py:450
 msgid "Query (1)"
 msgstr "Query"
 
-#: windows/main/controller.py:467
+#: windows/main/controller.py:469
 #, python-brace-format
 msgid "Query ({query_number})"
 msgstr "Query ({query_number})"
 
-#: windows/main/controller.py:516
+#: windows/main/controller.py:518
 msgid "You have unsaved changes. Save before closing?"
 msgstr "Hai modifiche non salvate. Salvare prima di chiudere?"
 
-#: windows/main/controller.py:517
+#: windows/main/controller.py:519
 msgid "Unsaved query"
 msgstr "Query non salvata"
 
-#: windows/main/controller.py:562
+#: windows/main/controller.py:564
 msgid "Save query"
 msgstr "Salva query"
 
-#: windows/main/controller.py:565
+#: windows/main/controller.py:567
 msgid "SQL files (*.sql)|*.sql|All files (*.*)|*.*"
 msgstr "File SQL (*.sql)|*.sql|Tutti i file (*.*)|*.*"
 
-#: windows/main/controller.py:593 windows/main/controller.py:624
-#: windows/main/controller.py:651 windows/main/database/list.py:119
-#: windows/main/database/procedure.py:206
-#: windows/main/database/procedure.py:232 windows/main/database/view.py:268
-#: windows/main/database/view.py:297 windows/main/query/controller.py:177
+#: windows/main/controller.py:595 windows/main/controller.py:626
+#: windows/main/controller.py:653 windows/main/database/list.py:119
+#: windows/main/database/routine.py:591 windows/main/database/routine.py:635
+#: windows/main/database/view.py:268 windows/main/database/view.py:297
+#: windows/main/query/controller.py:179
 msgid "Error"
 msgstr "Errore"
 
-#: windows/main/controller.py:631
+#: windows/main/controller.py:633
 #, python-brace-format
 msgid "-- Saved query to {file_path}"
 msgstr "-- Query salvata in {file_path}"
 
-#: windows/main/controller.py:657
+#: windows/main/controller.py:659
 #, python-brace-format
 msgid "-- Autosaved query to {file_path}"
 msgstr "-- Query salvata automaticamente in {file_path}"
 
-#: windows/main/controller.py:722
+#: windows/main/controller.py:725
 msgid "days"
 msgstr "giorni"
 
-#: windows/main/controller.py:723
+#: windows/main/controller.py:726
 msgid "hours"
 msgstr "ore"
 
-#: windows/main/controller.py:724
+#: windows/main/controller.py:727
 msgid "minutes"
 msgstr "minuti"
 
-#: windows/main/controller.py:725
+#: windows/main/controller.py:728
 msgid "seconds"
 msgstr "secondi"
 
-#: windows/main/controller.py:733
+#: windows/main/controller.py:736
 #, python-brace-format
 msgid "Memory used: {used} ({percentage:.2%})"
 msgstr "Memoria utilizzata: {used} ({percentage:.2%})"
 
-#: windows/main/controller.py:769
+#: windows/main/controller.py:772
 msgid "Settings saved successfully"
 msgstr "Impostazioni salvate con successo"
 
-#: windows/main/controller.py:993
+#: windows/main/controller.py:1006
 #, python-brace-format
 msgid "~{estimated} (Loading...)"
 msgstr "~{estimated} (Caricamento...)"
 
-#: windows/main/controller.py:995
+#: windows/main/controller.py:1008
 msgid "~ (Loading...)"
 msgstr "~ (Caricamento...)"
 
-#: windows/main/controller.py:1230
+#: windows/main/controller.py:1243
 msgid "Write Mode (2:00)"
 msgstr "Modalità scrittura (2:00)"
 
-#: windows/main/controller.py:1281
+#: windows/main/controller.py:1294
 msgid "Write Mode"
 msgstr "Modalità scrittura"
 
-#: windows/main/controller.py:1292
+#: windows/main/controller.py:1305
 msgid "Version"
 msgstr "Versione"
 
-#: windows/main/controller.py:1294
+#: windows/main/controller.py:1307
 msgid "Uptime"
 msgstr "Tempo di attività"
 
-#: windows/main/controller.py:1429
+#: windows/main/controller.py:1444
 #, python-brace-format
 msgid "Do you want discard the change to {database_name}?"
 msgstr "Vuoi annullare le modifiche a {database_name}?"
 
-#: windows/main/controller.py:1462
+#: windows/main/controller.py:1477
 #, python-brace-format
 msgid ""
 "Do you want to create a dump before dropping database '{database_name}'?\n"
@@ -1231,50 +1284,79 @@ msgstr ""
 "- Sì: apri flusso dump (prossimamente, nessuna eliminazione).\n"
 "- No: elimina il database ora."
 
-#: windows/main/controller.py:1467 windows/main/controller.py:1488
+#: windows/main/controller.py:1482 windows/main/controller.py:1503
 msgid "Delete database"
 msgstr "Elimina database"
 
-#: windows/main/controller.py:1473
+#: windows/main/controller.py:1488
 msgid "Dump is not implemented yet. No action has been performed."
 msgstr "Il dump non è ancora implementato. Nessuna azione è stata eseguita."
 
-#: windows/main/controller.py:1474
+#: windows/main/controller.py:1489
 msgid "Dump not available"
 msgstr "Dump non disponibile"
 
-#: windows/main/controller.py:1487
+#: windows/main/controller.py:1502
 msgid "Database deletion is not supported by this engine."
 msgstr "L'eliminazione del database non è supportata da questo motore."
 
-#: windows/main/controller.py:1502
+#: windows/main/controller.py:1517
 msgid "Database deleted successfully"
 msgstr "Database eliminato con successo"
 
-#: windows/main/controller.py:1503 windows/main/database/procedure.py:195
-#: windows/main/database/procedure.py:226 windows/main/database/view.py:256
+#: windows/main/controller.py:1518 windows/main/database/routine.py:556
+#: windows/main/database/routine.py:620 windows/main/database/view.py:256
 #: windows/main/database/view.py:291
 msgid "Success"
 msgstr "Successo"
 
-#: windows/main/controller.py:1741
+#: windows/main/controller.py:1792
 #, python-brace-format
 msgid "Do you want discard the change to {table_name}?"
 msgstr "Vuoi annullare le modifiche a {table_name}?"
 
-#: windows/main/controller.py:1767
+#: windows/main/controller.py:1818
 #, python-brace-format
 msgid "Do you want delete the table {table_name}?"
 msgstr "Vuoi eliminare la tabella {table_name}?"
 
-#: windows/main/controller.py:1789
+#: windows/main/controller.py:1840
 #, python-brace-format
 msgid "{table_name} (COPY)"
 msgstr "{table_name} (COPY)"
 
-#: windows/main/controller.py:1948
+#: windows/main/controller.py:1999
 msgid "Do you want delete the records?"
 msgstr "Vuoi eliminare i record?"
+
+#: windows/main/controller.py:2104
+#, fuzzy
+msgid "Database connection lost. Do you want to reconnect?"
+msgstr "Vuoi riconnetterti?"
+
+#: windows/main/controller.py:2105 windows/main/database/list.py:108
+msgid "Connection lost"
+msgstr "Connessione persa"
+
+#: windows/main/controller.py:2113
+#, fuzzy
+msgid "Connection restored successfully."
+msgstr "Connessione stabilita con successo"
+
+#: windows/main/controller.py:2114
+#, fuzzy
+msgid "Connection restored"
+msgstr "Errore di connessione"
+
+#: windows/main/controller.py:2120
+#, python-brace-format
+msgid "Could not reconnect: {error}"
+msgstr ""
+
+#: windows/main/controller.py:2121
+#, fuzzy
+msgid "Reconnection failed"
+msgstr "Riconnessione fallita:"
 
 #: windows/main/database/list.py:104
 msgid "The connection to the database was lost."
@@ -1284,44 +1366,60 @@ msgstr "La connessione al database è stata persa."
 msgid "Do you want to reconnect?"
 msgstr "Vuoi riconnetterti?"
 
-#: windows/main/database/list.py:108
-msgid "Connection lost"
-msgstr "Connessione persa"
-
 #: windows/main/database/list.py:118
 msgid "Reconnection failed:"
 msgstr "Riconnessione fallita:"
 
-#: windows/main/database/procedure.py:194
+#: windows/main/database/routine.py:545
+#, fuzzy
+msgid "Function created successfully"
+msgstr "Vista creata con successo"
+
+#: windows/main/database/routine.py:547
+#, fuzzy
+msgid "Function updated successfully"
+msgstr "Vista aggiornata con successo"
+
+#: windows/main/database/routine.py:551
 msgid "Procedure created successfully"
 msgstr "Procedura creata con successo"
 
-#: windows/main/database/procedure.py:194
+#: windows/main/database/routine.py:553
 msgid "Procedure updated successfully"
 msgstr "Procedura aggiornata con successo"
 
-#: windows/main/database/procedure.py:206
-#, python-brace-format
-msgid "Error saving procedure: {}"
-msgstr "Errore nel salvataggio della procedura: {}"
+#: windows/main/database/routine.py:590
+#, fuzzy, python-brace-format
+msgid "Error saving routine: {}"
+msgstr "Errore nel salvataggio della vista: {}"
 
-#: windows/main/database/procedure.py:217
-#, python-brace-format
-msgid "Are you sure you want to delete procedure '{}'?"
-msgstr "Sei sicuro di voler eliminare la procedura '{}'?"
+#: windows/main/database/routine.py:604
+#, fuzzy
+msgid "Function"
+msgstr "Funzioni"
 
-#: windows/main/database/procedure.py:218 windows/main/database/view.py:282
+#: windows/main/database/routine.py:604
+msgid "Procedure"
+msgstr "Procedure"
+
+#: windows/main/database/routine.py:607
+#, fuzzy, python-brace-format
+msgid "Are you sure you want to delete {} '{}'?"
+msgstr "Sei sicuro di voler eliminare la vista '{}'?"
+
+#: windows/main/database/routine.py:610 windows/main/database/view.py:282
 msgid "Confirm Delete"
 msgstr "Conferma eliminazione"
 
-#: windows/main/database/procedure.py:226
-msgid "Procedure deleted successfully"
-msgstr "Procedura eliminata con successo"
+#: windows/main/database/routine.py:619
+#, fuzzy, python-brace-format
+msgid "{} deleted successfully"
+msgstr "Vista eliminata con successo"
 
-#: windows/main/database/procedure.py:232
-#, python-brace-format
-msgid "Error deleting procedure: {}"
-msgstr "Errore nell'eliminazione della procedura: {}"
+#: windows/main/database/routine.py:634
+#, fuzzy, python-brace-format
+msgid "Error deleting routine: {}"
+msgstr "Errore nell'eliminazione della vista: {}"
 
 #: windows/main/database/view.py:255
 msgid "View created successfully"
@@ -1350,21 +1448,21 @@ msgstr "Vista eliminata con successo"
 msgid "Error deleting view: {}"
 msgstr "Errore nell'eliminazione della vista: {}"
 
-#: windows/main/query/controller.py:110
+#: windows/main/query/controller.py:112
 #, python-brace-format
 msgid "{elapsed_ms:.0f} ms"
 msgstr "{elapsed_ms:.0f} ms"
 
-#: windows/main/query/controller.py:112
+#: windows/main/query/controller.py:114
 #, python-brace-format
 msgid "{elapsed_s:.2f} s"
 msgstr "{elapsed_s:.2f} s"
 
-#: windows/main/query/controller.py:115
+#: windows/main/query/controller.py:117
 msgid "none"
 msgstr "nessuno"
 
-#: windows/main/query/controller.py:121
+#: windows/main/query/controller.py:123
 #, python-brace-format
 msgid ""
 "Query execution stopped after {elapsed}.\n"
@@ -1379,13 +1477,18 @@ msgstr ""
 "Fallite: {failed}.\n"
 "Ultima istruzione: #{last}."
 
-#: windows/main/query/controller.py:134
+#: windows/main/query/controller.py:136
 msgid "Query execution cancelled"
 msgstr "Esecuzione query annullata"
 
-#: windows/main/query/controller.py:176
+#: windows/main/query/controller.py:178
 msgid "No active database connection"
 msgstr "Nessuna connessione database attiva"
+
+#: windows/main/query/controller.py:227
+#, fuzzy
+msgid "Database connection lost"
+msgstr "Connessione persa"
 
 #: windows/main/query/history.py:55
 msgid "(empty query)"
@@ -1434,133 +1537,3 @@ msgstr "Errore"
 msgid "Error saving records"
 msgstr "Errore nel salvataggio dei record"
 
-#~ msgid "Created at:"
-#~ msgstr "Created at:"
-
-#~ msgid "Last connection:"
-#~ msgstr "Last connection:"
-
-#~ msgid "Successful connections:"
-#~ msgstr "Successful connections:"
-
-#~ msgid "Unsuccessful connections:"
-#~ msgstr "Unsuccessful connections:"
-
-#~ msgid "Session name"
-#~ msgstr "Nome sessione"
-
-#~ msgid "Open"
-#~ msgstr "Open"
-
-#~ msgid "Open session manager"
-#~ msgstr "Open session manager"
-
-#~ msgid "Foreign Key"
-#~ msgstr "Foreign Key"
-
-#~ msgid "New Session"
-#~ msgstr "Nuova sessione"
-
-#~ msgid "directory"
-#~ msgstr "directory"
-
-#~ msgid "Table `%(database_name)s`.`%(table_name)s`: %(total_rows) rows total"
-#~ msgstr ""
-#~ "Tabella `%(database_name)s`.`%(table_name)s`: %(total_rows) righe totali"
-
-#~ msgid "Next"
-#~ msgstr "Avanti"
-
-#~ msgid "{} rows affected"
-#~ msgstr "{} rows affected"
-
-#~ msgid "Query {}"
-#~ msgstr "Query"
-
-#~ msgid "Query {} (Error)"
-#~ msgstr "Query {} (Error)"
-
-#~ msgid "Query {} ({} rows × {} cols)"
-#~ msgstr "Query {} ({} rows × {} cols)"
-
-#~ msgid "{} rows"
-#~ msgstr "Righe"
-
-#~ msgid "{:.1f} ms"
-#~ msgstr "{:.1f} ms"
-
-#~ msgid "{} warnings"
-#~ msgstr "{} warnings"
-
-#~ msgid "Edit Value"
-#~ msgstr "Modifica valore"
-
-#~ msgid "Query #2"
-#~ msgstr "Query #2"
-
-#~ msgid "Column5"
-#~ msgstr "Colonna5"
-
-#~ msgid "Import"
-#~ msgstr "Importa"
-
-#~ msgid "Read only"
-#~ msgstr "Read only"
-
-#~ msgid "CASCADED"
-#~ msgstr "CASCADED"
-
-#~ msgid "CHECK OPTION"
-#~ msgstr "connessione"
-
-#~ msgid "collapsible"
-#~ msgstr "collassabile"
-
-#~ msgid "Column3"
-#~ msgstr "Colonna3"
-
-#~ msgid "Column4"
-#~ msgstr "Colonna4"
-
-#~ msgid ""
-#~ "Database "
-#~ "(*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"
-#~ msgstr ""
-#~ "Database "
-#~ "(*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3)|*.db;*.db3;*.sdb;*.s3db;*.sqlite;*.sqlite3"
-
-#~ msgid "Port"
-#~ msgstr "Porta"
-
-#~ msgid "Usage"
-#~ msgstr "Utilizzo"
-
-#~ msgid "%(total_rows)s"
-#~ msgstr "%(total_rows)s"
-
-#~ msgid "rows total"
-#~ msgstr "righe totali"
-
-#~ msgid "Lines"
-#~ msgstr "Righe"
-
-#~ msgid "Temporary"
-#~ msgstr "Temporaneo"
-
-#~ msgid "Engine options"
-#~ msgstr "Opzioni"
-
-#~ msgid "RadioBtn"
-#~ msgstr "RadioBtn"
-
-#~ msgid "Edit Column"
-#~ msgstr "Modifica colonna"
-
-#~ msgid "Datatype"
-#~ msgstr "Tipo di dati"
-
-#~ msgid "Zero Fill"
-#~ msgstr "Riempimento zero"
-
-#~ msgid "Refrsh"
-#~ msgstr "Aggiorna"

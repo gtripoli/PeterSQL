@@ -2101,8 +2101,8 @@ class MainFrameController(MainFrameView):
 
         choice = wx.MessageDialog(
             None,
-            message=_("Database scollegato, vuoi ricollegarti?"),
-            caption=_("Connessione persa"),
+            message=_("Database connection lost. Do you want to reconnect?"),
+            caption=_("Connection lost"),
             style=wx.YES_NO | wx.ICON_QUESTION,
         ).ShowModal()
 
@@ -2110,15 +2110,15 @@ class MainFrameController(MainFrameView):
             try:
                 session.connect()
                 wx.MessageBox(
-                    _("Connessione ripristinata con successo."),
-                    _("Connessione ripristinata"),
+                    _("Connection restored successfully."),
+                    _("Connection restored"),
                     wx.OK | wx.ICON_INFORMATION,
                 )
             except Exception as ex:
                 logger.error("Reconnection failed: %s", ex, exc_info=True)
                 wx.MessageBox(
-                    _("Impossibile ricollegarsi: {error}").format(error=str(ex)),
-                    _("Riconnessione fallita"),
+                    _("Could not reconnect: {error}").format(error=str(ex)),
+                    _("Reconnection failed"),
                     wx.OK | wx.ICON_ERROR,
                 )
                 self._remove_session_from_explorer(session)
