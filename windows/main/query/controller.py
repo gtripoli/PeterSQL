@@ -202,6 +202,9 @@ class QueryEditorController:
         if not statements_to_execute:
             return
 
+        if self.executor and self.executor.is_running():
+            return
+
         self.renderer.clear_all_tabs()
         self._cancel_feedback_pending = False
         self._set_cancel_button_enabled(True)

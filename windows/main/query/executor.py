@@ -60,6 +60,10 @@ class QueryExecutor:
             current_database: Optional[Any] = None,
             stop_on_error: bool = True
     ) -> None:
+        if self._current_thread and self._current_thread.is_alive():
+            logger.warning("Attempted to start a new execution while one is already running.")
+            return
+
         self._cancel_requested = False
         self._loader_context = Loader.cursor_wait()
         self._loader_context.__enter__()
