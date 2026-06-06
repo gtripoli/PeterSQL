@@ -23,6 +23,36 @@ import gettext
 _ = gettext.gettext
 
 ###########################################################################
+## Class SplashScreen
+###########################################################################
+
+class SplashScreen ( wx.Frame ):
+
+    def __init__( self, parent ):
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 640,480 ), style = wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP|wx.TAB_TRAVERSAL )
+
+        self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+
+        bSizer161 = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_bitmap3 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"petersql_large.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer161.Add( self.m_bitmap3, 1, wx.ALL|wx.EXPAND, 5 )
+
+        self.m_gauge1 = wx.Gauge( self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+        self.m_gauge1.SetValue( 0 )
+        bSizer161.Add( self.m_gauge1, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        self.SetSizer( bSizer161 )
+        self.Layout()
+
+        self.Centre( wx.BOTH )
+
+    def __del__( self ):
+        pass
+
+
+###########################################################################
 ## Class ConnectionsDialog
 ###########################################################################
 

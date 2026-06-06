@@ -2,11 +2,11 @@ language: en_US
 ui:
   window:
     size:
-    - 1769
-    - 967
+    - 2256
+    - 1472
     position:
-    - 26
-    - 23
+    - 0
+    - 0
   appearance:
     theme: petersql
     mode: auto

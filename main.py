@@ -51,7 +51,7 @@ class PeterSQL(wx.App):
         self.icon_registry_16 = IconRegistry(WORKDIR / "icons", 16)
 
         self._init_theme_loader()
-        
+
         self.theme_manager = ThemeManager(apply_function=apply_stc_theme)
         self.syntax_registry = SyntaxRegistry([JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT])
 
@@ -110,6 +110,11 @@ class PeterSQL(wx.App):
     def open_main_frame(self) -> None:
         try:
             from windows.main.controller import MainFrameController
+            from windows.splash import SplashController
+
+            splash = SplashController()
+            splash.Show()
+            splash.Update()
 
             self.main_frame = MainFrameController()
             size_values = self.settings.get_value("ui", "window", "size", default=[1920, 1080])
@@ -123,12 +128,14 @@ class PeterSQL(wx.App):
             self.main_frame.SetIcon(
                 wx.Icon(str(WORKDIR / "icons" / "petersql.ico"))
             )
-            self.main_frame.Show()
-
             self.main_frame.Bind(wx.EVT_SIZE, self._on_size)
             self.main_frame.Bind(wx.EVT_MOVE, self._on_move)
+
+            splash.start_close(on_done=self.main_frame.Show)
         except Exception as ex:
             logger.error(ex, exc_info=True)
+            if 'splash' in locals():
+                splash.Destroy()
 
     def _on_size(self, event: wx.SizeEvent) -> None:
         size = event.GetSize()
