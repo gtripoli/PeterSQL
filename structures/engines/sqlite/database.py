@@ -350,28 +350,43 @@ class SQLiteIndex(SQLIndex):
         )
 
     def create(self) -> bool:
+        """Create the SQLite index.
+
+        ``raw_create`` returns an empty string for implicit primary‑key
+        indexes or auto‑generated unique indexes. In those cases the operation
+        is a no‑op and should be considered successful.
+        """
         statement = self.raw_create()
         if not statement:
-            return False
-
+            return True
         return self.table.database.context.execute(statement)
 
     def drop(self) -> bool:
+        """Drop the SQLite index.
+
+        Primary‑key indexes cannot be dropped; we treat that as a successful
+        no‑op. Auto‑generated unique indexes are also managed by the table
+        creation process, so dropping them is a no‑op as well.
+        """
         if self.type == SQLiteIndexType.PRIMARY:
-            return False
+            return True
 
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # sqlite_ UNIQUE is handled in table creation
-
+            return True
 
         return self.table.database.context.execute(
             f"DROP INDEX IF EXISTS {self.fully_qualified_name}"
         )
 
-    def modify(self, new_index: Self):
-        self.drop()
+    def alter(self, original_index: Self):
+        """Alter the index by dropping the original and creating this one.
+        """
+        original_index.drop()
+        return self.create()
 
-        new_index.create()
+    # Backward compatibility: ``modify`` was previously used in the codebase.
+    def modify(self, new_index: Self):
+        self.alter(new_index)
 
 
 @dataclasses.dataclass(eq=False)

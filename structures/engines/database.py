@@ -248,33 +248,6 @@ class SQLTable(abc.ABC):
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
 
-    # Abstract API that concrete engine index classes must implement.
-    @abc.abstractmethod
-    def create(self) -> bool:
-        """Create the index in the underlying database.
-
-        Concrete engine classes must execute the appropriate SQL statement and
-        return ``True`` on success.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def drop(self) -> bool:
-        """Drop the index from the underlying database.
-
-        Concrete engine classes must execute the appropriate DROP statement and
-        return ``True`` on success.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def alter(self, original_index: Self) -> bool:
-        """Alter the index to match ``original_index``.
-
-        Implementations should generate the necessary ALTER statements.
-        """
-        raise NotImplementedError
-
     @abc.abstractmethod
     def raw_create(self) -> str:
         """Return the raw SQL string that would create the index.
@@ -598,6 +571,7 @@ class SQLIndex(abc.ABC):
         cls = self.__class__
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         return cls(**field_values)
+
     @abc.abstractmethod
     def create(self) -> bool:
         """Create the index in the database.
