@@ -274,6 +274,10 @@ class MariaDBIndex(SQLIndex):
 
         return self.table.database.context.execute(f"DROP INDEX {self.quoted_name} ON {self.table.fully_qualified_name}")
 
+    def alter(self, original_index: Self) -> bool:
+        original_index.drop()
+        return self.create()
+
     def modify(self, new: Self):
         self.drop()
 
