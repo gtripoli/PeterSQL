@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PeterSQL 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 10:58+0200\n"
+"POT-Creation-Date: 2026-06-06 11:23+0200\n"
 "PO-Revision-Date: 2026-03-10 18:21+0000\n"
 "Last-Translator: \n"
 "Language: en_US\n"
@@ -162,7 +162,7 @@ msgstr "Password"
 
 #: windows/views.py:203
 msgid "Connection timeout"
-msgstr "Connection"
+msgstr "Connection timeout"
 
 #: windows/views.py:221
 msgid "Use TLS"
@@ -280,7 +280,7 @@ msgstr "Total connection attempts"
 
 #: windows/views.py:569
 msgid "Average connection time (ms)"
-msgstr "Connection"
+msgstr "Average connection time (ms)"
 
 #: windows/views.py:586
 msgid "Most recent connection duration"
@@ -771,126 +771,111 @@ msgstr "Data type"
 
 #: windows/views.py:2269
 msgid "Procedure (doesn't return a result)"
-msgstr ""
+msgstr "Procedure (doesn't return a result)"
 
 #: windows/views.py:2269
 msgid "Function (return a result)"
-msgstr ""
+msgstr "Function (return a result)"
 
 #: windows/views.py:2279
-#, fuzzy
 msgid "Return type"
-msgstr "Data type"
+msgstr "Return type"
 
 #: windows/views.py:2299
-#, fuzzy
 msgid "Comment"
-msgstr "Comments"
+msgstr "Comment"
 
 #: windows/components/dataview.py:111 windows/views.py:2335
 msgid "#"
 msgstr "#"
 
 #: windows/views.py:2337
-#, fuzzy
 msgid "Datatype"
-msgstr "Data type"
+msgstr "Datatype"
 
 #: windows/views.py:2338
-#, fuzzy
 msgid "Context"
-msgstr "Connect"
+msgstr "Context"
 
 #: windows/views.py:2345
 msgid "Parameters"
 msgstr "Parameters"
 
 #: windows/views.py:2354
-#, fuzzy
 msgid "Data access"
-msgstr "Databases"
+msgstr "Data access"
 
 #: windows/views.py:2361
 msgid "CONTAINS SQL"
-msgstr ""
+msgstr "CONTAINS SQL"
 
 #: windows/views.py:2361
 msgid "NO SQL"
-msgstr ""
+msgstr "NO SQL"
 
 #: windows/views.py:2361
 msgid "READS SQL DATA"
-msgstr ""
+msgstr "READS SQL DATA"
 
 #: windows/views.py:2361
-#, fuzzy
 msgid "MODIFIES SQL DATA"
-msgstr "Modified at"
+msgstr "MODIFIES SQL DATA"
 
 #: windows/views.py:2371
-#, fuzzy
 msgid "Deterministic"
-msgstr "Definition"
+msgstr "Deterministic"
 
 #: windows/views.py:2395
-#, fuzzy
 msgid "SQL"
-msgstr "*.sql"
+msgstr "SQL"
 
 #: windows/views.py:2395
 msgid "PLPGSQL"
-msgstr ""
+msgstr "PLPGSQL"
 
 #: windows/views.py:2405
-#, fuzzy
 msgid "Volatility"
-msgstr "Virtuality"
+msgstr "Volatility"
 
 #: windows/views.py:2412
 msgid "VOLATILE"
-msgstr ""
+msgstr "VOLATILE"
 
 #: windows/views.py:2412
-#, fuzzy
 msgid "STABLE"
-msgstr "Table"
+msgstr "STABLE"
 
 #: windows/views.py:2412
-#, fuzzy
 msgid "IMMUTABLE"
-msgstr "Table"
+msgstr "IMMUTABLE"
 
 #: windows/views.py:2422
 msgid "Parallel"
-msgstr ""
+msgstr "Parallel"
 
 #: windows/views.py:2429
-#, fuzzy
 msgid "UNSAFE"
-msgstr "Save"
+msgstr "UNSAFE"
 
 #: windows/views.py:2429
 msgid "RESTRICTED"
-msgstr ""
+msgstr "RESTRICTED"
 
 #: windows/views.py:2429
-#, fuzzy
 msgid "SAFE"
-msgstr "Save"
+msgstr "SAFE"
 
 #: windows/views.py:2441
-#, fuzzy
 msgid "Cost"
-msgstr "Close"
+msgstr "Cost"
 
 #: windows/views.py:2609
-#, fuzzy
 msgid "Routine"
-msgstr "Uptime"
+msgstr "Routine"
 
 #: windows/views.py:2617
 msgid "Trigger"
-msgstr "Delete"
+msgstr "Trigger"
 
 #: windows/views.py:2634
 msgid "Duplicate"
@@ -951,7 +936,7 @@ msgstr "Data"
 
 #: windows/main/controller.py:319 windows/views.py:2798
 msgid "New query"
-msgstr "New directory"
+msgstr "New query"
 
 #: windows/views.py:2800
 msgid "Close"
@@ -967,7 +952,7 @@ msgstr "Run"
 
 #: windows/main/controller.py:321 windows/views.py:2804
 msgid "Execute"
-msgstr "SSH executable"
+msgstr "Execute"
 
 #: windows/views.py:2806
 msgid "Run all"
@@ -1169,7 +1154,7 @@ msgstr "{text} ({shortcut})"
 
 #: windows/main/controller.py:322
 msgid "Execute all"
-msgstr "SSH executable"
+msgstr "Execute all"
 
 #: windows/main/controller.py:442 windows/main/controller.py:450
 msgid "Query (1)"
@@ -1371,14 +1356,12 @@ msgid "Reconnection failed:"
 msgstr "Reconnection failed:"
 
 #: windows/main/database/routine.py:545
-#, fuzzy
 msgid "Function created successfully"
-msgstr "View created successfully"
+msgstr "Function created successfully"
 
 #: windows/main/database/routine.py:547
-#, fuzzy
 msgid "Function updated successfully"
-msgstr "View updated successfully"
+msgstr "Function updated successfully"
 
 #: windows/main/database/routine.py:551
 msgid "Procedure created successfully"
@@ -1389,37 +1372,36 @@ msgid "Procedure updated successfully"
 msgstr "Procedure updated successfully"
 
 #: windows/main/database/routine.py:590
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Error saving routine: {}"
-msgstr "Error saving view: {}"
+msgstr "Error saving routine: {}"
 
 #: windows/main/database/routine.py:604
-#, fuzzy
 msgid "Function"
-msgstr "Connection"
+msgstr "Function"
 
 #: windows/main/database/routine.py:604
 msgid "Procedure"
 msgstr "Procedure"
 
 #: windows/main/database/routine.py:607
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Are you sure you want to delete {} '{}'?"
-msgstr "Are you sure you want to delete view '{}'?"
+msgstr "Are you sure you want to delete {} '{}'?
 
 #: windows/main/database/routine.py:610 windows/main/database/view.py:282
 msgid "Confirm Delete"
 msgstr "Confirm Delete"
 
 #: windows/main/database/routine.py:619
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{} deleted successfully"
-msgstr "View deleted successfully"
+msgstr "{} deleted successfully"
 
 #: windows/main/database/routine.py:634
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Error deleting routine: {}"
-msgstr "Error deleting view: {}"
+msgstr "Error deleting routine: {}"
 
 #: windows/main/database/view.py:255
 msgid "View created successfully"
@@ -1460,7 +1442,7 @@ msgstr "{elapsed_s:.2f} s"
 
 #: windows/main/query/controller.py:117
 msgid "none"
-msgstr "Engine"
+msgstr "none"
 
 #: windows/main/query/controller.py:123
 #, python-brace-format

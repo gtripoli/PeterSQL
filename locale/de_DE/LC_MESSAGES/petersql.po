@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PeterSQL 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 10:58+0200\n"
+"POT-Creation-Date: 2026-06-06 11:23+0200\n"
 "PO-Revision-Date: 2026-03-10 18:21+0000\n"
 "Last-Translator: \n"
 "Language: de_DE\n"
@@ -162,7 +162,7 @@ msgstr "Passwort"
 
 #: windows/views.py:203
 msgid "Connection timeout"
-msgstr "Verbindung verloren"
+msgstr "Verbindungs-Timeout"
 
 #: windows/views.py:221
 msgid "Use TLS"
@@ -190,7 +190,7 @@ msgstr "Datei auswählen"
 
 #: windows/views.py:278 windows/views.py:397
 msgid "*.*"
-msgstr "*. *"
+msgstr "*.*"
 
 #: windows/components/dataview.py:70 windows/components/dataview.py:92
 #: windows/views.py:295 windows/views.py:1372 windows/views.py:1624
@@ -264,7 +264,7 @@ msgstr "Erfolgreiche Verbindungen"
 
 #: windows/views.py:501
 msgid "Last successful connection"
-msgstr "Erfolgreiche Verbindungen"
+msgstr "Letzte erfolgreiche Verbindung"
 
 #: windows/views.py:518
 msgid "Unsuccessful connections"
@@ -276,11 +276,11 @@ msgstr "Letzter Fehlergrund"
 
 #: windows/views.py:552
 msgid "Total connection attempts"
-msgstr "Letzte Verbindung"
+msgstr "Gesamte Verbindungsversuche"
 
 #: windows/views.py:569
 msgid "Average connection time (ms)"
-msgstr "Wiederverbindung fehlgeschlagen:"
+msgstr "Durchschnittliche Verbindungszeit (ms)"
 
 #: windows/views.py:586
 msgid "Most recent connection duration"
@@ -771,122 +771,107 @@ msgstr "Datentyp"
 
 #: windows/views.py:2269
 msgid "Procedure (doesn't return a result)"
-msgstr ""
+msgstr "Prozedur (gibt kein Ergebnis zurück)"
 
 #: windows/views.py:2269
 msgid "Function (return a result)"
-msgstr ""
+msgstr "Funktion (gibt ein Ergebnis zurück)"
 
 #: windows/views.py:2279
-#, fuzzy
 msgid "Return type"
-msgstr "Datentyp"
+msgstr "Rückgabetyp"
 
 #: windows/views.py:2299
-#, fuzzy
 msgid "Comment"
-msgstr "Kommentare"
+msgstr "Kommentar"
 
 #: windows/components/dataview.py:111 windows/views.py:2335
 msgid "#"
 msgstr "#"
 
 #: windows/views.py:2337
-#, fuzzy
 msgid "Datatype"
 msgstr "Datentyp"
 
 #: windows/views.py:2338
-#, fuzzy
 msgid "Context"
-msgstr "Verbinden"
+msgstr "Kontext"
 
 #: windows/views.py:2345
 msgid "Parameters"
 msgstr "Parameter"
 
 #: windows/views.py:2354
-#, fuzzy
 msgid "Data access"
-msgstr "Datenbanken"
+msgstr "Datenzugriff"
 
 #: windows/views.py:2361
 msgid "CONTAINS SQL"
-msgstr ""
+msgstr "CONTAINS SQL"
 
 #: windows/views.py:2361
 msgid "NO SQL"
-msgstr ""
+msgstr "NO SQL"
 
 #: windows/views.py:2361
 msgid "READS SQL DATA"
-msgstr ""
+msgstr "READS SQL DATA"
 
 #: windows/views.py:2361
-#, fuzzy
 msgid "MODIFIES SQL DATA"
-msgstr "Geändert am"
+msgstr "MODIFIES SQL DATA"
 
 #: windows/views.py:2371
-#, fuzzy
 msgid "Deterministic"
-msgstr "Definition"
+msgstr "Deterministisch"
 
 #: windows/views.py:2395
-#, fuzzy
 msgid "SQL"
-msgstr "*.sql"
+msgstr "SQL"
 
 #: windows/views.py:2395
 msgid "PLPGSQL"
-msgstr ""
+msgstr "PLPGSQL"
 
 #: windows/views.py:2405
-#, fuzzy
 msgid "Volatility"
-msgstr "Virtualität"
+msgstr "Volatilität"
 
 #: windows/views.py:2412
 msgid "VOLATILE"
-msgstr ""
+msgstr "VOLATIL"
 
 #: windows/views.py:2412
-#, fuzzy
 msgid "STABLE"
-msgstr "Tabelle"
+msgstr "STABIL"
 
 #: windows/views.py:2412
-#, fuzzy
 msgid "IMMUTABLE"
-msgstr "Tabelle"
+msgstr "UNVERÄNDERLICH"
 
 #: windows/views.py:2422
 msgid "Parallel"
-msgstr ""
+msgstr "Parallel"
 
 #: windows/views.py:2429
-#, fuzzy
 msgid "UNSAFE"
-msgstr "Speichern"
+msgstr "UNSICHER"
 
 #: windows/views.py:2429
 msgid "RESTRICTED"
-msgstr ""
+msgstr "EINGESCHRÄNKT"
 
 #: windows/views.py:2429
-#, fuzzy
 msgid "SAFE"
-msgstr "Speichern"
+msgstr "SICHER"
 
 #: windows/views.py:2441
-#, fuzzy
 msgid "Cost"
-msgstr "Schließen"
+msgstr "Kosten"
 
 #: windows/views.py:2609
-#, fuzzy
 msgid "Routine"
-msgstr "Betriebszeit"
+msgstr "Routine"
 
 #: windows/views.py:2617
 msgid "Trigger"
@@ -911,7 +896,7 @@ msgstr ""
 #: windows/views.py:2656
 #, python-brace-format
 msgid "{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
-msgstr "{database_name}.{table_name} - rows {from_row} - {to_row} of {total_rows}"
+msgstr "{database_name}.{table_name} - Zeilen {from_row} - {to_row} von {total_rows}"
 
 #: windows/views.py:2664
 msgid "First"
@@ -935,7 +920,7 @@ msgstr ""
 
 #: windows/views.py:2734
 msgid "CTRL+ENTER"
-msgstr "CTRL+ENTER"
+msgstr "STRG+EINGABE"
 
 #: windows/views.py:2762
 msgid "Insert row"
@@ -951,7 +936,7 @@ msgstr "Daten"
 
 #: windows/main/controller.py:319 windows/views.py:2798
 msgid "New query"
-msgstr "Abfrage"
+msgstr "Neue Abfrage"
 
 #: windows/views.py:2800
 msgid "Close"
@@ -959,7 +944,7 @@ msgstr "Schließen"
 
 #: windows/main/controller.py:320 windows/views.py:2800
 msgid "Close query"
-msgstr "Abfrage"
+msgstr "Abfrage schließen"
 
 #: windows/views.py:2804
 msgid "Run"
@@ -1031,19 +1016,19 @@ msgstr "Länge/Menge"
 
 #: windows/components/dataview.py:169
 msgid "Add column\tCTRL+INS"
-msgstr "Spalte hinzufügen\tCTRL+INS"
+msgstr "Spalte hinzufügen\tSTRG+EINFG"
 
 #: windows/components/dataview.py:175
 msgid "Remove column\tCTRL+DEL"
-msgstr "Spalte entfernen\tCTRL+DEL"
+msgstr "Spalte entfernen\tSTRG+ENTF"
 
 #: windows/components/dataview.py:183
 msgid "Move up\tCTRL+UP"
-msgstr "Nach oben bewegen\tCTRL+UP"
+msgstr "Nach oben bewegen\tSTRG+PFEIL OBEN"
 
 #: windows/components/dataview.py:190
 msgid "Move down\tCTRL+D"
-msgstr "Nach unten bewegen\tCTRL+D"
+msgstr "Nach unten bewegen\tSTRG+PFEIL UNTEN"
 
 #: windows/components/dataview.py:214
 msgid "Create new index"
@@ -1095,7 +1080,7 @@ msgstr "Kein Standardwert"
 
 #: windows/components/popup.py:35
 msgid "AUTO INCREMENT"
-msgstr "AUTO INCREMENT"
+msgstr "AUTO INKREMENT"
 
 #: windows/components/popup.py:39
 msgid "Text/Expression"
@@ -1175,12 +1160,12 @@ msgstr "Alle ausführen"
 
 #: windows/main/controller.py:442 windows/main/controller.py:450
 msgid "Query (1)"
-msgstr "Abfrage"
+msgstr "Abfrage (1)"
 
 #: windows/main/controller.py:469
 #, python-brace-format
 msgid "Query ({query_number})"
-msgstr "Query ({query_number})"
+msgstr "Abfrage ({query_number})"
 
 #: windows/main/controller.py:518
 msgid "You have unsaved changes. Save before closing?"
@@ -1333,33 +1318,29 @@ msgid "Do you want delete the records?"
 msgstr "Möchten Sie die Datensätze löschen?"
 
 #: windows/main/controller.py:2104
-#, fuzzy
 msgid "Database connection lost. Do you want to reconnect?"
-msgstr "Möchten Sie erneut verbinden?"
+msgstr "Datenbankverbindung verloren. Möchten Sie erneut verbinden?"
 
 #: windows/main/controller.py:2105 windows/main/database/list.py:108
 msgid "Connection lost"
 msgstr "Verbindung verloren"
 
 #: windows/main/controller.py:2113
-#, fuzzy
 msgid "Connection restored successfully."
-msgstr "Verbindung erfolgreich hergestellt"
+msgstr "Verbindung erfolgreich wiederhergestellt."
 
 #: windows/main/controller.py:2114
-#, fuzzy
 msgid "Connection restored"
-msgstr "Verbindungsfehler"
+msgstr "Verbindung wiederhergestellt"
 
 #: windows/main/controller.py:2120
 #, python-brace-format
 msgid "Could not reconnect: {error}"
-msgstr ""
+msgstr "Wiederverbindung fehlgeschlagen: {error}"
 
 #: windows/main/controller.py:2121
-#, fuzzy
 msgid "Reconnection failed"
-msgstr "Wiederverbindung fehlgeschlagen:"
+msgstr "Wiederverbindung fehlgeschlagen"
 
 #: windows/main/database/list.py:104
 msgid "The connection to the database was lost."
@@ -1374,14 +1355,12 @@ msgid "Reconnection failed:"
 msgstr "Wiederverbindung fehlgeschlagen:"
 
 #: windows/main/database/routine.py:545
-#, fuzzy
 msgid "Function created successfully"
-msgstr "Ansicht erfolgreich erstellt"
+msgstr "Funktion erfolgreich erstellt"
 
 #: windows/main/database/routine.py:547
-#, fuzzy
 msgid "Function updated successfully"
-msgstr "Ansicht erfolgreich aktualisiert"
+msgstr "Funktion erfolgreich aktualisiert"
 
 #: windows/main/database/routine.py:551
 msgid "Procedure created successfully"
@@ -1392,37 +1371,36 @@ msgid "Procedure updated successfully"
 msgstr "Prozedur erfolgreich aktualisiert"
 
 #: windows/main/database/routine.py:590
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Error saving routine: {}"
-msgstr "Fehler beim Speichern der Ansicht: {}"
+msgstr "Fehler beim Speichern der Routine: {}"
 
 #: windows/main/database/routine.py:604
-#, fuzzy
 msgid "Function"
-msgstr "Funktionen"
+msgstr "Funktion"
 
 #: windows/main/database/routine.py:604
 msgid "Procedure"
-msgstr "Procedure"
+msgstr "Prozedur"
 
 #: windows/main/database/routine.py:607
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Are you sure you want to delete {} '{}'?"
-msgstr "Sind Sie sicher, dass Sie die Ansicht '{}' löschen möchten?"
+msgstr "Sind Sie sicher, dass Sie {} '{}' löschen möchten?"
 
 #: windows/main/database/routine.py:610 windows/main/database/view.py:282
 msgid "Confirm Delete"
 msgstr "Löschen bestätigen"
 
 #: windows/main/database/routine.py:619
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{} deleted successfully"
-msgstr "Ansicht erfolgreich gelöscht"
+msgstr "{} erfolgreich gelöscht"
 
 #: windows/main/database/routine.py:634
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Error deleting routine: {}"
-msgstr "Fehler beim Löschen der Ansicht: {}"
+msgstr "Fehler beim Löschen der Routine: {}"
 
 #: windows/main/database/view.py:255
 msgid "View created successfully"
@@ -1489,9 +1467,8 @@ msgid "No active database connection"
 msgstr "Keine aktive Datenbankverbindung"
 
 #: windows/main/query/controller.py:227
-#, fuzzy
 msgid "Database connection lost"
-msgstr "Verbindung verloren"
+msgstr "Datenbankverbindung verloren"
 
 #: windows/main/query/history.py:55
 msgid "(empty query)"
@@ -1505,7 +1482,7 @@ msgstr "{affected_rows} Zeilen betroffen"
 #: windows/main/query/renderer.py:60 windows/main/query/renderer.py:84
 #, python-brace-format
 msgid "Query {query_number}"
-msgstr "Query {query_number}"
+msgstr "Abfrage {query_number}"
 
 #: windows/main/query/renderer.py:65
 #, python-brace-format
