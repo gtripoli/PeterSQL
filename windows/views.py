@@ -1359,8 +1359,6 @@ class MainFrameView ( wx.Frame ):
 
         bSizer154.Add( self.m_toolBar51, 0, wx.EXPAND, 5 )
 
-        bSizer152 = wx.BoxSizer( wx.VERTICAL )
-
         self.list_ctrl_database_tables = wx.dataview.DataViewCtrl( self.m_panel55, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_dataViewColumn12 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Name"), 0, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
         self.m_dataViewColumn13 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Rows"), 1, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_RIGHT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
@@ -1370,16 +1368,13 @@ class MainFrameView ( wx.Frame ):
         self.m_dataViewColumn17 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Engine"), 5, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
         self.m_dataViewColumn19 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Collation"), 6, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
         self.m_dataViewColumn18 = self.list_ctrl_database_tables.AppendTextColumn( _(u"Comments"), 7, wx.dataview.DATAVIEW_CELL_INERT, -1, wx.ALIGN_LEFT, wx.dataview.DATAVIEW_COL_RESIZABLE|wx.dataview.DATAVIEW_COL_SORTABLE )
-        bSizer152.Add( self.list_ctrl_database_tables, 1, wx.ALL|wx.EXPAND, 5 )
-
-
-        bSizer154.Add( bSizer152, 1, wx.EXPAND, 5 )
+        bSizer154.Add( self.list_ctrl_database_tables, 1, wx.ALL|wx.EXPAND, 5 )
 
 
         self.m_panel55.SetSizer( bSizer154 )
         self.m_panel55.Layout()
         bSizer154.Fit( self.m_panel55 )
-        self.m_notebook10.AddPage( self.m_panel55, _(u"Tables"), False )
+        self.m_notebook10.AddPage( self.m_panel55, _(u"Tables"), True )
         self.m_panel65 = wx.Panel( self.m_notebook10, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1482 = wx.BoxSizer( wx.VERTICAL )
 
@@ -1451,7 +1446,7 @@ class MainFrameView ( wx.Frame ):
         self.m_panel6521.SetSizer( bSizer148211 )
         self.m_panel6521.Layout()
         bSizer148211.Fit( self.m_panel6521 )
-        self.m_notebook10.AddPage( self.m_panel6521, _(u"Functions"), True )
+        self.m_notebook10.AddPage( self.m_panel6521, _(u"Functions"), False )
         self.m_panel65211 = wx.Panel( self.m_notebook10, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1482111 = wx.BoxSizer( wx.VERTICAL )
 
@@ -1509,11 +1504,6 @@ class MainFrameView ( wx.Frame ):
         bSizer149.Fit( self.m_panel651 )
         self.m_splitter7.SplitHorizontally( self.m_panel54, self.m_panel651, 200 )
         bSizer80.Add( self.m_splitter7, 1, wx.EXPAND, 5 )
-
-        bSizer147 = wx.BoxSizer( wx.VERTICAL )
-
-
-        bSizer80.Add( bSizer147, 1, wx.EXPAND, 5 )
 
         bSizer138 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -1581,7 +1571,7 @@ class MainFrameView ( wx.Frame ):
         self.m_menu15 = wx.Menu()
         self.panel_database.Bind( wx.EVT_RIGHT_DOWN, self.panel_databaseOnContextMenu )
 
-        self.MainFrameNotebook.AddPage( self.panel_database, _(u"Database"), False )
+        self.MainFrameNotebook.AddPage( self.panel_database, _(u"Database"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/database.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -1592,6 +1582,7 @@ class MainFrameView ( wx.Frame ):
         bSizer251 = wx.BoxSizer( wx.VERTICAL )
 
         self.m_splitter41 = wx.SplitterWindow( self.panel_table, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_LIVE_UPDATE )
+        self.m_splitter41.SetSashGravity( 0.5 )
         self.m_splitter41.Bind( wx.EVT_IDLE, self.m_splitter41OnIdle )
         self.m_splitter41.SetMinimumPaneSize( 200 )
 
@@ -2606,7 +2597,7 @@ class MainFrameView ( wx.Frame ):
         self.panel_routine.SetSizer( bSizer160 )
         self.panel_routine.Layout()
         bSizer160.Fit( self.panel_routine )
-        self.MainFrameNotebook.AddPage( self.panel_routine, _(u"Routine"), True )
+        self.MainFrameNotebook.AddPage( self.panel_routine, _(u"Routine"), False )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/code-folding.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
             MainFrameNotebookImages.Add( MainFrameNotebookBitmap )
@@ -2928,7 +2919,7 @@ class MainFrameView ( wx.Frame ):
             MainFrameNotebookIndex += 1
 
 
-        bSizer25.Add( self.MainFrameNotebook, 0, wx.ALL|wx.EXPAND, 5 )
+        bSizer25.Add( self.MainFrameNotebook, 1, wx.ALL|wx.EXPAND, 5 )
 
 
         self.m_panel15.SetSizer( bSizer25 )
@@ -3317,5 +3308,33 @@ class MainFrameView ( wx.Frame ):
     def m_splitter8OnIdle( self, event ):
         self.m_splitter8.SetSashPosition( -480 )
         self.m_splitter8.Unbind( wx.EVT_IDLE )
+
+
+###########################################################################
+## Class Trash
+###########################################################################
+
+class Trash ( wx.Frame ):
+
+    def __init__( self, parent ):
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+
+        self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+
+        bSizer147 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer152 = wx.BoxSizer( wx.VERTICAL )
+
+
+        bSizer147.Add( bSizer152, 1, wx.EXPAND, 5 )
+
+
+        self.SetSizer( bSizer147 )
+        self.Layout()
+
+        self.Centre( wx.BOTH )
+
+    def __del__( self ):
+        pass
 
 
