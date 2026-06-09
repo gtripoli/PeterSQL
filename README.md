@@ -38,7 +38,7 @@ For a detailed status snapshot, see:
 
 ### Recent updates
  
- - Connection passwords are now stored securely via system keyring instead of plaintext YAML.
+ - Connection passwords are now stored securely via system keyring using per-connection UUIDs instead of plaintext YAML.
  - SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
  - Table execution flow updated in the records UI.
  - `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
