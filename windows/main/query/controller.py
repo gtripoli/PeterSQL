@@ -44,6 +44,7 @@ class QueryEditorController:
 
         self.parser: Optional[SQLStatementParser] = None
         self.selector = StatementSelector(stc_editor)
+        # The executor is created on demand to ensure it always uses the current session.
         self.executor: Optional[QueryExecutor] = None
         self.renderer: Optional[QueryResultsRenderer] = None
         self._cancel_feedback_pending = False
@@ -181,9 +182,16 @@ class QueryEditorController:
             )
             return
 
+        # Ensure the parser matches the current engine.
         if not self.parser or self.parser.engine != session.engine:
             self.parser = SQLStatementParser(session.engine)
+
+        # Recreate the executor if the session has changed.
+        if self.executor is None or getattr(self.executor, "session", None) is not session:
             self.executor = QueryExecutor(session)
+
+        # Create the renderer once; it does not depend on the session.
+        if self.renderer is None:
             self.renderer = QueryResultsRenderer(self.notebook, session)
 
         sql_text = self.editor.GetText()
