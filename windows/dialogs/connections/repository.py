@@ -6,6 +6,15 @@ from helpers.logger import logger
 from helpers.observables import ObservableLazyList
 from helpers.repository import YamlRepository
 
+from structures.secrets import (
+    delete_database_password,
+    delete_ssh_password,
+    get_database_password,
+    get_ssh_password,
+    set_database_password,
+    set_ssh_password,
+)
+
 from windows.dialogs.connections import ConnectionDirectory
 
 from structures.connection import (
@@ -40,7 +49,7 @@ class ConnectionsRepository(
 
     def _write(self) -> None:
         connections = self.connections.get_value()
-        payload = [item.to_dict() for item in connections]
+        payload = [self._prepare_connection_dict(item) for item in connections]
         self._write_yaml(payload)
 
     def load(self) -> list[Union[ConnectionDirectory, Connection]]:
@@ -90,12 +99,15 @@ class ConnectionsRepository(
         ] = None
 
         if data.get("configuration"):
-            config_data = data["configuration"]
+            config_data = dict(data["configuration"])
             if engine in [
                 ConnectionEngine.MYSQL,
                 ConnectionEngine.MARIADB,
                 ConnectionEngine.POSTGRESQL,
             ]:
+                password_keyring_id = config_data.pop("password_keyring_id", None)
+                if password_keyring_id is not None:
+                    config_data["password"] = get_database_password(password_keyring_id)
                 configuration = self._build_credentials_configuration(config_data)
             elif engine == ConnectionEngine.SQLITE:
                 configuration = SourceConfiguration(**config_data)
@@ -151,6 +163,8 @@ class ConnectionsRepository(
         if connection.is_new:
             connection.id = self._next_id()
 
+        self._persist_connection_secrets(connection)
+
         if parent:
             parent.children.append(connection)
             connection.parent = parent
@@ -180,6 +194,8 @@ class ConnectionsRepository(
                     connections[i] = connection
                     return True
             return False
+
+        self._persist_connection_secrets(connection)
 
         if _find_and_replace(self.connections.get_value(), connection.id):
             self._write()
@@ -305,6 +321,7 @@ class ConnectionsRepository(
             return False
 
         if _find_and_delete(self.connections.get_value(), connection.id):
+            self._delete_connection_secrets(connection)
             self._write()
             self.connections.refresh()
 
@@ -353,6 +370,54 @@ class ConnectionsRepository(
             )
         except (TypeError, ValueError):
             return None
+
+    def _prepare_connection_dict(
+        self, item: Union["ConnectionDirectory", "Connection"]
+    ) -> dict[str, Any]:
+        data = item.to_dict()
+
+        if isinstance(item, ConnectionDirectory):
+            data["children"] = [
+                self._prepare_connection_dict(child) for child in item.children
+            ]
+            return data
+
+        configuration = data.get("configuration")
+        if configuration:
+            configuration = dict(configuration)
+            password = configuration.pop("password", None)
+            if password not in (None, ""):
+                configuration["password_keyring_id"] = str(item.id)
+                set_database_password(item.id, password)
+            elif "password_keyring_id" in configuration:
+                del configuration["password_keyring_id"]
+            data["configuration"] = configuration
+
+        ssh_tunnel = data.get("ssh_tunnel")
+        if ssh_tunnel:
+            ssh_tunnel = dict(ssh_tunnel)
+            ssh_password = ssh_tunnel.pop("password", None)
+            if ssh_password not in (None, ""):
+                ssh_tunnel["password_keyring_id"] = str(item.id)
+                set_ssh_password(item.id, ssh_password)
+            elif "password_keyring_id" in ssh_tunnel:
+                del ssh_tunnel["password_keyring_id"]
+            data["ssh_tunnel"] = ssh_tunnel
+
+        return data
+
+    def _persist_connection_secrets(self, connection: Connection) -> None:
+        if isinstance(connection.configuration, CredentialsConfiguration):
+            set_database_password(
+                connection.id, connection.configuration.password
+            )
+
+        if connection.ssh_tunnel:
+            set_ssh_password(connection.id, connection.ssh_tunnel.password)
+
+    def _delete_connection_secrets(self, connection: Connection) -> None:
+        delete_database_password(connection.id)
+        delete_ssh_password(connection.id)
 
     @staticmethod
     def _normalize_ssh_extra_args(extra_args: Any) -> Optional[Union[str, list[str]]]:

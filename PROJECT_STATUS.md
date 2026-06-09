@@ -127,8 +127,8 @@
   - **Next:** cross-version validation matrix.
 
 - [x] **Connection reliability updates** (PARTIAL)
-  - **Scope:** persistent connection statistics, empty DB password support, TLS auto-retry (MySQL/MariaDB).
-  - **Files:** `structures/connection.py`, `windows/dialogs/connections/`
+  - **Scope:** persistent connection statistics, empty DB password support, TLS auto-retry (MySQL/MariaDB), keyring-backed password storage.
+  - **Files:** `structures/connection.py`, `windows/dialogs/connections/`, `structures/secrets.py`
   - **Next:** SSH testcontainers integration validation (currently skipped) + long-run behavioral validation.
 
 - [x] **SQL dump/backup object-driven flow** (PARTIAL)
@@ -182,6 +182,7 @@
 
 ## 6. Recently Added
 
+- Connection passwords are now stored in the system keyring (`keyring`), removing plaintext passwords from `connections.yml`.
 - Audit fixes completed: PostgreSQL alter diff handling, equality comparisons, SQLite column/drop/modify signatures, SQLite database lifecycle errors, SQLite record exception safety, VERSION sync, PostgreSQL import/type hints, and ABC enforcement for `SQLColumn`/`SQLIndex`.
 - SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
 - Table execution flow updated in the records UI.
