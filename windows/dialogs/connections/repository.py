@@ -114,10 +114,11 @@ class ConnectionsRepository(
                 password_keyring_id = config_data.pop("password_keyring_id", None)
                 if password_keyring_id is not None:
                     if _is_legacy_numeric_id(password_keyring_id):
-                        legacy_password = get_database_password(password_keyring_id)
-                        if legacy_password is not None:
-                            set_database_password(secret_id, legacy_password)
-                            delete_database_password(password_keyring_id)
+                        if get_database_password(secret_id) is None:
+                            legacy_password = get_database_password(password_keyring_id)
+                            if legacy_password is not None:
+                                set_database_password(secret_id, legacy_password)
+                        delete_database_password(password_keyring_id)
                     else:
                         set_database_password(secret_id, get_database_password(password_keyring_id))
                     config_data["password"] = get_database_password(secret_id)
@@ -125,18 +126,20 @@ class ConnectionsRepository(
             elif engine == ConnectionEngine.SQLITE:
                 configuration = SourceConfiguration(**config_data)
 
-        ssh_tunnel_data = data.get("ssh_tunnel", {})
+        ssh_tunnel_data = data.get("ssh_tunnel") or {}
         ssh_password_keyring_id = ssh_tunnel_data.get("password_keyring_id")
         if ssh_password_keyring_id is not None:
             if _is_legacy_numeric_id(ssh_password_keyring_id):
-                legacy_ssh_password = get_ssh_password(ssh_password_keyring_id)
-                if legacy_ssh_password is not None:
-                    set_ssh_password(secret_id, legacy_ssh_password)
-                    delete_ssh_password(ssh_password_keyring_id)
+                if get_ssh_password(secret_id) is None:
+                    legacy_ssh_password = get_ssh_password(ssh_password_keyring_id)
+                    if legacy_ssh_password is not None:
+                        set_ssh_password(secret_id, legacy_ssh_password)
+                delete_ssh_password(ssh_password_keyring_id)
             else:
                 set_ssh_password(secret_id, get_ssh_password(ssh_password_keyring_id))
             ssh_tunnel_data = dict(ssh_tunnel_data)
             ssh_tunnel_data.pop("password_keyring_id", None)
+            ssh_tunnel_data["password"] = get_ssh_password(secret_id) or ""
 
         ssh_config = self._build_ssh_configuration(ssh_tunnel_data)
 
