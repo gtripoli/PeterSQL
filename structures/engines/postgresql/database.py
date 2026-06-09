@@ -1,4 +1,5 @@
 import dataclasses
+import re
 from typing import Self, Optional
 
 from helpers.logger import logger
@@ -35,17 +36,25 @@ class PostgreSQLDatabase(SQLDatabase):
 
         return self.context.execute(query)
 
+    def __post_init__(self):
+        super().__post_init__()
+        self._changed_fields: set[str] = set()
+
     def alter(self) -> bool:
         statements: list[str] = []
 
-        if self.tablespace:
+        name = getattr(self, "_original_name", self.name)
+
+        check_all = not self._changed_fields
+
+        if (check_all or "tablespace" in self._changed_fields) and self.tablespace:
             statements.append(
-                f"ALTER DATABASE {self.context.quote_identifier(self.name)} SET TABLESPACE {self.context.quote_identifier(self.tablespace)}"
+                f"ALTER DATABASE {self.context.quote_identifier(name)} SET TABLESPACE {self.context.quote_identifier(self.tablespace)}"
             )
 
-        if self.connection_limit is not None:
+        if (check_all or "connection_limit" in self._changed_fields) and self.connection_limit is not None:
             statements.append(
-                f"ALTER DATABASE {self.context.quote_identifier(self.name)} CONNECTION LIMIT {int(self.connection_limit)}"
+                f"ALTER DATABASE {self.context.quote_identifier(name)} CONNECTION LIMIT {int(self.connection_limit)}"
             )
 
         if not statements:
@@ -63,7 +72,7 @@ class PostgreSQLDatabase(SQLDatabase):
 
 @dataclasses.dataclass(eq=False)
 class PostgreSQLTable(SQLTable):
-    schema: str = None
+    schema: Optional[str] = None
     
     @property
     def fully_qualified_name(self):
@@ -142,38 +151,35 @@ class PostgreSQLTable(SQLTable):
                     transaction.execute(f'ALTER TABLE {original_table.fully_qualified_name} RENAME TO {new_name_quoted};')
 
                 # Handle column changes
-                for column in map_columns['added']:
-                    transaction.execute(f'ALTER TABLE {self.fully_qualified_name} ADD COLUMN {str(PostgreSQLColumnBuilder(column))};')
-
-                for column in map_columns['removed']:
-                    col_name_quoted = self.database.context.quote_identifier(column.name)
-                    transaction.execute(f'ALTER TABLE {self.fully_qualified_name} DROP COLUMN {col_name_quoted};')
-
-                for column in map_columns['modified']:
-                    original_column = column['original']
-                    current_column = column['current']
-                    if original_column.name != current_column.name:
+                for original_column, current_column in map_columns:
+                    if original_column is None:
+                        transaction.execute(f'ALTER TABLE {self.fully_qualified_name} ADD COLUMN {str(PostgreSQLColumnBuilder(current_column))};')
+                    elif current_column is None:
+                        col_name_quoted = self.database.context.quote_identifier(original_column.name)
+                        transaction.execute(f'ALTER TABLE {self.fully_qualified_name} DROP COLUMN {col_name_quoted};')
+                    elif original_column.name != current_column.name:
                         old_name_quoted = self.database.context.quote_identifier(original_column.name)
                         new_name_quoted = self.database.context.quote_identifier(current_column.name)
                         transaction.execute(f'ALTER TABLE {self.fully_qualified_name} RENAME COLUMN {old_name_quoted} TO {new_name_quoted};')
                     # For other changes, might need more complex ALTER statements
 
                 # Handle index changes
-                for index in map_indexes['added']:
-                    index.create()
-
-                for index in map_indexes['removed']:
-                    index.drop()
-
-                for index in map_indexes['modified']:
-                    index['current'].alter(index['original'])
+                for original_index, current_index in map_indexes:
+                    if current_index is None:
+                        original_index.drop()
+                    elif original_index is None:
+                        current_index.create()
+                    elif original_index != current_index:
+                        current_index.alter(original_index)
 
                 # Handle foreign key changes
-                for fk in map_foreign_keys['added']:
-                    fk.create()
-
-                for fk in map_foreign_keys['removed']:
-                    fk.drop()
+                for original_foreign_key, current_foreign_key in map_foreign_keys:
+                    if current_foreign_key is None:
+                        original_foreign_key.drop()
+                    elif original_foreign_key is None:
+                        current_foreign_key.create()
+                    elif original_foreign_key != current_foreign_key:
+                        original_foreign_key.modify(current_foreign_key)
 
         except Exception as ex:
             logger.error(ex, exc_info=True)
@@ -398,9 +404,11 @@ class PostgreSQLRecord(SQLRecord):
 
 @dataclasses.dataclass
 class PostgreSQLView(SQLView):
+    schema: Optional[str] = "public"
+
     @property
     def fully_qualified_name(self):
-        return self.database.context.qualify('public', self.name)
+        return self.database.context.qualify(self.schema, self.name)
     
     def raw_create(self) -> str:
         return f'CREATE VIEW {self.fully_qualified_name} AS {self.statement};'

@@ -27,6 +27,7 @@ class QueryEditorController:
             on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
             on_stop_state_changed: Optional[Callable[[bool], None]] = None,
             on_before_execute: Optional[Callable[[], bool]] = None,
+            on_connection_lost: Optional[Callable[['Session', str], None]] = None,
     ):
         self.editor = stc_editor
         self.notebook = results_notebook
@@ -39,9 +40,11 @@ class QueryEditorController:
         self.on_save_as_query = on_save_as_query
         self.on_stop_state_changed = on_stop_state_changed
         self.on_before_execute = on_before_execute
+        self.on_connection_lost = on_connection_lost
 
         self.parser: Optional[SQLStatementParser] = None
         self.selector = StatementSelector(stc_editor)
+        # The executor is created on demand to ensure it always uses the current session.
         self.executor: Optional[QueryExecutor] = None
         self.renderer: Optional[QueryResultsRenderer] = None
         self._cancel_feedback_pending = False
@@ -179,9 +182,16 @@ class QueryEditorController:
             )
             return
 
+        # Ensure the parser matches the current engine.
         if not self.parser or self.parser.engine != session.engine:
             self.parser = SQLStatementParser(session.engine)
+
+        # Recreate the executor if the session has changed.
+        if self.executor is None or getattr(self.executor, "session", None) is not session:
             self.executor = QueryExecutor(session)
+
+        # Create the renderer once; it does not depend on the session.
+        if self.renderer is None:
             self.renderer = QueryResultsRenderer(self.notebook, session)
 
         sql_text = self.editor.GetText()
@@ -200,6 +210,9 @@ class QueryEditorController:
         if not statements_to_execute:
             return
 
+        if self.executor and self.executor.is_running():
+            return
+
         self.renderer.clear_all_tabs()
         self._cancel_feedback_pending = False
         self._set_cancel_button_enabled(True)
@@ -215,6 +228,11 @@ class QueryEditorController:
     def _on_statement_complete(self, result: ExecutionResult) -> None:
         if result.cancelled:
             return
+
+        if result.connection_lost and self.on_connection_lost is not None:
+            session = self.get_session()
+            if session is not None:
+                self.on_connection_lost(session, result.error or _("Database connection lost"))
 
         if self.renderer:
             self.renderer.create_result_tab(result)
@@ -256,6 +274,7 @@ class QueryResultsController(QueryEditorController):
             on_save_as_query: Optional[Callable[[wx.Event], None]] = None,
             on_stop_state_changed: Optional[Callable[[bool], None]] = None,
             on_before_execute: Optional[Callable[[], bool]] = None,
+            on_connection_lost: Optional[Callable[['Session', str], None]] = None,
     ):
         from windows.main import CURRENT_DATABASE, CURRENT_SESSION  # Lazy import: unavoidable circular dependency.
 
@@ -271,4 +290,5 @@ class QueryResultsController(QueryEditorController):
             on_save_as_query=on_save_as_query,
             on_stop_state_changed=on_stop_state_changed,
             on_before_execute=on_before_execute,
+            on_connection_lost=on_connection_lost,
         )

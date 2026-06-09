@@ -1,11 +1,11 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-54%25-brightgreen)
-![Tests](https://img.shields.io/badge/tests-3114-blue)
+![Coverage](https://img.shields.io/badge/coverage-46%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2495-blue)
 
-![SQLite](https://img.shields.io/badge/SQLite-3.45.1-green)
+![SQLite](https://img.shields.io/badge/SQLite-3.50.4-green)
 ![MySQL](https://img.shields.io/badge/MySQL-8%20%7C%209-green)
 ![MariaDB](https://img.shields.io/badge/MariaDB-5%20%7C%2010%20%7C%2011%20%7C%2012-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%2017%20%7C%2018-lightgrey)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%2017%20%7C%2018-green)
 
 # PeterSQL
 
@@ -37,13 +37,14 @@ For a detailed status snapshot, see:
 - [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ### Recent updates
-
-- SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
-- Table execution flow updated in the records UI.
-- `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
-- `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`).
-- Advanced cell editor replaced with a dedicated `ColumnContentDialog` for large content.
-
+ 
+ - Connection passwords are now stored securely via system keyring using per-connection UUIDs instead of plaintext YAML.
+ - SQL autocomplete extended to INSERT / UPDATE / DELETE and string literals; parser improved with JSON and multi-table coverage.
+ - Table execution flow updated in the records UI.
+ - `row_format` and `convert_data` options added to the MySQL/MariaDB table editor.
+ - `windows/main/` modules restructured into subdirectories (`database/`, `table/`, `query/`).
+ - Advanced cell editor replaced with a dedicated `ColumnContentDialog` for large content.
+ - Added stored function support with deterministic flag handling for MySQL and MariaDB engines.
 ---
 
 ## 🧭 Why PeterSQL?
@@ -125,12 +126,12 @@ For detailed test coverage matrix, statistics, and architecture, see **[tests/RE
 | Suite | Passed | Skipped |
 |-------|--------|---------|
 | autocomplete | ![passed](https://img.shields.io/badge/passed-2540-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| core | ![passed](https://img.shields.io/badge/passed-122-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| ui | ![passed](https://img.shields.io/badge/passed-57-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| mysql | ![passed](https://img.shields.io/badge/passed-63-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-1-lightgrey) |
-| mariadb | ![passed](https://img.shields.io/badge/passed-123-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-3-lightgrey) |
-| postgresql | ![passed](https://img.shields.io/badge/passed-140-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| sqlite | ![passed](https://img.shields.io/badge/passed-24-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-5-lightgrey) |
+| core | ![passed](https://img.shields.io/badge/passed-143-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| ui | ![passed](https://img.shields.io/badge/passed-0-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| mysql | ![passed](https://img.shields.io/badge/passed-119-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-1-lightgrey) |
+| mariadb | ![passed](https://img.shields.io/badge/passed-237-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-3-lightgrey) |
+| postgresql | ![passed](https://img.shields.io/badge/passed-244-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| sqlite | ![passed](https://img.shields.io/badge/passed-54-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-5-lightgrey) |
 
 <!-- SUITE_BADGES_END -->
 

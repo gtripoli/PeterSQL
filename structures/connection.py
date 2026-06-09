@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+import uuid
 
 from functools import lru_cache
 from typing import Any, NamedTuple, Optional, Union
@@ -70,6 +71,7 @@ class Connection:
     configuration: Optional[Union[CredentialsConfiguration, SourceConfiguration]]
     comments: Optional[str] = ""
     ssh_tunnel: Optional[SSHTunnelConfiguration] = None
+    read_only: bool = False
     parent: Optional["ConnectionDirectory"] = dataclasses.field(
         default=None,
         compare=False,
@@ -84,6 +86,7 @@ class Connection:
     total_connection_attempts: int = 0
     average_connection_time_ms: Optional[int] = None
     most_recent_connection_duration_ms: Optional[int] = None
+    secret_id: Optional[str] = dataclasses.field(default=None)
 
     def __eq__(self, other: Any):
         if not isinstance(other, Connection):
@@ -102,7 +105,7 @@ class Connection:
         return dataclasses.replace(self)
 
     def to_dict(self):
-        return {
+        data = {
             "id": self.id,
             "type": "connection",
             "name": self.name,
@@ -112,6 +115,7 @@ class Connection:
             else None,
             "comments": self.comments,
             "ssh_tunnel": self.ssh_tunnel._asdict() if self.ssh_tunnel else None,
+            "read_only": self.read_only,
             "created_at": self.created_at,
             "last_connection_at": self.last_connection_at,
             "last_successful_connection_at": self.last_successful_connection_at,
@@ -122,6 +126,9 @@ class Connection:
             "average_connection_time_ms": self.average_connection_time_ms,
             "most_recent_connection_duration_ms": self.most_recent_connection_duration_ms,
         }
+        if self.secret_id is not None:
+            data["secret_id"] = self.secret_id
+        return data
 
     @property
     def is_valid(self):

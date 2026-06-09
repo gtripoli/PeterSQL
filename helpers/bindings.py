@@ -6,6 +6,7 @@ from typing import Optional, Union, Any, TypeAlias, Callable
 import wx
 import wx.stc
 
+from helpers.logger import logger
 from helpers.observables import Observable, CallbackEvent
 
 CONTROL_BIND_LABEL: TypeAlias = wx.StaticText
@@ -228,25 +229,43 @@ class AbstractMetaModel(abc.ABCMeta):
 class AbstractModel(metaclass=AbstractMetaModel):
     observables: list[Observable] = []
 
+    def __init__(self):
+        self.observables = []
+        self._bindings: list[AbstractBindControl] = []
+
+    def _ensure_internal_state(self) -> None:
+        if not hasattr(self, "observables"):
+            self.observables = []
+
+        if not hasattr(self, "_bindings"):
+            self._bindings = []
+
     def bind_control(self, control: CONTROLS, observable: Observable):
+        self._ensure_internal_state()
+        binding: Optional[AbstractBindControl] = None
+
         if isinstance(control, wx.StaticText):
-            BindLabelControl(control, observable)
+            binding = BindLabelControl(control, observable)
         elif isinstance(control, (wx.TextCtrl, wx.SpinCtrl, wx.CheckBox)):
-            BindValueControl(control, observable)
+            binding = BindValueControl(control, observable)
         elif isinstance(control, (wx.FilePickerCtrl, wx.DirPickerCtrl)):
-            BindPathControl(control, observable)
+            binding = BindPathControl(control, observable)
         elif isinstance(control, wx.Choice):
-            BindSelectionControl(control, observable)
+            binding = BindSelectionControl(control, observable)
         elif isinstance(control, wx.ComboBox):
-            BindComboControl(control, observable)
+            binding = BindComboControl(control, observable)
         elif isinstance(control, wx.stc.StyledTextCtrl):
-            BindStyledTextControl(control, observable)
+            binding = BindStyledTextControl(control, observable)
         elif isinstance(control, list) and control and isinstance(control[0], wx.RadioButton):
-            BindRadioGroupControl(control, observable)
+            binding = BindRadioGroupControl(control, observable)
+
+        if binding is not None:
+            self._bindings.append(binding)
 
         self.observables.append(observable)
 
     def bind_controls(self, **controls: Union[CONTROLS, tuple[CONTROLS, dict]]):
+        self._ensure_internal_state()
         for name, ctrl in controls.items():
             if hasattr(self, name) and isinstance(getattr(self, name), Observable):
                 observable = getattr(self, name)
@@ -256,8 +275,24 @@ class AbstractModel(metaclass=AbstractMetaModel):
                     self.bind_control(ctrl, observable)
 
     def subscribe(self, callback: Callable):
+        self._ensure_internal_state()
         for observable in self.observables:
             observable.subscribe(callback)
+
+    def sync(self) -> None:
+        self._ensure_internal_state()
+        for binding in self._bindings:
+            value = binding.get()
+            current_value = binding.observable.get_value()
+            if value != current_value:
+                logger.debug(
+                    "ui trace: model.sync changed observable=%s control=%s old=%r new=%r",
+                    getattr(binding.observable, "name", None),
+                    type(binding.control).__name__,
+                    current_value,
+                    value,
+                )
+                binding.observable.set_value(value)
 
 
 def wx_call_after_debounce(*observables: Observable, callback: Callable, wait_time: float = 0.4):

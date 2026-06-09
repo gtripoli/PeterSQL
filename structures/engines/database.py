@@ -54,14 +54,22 @@ class SQLDatabase(abc.ABC):
             return False
 
         if not all([
-            getattr(self, field.name) != getattr(other, field.name)
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.compare and not isinstance(field, ObservableLazyList)
         ]):
             return False
 
         for observable_lazy_list in ["tables", "views", "procedures", "functions", "triggers", "events"]:
-            if not all([oll1 != oll2 for oll1, oll2 in zip(getattr(self, observable_lazy_list, None), getattr(other, observable_lazy_list, None))]):
+            self_list = getattr(self, observable_lazy_list, None)
+            other_list = getattr(other, observable_lazy_list, None)
+            if self_list is None:
+                self_list = []
+            if other_list is None:
+                other_list = []
+            if len(self_list) != len(other_list):
+                return False
+            if not all([oll1 == oll2 for oll1, oll2 in zip(self_list, other_list)]):
                 return False
 
         return True
@@ -141,6 +149,15 @@ class SQLTable(abc.ABC):
         self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
         self.checks = ObservableLazyList(lambda: self.get_checks_handler(self))
         self.foreign_keys = ObservableLazyList(lambda: self.get_foreign_keys_handler(self))
+        self.records = ObservableLazyList(
+            lambda: self.get_records_handler(
+                self,
+                filters=None,
+                limit=1000,
+                offset=0,
+                orders=None,
+            )
+        )
 
     def load_records(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
         self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters=filters, limit=limit, offset=offset, orders=orders))
@@ -231,8 +248,15 @@ class SQLTable(abc.ABC):
     def generate_uuid(length: int = 8) -> str:
         return str(uuid.uuid4())[::-1][:length]
 
+    @abc.abstractmethod
     def raw_create(self) -> str:
-        raise NotImplementedError(f"{self.__class__.__name__}.raw_create() is not implemented")
+        """Return the raw SQL string that would create the index.
+
+        Concrete engine implementations must provide the SQL statement used to
+        create the index.  The method is required because the dump process
+        relies on it for schema export.
+        """
+        raise NotImplementedError
 
     def get_identifier_indexes(self) -> list['SQLIndex']:
         identifier_indexes = []
@@ -292,6 +316,41 @@ class SQLCheck(abc.ABC):
     @property
     def fully_qualified_name(self):
         return self.table.database.context.qualify(self.table.database.name, self.table.name, self.name)
+
+    @abc.abstractmethod
+    def add(self) -> bool:
+        """Add the column to the table.
+
+        Concrete engine implementations must execute the appropriate SQL
+        statement and return ``True`` on success.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def rename(self, new_name: str) -> bool:
+        """Rename the column to ``new_name``.
+
+        Implementations should perform the ALTER operation and return ``True``
+        on success.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        """Drop the column from the table.
+
+        Implementations must execute the appropriate DROP COLUMN statement.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def modify(self, current: Self):
+        """Modify the column to match the definition of ``current``.
+
+        ``current`` is the existing column definition; the method should apply
+        any necessary ALTER statements to bring the database column in sync.
+        """
+        raise NotImplementedError
 
     def copy(self):
         cls = self.__class__
@@ -361,11 +420,17 @@ class SQLColumn(abc.ABC):
 
     @property
     def is_primary_key(self):
-        return any([i.type == SQLiteIndexType.PRIMARY for i in list(self.table.indexes) if self.name in i.columns])
+        indexes = getattr(self.table, 'indexes', None)
+        if indexes is None:
+            return False
+        return any([i.type == SQLiteIndexType.PRIMARY for i in list(indexes) if self.name in i.columns])
 
     @property
     def is_unique_key(self):
-        return any([i.type == SQLiteIndexType.UNIQUE for i in list(self.table.indexes) if self.name in i.columns])
+        indexes = getattr(self.table, 'indexes', None)
+        if indexes is None:
+            return False
+        return any([i.type == SQLiteIndexType.UNIQUE for i in list(indexes) if self.name in i.columns])
 
     @property
     def is_valid(self):
@@ -507,8 +572,40 @@ class SQLIndex(abc.ABC):
         field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
         return cls(**field_values)
 
+    @abc.abstractmethod
+    def create(self) -> bool:
+        """Create the index in the database.
+
+        Concrete engines must implement the appropriate CREATE INDEX statement
+        and return ``True`` on success.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def drop(self) -> bool:
+        """Drop the index from the database.
+
+        Implementations should handle primary‑key special cases where dropping
+        may be a no‑op.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def alter(self, original_index: Self) -> bool:
+        """Alter the index to match ``original_index``.
+
+        The default strategy is to drop and recreate; concrete classes may
+        provide a more efficient implementation.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def raw_create(self) -> str:
-        raise NotImplementedError(f"{self.__class__.__name__}.raw_create() is not implemented")
+        """Return the raw SQL string for creating the index.
+
+        This is used by ``create`` implementations to execute the statement.
+        """
+        raise NotImplementedError
 
 
 @dataclasses.dataclass(eq=False)
@@ -533,7 +630,7 @@ class SQLForeignKey(abc.ABC):
             return False
 
         if not all([
-            getattr(self, field.name) != getattr(other, field.name)
+            getattr(self, field.name) == getattr(other, field.name)
             for field in dataclasses.fields(self)
             if field.compare
         ]):
@@ -562,7 +659,7 @@ class SQLForeignKey(abc.ABC):
 
     def copy(self):
         cls = self.__class__
-        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls)}
+        field_values = {f.name: getattr(self, f.name) for f in dataclasses.fields(cls) if f.init == True}
         return cls(**field_values)
 
 
@@ -681,6 +778,17 @@ class SQLView(abc.ABC):
     name: str
     database: SQLDatabase = dataclasses.field(compare=False)
     statement: str
+    total_rows: Optional[int] = None
+
+    get_columns_handler: Callable = dataclasses.field(compare=False, default_factory=lambda: lambda view: list())
+    get_records_handler: Callable = dataclasses.field(compare=False, default_factory=lambda: lambda view, **kw: list())
+
+    def __post_init__(self):
+        self.columns = ObservableLazyList(lambda: self.get_columns_handler(self))
+        self.records = ObservableLazyList(lambda: [])
+
+    def load_records(self, filters=None, limit=1000, offset=0, orders=None):
+        self.records = ObservableLazyList(lambda: self.get_records_handler(self, filters=filters, limit=limit, offset=offset, orders=orders))
 
     @property
     def is_new(self) -> bool:

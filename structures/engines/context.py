@@ -1,9 +1,14 @@
 import abc
 import contextlib
 import re
+import threading
 
-from typing import Any, Optional
+from gettext import gettext as _
+from typing import Any, Callable, Optional
 
+import pymysql
+import psycopg2
+import sqlite3
 import yaml
 
 from constants import WORKDIR
@@ -32,6 +37,28 @@ QUERY_LOGS: ObservableList[str] = ObservableList()
 SQL_SAFE_NAME_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
+class ConnectionLostError(Exception):
+    """Raised when the database connection has been lost and needs user intervention."""
+    pass
+
+_WRITE_QUERY_RE = re.compile(
+    r"^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE|RENAME|LOCK)\b",
+    re.IGNORECASE,
+)
+
+# PyMySQL/MySQL/MariaDB disconnect error codes and message fragments
+_PYMYSQL_DISCONNECT_CODES: frozenset[int] = frozenset({
+    2006,   # CR_SERVER_GONE_ERROR
+    2013,   # CR_SERVER_LOST
+    2055,   # CR_SERVER_LOST_EXTENDED
+})
+_PYMYSQL_DISCONNECT_FRAGMENTS: tuple[str, ...] = (
+    "server has gone away",
+    "lost connection",
+    "can't connect",
+)
+
+
 class AbstractContext(abc.ABC):
     """Base context API for SQL engines."""
 
@@ -58,6 +85,8 @@ class AbstractContext(abc.ABC):
         self.connection = connection
 
         self.databases = ObservableLazyList(self.get_databases)
+        self._connection_lost_handler: Optional[Callable[["AbstractContext", str], None]] = None
+        self._connection_lost_lock = threading.Lock()
 
     def __del__(self):
         """Ensure resources are released during object destruction."""
@@ -112,6 +141,10 @@ class AbstractContext(abc.ABC):
 
     def after_connect(self, *args, **kwargs):
         """Run engine-specific setup right after a successful connection."""
+        pass
+
+    def set_write_mode(self, enabled: bool) -> None:
+        """Override the DB-level read-only session setting. No-op by default."""
         pass
 
     def before_disconnect(self, *args, **kwargs):
@@ -361,6 +394,11 @@ class AbstractContext(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def build_empty_database(self, /, name: str = "") -> SQLDatabase:
+        """Build a new in-memory database model with default values."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def build_empty_table(
             self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> SQLTable:
@@ -524,6 +562,10 @@ class AbstractContext(abc.ABC):
     def execute(self, query: str) -> bool:
         """Execute a SQL query and append it to query logs."""
         query_clean = re.sub(r"\s+", " ", str(query)).strip()
+
+        if self.connection.read_only and _WRITE_QUERY_RE.match(query_clean):
+            raise PermissionError(_("This connection is read-only."))
+
         logger.debug("execute query: %s", query_clean)
         QUERY_LOGS.append(query_clean)
 
@@ -532,9 +574,67 @@ class AbstractContext(abc.ABC):
         except Exception as ex:
             logger.error(query)
             QUERY_LOGS.append(f"/* {str(ex)} */")
+            if self._is_connection_lost(ex):
+                error_message = _("Database connection lost: {error}").format(error=str(ex))
+                self._handle_connection_lost(error_message)
+                raise ConnectionLostError(error_message) from ex
             raise
 
         return True
+
+    def set_connection_lost_handler(self, handler: Optional[Callable[["AbstractContext", str], None]]) -> None:
+        """Register a callback invoked when a lost connection is detected during execute()."""
+        with self._connection_lost_lock:
+            self._connection_lost_handler = handler
+
+    def _handle_connection_lost(self, error_message: str) -> None:
+        handler = None
+        with self._connection_lost_lock:
+            handler = self._connection_lost_handler
+
+        if callable(handler):
+            try:
+                handler(self, error_message)
+            except Exception as ex:
+                logger.error("Connection lost handler failed: %s", ex, exc_info=True)
+
+    @staticmethod
+    def _is_connection_lost(exc: Exception) -> bool:
+        """Return True when the exception indicates a lost DB connection.
+
+        Only disconnect-specific errors are classified as connection loss.
+        Ordinary SQL errors (missing table, syntax, access denied, etc.) are
+        not treated as lost connections so they propagate normally.
+        """
+        # PyMySQL / MySQL / MariaDB
+        # InterfaceError is always connection-level in PyMySQL.
+        if pymysql and isinstance(exc, pymysql.err.InterfaceError):
+            return True
+        # OperationalError covers both SQL errors and network errors; only
+        # flag the ones with known disconnect codes or message fragments.
+        if pymysql and isinstance(exc, pymysql.err.OperationalError):
+            code = exc.args[0] if exc.args else 0
+            msg = str(exc).lower()
+            if code in _PYMYSQL_DISCONNECT_CODES or any(f in msg for f in _PYMYSQL_DISCONNECT_FRAGMENTS):
+                return True
+
+        # PostgreSQL
+        # InterfaceError (e.g. "connection already closed") is always network-level.
+        if psycopg2 and isinstance(exc, psycopg2.InterfaceError):
+            return True
+        # OperationalError with pgcode=None is a connection-level error;
+        # OperationalError with a pgcode is a server-side SQL error.
+        if psycopg2 and isinstance(exc, psycopg2.OperationalError):
+            if getattr(exc, "pgcode", None) is None:
+                return True
+
+        # SQLite
+        if sqlite3 and isinstance(exc, sqlite3.OperationalError):
+            message = str(exc).lower()
+            if any(token in message for token in ["database is locked", "disk i/o error", "unable to open"]):
+                return True
+
+        return False
 
     def fetchone(self) -> Any:
         """Fetch a single row from the active cursor."""

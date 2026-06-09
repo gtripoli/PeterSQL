@@ -28,16 +28,20 @@ class MySQLDatabase(SQLDatabase):
     character_set: Optional[str] = None
     encryption: Optional[str] = None
 
-    def _build_database_clauses(self) -> list[str]:
+    def __post_init__(self):
+        super().__post_init__()
+        self._changed_fields: set[str] = set()
+
+    def _build_database_clauses(self, fields: set[str] | None = None) -> list[str]:
         clauses: list[str] = []
 
-        if self.character_set:
+        if (fields is None or "character_set" in fields) and self.character_set:
             clauses.append(f"CHARACTER SET {self.context.quote_identifier(self.character_set)}")
 
-        if self.default_collation:
+        if (fields is None or "default_collation" in fields) and self.default_collation:
             clauses.append(f"COLLATE {self.context.quote_identifier(self.default_collation)}")
 
-        if self.encryption:
+        if (fields is None or "encryption" in fields) and self.encryption:
             clauses.append(f"ENCRYPTION = '{str(self.encryption).upper()}'")
 
         return clauses
@@ -51,13 +55,15 @@ class MySQLDatabase(SQLDatabase):
         return self.context.execute(query)
 
     def alter(self) -> bool:
-        clauses = self._build_database_clauses()
+        fields = self._changed_fields or None
+        clauses = self._build_database_clauses(fields)
 
         if not clauses:
             return False
 
+        name = getattr(self, "_original_name", self.name)
         self.context.execute(
-            f"ALTER DATABASE {self.context.quote_identifier(self.name)} {' '.join(clauses)}"
+            f"ALTER DATABASE {self.context.quote_identifier(name)} {' '.join(clauses)}"
         )
         return True
 
@@ -79,12 +85,19 @@ class MySQLTable(SQLTable):
 
         columns_and_indexes = columns + indexes
 
+        clauses: list[str] = []
+
+        if self.collation_name:
+            clauses.append(f"COLLATE='{self.collation_name}'")
+
+        if self.engine:
+            clauses.append(f"ENGINE={self.engine}")
+
         return f"""
             CREATE TABLE {self.fully_qualified_name} (
                 {', '.join(columns_and_indexes)}
             )
-            COLLATE='{self.collation_name}'
-            ENGINE={self.engine};
+            {' '.join(clauses)};
             """
 
     def alter_auto_increment(self, auto_increment: int):
@@ -262,6 +275,10 @@ class MySQLIndex(SQLIndex):
 
         return self.table.database.context.execute(f"DROP INDEX {self.quoted_name} ON {self.table.fully_qualified_name}")
 
+    def alter(self, original_index: Self) -> bool:
+        original_index.drop()
+        return self.create()
+
     def modify(self, new: Self):
         self.drop()
 
@@ -427,7 +444,7 @@ class MySQLFunction(SQLFunction):
     parameters: str = ""
     returns: str = ""
     deterministic: bool = False
-    sql: str = ""
+    statement: str = ""
 
     def _show_create_function(self) -> str:
         context = self.database.context
@@ -439,7 +456,7 @@ class MySQLFunction(SQLFunction):
         return self.database.context.execute(self.raw_create())
 
     def raw_create(self) -> str:
-        if not self.sql.strip() or not self.returns.strip():
+        if not self.statement.strip() or not self.returns.strip():
             return self._show_create_function()
 
         deterministic = "DETERMINISTIC" if self.deterministic else "NOT DETERMINISTIC"
@@ -448,7 +465,7 @@ class MySQLFunction(SQLFunction):
             RETURNS {self.returns}
             {deterministic}
             BEGIN
-                {self.sql};
+                {self.statement};
             END
         """
 

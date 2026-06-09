@@ -42,9 +42,9 @@ class MySQLDataType(StandardDataType):
     TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL)
     YEAR = SQLDataType(name="YEAR", category=DataTypeCategory.TEMPORAL)
 
-    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.TEXT, has_set=True)
-    SET = SQLDataType(name="SET", category=DataTypeCategory.TEXT, has_set=True)
+    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.OTHER, has_set=True)
+    SET = SQLDataType(name="SET", category=DataTypeCategory.OTHER, has_set=True)
 
     # Other
     BOOLEAN = StandardDataType.BOOLEAN
-    JSON = SQLDataType(name="JSON", category=DataTypeCategory.TEXT, format=DataTypeFormat.JSON)
+    JSON = SQLDataType(name="JSON", category=DataTypeCategory.OTHER, format=DataTypeFormat.JSON)

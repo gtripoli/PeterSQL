@@ -16,13 +16,13 @@ from structures.engines.sqlite.indextype import SQLiteIndexType
 @dataclasses.dataclass
 class SQLiteDatabase(SQLDatabase):
     def create(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be created through SQL")
 
     def alter(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be altered through SQL")
 
     def drop(self) -> bool:
-        return False
+        raise NotImplementedError("SQLite databases are files and cannot be dropped through SQL")
 
 
 @dataclasses.dataclass(eq=False)
@@ -306,12 +306,12 @@ class SQLiteColumn(SQLColumn):
     def rename(self, new_name: str) -> bool:
         return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} RENAME COLUMN {self.quoted_name} TO `{new_name}`")
 
-    def modify(self):
+    def modify(self, current: Self):
         sql_safe_new_name = self.table.database.context.quote_identifier(f"_{self.table.name}_{self.generate_uuid()}")
 
         for i, c in enumerate(self.table.columns):
             if c.name == self.name:
-                self.table.columns[i] = self
+                self.table.columns[i] = current
                 break
 
         with self.table.database.context.transaction() as transaction:
@@ -323,8 +323,8 @@ class SQLiteColumn(SQLColumn):
 
             transaction.execute(f"DROP TABLE {sql_safe_new_name};")
 
-    def drop(self, table: SQLTable, column: SQLColumn) -> bool:
-        return self.table.database.context.execute(f"ALTER TABLE {table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
+    def drop(self) -> bool:
+         return self.table.database.context.execute(f"ALTER TABLE {self.table.fully_qualified_name} DROP COLUMN {self.quoted_name}")
 
 
 @dataclasses.dataclass(eq=False)
@@ -350,34 +350,56 @@ class SQLiteIndex(SQLIndex):
         )
 
     def create(self) -> bool:
+        """Create the SQLite index.
+
+        ``raw_create`` returns an empty string for implicit primary‑key
+        indexes or auto‑generated unique indexes. In those cases the operation
+        is a no‑op and should be considered successful.
+        """
         statement = self.raw_create()
         if not statement:
-            return False
-
+            return True
         return self.table.database.context.execute(statement)
 
     def drop(self) -> bool:
+        """Drop the SQLite index.
+
+        Primary‑key indexes cannot be dropped; we treat that as a successful
+        no‑op. Auto‑generated unique indexes are also managed by the table
+        creation process, so dropping them is a no‑op as well.
+        """
         if self.type == SQLiteIndexType.PRIMARY:
-            return False
+            return True
 
         if self.type == SQLiteIndexType.UNIQUE and self.name.startswith("sqlite_autoindex_"):
-            return False  # sqlite_ UNIQUE is handled in table creation
+            return True
 
-
-        print(f"DROP INDEX IF EXISTS {self.fully_qualified_name}")
         return self.table.database.context.execute(
             f"DROP INDEX IF EXISTS {self.fully_qualified_name}"
         )
 
-    def modify(self, new_index: Self):
-        self.drop()
+    def alter(self, original_index: Self):
+        """Alter the index by dropping the original and creating this one.
+        """
+        original_index.drop()
+        return self.create()
 
-        new_index.create()
+    # Backward compatibility: ``modify`` was previously used in the codebase.
+    def modify(self, new_index: Self):
+        self.alter(new_index)
 
 
 @dataclasses.dataclass(eq=False)
 class SQLiteForeignKey(SQLForeignKey):
-    pass
+    def create(self) -> bool:
+        raise NotImplementedError("SQLite does not support adding Foreign Keys constraints after table creation")
+
+    def drop(self) -> bool:
+        raise NotImplementedError("SQLite does not support dropping Foreign Keys constraints")
+
+    def alter(self) -> bool:
+        raise NotImplementedError("SQLite does not support altering Foreign Keys constraints")
+
 
 
 class SQLiteRecord(SQLRecord):
@@ -397,7 +419,7 @@ class SQLiteRecord(SQLRecord):
             # elif column. :
 
         if not columns_values:
-            assert False, "No columns values"
+            raise ValueError("No column values provided for insert operation")
 
         return f"""INSERT INTO `{self.table.name}` ({', '.join(columns_values.keys())}) VALUES ({', '.join(columns_values.values())})"""
 
@@ -411,7 +433,7 @@ class SQLiteRecord(SQLRecord):
 
         if not (existing_record := self.table.database.context.fetchone()):
             logger.warning(f"Record not found for update: {identifier_columns}")
-            assert False, "Record not found for update with identifier columns"
+            raise ValueError("Record not found for update with identifier columns")
 
         changed_columns = []
 
@@ -445,7 +467,9 @@ class SQLiteRecord(SQLRecord):
             if raw_insert_record := self.raw_insert_record():
                 try:
                     return transaction.execute(raw_insert_record)
-                except:
+                except PermissionError:
+                    raise
+                except Exception:
                     return False
 
         return False
@@ -455,7 +479,9 @@ class SQLiteRecord(SQLRecord):
             if raw_update_record := self.raw_update_record():
                 try:
                     return transaction.execute(raw_update_record)
-                except:
+                except PermissionError:
+                    raise
+                except Exception:
                     return False
 
             return False
@@ -465,19 +491,21 @@ class SQLiteRecord(SQLRecord):
             if raw_delete_record := self.raw_delete_record():
                 try:
                     return transaction.execute(raw_delete_record)
-                except:
+                except PermissionError:
+                    raise
+                except Exception:
                     return False
 
         return False
 
 
 class SQLiteView(SQLView):
-    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str):
+    def __init__(self, /, id: int, name: str, database: SQLDatabase, statement: str, **kwargs):
         match = re.search(r'CREATE\s+VIEW\s+.*?\s+AS\s+(.*)', statement, re.IGNORECASE | re.DOTALL)
         if match:
             statement = match.group(1).strip()
 
-        super().__init__(id=id, name=name, database=database, statement=statement)
+        super().__init__(id=id, name=name, database=database, statement=statement, **kwargs)
 
     def raw_create(self) -> str:
         return f"CREATE VIEW IF NOT EXISTS {self.fully_qualified_name} AS {self.statement}"

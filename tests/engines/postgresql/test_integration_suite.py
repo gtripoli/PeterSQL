@@ -21,7 +21,16 @@ from tests.engines.base_check_tests import BaseCheckTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
 from tests.engines.base_function_tests import BaseFunctionTests
 from tests.engines.base_procedure_tests import BaseProcedureTests
-from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests
+from tests.engines.base_readonly_tests import BaseReadOnlyTests
+from tests.engines.base_view_tests import (
+    BaseViewCreateDropTests,
+    BaseViewAlterTests,
+    BaseViewSaveTests,
+    BaseViewIsNewTests,
+    BaseViewColumnsTests,
+    BaseViewRecordsTests,
+    BaseViewCopyTests,
+)
 
 
 @pytest.mark.integration
@@ -88,8 +97,27 @@ class TestPostgreSQLTrigger(BaseTriggerTests):
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewCreateDrop(BaseViewCreateDropTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id, 'test' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewAlter(BaseViewAlterTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+    def get_updated_view_statement(self) -> str:
+        return "SELECT 1 as id, 'updated' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
 class TestPostgreSQLViewSave(BaseViewSaveTests):
-    
+
     def get_view_statement(self) -> str:
         return "SELECT 1 as id, 'test' as name"
 
@@ -98,6 +126,38 @@ class TestPostgreSQLViewSave(BaseViewSaveTests):
 
     def get_updated_view_statement(self) -> str:
         return "SELECT 1 as id, 'updated' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewIsNew(BaseViewIsNewTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewColumns(BaseViewColumnsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM public.users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewRecords(BaseViewRecordsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM public.users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLViewCopy(BaseViewCopyTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
 
 
 @pytest.mark.integration
@@ -150,3 +210,9 @@ class TestPostgreSQLDatabase(BaseDatabaseCreateAlterTests):
 
     def requires_autocommit_for_database_ddl(self) -> bool:
         return True
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("postgresql")
+class TestPostgreSQLReadOnly(BaseReadOnlyTests):
+    pass

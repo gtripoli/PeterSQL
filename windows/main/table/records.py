@@ -34,7 +34,7 @@ class RecordsModel(BaseObservableDataViewListModel):
         self.table: SQLTable = table
 
     def _load(self, data):
-        super()._load([record.copy() for record in data])
+        super()._load(data)
 
     def _is_null(self, row, col):
         column = self.table.columns[col]
@@ -52,8 +52,8 @@ class RecordsModel(BaseObservableDataViewListModel):
         value = record.values.get(column.name)
 
         if value is None:
-            if column.datatype.name == "BOOLEAN":
-                return False
+            # if column.datatype.name == "BOOLEAN":
+            #     return False
             return NULL_DISPLAY
 
         if not str(value).strip():
@@ -101,7 +101,7 @@ class RecordsModel(BaseObservableDataViewListModel):
             attr.SetColour(wx.Colour(180, 180, 120))
         else:
             color = column.datatype.category.value.color
-            attr.SetColour(wx.Colour(color))
+            attr.SetColour(wx.Colour(*color))
 
         if column.is_primary_key:
             attr.SetBold(True)
@@ -120,7 +120,7 @@ class RecordsModel(BaseObservableDataViewListModel):
 
 class TableRecordsController:
     app = wx.GetApp()
-
+    executor: Optional[RecordsExecutor] = None
     def __init__(self, list_ctrl_records: TableRecordsDataViewCtrl):
         self.list_ctrl_records = list_ctrl_records
         self.list_ctrl_records.make_advanced_dialog = self.make_advanced_dialog
@@ -132,8 +132,6 @@ class TableRecordsController:
         CURRENT_DATABASE.subscribe(self._load_database)
         CURRENT_TABLE.subscribe(self._load_table)
         
-        self.executor: Optional[RecordsExecutor] = None
-
     def _load_session(self, session: Session):
         self.session = session
         self.executor = RecordsExecutor(session) if session else None
@@ -142,47 +140,47 @@ class TableRecordsController:
         self.database = database
 
     def _load_table(self, table: SQLTable):
-        if table is not None:
-            self.table = table
-            self.load_records_async()
+        self.table = table
 
     def _on_auto_apply_changed(self, auto_apply_enabled: bool):
         """Handle auto-apply setting change and update toolbar states."""
         selected_records = self.get_selected_records()
         self._update_toolbar_states(selected_records)
 
-    def load_records_async(self, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
+    def load_records_async(self, obj=None, filters: Optional[str] = None, limit: int = 1000, offset: int = 0, orders: Optional[str] = None):
         """Load records asynchronously using RecordsExecutor."""
-        if not self.executor or not self.table:
+        target = obj or self.table
+        if not self.executor or not target:
             return
-            
+
         self.executor.load_records(
-            table=self.table,
-            on_complete=self._on_records_loaded,
+            table=target,
+            on_complete=lambda result: self._on_records_loaded(result, target),
             filters=filters,
             limit=limit,
             offset=offset,
             orders=orders
         )
-    
-    def _on_records_loaded(self, result: RecordsOperationResult):
+
+    def _on_records_loaded(self, result: RecordsOperationResult, obj=None):
         """Handle completion of records loading."""
+        target = obj or self.table
         if result.success and result.records is not None:
-            self.table.records.set_value(result.records)
-            self.load_model()
+            target.records.set_value(result.records)
         else:
             logger.error(f"Failed to load records: {result.error}")
-            # Fallback to synchronous loading
             try:
-                self.table.load_records()
-                self.load_model()
+                target.load_records()
             except Exception as ex:
                 logger.error(f"Fallback loading also failed: {ex}", exc_info=True)
 
-    def load_model(self):
-        self.model = RecordsModel(self.table, len(self.table.columns))
-        self.model.set_observable(self.table.records)
+    def load_model_for(self, obj):
+        self.model = RecordsModel(obj, len(obj.columns))
+        self.model.set_observable(obj.records)
         self.list_ctrl_records.AssociateModel(self.model)
+
+    def load_model(self):
+        self.load_model_for(self.table)
 
     def _do_edit(self, item, model_column: int = 1):
         column = self.list_ctrl_records.GetColumn(model_column)
@@ -190,7 +188,6 @@ class TableRecordsController:
 
     def _on_item_value_changed(self, event: wx.dataview.DataViewEvent):
         logger.debug(f"{'#' * 10} ON RECORD EDITING DONE {'#' * 10}")
-        table: SQLTable = CURRENT_TABLE.get_value()
 
         item = event.GetItem()
 
@@ -199,19 +196,16 @@ class TableRecordsController:
             return
 
         current_record = self.model.data[self.model.GetRow(item)]
-        original_record = next((r for r in list(table.records) if r.id == current_record.id), None)
 
-        if current_record.id == -1 or current_record != original_record:
-            if AUTO_APPLY.get_value() and current_record.is_valid():
-                try:
-                    current_record.save()
-                except Exception as ex:
-                    logger.error(f"Error saving record: {ex}", exc_info=True)
-                else:
-                    # Refresh records after successful save
-                    self.load_records_async()
+        if AUTO_APPLY.get_value() and current_record.is_valid():
+            try:
+                current_record.save()
+            except Exception as ex:
+                logger.error(f"Error saving record: {ex}", exc_info=True)
             else:
-                NEW_RECORDS.append(current_record, replace_existing=True)
+                self.load_records_async()
+        else:
+            NEW_RECORDS.append(current_record, replace_existing=True)
 
         event.Skip()
 
@@ -219,24 +213,23 @@ class TableRecordsController:
         logger.debug(f"{'#' * 10} ON SELECTION CHANGED {'#' * 10}")
         selected_records = self.get_selected_records()
         CURRENT_RECORDS.set_value(selected_records)
-        
+
         # Update toolbar states based on selection
         self._update_toolbar_states(selected_records)
-        
-        event.Skip()
 
+        event.Skip()
 
     def _update_toolbar_states(self, selected_records: list):
         """Update toolbar tool states based on record selection and auto-apply setting."""
         # This method provides the logic for toolbar state management
         # The actual toolbar updates will be handled by the main controller
         # through the CURRENT_RECORDS observable subscription
-        
+
         # Calculate toolbar states
         has_selection = len(selected_records) > 0
         has_single_selection = len(selected_records) == 1
         auto_apply_enabled = AUTO_APPLY.get_value()
-        
+
         # Store states for the main controller to use
         self._toolbar_states = {
             'duplicate_enabled': has_single_selection,
@@ -346,9 +339,12 @@ class TableRecordsController:
 
     def do_cancel_records(self):
         """Discard all pending changes in NEW_RECORDS."""
+        # BUG FIX: was load_model() which recreates the model from in-memory table.records
+        # (already modified by SetValueByRow), so edits were never actually discarded.
+        # load_records_async() fetches fresh data from the DB, properly reversing edits.
         NEW_RECORDS.clear()
         if self.table:
-            self.load_model()
+            self.load_records_async()
 
     def do_refresh_records(self):
         """Refresh records from database."""

@@ -77,6 +77,7 @@ class ConnectionsTreeModel(BaseObservableDataViewTreeModel):
 class ConnectionsTreeController:
     on_selection_chance: Callable[[Optional[Any]], Optional[Any]] = None
     on_item_activated: Callable[[Optional[Any]], Optional[Any]] = None
+    on_item_renamed: Callable[[Optional[Any]], None] = None
 
     def __init__(
         self,
@@ -108,22 +109,20 @@ class ConnectionsTreeController:
         CURRENT_CONNECTION.subscribe(self._on_current_connection)
 
     def _on_item_editing_done(self, event):
-        item = event.GetItem()
+        if event.IsEditCancelled():
+            return
 
+        item = event.GetItem()
         if not item.IsOk():
             return
 
         obj = self.model.ItemToObject(item)
 
-        if isinstance(obj, ConnectionDirectory):
-            self.repository.save_directory(obj)
-            CURRENT_DIRECTORY(obj)
-
-        elif isinstance(obj, Connection):
-            self.repository.save_connection(obj)
-            CURRENT_CONNECTION(obj)
-
-        self.model.ItemChanged(item)
+        if isinstance(obj, (ConnectionDirectory, Connection)):
+            # On GTK, EVT_DATAVIEW_ITEM_EDITING_DONE fires before SetValue is called,
+            # so obj.name still holds the old name at this point. wx.CallAfter defers
+            # the notification to the next event loop iteration, after SetValue has run.
+            wx.CallAfter(self.on_item_renamed, obj)
 
     def _on_item_start_editing(self, event):
         if not self._allow_next_edit:

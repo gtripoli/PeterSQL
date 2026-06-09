@@ -143,6 +143,8 @@ class TestAbstractModel:
     def test_model_bind_control(self, wx_app):
         """Test binding control to model."""
         class TestModel(AbstractModel):
+            super().__init__()
+
             name = Observable[str]()
 
         frame = wx.Frame(None)
@@ -158,6 +160,7 @@ class TestAbstractModel:
     def test_model_bind_controls(self, wx_app):
         """Test binding multiple controls."""
         class TestModel(AbstractModel):
+            super().__init__()
             name = Observable[str]()
             age = Observable[int]()
 

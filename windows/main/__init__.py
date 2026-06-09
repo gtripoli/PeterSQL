@@ -14,6 +14,7 @@ from windows.state import (
     CURRENT_TRIGGER,
     CURRENT_VIEW,
     SESSIONS_LIST,
+    WRITE_OVERRIDE,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "CURRENT_TRIGGER",
     "CURRENT_VIEW",
     "SESSIONS_LIST",
+    "WRITE_OVERRIDE",
 ]

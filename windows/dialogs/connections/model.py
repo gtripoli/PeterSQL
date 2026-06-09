@@ -15,6 +15,7 @@ from . import CURRENT_CONNECTION, PENDING_CONNECTION
 
 class ConnectionModel(AbstractModel):
     def __init__(self):
+        super().__init__()
         self.name = Observable[str]()
         self.engine = Observable[str](initial=ConnectionEngine.MYSQL.value.name)
         self.hostname = Observable[str]()
@@ -37,13 +38,15 @@ class ConnectionModel(AbstractModel):
         self.average_connection_time = Observable[str]("")
         self.most_recent_connection_duration = Observable[str]("")
 
+        self.read_only = Observable[bool](initial=False)
+
         self.ssh_tunnel_enabled = Observable[bool](initial=False)
         self.ssh_tunnel_executable = Observable[str](initial="ssh")
         self.ssh_tunnel_hostname = Observable[str]()
         self.ssh_tunnel_port = Observable[int](initial=22)
         self.ssh_tunnel_username = Observable[str]()
         self.ssh_tunnel_password = Observable[str]()
-        self.ssh_tunnel_local_port = Observable[int](initial=3307)
+        self.ssh_tunnel_local_port = Observable[int](initial=0)
         self.ssh_tunnel_identity_file = Observable[str]()
         self.ssh_tunnel_remote_hostname = Observable[str]()
         self.ssh_tunnel_remote_port = Observable[int](initial=3306)
@@ -63,6 +66,7 @@ class ConnectionModel(AbstractModel):
             self.port,
             self.filename,
             self.comments,
+            self.read_only,
             self.created_at,
             self.last_connection_at,
             self.successful_connected,
@@ -118,13 +122,14 @@ class ConnectionModel(AbstractModel):
             self.total_connection_attempts: "0",
             self.average_connection_time: "",
             self.most_recent_connection_duration: "",
+            self.read_only: False,
             self.ssh_tunnel_enabled: False,
             self.ssh_tunnel_executable: "ssh",
             self.ssh_tunnel_hostname: None,
             self.ssh_tunnel_port: 22,
             self.ssh_tunnel_username: None,
             self.ssh_tunnel_password: None,
-            self.ssh_tunnel_local_port: 3307,
+            self.ssh_tunnel_local_port: 0,
             self.ssh_tunnel_identity_file: None,
             self.ssh_tunnel_remote_hostname: None,
             self.ssh_tunnel_remote_port: 3306,
@@ -144,6 +149,7 @@ class ConnectionModel(AbstractModel):
             self.engine(connection.engine.value.name)
 
         self.comments(connection.comments)
+        self.read_only(connection.read_only)
         self.created_at(connection.created_at or "")
         self.last_connection_at(connection.last_connection_at or "")
         self.successful_connected(str(connection.successful_connections))
@@ -234,6 +240,7 @@ class ConnectionModel(AbstractModel):
         pending_connection.name = self.name() or ""
         pending_connection.engine = connection_engine
         pending_connection.comments = self.comments()
+        pending_connection.read_only = bool(self.read_only.get_value())
 
         if connection_engine in [
             ConnectionEngine.MYSQL,

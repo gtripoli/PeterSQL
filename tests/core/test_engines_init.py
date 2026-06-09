@@ -28,11 +28,22 @@ class TestMergeOriginalCurrent:
     def test_merge_original_modified_indexes(self):
         mock_table = Mock()
         mock_type = Mock()
+        # Define a minimal concrete implementation of SQLIndex for testing.
+        class DummyIndex(SQLIndex):
+            def raw_create(self) -> str:  # pragma: no cover
+                return ""
+            def create(self) -> bool:  # pragma: no cover
+                return True
+            def drop(self) -> bool:  # pragma: no cover
+                return True
+            def alter(self, original_index: Self) -> bool:  # pragma: no cover
+                return True
+
         original = [
-            SQLIndex(id=1, name='idx1', type=mock_type, columns=[], table=mock_table),
+            DummyIndex(id=1, name='idx1', type=mock_type, columns=[], table=mock_table),
         ]
         current = [
-            SQLIndex(id=1, name='idx1_updated', type=mock_type, columns=[], table=mock_table),
+            DummyIndex(id=1, name='idx1_updated', type=mock_type, columns=[], table=mock_table),
         ]
         result = merge_original_current(original, current)
         assert len(result) == 1

@@ -15,16 +15,20 @@ class BaseFunctionTests:
     def get_function_returns(self) -> str:
         return "integer"
 
+    def get_function_deterministic(self) -> bool:
+        return False
+
     def get_updated_function_statement(self) -> str:
         return self.get_function_statement()
-    
+
     def test_function_create_and_drop(self, session: Session, database: SQLDatabase):
         function = session.context.build_empty_function(
             database,
             name="test_function",
             parameters=self.get_function_parameters(),
             returns=self.get_function_returns(),
-            statement=self.get_function_statement()
+            statement=self.get_function_statement(),
+            deterministic=self.get_function_deterministic(),
         )
         
         assert function.is_new is True
@@ -50,6 +54,7 @@ class BaseFunctionTests:
             parameters=self.get_function_parameters(),
             returns=self.get_function_returns(),
             statement=self.get_function_statement(),
+            deterministic=self.get_function_deterministic(),
         )
 
         assert function.create() is True

@@ -3,6 +3,7 @@ import locale
 import os
 
 from pathlib import Path
+from typing import Optional
 
 import wx
 
@@ -10,7 +11,7 @@ from constants import WORKDIR
 from icons import IconRegistry
 
 from helpers.loader import Loader
-from helpers.logger import logger
+from helpers.logger import configure_logging, enable_fault_handler, install_global_exception_hooks, logger
 from helpers.settings import Settings, SettingsRepository
 
 from windows.components.stc.styles import apply_stc_theme, set_theme_loader
@@ -23,9 +24,6 @@ from windows.components.stc.theme_loader import ThemeLoader
 class PeterSQL(wx.App):
     locale: wx.Locale = wx.Locale()
 
-    settings_repository = SettingsRepository(WORKDIR / "settings.yml")
-    settings: Settings = settings_repository.load()
-
     main_frame: wx.Frame = None
 
     icon_registry_16: IconRegistry
@@ -34,13 +32,26 @@ class PeterSQL(wx.App):
     
     theme_loader: ThemeLoader
 
+    def __init__(
+        self,
+        *args,
+        settings_path: Optional[Path] = None,
+        **kwargs,
+    ):
+        if settings_path is None:
+            settings_path = WORKDIR / "settings.yml"
+
+        self.settings_repository = SettingsRepository(settings_path)
+        self.settings = self.settings_repository.load()
+        super().__init__(*args, **kwargs)
+
     def OnInit(self) -> bool:
         Loader.loading.subscribe(self._on_loading_change)
 
         self.icon_registry_16 = IconRegistry(WORKDIR / "icons", 16)
 
         self._init_theme_loader()
-        
+
         self.theme_manager = ThemeManager(apply_function=apply_stc_theme)
         self.syntax_registry = SyntaxRegistry([JSON, SQL, XML, YAML, MARKDOWN, HTML, REGEX, CSV, BASE64, TEXT])
 
@@ -48,6 +59,11 @@ class PeterSQL(wx.App):
 
         self.open_session_manager()
 
+        return True
+
+    def OnExceptionInMainLoop(self) -> bool:
+        # wx calls this hook implicitly when an exception escapes an event callback in MainLoop.
+        logger.exception("Unhandled exception raised inside wx main loop")
         return True
     
     def _init_theme_loader(self) -> None:
@@ -94,6 +110,11 @@ class PeterSQL(wx.App):
     def open_main_frame(self) -> None:
         try:
             from windows.main.controller import MainFrameController
+            from windows.splash import SplashController
+
+            splash = SplashController()
+            splash.Show()
+            splash.Update()
 
             self.main_frame = MainFrameController()
             size_values = self.settings.get_value("ui", "window", "size", default=[1920, 1080])
@@ -107,12 +128,14 @@ class PeterSQL(wx.App):
             self.main_frame.SetIcon(
                 wx.Icon(str(WORKDIR / "icons" / "petersql.ico"))
             )
-            self.main_frame.Show()
-
             self.main_frame.Bind(wx.EVT_SIZE, self._on_size)
             self.main_frame.Bind(wx.EVT_MOVE, self._on_move)
+
+            splash.start_close(on_done=self.main_frame.Show)
         except Exception as ex:
             logger.error(ex, exc_info=True)
+            if 'splash' in locals():
+                splash.Destroy()
 
     def _on_size(self, event: wx.SizeEvent) -> None:
         size = event.GetSize()
@@ -138,5 +161,10 @@ class PeterSQL(wx.App):
 
 
 if __name__ == "__main__":
+    logs_directory = WORKDIR / "logs"
+    configure_logging(logs_directory / "petersql.log")
+    enable_fault_handler(logs_directory / "fault.log")
+    install_global_exception_hooks()
+
     app = PeterSQL()
     app.MainLoop()

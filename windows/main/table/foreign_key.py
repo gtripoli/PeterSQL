@@ -140,9 +140,9 @@ class TableForeignKeyController:
         index = len(table.foreign_keys)
 
         new_empty_foreign_key = session.context.build_empty_foreign_key(
-            name="",
-            table=table,
-            columns=[]
+            table,
+            [],
+            name = "",
         )
 
         table.foreign_keys.append(new_empty_foreign_key)

@@ -85,6 +85,13 @@ class MySQLContext(AbstractContext):
 
         self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
+        if self.connection.read_only:
+            self.execute("SET SESSION TRANSACTION READ ONLY;")
+
+    def set_write_mode(self, enabled: bool) -> None:
+        mode = "READ WRITE" if enabled else "READ ONLY"
+        self.execute(f"SET SESSION TRANSACTION {mode};")
+
     def _parse_type(self, column_type: str):
         """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
 
@@ -202,6 +209,7 @@ class MySQLContext(AbstractContext):
                 cursorclass=pymysql.cursors.DictCursor,
                 connect_timeout=connect_timeout,
                 compress=compressed_protocol,
+                autocommit=True,
                 **connect_kwargs,
             )
             if use_tls:
@@ -303,6 +311,7 @@ class MySQLContext(AbstractContext):
                     context=self,
                     get_tables_handler=self.get_tables,
                     get_procedures_handler=self.get_procedures,
+                    get_functions_handler=self.get_functions,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
@@ -332,6 +341,31 @@ class MySQLContext(AbstractContext):
 
         return results
 
+    def get_functions(self, database: SQLDatabase) -> list["MySQLFunction"]:
+        from structures.engines.mysql.database import MySQLFunction
+
+        results: list[MySQLFunction] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MySQLFunction(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    returns="",
+                    statement="",
+                )
+            )
+        return results
+
     def get_views(self, database: SQLDatabase):
         results: list[MySQLView] = []
         self.execute(
@@ -344,6 +378,8 @@ class MySQLContext(AbstractContext):
                     name=result["TABLE_NAME"],
                     database=database,
                     statement=result["VIEW_DEFINITION"] or "",
+                    get_columns_handler=self.get_columns,
+                    get_records_handler=self.get_records,
                 )
             )
 
@@ -613,6 +649,18 @@ class MySQLContext(AbstractContext):
         logger.debug(f"get records for table={table.name}")
         return results
 
+    def build_empty_database(self, /, name: str = "") -> MySQLDatabase:
+        return MySQLDatabase(
+            id=MySQLContext.get_temporary_id(self.databases),
+            name=name,
+            context=self,
+            get_tables_handler=self.get_tables,
+            get_procedures_handler=self.get_procedures,
+            get_functions_handler=self.get_functions,
+            get_views_handler=self.get_views,
+            get_triggers_handler=self.get_triggers,
+        )
+
     def build_empty_table(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> MySQLTable:
@@ -741,6 +789,8 @@ class MySQLContext(AbstractContext):
             name=name,
             database=database,
             statement=default_values.get("statement", ""),
+            get_columns_handler=self.get_columns,
+            get_records_handler=self.get_records,
         )
 
     def build_empty_function(
@@ -760,7 +810,7 @@ class MySQLContext(AbstractContext):
             parameters=default_values.get("parameters", ""),
             returns=default_values.get("returns", "INT"),
             deterministic=default_values.get("deterministic", False),
-            sql=default_values.get("sql", ""),
+            statement=default_values.get("statement", ""),
         )
 
     def build_empty_procedure(

@@ -206,19 +206,32 @@ class BaseDataViewCtrl(wx.dataview.DataViewCtrl):
             # For editable cells, use EditItem
             wx.CallAfter(self.EditItem, item, column)
 
-    def calculate_column_width(self, text, col=None):
-        w = 0
-        cw = 0
+    def autosize_columns_from_content(self, sample_rows: int = 30):
+        if not (model := self.GetModel()):
+            return
+        n_rows = min(model.GetCount(), sample_rows)
 
-        if view := self.GetParent():
-            dc = wx.ClientDC(view)
-            w, h = dc.GetTextExtent(str(text))
-            if col:
-                cw = self.GetCurrentColumn().GetWidth()
+        dc = wx.ClientDC(self)
+        dc.SetFont(self.GetFont())
 
-        return max(cw, w + 20)
+        for col_idx, col in enumerate(self.GetColumns()):
+            # header
+            max_width = self.measure_text(col.GetTitle())
 
-    def measure_text(self, text: str, padding: int = 24) -> int:
+            # sample rows
+            for row in range(n_rows):
+                row_value = model.GetValueByRow(row, col_idx)
+                if row_value is None:
+                    continue
+                row_width = self.measure_text(str(row_value))
+                if row_width > max_width:
+                    max_width = row_width
+
+            #             width = max_w + 24
+            width = max(60, min(max_width, 360))
+            col.SetWidth(width)
+
+    def measure_text(self, text: str, padding: int = 32) -> int:
         dc = wx.ClientDC(self)
         dc.SetFont(self.GetFont())
         width, _ = dc.GetTextExtent(str(text))

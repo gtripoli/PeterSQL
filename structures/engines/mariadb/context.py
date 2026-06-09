@@ -84,6 +84,13 @@ class MariaDBContext(AbstractContext):
 
         self.FUNCTIONS = tuple(dict.fromkeys(builtin_functions + user_functions))
 
+        if self.connection.read_only:
+            self.execute("SET SESSION TRANSACTION READ ONLY;")
+
+    def set_write_mode(self, enabled: bool) -> None:
+        mode = "READ WRITE" if enabled else "READ ONLY"
+        self.execute(f"SET SESSION TRANSACTION {mode};")
+
     def _parse_type(self, column_type: str):
         """Parse a raw COLUMN_TYPE string from information_schema into structured field attributes.
 
@@ -202,6 +209,7 @@ class MariaDBContext(AbstractContext):
                     port=self.port,
                     connect_timeout=connect_timeout,
                     compress=compressed_protocol,
+                    autocommit=True,
                     **connect_kwargs,
                 )
                 if use_tls:
@@ -293,6 +301,7 @@ class MariaDBContext(AbstractContext):
                     context=self,
                     get_tables_handler=self.get_tables,
                     get_procedures_handler=self.get_procedures,
+                    get_functions_handler=self.get_functions,
                     get_views_handler=self.get_views,
                     get_triggers_handler=self.get_triggers,
                 )
@@ -322,6 +331,31 @@ class MariaDBContext(AbstractContext):
 
         return results
 
+    def get_functions(self, database: SQLDatabase) -> list["MariaDBFunction"]:
+        from structures.engines.mariadb.database import MariaDBFunction
+
+        results: list[MariaDBFunction] = []
+        self.execute(
+            f"""
+            SELECT ROUTINE_NAME
+            FROM INFORMATION_SCHEMA.ROUTINES
+            WHERE ROUTINE_SCHEMA = '{database.name}' AND ROUTINE_TYPE = 'FUNCTION'
+            ORDER BY ROUTINE_NAME
+            """
+        )
+        for i, result in enumerate(self.fetchall()):
+            results.append(
+                MariaDBFunction(
+                    id=i,
+                    name=result["ROUTINE_NAME"],
+                    database=database,
+                    parameters="",
+                    returns="",
+                    statement="",
+                )
+            )
+        return results
+
     def get_views(self, database: SQLDatabase):
         results: list[MariaDBView] = []
         self.execute(
@@ -334,6 +368,8 @@ class MariaDBContext(AbstractContext):
                     name=result["TABLE_NAME"],
                     database=database,
                     statement=result["VIEW_DEFINITION"],
+                    get_columns_handler=self.get_columns,
+                    get_records_handler=self.get_records,
                 )
             )
 
@@ -602,6 +638,17 @@ class MariaDBContext(AbstractContext):
 
         return results
 
+    def build_empty_database(self, /, name: str = "") -> MariaDBDatabase:
+        return MariaDBDatabase(
+            id=MariaDBContext.get_temporary_id(self.databases),
+            name=name,
+            context=self,
+            get_tables_handler=self.get_tables,
+            get_procedures_handler=self.get_procedures,
+            get_views_handler=self.get_views,
+            get_triggers_handler=self.get_triggers,
+        )
+
     def build_empty_table(
         self, database: SQLDatabase, /, name: Optional[str] = None, **default_values
     ) -> MariaDBTable:
@@ -734,6 +781,8 @@ class MariaDBContext(AbstractContext):
             name=name,
             database=database,
             statement=default_values.get("statement", ""),
+            get_columns_handler=self.get_columns,
+            get_records_handler=self.get_records,
         )
 
     def build_empty_function(

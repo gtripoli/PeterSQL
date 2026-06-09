@@ -48,6 +48,7 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_tree_controller.on_item_activated = (
             lambda connection: self.on_connect(None)
         )
+        self.connections_tree_controller.on_item_renamed = self._on_item_renamed
 
         self.connections_model = ConnectionModel()
         self.connections_model.bind_controls(
@@ -71,6 +72,7 @@ class ConnectionsManager(ConnectionsDialog):
             total_connection_attempts=self.total_connection_attempts,
             average_connection_time=self.average_connection_time,
             most_recent_connection_duration=self.most_recent_connection_duration,
+            read_only=self.read_only,
             ssh_tunnel_enabled=self.ssh_tunnel_enabled,
             ssh_tunnel_executable=self.ssh_tunnel_executable,
             ssh_tunnel_hostname=self.ssh_tunnel_hostname,
@@ -644,6 +646,20 @@ class ConnectionsManager(ConnectionsDialog):
         self.connections_tree_ctrl.Select(item)
         self.connections_tree_ctrl.EnsureVisible(item)
 
+    def _select_directory_in_tree(self, directory_id: int) -> None:
+        directory = self._find_directory_by_id(directory_id)
+        if directory is None:
+            return
+
+        item = self.connections_tree_controller.model.ObjectToItem(directory)
+        if item is None or not item.IsOk():
+            return
+
+        self._expand_item_parents(item)
+        self.connections_tree_ctrl.Select(item)
+        self.connections_tree_ctrl.EnsureVisible(item)
+        CURRENT_DIRECTORY(directory)
+
     def on_create_directory(self, event):
         if not self._confirm_save_pending_changes():
             return
@@ -653,10 +669,7 @@ class ConnectionsManager(ConnectionsDialog):
         new_dir = ConnectionDirectory(id=-1, name=_("New directory"))
         self._repository.add_directory(new_dir, parent)
 
-        item = self.connections_tree_controller.model.ObjectToItem(new_dir)
-        if item.IsOk():
-            self.connections_tree_ctrl.Select(item)
-            self.connections_tree_controller.edit_item(item)
+        wx.CallAfter(self._select_directory_in_tree, new_dir.id)
 
         if parent:
             parent_item = self.connections_tree_controller.model.ObjectToItem(parent)
@@ -715,6 +728,16 @@ class ConnectionsManager(ConnectionsDialog):
         PENDING_CONNECTION(None)
         wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
         wx.CallAfter(self._select_connection_in_tree, refreshed_connection)
+
+    def _on_item_renamed(self, obj):
+        expanded_paths = self._capture_expanded_directory_paths()
+        if isinstance(obj, ConnectionDirectory):
+            self._repository.save_directory(obj)
+            CURRENT_DIRECTORY(obj)
+        elif isinstance(obj, Connection):
+            self._repository.save_connection(obj)
+            CURRENT_CONNECTION(obj)
+        wx.CallAfter(self._restore_expanded_directory_paths, expanded_paths)
 
     def on_rename(self, event):
         selected_item = self._get_action_item()

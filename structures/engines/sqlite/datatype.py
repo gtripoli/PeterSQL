@@ -26,3 +26,5 @@ class SQLiteDataType(StandardDataType):
     NUMERIC = SQLDataType(name="NUMERIC", category=DataTypeCategory.REAL)
     DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, has_precision=True, has_scale=True)
     BOOLEAN = StandardDataType.BOOLEAN
+
+    UNKNOWN = SQLDataType(name="UNKNOWN", category=DataTypeCategory.TEXT, alias=["ANY"])

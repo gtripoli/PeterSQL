@@ -15,6 +15,7 @@ from structures.connection import Connection, ConnectionEngine
 from structures.engines.database import SQLTable, SQLRecord
 
 from windows.main.query.executor import QueryExecutor
+from windows.state import CURRENT_DATABASE
 
 
 @dataclasses.dataclass
@@ -154,7 +155,7 @@ class RecordsExecutor:
         orders = operation_kwargs.get("orders")
 
         records = context.get_records(
-            table=table,
+            table,
             filters=filters,
             limit=limit,
             offset=offset,
@@ -209,7 +210,7 @@ class RecordsExecutor:
         #     context.connect(**connect_kwargs)
         #     return context
 
-        context.connect(skip_before_connect=True, skip_after_connect=True, database=self.session.database)
+        context.connect(skip_before_connect=True, skip_after_connect=True, database=CURRENT_DATABASE.get_value().name)
         return context
 
     def _set_worker_context(self, context: Any) -> None:

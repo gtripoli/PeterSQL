@@ -9,9 +9,20 @@ from tests.engines.base_column_tests import BaseColumnTests
 from tests.engines.base_index_tests import BaseIndexTests
 from tests.engines.base_foreignkey_tests import BaseForeignKeyTests
 from tests.engines.base_check_tests import BaseCheckTests
+from tests.engines.base_function_tests import BaseFunctionTests
 from tests.engines.base_procedure_tests import BaseProcedureTests
 from tests.engines.base_trigger_tests import BaseTriggerTests
-from tests.engines.base_view_tests import BaseViewSaveTests, BaseViewIsNewTests, BaseViewDefinerTests
+from tests.engines.base_readonly_tests import BaseReadOnlyTests
+from tests.engines.base_view_tests import (
+    BaseViewCreateDropTests,
+    BaseViewAlterTests,
+    BaseViewSaveTests,
+    BaseViewIsNewTests,
+    BaseViewColumnsTests,
+    BaseViewRecordsTests,
+    BaseViewCopyTests,
+    BaseViewDefinerTests,
+)
 
 
 @pytest.mark.integration
@@ -60,6 +71,26 @@ class TestMySQLCheck(BaseCheckTests):
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("mysql")
+class TestMySQLFunction(BaseFunctionTests):
+
+    def get_function_parameters(self) -> str:
+        return "x INT"
+
+    def get_function_returns(self) -> str:
+        return "INT"
+
+    def get_function_deterministic(self) -> bool:
+        return True
+
+    def get_function_statement(self) -> str:
+        return "RETURN x + 1"
+
+    def get_updated_function_statement(self) -> str:
+        return "RETURN x + 2"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLProcedure(BaseProcedureTests):
 
     def get_procedure_statement(self) -> str:
@@ -75,6 +106,25 @@ class TestMySQLTrigger(BaseTriggerTests):
 
     def get_trigger_statement(self, db_name: str, table_name: str) -> str:
         return f"AFTER INSERT ON {db_name}.{table_name} FOR EACH ROW BEGIN END"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLViewCreateDrop(BaseViewCreateDropTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id, 'test' as name"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLViewAlter(BaseViewAlterTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+    def get_updated_view_statement(self) -> str:
+        return "SELECT 1 as id, 'updated' as name"
 
 
 @pytest.mark.integration
@@ -101,6 +151,30 @@ class TestMySQLViewIsNew(BaseViewIsNewTests):
 
 @pytest.mark.integration
 @pytest.mark.xdist_group("mysql")
+class TestMySQLViewColumns(BaseViewColumnsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLViewRecords(BaseViewRecordsTests):
+
+    def get_users_view_statement(self) -> str:
+        return "SELECT id, name FROM users"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLViewCopy(BaseViewCopyTests):
+
+    def get_simple_view_statement(self) -> str:
+        return "SELECT 1 as id"
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
 class TestMySQLViewDefiner(BaseViewDefinerTests):
     pass
 
@@ -120,3 +194,10 @@ class TestMySQLDatabase(BaseDatabaseCreateAlterTests):
             "character_set": "utf8mb4",
             "default_collation": "utf8mb4_general_ci",
         }
+
+
+
+@pytest.mark.integration
+@pytest.mark.xdist_group("mysql")
+class TestMySQLReadOnly(BaseReadOnlyTests):
+    pass

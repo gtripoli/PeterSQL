@@ -1,4 +1,5 @@
 import dataclasses
+import os
 from typing import Callable
 
 import wx
@@ -8,6 +9,7 @@ from icons import IconList
 
 from helpers import bytes_to_human
 from helpers.loader import Loader
+from helpers.logger import logger
 from helpers.observables import CallbackEvent
 
 from structures.session import Session
@@ -44,8 +46,8 @@ class GaugeWithLabel(wx.Panel):
         self.label.SetFont(font)
 
     def SetValue(self, val):
-        self.gauge.SetValue(val)
-        self.label.SetLabel(f"{val}%")
+        self.gauge.SetValue(int(val))
+        self.label.SetLabel(f"{val:0.1f}%")
         self.label.Refresh()
 
 
@@ -57,6 +59,7 @@ class TreeExplorerController:
         self.app = wx.GetApp()
 
         self.tree_ctrl_explorer = tree_ctrl_explorer
+        self._database_items: dict = {}
 
         self.tree_ctrl_explorer.AddColumn("Name", width=200)
         self.tree_ctrl_explorer.AddColumn("Usage", width=100, flag=wx.ALIGN_RIGHT)
@@ -103,16 +106,21 @@ class TreeExplorerController:
             if isinstance(obj, Session):
                 self.select_session(obj, event)
             elif isinstance(obj, SQLDatabase):
+                parent_item = self.tree_ctrl_explorer.GetItemParent(item)
+                parent_session = self.tree_ctrl_explorer.GetItemPyData(parent_item)
+                if isinstance(parent_session, Session):
+                    self.select_session(parent_session, event)
                 self.select_database(obj, item, event)
             elif isinstance(
                     obj,
                     (SQLTable, SQLView, SQLTrigger, SQLProcedure, SQLFunction, SQLEvent),
             ):
-                self.select_sql_object(obj)
+                wx.CallAfter(self.select_sql_object, obj)
 
             event.Skip()
 
     def populate_tree(self):
+        self._database_items = {}
         self.tree_ctrl_explorer.DeleteAllItems()
         self.root_item = self.tree_ctrl_explorer.AddRoot("")
 
@@ -125,6 +133,7 @@ class TreeExplorerController:
         session_item = self.tree_ctrl_explorer.AppendItem(self.root_item, session.name, image=wx.GetApp().icon_registry_16.get_index(getattr(IconList, session.engine.name, IconList.NOT_FOUND)), data=session)
         for database in session.context.databases.get_value():
             db_item = self.tree_ctrl_explorer.AppendItem(session_item, database.name, image=wx.GetApp().icon_registry_16.get_index(IconList.DATABASE), data=database)
+            self._database_items[id(database)] = db_item
             self.tree_ctrl_explorer.SetItemText(db_item, bytes_to_human(database.total_bytes), column=1)
             self.tree_ctrl_explorer.AppendItem(db_item, "Loading...", image=wx.GetApp().icon_registry_16.get_index(IconList.CLOCK), data=None)
 
@@ -165,7 +174,7 @@ class TreeExplorerController:
                 )
 
                 if isinstance(obj, SQLTable):
-                    percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
+                    percentage = float((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
 
                     gauge_panel = GaugeWithLabel(self.tree_ctrl_explorer, max_range=100, size=(self.tree_ctrl_explorer.GetColumnWidth(1) - 20, self.tree_ctrl_explorer.CharHeight))
                     gauge_panel.SetValue(percentage)
@@ -178,20 +187,28 @@ class TreeExplorerController:
             self.tree_ctrl_explorer.Delete(loading_item)
 
     def reset_current_objects(self):
+        logger.debug(
+            "ui trace: explorer.reset_current_objects before table=%s view=%s trigger=%s",
+            getattr(CURRENT_TABLE.get_value(), "name", None) if CURRENT_TABLE.get_value() is not None else None,
+            getattr(CURRENT_VIEW.get_value(), "name", None) if CURRENT_VIEW.get_value() is not None else None,
+            getattr(CURRENT_TRIGGER.get_value(), "name", None) if CURRENT_TRIGGER.get_value() is not None else None,
+        )
         CURRENT_TABLE.set_value(None)
         CURRENT_VIEW.set_value(None)
         CURRENT_TRIGGER.set_value(None)
         CURRENT_PROCEDURE.set_value(None)
         CURRENT_EVENT.set_value(None)
         CURRENT_FUNCTION.set_value(None)
+        logger.debug("ui trace: explorer.reset_current_objects after clear")
 
     def select_session(self, session: Session, event):
         if session == CURRENT_SESSION.get_value() and CURRENT_DATABASE.get_value():
+            CURRENT_SESSION.execute_callback(CallbackEvent.AFTER_CHANGE)
             event.Skip()
             return
         CURRENT_SESSION.set_value(session)
         CURRENT_CONNECTION.set_value(session.connection)
-        # CURRENT_DATABASE.set_value(None)
+        CURRENT_DATABASE.set_value(None)
 
     def select_database(self, database: SQLDatabase, item, event):
         if database != CURRENT_DATABASE.get_value():
@@ -204,6 +221,7 @@ class TreeExplorerController:
                                    message="not connected").ShowModal() == wx.ID_OK:
                     session.connect()
 
+            self.reset_current_objects()
             CURRENT_DATABASE.set_value(database)
             CURRENT_SESSION.get_value().context.set_database(database)
 
@@ -221,7 +239,6 @@ class TreeExplorerController:
 
         if database != CURRENT_DATABASE.get_value():
             CURRENT_DATABASE.set_value(database)
-            database.context
             CURRENT_SESSION.get_value().context.set_database(database)
 
         if isinstance(sql_obj, SQLTable):
@@ -247,3 +264,64 @@ class TreeExplorerController:
         elif isinstance(sql_obj, SQLEvent):
             if not CURRENT_EVENT.get_value() or sql_obj != CURRENT_EVENT.get_value():
                 CURRENT_EVENT.set_value(sql_obj.copy())
+
+    def refresh_current_database(self):
+        database = CURRENT_DATABASE.get_value()
+        if not database:
+            logger.debug("explorer refresh: no current database")
+            return
+
+        db_item = self._database_items.get(id(database))
+        if db_item is None or not db_item.IsOk():
+            logger.debug("explorer refresh: db_item not found for database=%s id=%s keys=%s", database.name, id(database), list(self._database_items.keys()))
+            return
+
+        logger.debug("explorer refresh: refreshing database=%s", database.name)
+        for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+            observable = getattr(database, observable_name, None)
+            if observable is not None and observable.is_loaded:
+                logger.debug("explorer refresh: refreshing observable=%s", observable_name)
+                observable.refresh()
+            else:
+                logger.debug("explorer refresh: skipping observable=%s is_loaded=%s", observable_name, getattr(observable, "is_loaded", None))
+
+        self.tree_ctrl_explorer.DeleteChildren(db_item)
+        self._load_observables_for_refresh(db_item, database)
+        self.tree_ctrl_explorer.Expand(db_item)
+        self.tree_ctrl_explorer.Layout()
+
+    def _load_observables_for_refresh(self, db_item, database: SQLDatabase):
+        for observable_name in ["tables", "views", "procedures", "functions", "triggers", "events"]:
+            observable = getattr(database, observable_name, None)
+
+            category_item = self.tree_ctrl_explorer.AppendItem(
+                db_item,
+                observable_name.capitalize(),
+                image=wx.GetApp().icon_registry_16.get_index(
+                    getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)
+                ),
+                data=None
+            )
+
+            if observable is None or not observable.is_loaded:
+                continue
+
+            objs = observable.get_value()
+            if not objs:
+                continue
+
+            for obj in objs:
+                obj_item = self.tree_ctrl_explorer.AppendItem(
+                    category_item,
+                    obj.name,
+                    image=wx.GetApp().icon_registry_16.get_index(
+                        getattr(IconList, observable_name[:-1].upper(), IconList.NOT_FOUND)
+                    ),
+                    data=obj
+                )
+
+                if isinstance(obj, SQLTable):
+                    percentage = int((obj.total_bytes / database.total_bytes) * 100) if database.total_bytes else 0
+                    self.tree_ctrl_explorer.SetItemText(obj_item, f"{percentage}%", column=1)
+                else:
+                    self.tree_ctrl_explorer.SetItemText(obj_item, "", column=1)
