@@ -121,6 +121,7 @@ class ConnectionsRepository(
                         delete_database_password(password_keyring_id)
                     else:
                         set_database_password(secret_id, get_database_password(password_keyring_id))
+                if not config_data.get("password"):
                     config_data["password"] = get_database_password(secret_id)
                 configuration = self._build_credentials_configuration(config_data)
             elif engine == ConnectionEngine.SQLITE:
@@ -137,9 +138,12 @@ class ConnectionsRepository(
                 delete_ssh_password(ssh_password_keyring_id)
             else:
                 set_ssh_password(secret_id, get_ssh_password(ssh_password_keyring_id))
+
+        if ssh_tunnel_data:
             ssh_tunnel_data = dict(ssh_tunnel_data)
             ssh_tunnel_data.pop("password_keyring_id", None)
-            ssh_tunnel_data["password"] = get_ssh_password(secret_id) or ""
+            if not ssh_tunnel_data.get("password"):
+                ssh_tunnel_data["password"] = get_ssh_password(secret_id) or ""
 
         ssh_config = self._build_ssh_configuration(ssh_tunnel_data)
 
