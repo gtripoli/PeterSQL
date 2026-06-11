@@ -205,6 +205,7 @@ class PostgreSQLContext(AbstractContext):
                 )
 
                 self._connection = psycopg2.connect(**base_kwargs)
+                self._connection.autocommit = True
                 self._cursor = self._connection.cursor(
                     cursor_factory=psycopg2.extras.RealDictCursor
                 )

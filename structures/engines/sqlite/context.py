@@ -114,6 +114,7 @@ class SQLiteContext(AbstractContext):
                 logger.error(f"Failed to connect to SQLite: {e}")
                 raise
             else:
+                self._connection.isolation_level = None
                 self._connection.row_factory = sqlite3.Row
                 self._cursor = self._connection.cursor()
                 if not skip_after_connect:
