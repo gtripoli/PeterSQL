@@ -357,7 +357,7 @@ class TableRecordsDataViewCtrl(BaseDataViewCtrl):
 
                 records = []
                 references = []
-                if reference_table := next((table for table in database.tables if table.name == foreign_key.reference_table), None):
+                if reference_table := next((table for table in database.tables if table.name == foreign_key.reference_table or f"{getattr(table, 'schema', '')}.{table.name}" == foreign_key.reference_table), None):
                     records = session.context.get_records(reference_table)
 
                 for record in records:
