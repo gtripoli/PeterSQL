@@ -1,5 +1,5 @@
 ![status: unstable](https://img.shields.io/badge/status-unstable-orange)
-![Coverage](https://img.shields.io/badge/coverage-46%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-47%25-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-2495-blue)
 
 ![SQLite](https://img.shields.io/badge/SQLite-3.50.4-green)
@@ -126,7 +126,7 @@ For detailed test coverage matrix, statistics, and architecture, see **[tests/RE
 | Suite | Passed | Skipped |
 |-------|--------|---------|
 | autocomplete | ![passed](https://img.shields.io/badge/passed-2540-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
-| core | ![passed](https://img.shields.io/badge/passed-143-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
+| core | ![passed](https://img.shields.io/badge/passed-147-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
 | ui | ![passed](https://img.shields.io/badge/passed-0-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-0-lightgrey) |
 | mysql | ![passed](https://img.shields.io/badge/passed-119-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-1-lightgrey) |
 | mariadb | ![passed](https://img.shields.io/badge/passed-237-brightgreen) | ![skipped](https://img.shields.io/badge/skipped-3-lightgrey) |

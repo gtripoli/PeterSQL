@@ -56,7 +56,7 @@ Please open an issue describing:
 
 Main requirements:
 
-- Python **3.11+**
+- Python **>=3.14**
 - wxPython
 - Supported databases (optional for development):
     - SQLite
