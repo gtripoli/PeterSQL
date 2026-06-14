@@ -13,6 +13,7 @@ from windows.state import (
     CURRENT_TABLE,
     CURRENT_TRIGGER,
     CURRENT_VIEW,
+    DATABASE_SELECTED_TABLE,
     SESSIONS_LIST,
     WRITE_OVERRIDE,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "CURRENT_TABLE",
     "CURRENT_TRIGGER",
     "CURRENT_VIEW",
+    "DATABASE_SELECTED_TABLE",
     "SESSIONS_LIST",
     "WRITE_OVERRIDE",
 ]
