@@ -2,6 +2,7 @@ import abc
 import copy
 import dataclasses
 import datetime
+import pathlib
 import uuid
 
 from typing import Optional, Callable, Literal, Self
@@ -111,11 +112,13 @@ class SQLDatabase(abc.ABC):
         self,
         /,
         *,
+        output_dir: pathlib.Path | None = None,
         include_schema: bool = True,
         include_records: bool = True,
     ) -> str:
         return create_database_dump(
             self,
+            output_dir=output_dir,
             include_schema=include_schema,
             include_records=include_records,
         )
@@ -316,41 +319,6 @@ class SQLCheck(abc.ABC):
     @property
     def fully_qualified_name(self):
         return self.table.database.context.qualify(self.table.database.name, self.table.name, self.name)
-
-    @abc.abstractmethod
-    def add(self) -> bool:
-        """Add the column to the table.
-
-        Concrete engine implementations must execute the appropriate SQL
-        statement and return ``True`` on success.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def rename(self, new_name: str) -> bool:
-        """Rename the column to ``new_name``.
-
-        Implementations should perform the ALTER operation and return ``True``
-        on success.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def drop(self) -> bool:
-        """Drop the column from the table.
-
-        Implementations must execute the appropriate DROP COLUMN statement.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def modify(self, current: Self):
-        """Modify the column to match the definition of ``current``.
-
-        ``current`` is the existing column definition; the method should apply
-        any necessary ALTER statements to bring the database column in sync.
-        """
-        raise NotImplementedError
 
     def copy(self):
         cls = self.__class__
