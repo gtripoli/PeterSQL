@@ -10,11 +10,14 @@ def create_database_dump(
     database: Any,
     /,
     *,
+    output_dir: pathlib.Path | None = None,
     include_schema: bool = True,
     include_records: bool = True,
 ) -> str:
+    if output_dir is None:
+        output_dir = pathlib.Path.home()
     database.context.set_database(database)
-    dump_path = _build_dump_path(database.name)
+    dump_path = _build_dump_path(database.name, output_dir)
     with dump_path.open("w", encoding="utf-8") as handle:
         _write_header(handle)
         if include_schema:
@@ -22,15 +25,16 @@ def create_database_dump(
         if include_records:
             _write_records(handle, database)
 
+    print(f"Dump written to: {dump_path}")
     return str(dump_path)
 
 
-def _build_dump_path(database_name: str) -> pathlib.Path:
+def _build_dump_path(database_name: str, output_dir: pathlib.Path) -> pathlib.Path:
     now = datetime.datetime.now()
     safe_name = "".join(char if char.isalnum() or char == "_" else "_" for char in database_name)
     suffix = now.strftime("%Y%m%d_%H%M%S_%f")
     filename = f"petersql_backup_{safe_name}_{suffix}.sql"
-    return pathlib.Path.cwd() / filename
+    return output_dir / filename
 
 
 def _write_header(handle):
