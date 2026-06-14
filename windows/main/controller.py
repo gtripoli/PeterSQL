@@ -1720,8 +1720,6 @@ class MainFrameController(MainFrameView):
                     self.MainFrameNotebook.GetSelection(),
                 )
 
-        self.tool_clone_table.Enable(table is not None)
-
     def _on_new_database(self, database) -> None:
         self._update_database_action_buttons()
 
@@ -1729,13 +1727,19 @@ class MainFrameController(MainFrameView):
         self.btn_apply_table.Enable(bool(table is not None and table.is_valid))
         self.btn_cancel_table.Enable(bool(table is not None))
 
+        if table is not None:
+            self.tool_delete_table.Enable(False)
+            self.tool_clone_table.Enable(False)
+
         if isinstance(table, SQLTable):
             self.sql_create_table.SetText(
                 sqlglot.parse_one(table.raw_create(), read=table.database.context.connection.engine.value.dialect).sql(pretty=True)
             )
 
     def _on_database_selected_table(self, table: SQLTable):
-        self.tool_delete_table.Enable(table is not None)
+        has_new = NEW_TABLE.get_value() is not None
+        self.tool_delete_table.Enable(table is not None and not has_new)
+        self.tool_clone_table.Enable(table is not None and not has_new)
 
     # def _on_selected_table(self, table : SQLTable):
     #     self.tool_delete_table.Enable(table is not None)
@@ -1839,33 +1843,39 @@ class MainFrameController(MainFrameView):
             database.tables.refresh()
 
     def on_clone_table(self, event):
-        table = CURRENT_TABLE.get_value()
+        table = DATABASE_SELECTED_TABLE.get_value()
 
-        if table:
-            new_table = table.copy()
-            new_table.id = -1
-            new_table.name = _("{table_name} (COPY)").format(table_name=new_table.name)
+        if not table:
+            return
 
-            for column in new_table.columns:
-                column.id = -1
-                column.table = new_table
+        new_table = table.copy()
+        new_table.id = -1
+        new_table.name = f"{new_table.name}_copy"
 
-            for index in new_table.indexes:
-                index.id = -1
-                index.table = new_table
+        for column in new_table.columns:
+            column.id = -1
+            column.table = new_table
 
-            for foreign_key in new_table.foreign_keys:
-                foreign_key.id = -1
-                foreign_key.table = new_table
+        for index in new_table.indexes:
+            index.id = -1
+            index.table = new_table
 
-            NEW_TABLE.set_value(new_table)
+        for foreign_key in new_table.foreign_keys:
+            foreign_key.id = -1
+            foreign_key.table = new_table
 
-            DATABASE_SELECTED_TABLE.set_value(None)
-            CURRENT_TABLE.set_value(None)
+        for check in new_table.checks:
+            check.id = -1
+            check.table = new_table
 
-            self._toggle_panel(2, True)
-            self.MainFrameNotebook.SetSelection(2)
-            self.table_name.SetFocus()
+        NEW_TABLE.set_value(new_table)
+        self.edit_table_model._load_table(new_table)
+
+        DATABASE_SELECTED_TABLE.set_value(None)
+
+        self._toggle_panel(2, True)
+        self.MainFrameNotebook.SetSelection(2)
+        self.table_name.SetFocus()
 
     # COLUMNS
     def _on_current_column(self, column: SQLColumn):
