@@ -46,6 +46,11 @@ class MariaDBColumnBuilder(AbstractColumnBuilder):
     def generated(self):
         return f"AS ({self.column.expression}) {self.column.virtuality}" if self.column.virtuality is not None else ''
 
+    def _format_set_values(self, values) -> str:
+        if isinstance(values, list):
+            return ", ".join("'" + str(v).replace("'", "''") + "'" for v in values)
+        return str(values)
+
 
 class MariaDBIndexBuilder(AbstractIndexBuilder):
     TEMPLATE = ["%(type)s", "%(name)s", "(%(columns)s)"]

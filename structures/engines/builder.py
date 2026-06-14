@@ -41,9 +41,23 @@ class AbstractColumnBuilder(abc.ABC):
                 datatype_str += f"({self.column.numeric_precision or self.column.datatype.default_precision})"
 
         if self.column.datatype.has_set:
-            datatype_str += f"({self.column.set or self.column.datatype.default_set})"
+            set_value = self.column.set or self.column.datatype.default_set
+            set_str = self._format_set_values(set_value)
+            datatype_str += f"({set_str})"
 
         return datatype_str
+
+    def _format_set_values(self, values) -> str:
+        """Hook to format ENUM/SET literal values for SQL output.
+
+        The default implementation is conservative: pre-formatted strings are
+        returned as-is, and list values are joined without SQL quoting.
+        Engine-specific builders (MySQL, MariaDB) override this to apply
+        proper single-quote escaping.
+        """
+        if isinstance(values, list):
+            return ", ".join(str(v) for v in values)
+        return str(values)
 
     @property
     def auto_increment(self):
@@ -59,7 +73,7 @@ class AbstractColumnBuilder(abc.ABC):
 
     @property
     def collate(self):
-        return f"CHARSET SET {self.column.table.database.context.COLLATION[self.column.collation_name]} COLLATE {self.column.collation_name}" if self.column.collation_name else ''
+        return f"CHARSET SET {self.column.table.database.context.COLLATIONS[self.column.collation_name]} COLLATE {self.column.collation_name}" if self.column.collation_name else ''
 
     @property
     def virtual(self):
