@@ -1037,40 +1037,35 @@ class MainFrameView ( wx.Frame ):
         self.panel_database = wx.Panel( self.MainFrameNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer27 = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_notebook6 = wx.Notebook( self.panel_database, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_panel30 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer80 = wx.BoxSizer( wx.VERTICAL )
-
-        self.m_splitter7 = wx.SplitterWindow( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_splitter7 = wx.SplitterWindow( self.panel_database, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
         self.m_splitter7.Bind( wx.EVT_IDLE, self.m_splitter7OnIdle )
         self.m_splitter7.SetMinimumPaneSize( 200 )
 
         self.m_panel54 = wx.Panel( self.m_splitter7, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer158 = wx.BoxSizer( wx.VERTICAL )
 
+        self.m_notebook6 = wx.Notebook( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_panel30 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer171 = wx.BoxSizer( wx.VERTICAL )
+
         bSizer159 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText90 = wx.StaticText( self.m_panel54, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText90 = wx.StaticText( self.m_panel30, wx.ID_ANY, _(u"Name"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText90.Wrap( -1 )
 
         self.m_staticText90.SetMinSize( wx.Size( 150,-1 ) )
 
         bSizer159.Add( self.m_staticText90, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-        self.database_name = wx.TextCtrl( self.m_panel54, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.database_name = wx.TextCtrl( self.m_panel30, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_READONLY )
         bSizer159.Add( self.database_name, 1, wx.ALL, 5 )
 
 
-        bSizer158.Add( bSizer159, 0, wx.EXPAND, 5 )
-
-        bSizer1481111 = wx.BoxSizer( wx.HORIZONTAL )
-
-
-        bSizer158.Add( bSizer1481111, 1, wx.EXPAND, 5 )
+        bSizer171.Add( bSizer159, 0, wx.EXPAND, 5 )
 
         bSizer142 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_collation_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_collation_panel = wx.Panel( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1392 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText702 = wx.StaticText( self.database_collation_panel, wx.ID_ANY, _(u"Collation"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1092,43 +1087,86 @@ class MainFrameView ( wx.Frame ):
         bSizer142.Add( self.database_collation_panel, 1, wx.ALIGN_CENTER, 5 )
 
 
-        bSizer142.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-
-        bSizer158.Add( bSizer142, 0, wx.EXPAND, 5 )
+        bSizer171.Add( bSizer142, 0, wx.EXPAND, 5 )
 
         bSizer13911 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_encryption_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_connection_limit_panel = wx.Panel( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer139111 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText70111 = wx.StaticText( self.database_connection_limit_panel, wx.ID_ANY, _(u"Connection limit"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText70111.Wrap( -1 )
+
+        self.m_staticText70111.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer139111.Add( self.m_staticText70111, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.database_connection_limit = wx.SpinCtrl( self.database_connection_limit_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 0, 0 )
+        bSizer139111.Add( self.database_connection_limit, 1, wx.ALL, 5 )
+
+
+        self.database_connection_limit_panel.SetSizer( bSizer139111 )
+        self.database_connection_limit_panel.Layout()
+        bSizer139111.Fit( self.database_connection_limit_panel )
+        bSizer13911.Add( self.database_connection_limit_panel, 1, wx.ALIGN_CENTER, 5 )
+
+        self.database_encryption_panel = wx.Panel( self.m_panel30, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1391 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.database_encryption = wx.CheckBox( self.database_encryption_panel, wx.ID_ANY, _(u"Encryption"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer1391.Add( self.database_encryption, 0, wx.ALL, 5 )
+        bSizer1391.Add( self.database_encryption, 0, wx.ALL|wx.EXPAND, 5 )
 
 
         self.database_encryption_panel.SetSizer( bSizer1391 )
         self.database_encryption_panel.Layout()
         bSizer1391.Fit( self.database_encryption_panel )
-        bSizer13911.Add( self.database_encryption_panel, 1, wx.ALIGN_CENTER, 0 )
-
-        self.database_read_only_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer148 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.database_read_only = wx.CheckBox( self.database_read_only_panel, wx.ID_ANY, _(u"Read Only"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer148.Add( self.database_read_only, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        bSizer13911.Add( self.database_encryption_panel, 0, wx.ALIGN_CENTER, 0 )
 
 
-        self.database_read_only_panel.SetSizer( bSizer148 )
-        self.database_read_only_panel.Layout()
-        bSizer148.Fit( self.database_read_only_panel )
-        bSizer13911.Add( self.database_read_only_panel, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer171.Add( bSizer13911, 0, wx.EXPAND, 5 )
 
 
-        bSizer158.Add( bSizer13911, 0, wx.EXPAND, 5 )
+        self.m_panel30.SetSizer( bSizer171 )
+        self.m_panel30.Layout()
+        bSizer171.Fit( self.m_panel30 )
+        self.m_notebook6.AddPage( self.m_panel30, _(u"General"), True )
+        self.m_panel31 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_panel31.Hide()
 
-        bSizer92 = wx.BoxSizer( wx.HORIZONTAL )
+        bSizer82 = wx.BoxSizer( wx.VERTICAL )
 
-        self.database_tablespace_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_staticText7011 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText7011.Wrap( -1 )
+
+        self.m_staticText7011.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer82.Add( self.m_staticText7011, 0, wx.ALL, 5 )
+
+        self.m_staticText7011111 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText7011111.Wrap( -1 )
+
+        self.m_staticText7011111.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer82.Add( self.m_staticText7011111, 0, wx.ALL, 5 )
+
+        self.m_staticText70111111 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText70111111.Wrap( -1 )
+
+        self.m_staticText70111111.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer82.Add( self.m_staticText70111111, 0, wx.ALL, 5 )
+
+
+        self.m_panel31.SetSizer( bSizer82 )
+        self.m_panel31.Layout()
+        bSizer82.Fit( self.m_panel31 )
+        self.m_notebook6.AddPage( self.m_panel31, _(u"Diagram"), False )
+        self.m_panel801 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer1481111 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer1651 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.database_tablespace_panel = wx.Panel( self.m_panel801, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer13912 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText7012 = wx.StaticText( self.database_tablespace_panel, wx.ID_ANY, _(u"Tablespace"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1147,78 +1185,14 @@ class MainFrameView ( wx.Frame ):
         self.database_tablespace_panel.SetSizer( bSizer13912 )
         self.database_tablespace_panel.Layout()
         bSizer13912.Fit( self.database_tablespace_panel )
-        bSizer92.Add( self.database_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
-
-        self.database_connection_limit_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer139111 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText70111 = wx.StaticText( self.database_connection_limit_panel, wx.ID_ANY, _(u"Connection limit"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText70111.Wrap( -1 )
-
-        self.m_staticText70111.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer139111.Add( self.m_staticText70111, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.database_connection_limit = wx.SpinCtrl( self.database_connection_limit_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 0, 0 )
-        bSizer139111.Add( self.database_connection_limit, 1, wx.ALL, 5 )
+        bSizer1651.Add( self.database_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
 
 
-        self.database_connection_limit_panel.SetSizer( bSizer139111 )
-        self.database_connection_limit_panel.Layout()
-        bSizer139111.Fit( self.database_connection_limit_panel )
-        bSizer92.Add( self.database_connection_limit_panel, 1, wx.ALIGN_CENTER, 5 )
+        bSizer1481111.Add( bSizer1651, 0, wx.EXPAND, 5 )
 
+        bSizer1662 = wx.BoxSizer( wx.HORIZONTAL )
 
-        bSizer158.Add( bSizer92, 0, wx.EXPAND, 5 )
-
-        bSizer1481 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.database_password_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer139121 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText70121 = wx.StaticText( self.database_password_panel, wx.ID_ANY, _(u"Password"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText70121.Wrap( -1 )
-
-        self.m_staticText70121.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer139121.Add( self.m_staticText70121, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        self.m_textCtrl36 = wx.TextCtrl( self.database_password_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
-        bSizer139121.Add( self.m_textCtrl36, 1, wx.ALL, 5 )
-
-
-        self.database_password_panel.SetSizer( bSizer139121 )
-        self.database_password_panel.Layout()
-        bSizer139121.Fit( self.database_password_panel )
-        bSizer1481.Add( self.database_password_panel, 1, wx.ALIGN_CENTER, 5 )
-
-        self.database_profile_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer1391111 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.m_staticText701111 = wx.StaticText( self.database_profile_panel, wx.ID_ANY, _(u"Profile"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText701111.Wrap( -1 )
-
-        self.m_staticText701111.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer1391111.Add( self.m_staticText701111, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-        database_profileChoices = []
-        self.database_profile = wx.Choice( self.database_profile_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, database_profileChoices, 0 )
-        self.database_profile.SetSelection( 0 )
-        bSizer1391111.Add( self.database_profile, 1, wx.ALL, 5 )
-
-
-        self.database_profile_panel.SetSizer( bSizer1391111 )
-        self.database_profile_panel.Layout()
-        bSizer1391111.Fit( self.database_profile_panel )
-        bSizer1481.Add( self.database_profile_panel, 1, wx.ALIGN_CENTER, 5 )
-
-
-        bSizer158.Add( bSizer1481, 0, wx.EXPAND, 5 )
-
-        bSizer96 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.database_default_tablespace_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_default_tablespace_panel = wx.Panel( self.m_panel801, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1391212 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText701212 = wx.StaticText( self.database_default_tablespace_panel, wx.ID_ANY, _(u"Default tablespace"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1237,12 +1211,12 @@ class MainFrameView ( wx.Frame ):
         self.database_default_tablespace_panel.SetSizer( bSizer1391212 )
         self.database_default_tablespace_panel.Layout()
         bSizer1391212.Fit( self.database_default_tablespace_panel )
-        bSizer96.Add( self.database_default_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
+        bSizer1662.Add( self.database_default_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
 
-        self.database_temporary_tablespace_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_temporary_tablespace_panel = wx.Panel( self.m_panel801, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer13912121 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.m_staticText7012121 = wx.StaticText( self.database_temporary_tablespace_panel, wx.ID_ANY, _(u"Temporary tablespace"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText7012121 = wx.StaticText( self.database_temporary_tablespace_panel, wx.ID_ANY, _(u"Temporary tablespace"), wx.DefaultPosition, wx.DefaultSize, wx.ST_ELLIPSIZE_END )
         self.m_staticText7012121.Wrap( -1 )
 
         self.m_staticText7012121.SetMinSize( wx.Size( 150,-1 ) )
@@ -1258,14 +1232,14 @@ class MainFrameView ( wx.Frame ):
         self.database_temporary_tablespace_panel.SetSizer( bSizer13912121 )
         self.database_temporary_tablespace_panel.Layout()
         bSizer13912121.Fit( self.database_temporary_tablespace_panel )
-        bSizer96.Add( self.database_temporary_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
+        bSizer1662.Add( self.database_temporary_tablespace_panel, 1, wx.ALIGN_CENTER, 5 )
 
 
-        bSizer158.Add( bSizer96, 0, wx.EXPAND, 5 )
+        bSizer1481111.Add( bSizer1662, 0, wx.EXPAND, 5 )
 
-        bSizer14811 = wx.BoxSizer( wx.HORIZONTAL )
+        bSizer167 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_quota_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_quota_panel = wx.Panel( self.m_panel801, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer1391211 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText701211 = wx.StaticText( self.database_quota_panel, wx.ID_ANY, _(u"Quota"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1282,9 +1256,9 @@ class MainFrameView ( wx.Frame ):
         self.database_quota_panel.SetSizer( bSizer1391211 )
         self.database_quota_panel.Layout()
         bSizer1391211.Fit( self.database_quota_panel )
-        bSizer14811.Add( self.database_quota_panel, 1, wx.ALIGN_CENTER, 5 )
+        bSizer167.Add( self.database_quota_panel, 1, wx.ALIGN_CENTER, 5 )
 
-        self.database_unlimited_quota_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_unlimited_quota_panel = wx.Panel( self.m_panel801, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer13911111 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.database_unlimited_quota = wx.CheckBox( self.database_unlimited_quota_panel, wx.ID_ANY, _(u"Unlimited quota"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1294,14 +1268,58 @@ class MainFrameView ( wx.Frame ):
         self.database_unlimited_quota_panel.SetSizer( bSizer13911111 )
         self.database_unlimited_quota_panel.Layout()
         bSizer13911111.Fit( self.database_unlimited_quota_panel )
-        bSizer14811.Add( self.database_unlimited_quota_panel, 1, wx.ALIGN_CENTER, 5 )
+        bSizer167.Add( self.database_unlimited_quota_panel, 1, wx.ALIGN_CENTER, 5 )
 
 
-        bSizer158.Add( bSizer14811, 0, wx.EXPAND, 5 )
+        bSizer1481111.Add( bSizer167, 0, wx.EXPAND, 5 )
+
+
+        self.m_panel801.SetSizer( bSizer1481111 )
+        self.m_panel801.Layout()
+        bSizer1481111.Fit( self.m_panel801 )
+        self.m_notebook6.AddPage( self.m_panel801, _(u"Advanced"), False )
+        self.m_panel811 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer163 = wx.BoxSizer( wx.VERTICAL )
+
+        bSizer1481 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.database_password_panel = wx.Panel( self.m_panel811, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer139121 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.m_staticText70121 = wx.StaticText( self.database_password_panel, wx.ID_ANY, _(u"Password"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText70121.Wrap( -1 )
+
+        self.m_staticText70121.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer139121.Add( self.m_staticText70121, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        self.m_textCtrl36 = wx.TextCtrl( self.database_password_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD )
+        bSizer139121.Add( self.m_textCtrl36, 1, wx.ALL, 5 )
+
+
+        self.database_password_panel.SetSizer( bSizer139121 )
+        self.database_password_panel.Layout()
+        bSizer139121.Fit( self.database_password_panel )
+        bSizer1481.Add( self.database_password_panel, 1, wx.ALIGN_CENTER, 5 )
+
+        self.database_password_expire_panel = wx.Panel( self.m_panel811, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer139111111 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.database_password_expire = wx.CheckBox( self.database_password_expire_panel, wx.ID_ANY, _(u"Password expire"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer139111111.Add( self.database_password_expire, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.database_password_expire_panel.SetSizer( bSizer139111111 )
+        self.database_password_expire_panel.Layout()
+        bSizer139111111.Fit( self.database_password_expire_panel )
+        bSizer1481.Add( self.database_password_expire_panel, 1, wx.ALIGN_CENTER, 5 )
+
+
+        bSizer163.Add( bSizer1481, 0, wx.EXPAND, 5 )
 
         bSizer148111 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_account_status_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.database_account_status_panel = wx.Panel( self.m_panel811, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         bSizer13912111 = wx.BoxSizer( wx.HORIZONTAL )
 
         self.m_staticText7012111 = wx.StaticText( self.database_account_status_panel, wx.ID_ANY, _(u"Account status"), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -1322,20 +1340,37 @@ class MainFrameView ( wx.Frame ):
         bSizer13912111.Fit( self.database_account_status_panel )
         bSizer148111.Add( self.database_account_status_panel, 1, wx.ALIGN_CENTER, 5 )
 
-        self.database_password_expire_panel = wx.Panel( self.m_panel54, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        bSizer139111111 = wx.BoxSizer( wx.HORIZONTAL )
+        self.database_profile_panel = wx.Panel( self.m_panel811, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer1391111 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.database_password_expire = wx.CheckBox( self.database_password_expire_panel, wx.ID_ANY, _(u"Password expire"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer139111111.Add( self.database_password_expire, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+        self.m_staticText701111 = wx.StaticText( self.database_profile_panel, wx.ID_ANY, _(u"Profile"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.m_staticText701111.Wrap( -1 )
+
+        self.m_staticText701111.SetMinSize( wx.Size( 150,-1 ) )
+
+        bSizer1391111.Add( self.m_staticText701111, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+        database_profileChoices = []
+        self.database_profile = wx.Choice( self.database_profile_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, database_profileChoices, 0 )
+        self.database_profile.SetSelection( 0 )
+        bSizer1391111.Add( self.database_profile, 1, wx.ALL, 5 )
 
 
-        self.database_password_expire_panel.SetSizer( bSizer139111111 )
-        self.database_password_expire_panel.Layout()
-        bSizer139111111.Fit( self.database_password_expire_panel )
-        bSizer148111.Add( self.database_password_expire_panel, 1, wx.ALIGN_CENTER, 5 )
+        self.database_profile_panel.SetSizer( bSizer1391111 )
+        self.database_profile_panel.Layout()
+        bSizer1391111.Fit( self.database_profile_panel )
+        bSizer148111.Add( self.database_profile_panel, 1, wx.ALIGN_CENTER, 5 )
 
 
-        bSizer158.Add( bSizer148111, 0, wx.EXPAND, 5 )
+        bSizer163.Add( bSizer148111, 0, wx.EXPAND, 5 )
+
+
+        self.m_panel811.SetSizer( bSizer163 )
+        self.m_panel811.Layout()
+        bSizer163.Fit( self.m_panel811 )
+        self.m_notebook6.AddPage( self.m_panel811, _(u"Security"), False )
+
+        bSizer158.Add( self.m_notebook6, 1, wx.EXPAND | wx.ALL, 5 )
 
 
         self.m_panel54.SetSizer( bSizer158 )
@@ -1503,21 +1538,23 @@ class MainFrameView ( wx.Frame ):
         self.m_panel651.Layout()
         bSizer149.Fit( self.m_panel651 )
         self.m_splitter7.SplitHorizontally( self.m_panel54, self.m_panel651, 200 )
-        bSizer80.Add( self.m_splitter7, 1, wx.EXPAND, 5 )
+        bSizer27.Add( self.m_splitter7, 1, wx.EXPAND, 5 )
+
+        bSizer80 = wx.BoxSizer( wx.VERTICAL )
 
         bSizer138 = wx.BoxSizer( wx.HORIZONTAL )
 
-        self.btn_cancel_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_cancel_database = wx.Button( self.panel_database, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.btn_cancel_database.Enable( False )
 
         bSizer138.Add( self.btn_cancel_database, 0, wx.ALL, 5 )
 
-        self.btn_delete_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_delete_database = wx.Button( self.panel_database, wx.ID_ANY, _(u"Delete"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.btn_delete_database.Enable( False )
 
         bSizer138.Add( self.btn_delete_database, 0, wx.ALL, 5 )
 
-        self.btn_apply_database = wx.Button( self.m_panel30, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.btn_apply_database = wx.Button( self.panel_database, wx.ID_ANY, _(u"Apply"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.btn_apply_database.Enable( False )
 
         bSizer138.Add( self.btn_apply_database, 0, wx.ALL, 5 )
@@ -1526,51 +1563,12 @@ class MainFrameView ( wx.Frame ):
         bSizer80.Add( bSizer138, 0, wx.EXPAND, 5 )
 
 
-        self.m_panel30.SetSizer( bSizer80 )
-        self.m_panel30.Layout()
-        bSizer80.Fit( self.m_panel30 )
-        self.m_notebook6.AddPage( self.m_panel30, _(u"Options"), False )
-        self.m_panel31 = wx.Panel( self.m_notebook6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.m_panel31.Hide()
-
-        bSizer82 = wx.BoxSizer( wx.VERTICAL )
-
-        self.m_staticText7011 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText7011.Wrap( -1 )
-
-        self.m_staticText7011.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer82.Add( self.m_staticText7011, 0, wx.ALL, 5 )
-
-        self.m_staticText7011111 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText7011111.Wrap( -1 )
-
-        self.m_staticText7011111.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer82.Add( self.m_staticText7011111, 0, wx.ALL, 5 )
-
-        self.m_staticText70111111 = wx.StaticText( self.m_panel31, wx.ID_ANY, _(u"MyLabel"), wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_staticText70111111.Wrap( -1 )
-
-        self.m_staticText70111111.SetMinSize( wx.Size( 150,-1 ) )
-
-        bSizer82.Add( self.m_staticText70111111, 0, wx.ALL, 5 )
-
-
-        self.m_panel31.SetSizer( bSizer82 )
-        self.m_panel31.Layout()
-        bSizer82.Fit( self.m_panel31 )
-        self.m_notebook6.AddPage( self.m_panel31, _(u"Diagram"), False )
-
-        bSizer27.Add( self.m_notebook6, 1, wx.EXPAND | wx.ALL, 5 )
+        bSizer27.Add( bSizer80, 0, wx.EXPAND, 5 )
 
 
         self.panel_database.SetSizer( bSizer27 )
         self.panel_database.Layout()
         bSizer27.Fit( self.panel_database )
-        self.m_menu15 = wx.Menu()
-        self.panel_database.Bind( wx.EVT_RIGHT_DOWN, self.panel_databaseOnContextMenu )
-
         self.MainFrameNotebook.AddPage( self.panel_database, _(u"Database"), True )
         MainFrameNotebookBitmap = wx.Bitmap( u"icons/16x16/database.png", wx.BITMAP_TYPE_ANY )
         if ( MainFrameNotebookBitmap.IsOk() ):
@@ -3280,9 +3278,6 @@ class MainFrameView ( wx.Frame ):
         self.m_splitter7.SetSashPosition( 200 )
         self.m_splitter7.Unbind( wx.EVT_IDLE )
 
-    def panel_databaseOnContextMenu( self, event ):
-        self.panel_database.PopupMenu( self.m_menu15, event.GetPosition() )
-
     def m_splitter41OnIdle( self, event ):
         self.m_splitter41.SetSashPosition( 200 )
         self.m_splitter41.Unbind( wx.EVT_IDLE )
@@ -3311,6 +3306,20 @@ class MainFrameView ( wx.Frame ):
 
 
 ###########################################################################
+## Class MyPanel1
+###########################################################################
+
+class MyPanel1 ( wx.Panel ):
+
+    def __init__( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL, name = wx.EmptyString ):
+        wx.Panel.__init__ ( self, parent, id = id, pos = pos, size = size, style = style, name = name )
+
+
+    def __del__( self ):
+        pass
+
+
+###########################################################################
 ## Class Trash
 ###########################################################################
 
@@ -3328,13 +3337,61 @@ class Trash ( wx.Frame ):
 
         bSizer147.Add( bSizer152, 1, wx.EXPAND, 5 )
 
+        self.m_panel821 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer96 = wx.BoxSizer( wx.HORIZONTAL )
+
+        bSizer14811 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer14811.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+
+        bSizer14811.Add( ( 0, 0), 0, wx.EXPAND, 5 )
+
+
+        bSizer96.Add( bSizer14811, 0, wx.EXPAND, 5 )
+
+        bSizer164 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer96.Add( bSizer164, 0, wx.EXPAND, 5 )
+
+        bSizer92 = wx.BoxSizer( wx.HORIZONTAL )
+
+
+        bSizer96.Add( bSizer92, 0, wx.EXPAND, 5 )
+
+
+        self.m_panel821.SetSizer( bSizer96 )
+        self.m_panel821.Layout()
+        bSizer96.Fit( self.m_panel821 )
+        bSizer147.Add( self.m_panel821, 1, wx.EXPAND | wx.ALL, 5 )
+
+        self.database_read_only_panel = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        bSizer148 = wx.BoxSizer( wx.HORIZONTAL )
+
+        self.database_read_only = wx.CheckBox( self.database_read_only_panel, wx.ID_ANY, _(u"Read Only"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        bSizer148.Add( self.database_read_only, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+
+        self.database_read_only_panel.SetSizer( bSizer148 )
+        self.database_read_only_panel.Layout()
+        bSizer148.Fit( self.database_read_only_panel )
+        bSizer147.Add( self.database_read_only_panel, 0, wx.EXPAND | wx.ALL, 5 )
+
 
         self.SetSizer( bSizer147 )
         self.Layout()
+        self.m_menu15 = wx.Menu()
+        self.Bind( wx.EVT_RIGHT_DOWN, self.TrashOnContextMenu )
+
 
         self.Centre( wx.BOTH )
 
     def __del__( self ):
         pass
+
+    def TrashOnContextMenu( self, event ):
+        self.PopupMenu( self.m_menu15, event.GetPosition() )
 
 
