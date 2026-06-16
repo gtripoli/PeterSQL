@@ -204,6 +204,19 @@ class MariaDBTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class MariaDBCheck(SQLCheck):
+    def add(self) -> bool:
+        return self.create()
+
+    def rename(self, new_name: str) -> bool:
+        old_name_quoted = self.table.database.context.quote_identifier(self.name)
+        new_name_quoted = self.table.database.context.quote_identifier(new_name)
+        statement = f"ALTER TABLE {self.table.fully_qualified_name} RENAME CONSTRAINT {old_name_quoted} TO {new_name_quoted}"
+        return self.table.database.context.execute(statement)
+
+    def modify(self, current) -> bool:
+        self.drop()
+        return current.create()
+
     def create(self) -> bool:
         statement = f"ALTER TABLE {self.table.fully_qualified_name} ADD CONSTRAINT {self.quoted_name} CHECK ({self.expression})"
         return self.table.database.context.execute(statement)

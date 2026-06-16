@@ -13,14 +13,106 @@ on:
       - main
 
 env:
+  WX_VERSION: "4.2.5"
   PYTHON_VERSION: "3.14"
-  PIP_CACHE_DIR: /home/runner/.cache/pip
   UV_CACHE_DIR: /home/runner/.cache/uv
+  PIP_CACHE_DIR: /home/runner/.cache/pip
   WHEEL_CACHE_DIR: /home/runner/.cache/wheels
-  PIP_FIND_LINKS: /home/runner/.cache/wheels
+  # Disable the Ryuk resource-reaper sidecar: it needs privileged Docker access
+  # which is unavailable in standard GitHub Actions runners and in act.
+  TESTCONTAINERS_RYUK_DISABLED: "true"
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Build the wxPython wheel once and cache it with a stable key.
+  # The key is tied to OS + Python version + wxPython version only, so
+  # bumping any other dependency in uv.lock will never bust this cache.
+  # ─────────────────────────────────────────────────────────────────────────
+  build-wxpython:
+    if: github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Restore wxPython wheel cache
+        id: wx_cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WHEEL_CACHE_DIR }}
+          key: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.WX_VERSION }}
+
+      - name: Cache pip (wxPython source tarball)
+        if: steps.wx_cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: pip-wx-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.WX_VERSION }}
+
+      - name: Set up Python
+        if: steps.wx_cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install wx build deps
+        if: steps.wx_cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config gettext \
+            xvfb \
+            libgtk-3-dev libglib2.0-dev \
+            libcairo2-dev libpango1.0-dev libatk1.0-dev libgdk-pixbuf2.0-dev \
+            libjpeg-dev libpng-dev libtiff-dev libtiff6 \
+            libnotify-dev libsm-dev \
+            libsdl2-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libglu1-mesa-dev freeglut3-dev \
+            libx11-dev libxext-dev libxinerama-dev libxi-dev libxrandr-dev \
+            libxrender-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libxss-dev libxtst-dev
+
+          if ! sudo apt-get install -y libwebkit2gtk-4.0-dev; then
+            sudo apt-get install -y libwebkit2gtk-4.1-dev
+          fi
+
+      - name: Verify GTK+ (build diagnostics)
+        if: steps.wx_cache.outputs.cache-hit != 'true'
+        run: |
+          pkg-config --modversion gtk+-3.0
+          pkg-config --cflags --libs gtk+-3.0
+
+      - name: Build wxPython wheel
+        if: steps.wx_cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${WHEEL_CACHE_DIR}"
+          pip install wheel
+          if ! xvfb-run python -m pip wheel -w "${WHEEL_CACHE_DIR}" "wxpython==${{ env.WX_VERSION }}"; then
+            echo "::error::wxPython wheel build failed — dumping config.log for diagnosis."
+            echo "=== Searching for config.log under /tmp, UV_CACHE_DIR, PIP_CACHE_DIR, GITHUB_WORKSPACE ==="
+            find /tmp "${UV_CACHE_DIR}" "${PIP_CACHE_DIR}" "${GITHUB_WORKSPACE}" \
+              -name "config.log" 2>/dev/null | head -20 | \
+              while IFS= read -r f; do
+                echo "=== $f ==="
+                tail -100 "$f"
+                echo ""
+              done
+            exit 1
+          fi
+
+      - name: Upload wxPython wheel as artifact
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          path: ${{ env.WHEEL_CACHE_DIR }}/wxpython-*.whl
+          if-no-files-found: error
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Run the test suite on every push to non-main branches and on PRs.
+  # ─────────────────────────────────────────────────────────────────────────
   test:
+    needs: build-wxpython
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
 
@@ -32,104 +124,56 @@ jobs:
         with:
           version: latest
           enable-cache: true
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-dependency-glob: uv.lock
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install wx build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential pkg-config gettext \
-            libgtk-3-dev libglib2.0-dev \
-            libjpeg-dev libpng-dev libtiff-dev libtiff6 \
-            libnotify-dev libsm-dev \
-            libsdl2-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            libglu1-mesa-dev freeglut3-dev \
-            libx11-dev libxext-dev libxinerama-dev libxi-dev libxrandr-dev \
-            libxss-dev libxtst-dev xvfb
+      - name: Install runtime deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnotify4 libsdl2-2.0-0
 
-          if ! sudo apt-get install -y libwebkit2gtk-4.0-dev; then
-            sudo apt-get install -y libwebkit2gtk-4.1-dev
-          fi
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.PIP_CACHE_DIR }}
-          key: pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.UV_CACHE_DIR }}
-          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-
-      - name: Cache wheelhouse
+      - name: Restore wxPython wheel
         uses: actions/cache@v4
         with:
           path: ${{ env.WHEEL_CACHE_DIR }}
-          key: wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+          key: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.WX_VERSION }}
 
-      - name: Initialize venv UV
+      - name: Download wxPython wheel artifact
+        if: ${{ !env.ACT }}
+        uses: actions/download-artifact@v4
+        with:
+          name: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          path: ${{ env.WHEEL_CACHE_DIR }}
+
+      - name: Initialize venv
         run: uv venv
 
-      - name: Export requirements from uv.lock (include dev extra)
-        run: uv export --format requirements-txt --locked --no-hashes --extra dev -o requirements.lock.txt
-
-      - name: Check wheelhouse status
-        id: wheelhouse_check
+      - name: Verify wxPython wheel
         run: |
-          mkdir -p "${WHEEL_CACHE_DIR}"
-
-          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
-            echo "wxPython wheel found in cache, skipping wheel build"
-            echo "needs_build=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "wxPython wheel missing, wheelhouse build required"
-            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+          echo "=== Wheelhouse contents ==="
+          ls -la "${WHEEL_CACHE_DIR}"
+          if ! ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl 2>/dev/null | grep -q .; then
+            echo "::error::wxPython wheel not found in ${WHEEL_CACHE_DIR}. Failing fast — no source build allowed."
+            exit 1
           fi
 
-      - name: Build wheelhouse from lock
-        if: steps.wheelhouse_check.outputs.needs_build == 'true'
-        run: |
-          mkdir -p "${WHEEL_CACHE_DIR}"
-          python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
-          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
+      - name: Install dependencies
+        run: uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-install-package wxpython
 
-      - name: Upgrade build tooling
-        run: uv pip install -U pip setuptools wheel
+      - name: Install wxPython from local wheel
+        run: uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" "wxpython==${{ env.WX_VERSION }}"
 
-      - name: Preinstall wxPython from wheelhouse
-        run: |
-          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
-            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
-          else
-            echo "No wxPython wheel found in wheelhouse"
-          fi
+      - name: Run tests
+        run: xvfb-run -a uv run --no-sync ./scripts/runtest.py
 
-      - name: Install dependencies from wheelhouse (fallback on build)
-        run: |
-          if uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-build; then
-            echo "Dependencies installed from wheelhouse without builds"
-          else
-            echo "Wheel-only install failed, falling back to normal uv sync"
-            uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
-          fi
-
-      - name: Run tests (--all)
-        run: xvfb-run -a uv run ./scripts/runtest.py --suite all
-
+  # ─────────────────────────────────────────────────────────────────────────
+  # Run tests and commit updated README on every push to main.
+  # ─────────────────────────────────────────────────────────────────────────
   update:
+    needs: build-wxpython
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
@@ -141,102 +185,50 @@ jobs:
         with:
           version: latest
           enable-cache: true
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-dependency-glob: uv.lock
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install wx build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential pkg-config gettext \
-            libgtk-3-dev libglib2.0-dev \
-            libjpeg-dev libpng-dev libtiff-dev libtiff6 \
-            libnotify-dev libsm-dev \
-            libsdl2-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            libglu1-mesa-dev freeglut3-dev \
-            libx11-dev libxext-dev libxinerama-dev libxi-dev libxrandr-dev \
-            libxss-dev libxtst-dev xvfb
+      - name: Install runtime deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnotify4 libsdl2-2.0-0
 
-          if ! sudo apt-get install -y libwebkit2gtk-4.0-dev; then
-            sudo apt-get install -y libwebkit2gtk-4.1-dev
-          fi
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.PIP_CACHE_DIR }}
-          key: pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            pip-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.UV_CACHE_DIR }}
-          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-
-      - name: Cache wheelhouse
+      - name: Restore wxPython wheel
         uses: actions/cache@v4
         with:
           path: ${{ env.WHEEL_CACHE_DIR }}
-          key: wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+          key: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.WX_VERSION }}
 
-      - name: Initialize venv UV
+      - name: Download wxPython wheel artifact
+        if: ${{ !env.ACT }}
+        uses: actions/download-artifact@v4
+        with:
+          name: wxpython-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          path: ${{ env.WHEEL_CACHE_DIR }}
+
+      - name: Initialize venv
         run: uv venv
 
-      - name: Export requirements from uv.lock (include dev extra)
-        run: uv export --format requirements-txt --locked --no-hashes --extra dev -o requirements.lock.txt
-
-      - name: Check wheelhouse status
-        id: wheelhouse_check
+      - name: Verify wxPython wheel
         run: |
-          mkdir -p "${WHEEL_CACHE_DIR}"
-
-          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
-            echo "wxPython wheel found in cache, skipping wheel build"
-            echo "needs_build=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "wxPython wheel missing, wheelhouse build required"
-            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+          echo "=== Wheelhouse contents ==="
+          ls -la "${WHEEL_CACHE_DIR}"
+          if ! ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl 2>/dev/null | grep -q .; then
+            echo "::error::wxPython wheel not found in ${WHEEL_CACHE_DIR}. Failing fast — no source build allowed."
+            exit 1
           fi
 
-      - name: Build wheelhouse from lock
-        if: steps.wheelhouse_check.outputs.needs_build == 'true'
-        run: |
-          mkdir -p "${WHEEL_CACHE_DIR}"
-          python -m pip wheel -w "${WHEEL_CACHE_DIR}" -r requirements.lock.txt
-          find "${PIP_CACHE_DIR}/wheels" -type f -name 'wxpython-*.whl' -exec cp -u {} "${WHEEL_CACHE_DIR}/" \;
+      - name: Install dependencies
+        run: uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-install-package wxpython
 
-      - name: Upgrade build tooling
-        run: uv pip install -U pip setuptools wheel
+      - name: Install wxPython from local wheel
+        run: uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" "wxpython==${{ env.WX_VERSION }}"
 
-      - name: Preinstall wxPython from wheelhouse
-        run: |
-          if ls "${WHEEL_CACHE_DIR}"/wxpython-*.whl >/dev/null 2>&1; then
-            uv pip install --no-index --find-links "${WHEEL_CACHE_DIR}" wxpython==4.2.5
-          else
-            echo "No wxPython wheel found in wheelhouse"
-          fi
-
-      - name: Install dependencies from wheelhouse (fallback on build)
-        run: |
-          if uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}" --no-build; then
-            echo "Dependencies installed from wheelhouse without builds"
-          else
-            echo "Wheel-only install failed, falling back to normal uv sync"
-            uv sync --extra dev --find-links "${WHEEL_CACHE_DIR}"
-          fi
-
-      - name: Run tests and update README (--update)
-        run: xvfb-run -a uv run ./scripts/runtest.py --suite all --update
+      - name: Run tests and update README
+        run: xvfb-run -a uv run --no-sync ./scripts/runtest.py
 
       - name: Commit and push updated README
         run: |
@@ -255,8 +247,10 @@ jobs:
       - name: Build (placeholder)
         run: echo "Build scripts are not ready yet."
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # Release flow — temporarily disabled.
+  # ─────────────────────────────────────────────────────────────────────────
   release:
-    # Temporarily disabled: release flow is not ready yet.
     if: false
     runs-on: ubuntu-latest
 

@@ -23,20 +23,20 @@ Current scenarios use `wx.UIActionSimulator` for user-like typing/clicking on th
 
 ## Run in test mode
 
-Use the project test runner with the dedicated UI suite:
+Use the project test runner with the dedicated UI subcommand:
 
 ```bash
-PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH" xvfb-run -a uv run ./scripts/runtest.py --suite ui
+PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH" xvfb-run -a uv run ./scripts/runtest.py ui
 ```
 
 The UI suite is forced to run with xdist single worker (`-n 1`) inside `scripts/runtest.py` for clearer one-failure-at-a-time diagnostics.
 
 ## Refresh screenshots
 
-Use the same suite with `--refresh-screenshots`:
+Add `--screenshot` to the `ui` subcommand:
 
 ```bash
-PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH" xvfb-run -a uv run ./scripts/runtest.py --suite ui --refresh-screenshots
+PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH" xvfb-run -a uv run ./scripts/runtest.py ui --screenshot
 ```
 
 Generated files are saved under `screenshot/`.

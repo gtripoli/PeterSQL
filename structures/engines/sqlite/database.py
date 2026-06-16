@@ -13,7 +13,7 @@ from structures.engines.sqlite.builder import SQLiteColumnBuilder
 from structures.engines.sqlite.indextype import SQLiteIndexType
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=False)
 class SQLiteDatabase(SQLDatabase):
     def create(self) -> bool:
         raise NotImplementedError("SQLite databases are files and cannot be created through SQL")
@@ -282,6 +282,15 @@ class SQLiteTable(SQLTable):
 
 @dataclasses.dataclass(eq=False)
 class SQLiteCheck(SQLCheck):
+    def add(self) -> bool:
+        raise NotImplementedError("SQLite does not support adding CHECK constraints after table creation")
+
+    def rename(self, new_name: str) -> bool:
+        raise NotImplementedError("SQLite does not support renaming CHECK constraints")
+
+    def modify(self, current) -> bool:
+        raise NotImplementedError("SQLite does not support modifying CHECK constraints")
+
     def create(self) -> bool:
         # SQLite doesn't support ADD CONSTRAINT for CHECK after table creation
         # CHECK constraints must be defined inline during CREATE TABLE
