@@ -2,7 +2,7 @@
 ![Coverage](https://img.shields.io/badge/coverage-47%25-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-2495-blue)
 
-![SQLite](https://img.shields.io/badge/SQLite-3.50.4-green)
+![SQLite](https://img.shields.io/badge/SQLite-3.45.1-green)
 ![MySQL](https://img.shields.io/badge/MySQL-8%20%7C%209-green)
 ![MariaDB](https://img.shields.io/badge/MariaDB-5%20%7C%2010%20%7C%2011%20%7C%2012-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20%7C%2016%20%7C%2017%20%7C%2018-green)
