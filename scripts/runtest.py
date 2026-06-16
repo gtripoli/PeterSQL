@@ -2,13 +2,14 @@
 """
 PeterSQL test runner
 
-  (no args)                    Run all tests and update README badges
+  (no args)                    Run all tests (excluding UI) and update README badges
   unit                         Unit tests only (tests/core/)
   autocomplete                 Autocomplete golden-case tests
   autocomplete --engine <name> Restrict autocomplete tests to one engine
   integration                  Integration tests only
   integration --engine <name>  Restrict integration tests to one engine
-  ui                           UI tests (always refreshes screenshots)
+  ui                           UI tests
+  ui --screenshot              UI tests and refresh screenshots
 """
 
 import argparse
@@ -188,7 +189,8 @@ def main() -> int:
     it = sub.add_parser("integration", help="Integration tests only")
     it.add_argument("--engine", choices=engine_choices, help="Restrict to one engine")
 
-    sub.add_parser("ui", help="UI tests (always refreshes screenshots)")
+    ui = sub.add_parser("ui", help="UI tests")
+    ui.add_argument("--screenshot", action="store_true", help="Refresh screenshots during the run")
 
     args = parser.parse_args()
     suite = args.suite
@@ -220,17 +222,21 @@ def main() -> int:
 
     elif suite == "ui":
         print("Running UI tests...")
-        exit_code = _run([
+        cmd = [
             "xvfb-run", "-a",
             "uv", "run", "pytest", "tests/ui/test_scenarios.py",
-            "--tb=short", "-n", "1", "--refresh-screenshots",
-        ])
+            "--tb=short", "-n", "1",
+        ]
+        if getattr(args, "screenshot", False):
+            cmd.append("--refresh-screenshots")
+        exit_code = _run(cmd)
 
     else:
         print("Running all tests...")
         exit_code = _run([
             "uv", "run", "pytest", "tests/",
-            "--tb=no", "--ignore=tests/ui", "--junitxml", JUNIT_FILE,
+            "--tb=no", "--ignore=tests/ui",
+            "--junitxml", JUNIT_FILE,
         ], capture=True)
 
         print("\nUpdating README badges...")

@@ -1,6 +1,7 @@
 import pytest
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.indextype import SQLiteIndexType
+from structures.engines.sqlite.database import SQLiteDatabase
 
 from tests.engines.base_database_tests import BaseDatabaseUnsupportedTests
 from tests.engines.base_table_tests import BaseTableTests
@@ -195,7 +196,10 @@ class TestSQLiteViewCopy(BaseViewCopyTests):
 
 @pytest.mark.integration
 class TestSQLiteDatabase(BaseDatabaseUnsupportedTests):
-    pass
+
+    @staticmethod
+    def _build_new_database(database, session, name: str):
+        return SQLiteDatabase(id=-1, name=name, context=session.context)
 
 
 @pytest.mark.integration
