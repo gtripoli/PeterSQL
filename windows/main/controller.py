@@ -1728,8 +1728,8 @@ class MainFrameController(MainFrameView):
         self.btn_cancel_table.Enable(bool(table is not None))
 
         if table is not None:
-            self.tool_delete_table.Enable(False)
-            self.tool_clone_table.Enable(False)
+            self.m_toolBar51.EnableTool(self.tool_delete_table.GetId(), False)
+            self.m_toolBar51.EnableTool(self.tool_clone_table.GetId(), False)
 
         if isinstance(table, SQLTable):
             self.sql_create_table.SetText(
@@ -1738,8 +1738,8 @@ class MainFrameController(MainFrameView):
 
     def _on_database_selected_table(self, table: SQLTable):
         has_new = NEW_TABLE.get_value() is not None
-        self.tool_delete_table.Enable(table is not None and not has_new and not table.is_new)
-        self.tool_clone_table.Enable(table is not None and not has_new)
+        self.m_toolBar51.EnableTool(self.tool_delete_table.GetId(), table is not None and not has_new and not table.is_new)
+        self.m_toolBar51.EnableTool(self.tool_clone_table.GetId(), table is not None and not has_new)
 
     # def _on_selected_table(self, table : SQLTable):
     #     self.tool_delete_table.Enable(table is not None)

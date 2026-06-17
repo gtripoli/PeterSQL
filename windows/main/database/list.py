@@ -138,6 +138,7 @@ class ListDatabaseTable:
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
         if not item.IsOk():
+            DATABASE_SELECTED_TABLE.set_value(None)
             return
 
         if table := self.model.get_data_by_item(item):
