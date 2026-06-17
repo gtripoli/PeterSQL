@@ -385,8 +385,8 @@ class PopupCalendarTime(BasePopup):
     def set_value(self, value):
         super().set_value(value)
         if value:
-            self._date, self._time = value.split(" ")
             try:
+                self._date, self._time = value.split(" ")
                 dt = wx.DateTime()
                 dt.ParseISODate(self._date)
                 self.calendar_picker.SetDate(dt)
