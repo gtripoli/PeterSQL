@@ -1,9 +1,71 @@
-"""Tests for RecordsModel.is_static_default, static-default cache helpers,
-and cache invalidation via clear_static_defaults_cache."""
-import pytest
+"""Tests for RecordsModel value access and static-default cache behavior."""
+import datetime
+
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
+from structures.engines.datatype import DataTypeCategory, SQLDataType
+
 from windows.main.table.records import RecordsModel, _STATIC_DEFAULT_SENTINEL
+
+
+class TestRecordsModelValueAccess:
+    """Verify RecordsModel value access and formatting."""
+
+    @staticmethod
+    def _make_column(name: str, datatype: SQLDataType) -> SimpleNamespace:
+        return SimpleNamespace(name=name, datatype=datatype)
+
+    def _make_model(self, columns: list[SimpleNamespace], values: dict[str, Any]) -> RecordsModel:
+        table = MagicMock()
+        table.columns = columns
+
+        record = MagicMock()
+        record.values = values
+
+        model = RecordsModel(table, len(columns))
+        model._data = [record]
+        return model
+
+    def test_valid_column_access_returns_text_value(self):
+        column = self._make_column("name", SQLDataType("TEXT", DataTypeCategory.TEXT))
+        model = self._make_model([column], {"name": "Alice"})
+
+        assert model.GetValueByRow(0, 0) == "Alice"
+
+    def test_invalid_positive_column_index_returns_empty_string(self):
+        model = self._make_model([], {})
+
+        assert model.GetValueByRow(0, 0) == ""
+
+    def test_negative_column_index_returns_empty_string(self):
+        column = self._make_column("name", SQLDataType("TEXT", DataTypeCategory.TEXT))
+        model = self._make_model([column], {"name": "Alice"})
+
+        assert model.GetValueByRow(0, -1) == ""
+
+    def test_null_value_returns_null_display(self):
+        column = self._make_column("name", SQLDataType("TEXT", DataTypeCategory.TEXT))
+        model = self._make_model([column], {"name": None})
+
+        assert model.GetValueByRow(0, 0) == "NULL"
+
+    @pytest.mark.parametrize(("value", "expected"), [(0, False), (1, True)])
+    def test_boolean_value_returns_boolean(self, value: int, expected: bool):
+        column = self._make_column("enabled", SQLDataType("BOOLEAN", DataTypeCategory.INTEGER))
+        model = self._make_model([column], {"enabled": value})
+
+        assert model.GetValueByRow(0, 0) is expected
+
+    def test_datetime_value_returns_formatted_datetime(self):
+        column = self._make_column("created_at", SQLDataType("DATETIME", DataTypeCategory.TEMPORAL))
+        value = datetime.datetime(2026, 6, 23, 14, 5, 6)
+        model = self._make_model([column], {"created_at": value})
+
+        assert model.GetValueByRow(0, 0) == "2026-06-23 14:05:06"
 
 
 class TestIsStaticDefault:

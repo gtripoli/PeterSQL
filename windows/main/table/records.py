@@ -80,7 +80,15 @@ class RecordsModel(BaseObservableDataViewListModel):
         if not len(self.data):
             return None
 
-        column = self.table.columns[col]
+        if col < 0:
+            logger.error(f"Invalid record column index: {col}")
+            return ""
+
+        try:
+            column = self.table.columns[col]
+        except IndexError:
+            logger.error(f"Invalid record column index: {col}")
+            return ""
 
         record: SQLRecord = self.data[row]
 
