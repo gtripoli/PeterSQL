@@ -1,7 +1,8 @@
 import datetime
+import re
 
 from gettext import gettext as _
-from typing import Optional
+from typing import Optional, Any
 
 import wx
 import wx.dataview
@@ -26,12 +27,46 @@ NEW_RECORDS: ObservableList[SQLRecord] = ObservableList()
 
 NULL_DISPLAY = "NULL"
 
+# ---------------------------------------------------------------------------
+# Module-level constants used by RecordsModel.is_static_default
+# ---------------------------------------------------------------------------
+
+# Sentinel used by RecordsModel.get_static_default to distinguish a cached
+# value of None (or 0, '') from "not in cache".
+_STATIC_DEFAULT_SENTINEL: Any = object()
+
+# Whitelist regex for SQL default expressions that are provably constant.
+# Anything not matching is treated as dynamic (evaluated every time, never
+# cached).  The list is intentionally narrow to stay conservative:
+#   - NULL literal
+#   - Boolean literals  TRUE / FALSE
+#   - Integer or float numeric literals (optionally negative)
+#   - SQL single-quoted string literals (supports '' escaping)
+_STATIC_DEFAULT_RE = re.compile(
+    r"^(?:"
+    r"NULL"              # NULL keyword
+    r"|TRUE|FALSE"       # boolean keywords
+    r"|-?\d+(\.\d+)?"   # integer or decimal literal
+    r"|'(?:[^']|'')*'"  # SQL single-quoted string ('' = escaped quote)
+    r")$",
+    re.IGNORECASE,
+)
+
 
 class RecordsModel(BaseObservableDataViewListModel):
     def __init__(self, table: SQLTable, column_count: Optional[int] = None):
         super().__init__(column_count)
 
         self.table: SQLTable = table
+
+        # Cache for server-side defaults that are provably constant (NULL,
+        # numeric literals, simple string literals, TRUE/FALSE).  The cache
+        # lives with the model, so it is cleared automatically whenever a new
+        # table is loaded (which recreates the model via load_model_for).
+        # Key: (column_name, original server_default expression)
+        # Value: the Python value returned by the DB engine the first time the
+        #        expression was evaluated.
+        self._static_defaults_cache: dict[tuple[str, str], Any] = {}
 
     def _load(self, data):
         super()._load(data)
@@ -45,7 +80,15 @@ class RecordsModel(BaseObservableDataViewListModel):
         if not len(self.data):
             return None
 
-        column = self.table.columns[col]
+        if col < 0:
+            logger.error(f"Invalid record column index: {col}")
+            return ""
+
+        try:
+            column = self.table.columns[col]
+        except IndexError:
+            logger.error(f"Invalid record column index: {col}")
+            return ""
 
         record: SQLRecord = self.data[row]
 
@@ -111,6 +154,50 @@ class RecordsModel(BaseObservableDataViewListModel):
     def HasValue(self, item, col):
         return bool(self.data)
 
+    # ------------------------------------------------------------------
+    # Static-default cache helpers
+    # ------------------------------------------------------------------
+
+    def get_static_default(self, col_name: str, server_default: str) -> tuple[bool, Any]:
+        """Return ``(found, value)`` for a static default.
+
+        ``found`` is True even when the cached value is falsy (0, '', None).
+        Callers must use the boolean flag rather than truthiness of *value*.
+        """
+        key = (col_name, server_default)
+        value = self._static_defaults_cache.get(key, _STATIC_DEFAULT_SENTINEL)
+        if value is _STATIC_DEFAULT_SENTINEL:
+            return False, None
+        return True, value
+
+    def set_static_default(self, col_name: str, server_default: str, value: Any) -> None:
+        """Store a materialised static default value in the cache."""
+        self._static_defaults_cache[(col_name, server_default)] = value
+
+    def clear_static_defaults_cache(self) -> None:
+        """Discard all cached static default values.
+
+        The cache is cleared implicitly whenever a new table is loaded because
+        ``TableRecordsController.load_model_for`` always creates a fresh
+        ``RecordsModel`` instance (and therefore a fresh empty
+        ``_static_defaults_cache``).
+
+        This method exposes the same invalidation explicitly so callers can
+        force a reset when DDL or column metadata changes without recreating
+        the entire model.
+        """
+        self._static_defaults_cache.clear()
+
+    @staticmethod
+    def is_static_default(expr: str) -> bool:
+        """Return True only for known-static SQL default expressions.
+
+        Conservative: if the expression is not in the whitelist it returns
+        False so the caller evaluates it on every new record without caching
+        (dynamic path).  Examples of dynamic expressions: ``NOW()``,
+        ``uuid()``, ``CURRENT_DATE``, ``WEEK(CURRENT_TIMESTAMP())``.
+        """
+        return bool(_STATIC_DEFAULT_RE.match(expr.strip()))
 
     def add_row(self, data: SQLRecord) -> wx.dataview.DataViewItem:
         self.data.append(data)
@@ -175,6 +262,12 @@ class TableRecordsController:
                 logger.error(f"Fallback loading also failed: {ex}", exc_info=True)
 
     def load_model_for(self, obj):
+        # A new RecordsModel is created for every table load, which implicitly
+        # clears the static-default cache (fresh _static_defaults_cache dict).
+        # DDL changes always end up here via:
+        #   do_apply_table → CURRENT_TABLE.set_value → _on_current_table
+        #   → _load_records_page → load_model_for
+        # so stale cached defaults can never survive a DDL change.
         self.model = RecordsModel(obj, len(obj.columns))
         self.model.set_observable(obj.records)
         self.list_ctrl_records.AssociateModel(self.model)
@@ -276,7 +369,7 @@ class TableRecordsController:
         session = CURRENT_SESSION.get_value()
         table = CURRENT_TABLE.get_value()
 
-        values = dict()
+        values: dict = {}
         current_record = None
 
         if copy_from_selected:
@@ -284,18 +377,56 @@ class TableRecordsController:
             if selected.IsOk():
                 current_record: SQLRecord = self.model.get_data_by_item(selected)
 
-        column_server_default = {}
+        if use_server_defaults:
+            context = table.database.context
+
+            # Columns whose server-default value still needs to be fetched from
+            # the DB engine (either dynamic, or a static that is not yet cached).
+            needs_eval: list = []
+
+            for column in table.columns:
+                if column.is_auto_increment or not column.server_default:
+                    continue
+
+                expr = column.server_default
+
+                if RecordsModel.is_static_default(expr):
+                    found, cached_value = self.model.get_static_default(column.name, expr)
+                    if found:
+                        # Serve directly from the model cache — no DB round-trip.
+                        values[column.name] = cached_value
+                        continue
+
+                # Dynamic, or a static that is not yet cached → schedule evaluation.
+                needs_eval.append(column)
+
+            if needs_eval:
+                # Build a single SELECT that evaluates all required expressions.
+                # Use the column name (quoted via quote_identifier) as the SQL
+                # alias so the result row can be addressed by column.name.
+                parts = [
+                    f"{col.server_default} AS {context.quote_identifier(col.name)}"
+                    for col in needs_eval
+                ]
+                sql = f"SELECT {', '.join(parts)}"
+                if context.execute(sql):
+                    row = context.fetchone()
+                    if row:
+                        for col in needs_eval:
+                            # Use 'col.name' as dict key (drivers strip alias quoting).
+                            evaluated = row[col.name]
+                            values[col.name] = evaluated
+                            # Persist only static defaults in the model cache.
+                            if RecordsModel.is_static_default(col.server_default):
+                                self.model.set_static_default(col.name, col.server_default, evaluated)
+
         for column in table.columns:
             if column.is_auto_increment:
                 continue
-
-            if use_server_defaults and column.server_default:
-                if not column_server_default.get(column.server_default):
-                    if table.database.context.execute(f"SELECT {column.server_default} as column_default"):
-                        column_server_default[column.server_default] = table.database.context.fetchone()['column_default']
-
-                values[column.name] = column_server_default[column.server_default]
-            elif copy_from_selected and current_record:
+            if use_server_defaults and column.server_default and column.name in values:
+                # Already handled in the server-defaults block above.
+                continue
+            if copy_from_selected and current_record:
                 values[column.name] = current_record.values.get(column.name)
 
         new_empty_record = session.context.build_empty_record(

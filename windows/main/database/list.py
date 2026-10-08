@@ -11,7 +11,7 @@ from helpers.logger import logger
 
 from structures.engines.database import SQLTable, SQLDatabase, SQLView, SQLProcedure, SQLFunction, SQLTrigger, SQLEvent
 
-from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_PROCEDURE, CURRENT_FUNCTION, CURRENT_TRIGGER, CURRENT_EVENT
+from windows.main import CURRENT_DATABASE, CURRENT_TABLE, CURRENT_SESSION, CURRENT_VIEW, CURRENT_PROCEDURE, CURRENT_FUNCTION, CURRENT_TRIGGER, CURRENT_EVENT, DATABASE_SELECTED_TABLE
 
 
 class ModelDatabaseTable(BaseObservableDataViewListModel):
@@ -74,6 +74,7 @@ class ListDatabaseTable:
 
         self.list_ctrl_database_tables = list_ctrl_database_tables
         self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
+        self.list_ctrl_database_tables.Bind(wx.dataview.EVT_DATAVIEW_SELECTION_CHANGED, self._on_selection_changed)
 
         self.model = ModelDatabaseTable(7)
         self.list_ctrl_database_tables.AssociateModel(self.model)
@@ -86,6 +87,8 @@ class ListDatabaseTable:
             logger.debug("ui trace: list._load_database rescheduled to main thread")
             wx.CallAfter(self._load_database, database)
             return
+
+        DATABASE_SELECTED_TABLE.set_value(None)
 
         if not database:
             return
@@ -135,11 +138,11 @@ class ListDatabaseTable:
     def _on_selection_changed(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
         if not item.IsOk():
+            DATABASE_SELECTED_TABLE.set_value(None)
             return
 
         if table := self.model.get_data_by_item(item):
-            CURRENT_VIEW.set_value(None)
-            CURRENT_TABLE.set_value(table.copy())
+            DATABASE_SELECTED_TABLE.set_value(table.copy())
 
     def _on_item_activated(self, event: wx.dataview.DataViewEvent):
         item = event.GetItem()
@@ -148,6 +151,7 @@ class ListDatabaseTable:
 
         if table := self.model.get_data_by_item(item):
             CURRENT_VIEW.set_value(None)
+            DATABASE_SELECTED_TABLE.set_value(table.copy())
             CURRENT_TABLE.set_value(table.copy())
 
 

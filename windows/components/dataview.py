@@ -276,7 +276,9 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
         self.AppendColumn(column1)
 
         column2_renderer = PopupRenderer(PopupChoice)
-        column2_renderer.on_open = lambda popup: popup.set_choices([t.name for t in list(CURRENT_DATABASE.get_value().tables)])
+        column2_renderer.on_open = lambda popup: popup.set_choices([
+            self._table_reference_name(t) for t in list(CURRENT_DATABASE.get_value().tables)
+        ])
         column2 = wx.dataview.DataViewColumn(_(u"Reference table"), column2_renderer, 2, width=wx.COL_WIDTH_AUTOSIZE, flags=wx.dataview.DATAVIEW_COL_RESIZABLE, align=wx.ALIGN_LEFT)
         column2.SetMinWidth(140)
         self.AppendColumn(column2)
@@ -328,11 +330,29 @@ class TableForeignKeysDataViewCtrl(BaseDataViewCtrl):
     def _load_table_columns(self, popup, column2_render: PopupRenderer) -> list[str]:
         value = column2_render.GetValue()
         if value:
-            table = next((t for t in list(CURRENT_DATABASE.get_value().tables) if t.name == value), None)
+            table = self._find_reference_table(value)
             if table:
                 return [c.name for c in list(table.columns)]
 
         return []
+
+    @staticmethod
+    def _table_reference_name(table: SQLTable) -> str:
+        if schema := getattr(table, "schema", None):
+            return f"{schema}.{table.name}"
+
+        return table.name
+
+    @staticmethod
+    def _find_reference_table(reference_table: str) -> Optional[SQLTable]:
+        return next(
+            (
+                table
+                for table in list(CURRENT_DATABASE.get_value().tables)
+                if table.name == reference_table or TableForeignKeysDataViewCtrl._table_reference_name(table) == reference_table
+            ),
+            None,
+        )
 
 
 class TableRecordsDataViewCtrl(BaseDataViewCtrl):

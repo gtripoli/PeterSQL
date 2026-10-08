@@ -15,7 +15,7 @@ class MariaDBDataType(StandardDataType):
     DECIMAL = SQLDataType(name="DECIMAL", category=DataTypeCategory.REAL, alias=["DEC", "NEWDECIMAL"], has_precision=True, has_scale=True)
 
     # Text types
-    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, alias=["STRING"], has_length=True, max_size=255)
+    CHAR = SQLDataType(name="CHAR", category=DataTypeCategory.TEXT, alias=["STRING"], has_length=True, max_size=255, format=DataTypeFormat.STRING)
     VARCHAR = SQLDataType(name="VARCHAR", category=DataTypeCategory.TEXT, alias=["VAR_STRING"], has_length=True, max_size=65535, format=DataTypeFormat.STRING)
     TINYTEXT = SQLDataType(name="TINYTEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
     TEXT = SQLDataType(name="TEXT", category=DataTypeCategory.TEXT, format=DataTypeFormat.STRING)
@@ -31,14 +31,14 @@ class MariaDBDataType(StandardDataType):
     LONGBLOB = SQLDataType(name="LONGBLOB", category=DataTypeCategory.BINARY, alias=["LONG_BLOB"])
 
     # Date and time
-    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL)
-    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL)
-    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL)
-    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL)
+    DATE = SQLDataType(name="DATE", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    DATETIME = SQLDataType(name="DATETIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    TIMESTAMP = SQLDataType(name="TIMESTAMP", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
+    TIME = SQLDataType(name="TIME", category=DataTypeCategory.TEMPORAL, format=DataTypeFormat.STRING)
     YEAR = SQLDataType(name="YEAR", category=DataTypeCategory.TEMPORAL)
 
-    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.OTHER, has_set=True)
-    SET = SQLDataType(name="SET", category=DataTypeCategory.OTHER, has_set=True)
+    ENUM = SQLDataType(name="ENUM", category=DataTypeCategory.OTHER, has_set=True, format=DataTypeFormat.STRING)
+    SET = SQLDataType(name="SET", category=DataTypeCategory.OTHER, has_set=True, format=DataTypeFormat.STRING)
 
     # Other
     BOOLEAN = StandardDataType.BOOLEAN

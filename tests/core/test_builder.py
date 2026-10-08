@@ -3,6 +3,8 @@ import pytest
 from structures.engines.sqlite.database import SQLiteDatabase, SQLiteTable, SQLiteColumn
 from structures.engines.sqlite.datatype import SQLiteDataType
 from structures.engines.sqlite.builder import SQLiteColumnBuilder
+from structures.engines.mariadb.builder import MariaDBColumnBuilder
+from structures.engines.mysql.builder import MySQLColumnBuilder
 
 
 class TestSQLiteColumnBuilder:
@@ -113,3 +115,53 @@ class TestSQLiteColumnBuilder:
 
         assert SQLiteColumnBuilder(column_nullable).nullable == "NULL"
         assert SQLiteColumnBuilder(column_required).nullable == "NOT NULL"
+
+
+class TestMariaDBFormatSetValues:
+    """Tests for MariaDBColumnBuilder._format_set_values."""
+
+    def test_simple_list(self):
+        """A plain list of strings is quoted and joined."""
+        result = MariaDBColumnBuilder._format_set_values(None, ['EN', 'FR'])
+        assert result == "'EN', 'FR'"
+
+    def test_single_quote_escaping(self):
+        """Single quotes inside values are escaped as ''."""
+        result = MariaDBColumnBuilder._format_set_values(None, ["O'Reilly", 'EN'])
+        assert result == "'O''Reilly', 'EN'"
+
+    def test_preformatted_string_passthrough(self):
+        """A pre-formatted string (non-list) is returned unchanged."""
+        preformatted = "'A', 'B'"
+        result = MariaDBColumnBuilder._format_set_values(None, preformatted)
+        assert result == preformatted
+
+    def test_non_string_elements_stringified(self):
+        """Non-string list elements are stringified and quoted without raising AttributeError."""
+        result = MariaDBColumnBuilder._format_set_values(None, [1, 2, 3])
+        assert result == "'1', '2', '3'"
+
+
+class TestMySQLFormatSetValues:
+    """Tests for MySQLColumnBuilder._format_set_values."""
+
+    def test_simple_list(self):
+        """A plain list of strings is quoted and joined."""
+        result = MySQLColumnBuilder._format_set_values(None, ['EN', 'FR'])
+        assert result == "'EN', 'FR'"
+
+    def test_single_quote_escaping(self):
+        """Single quotes inside values are escaped as ''."""
+        result = MySQLColumnBuilder._format_set_values(None, ['EN', "O'Reilly"])
+        assert result == "'EN', 'O''Reilly'"
+
+    def test_preformatted_string_passthrough(self):
+        """A pre-formatted string (non-list) is returned unchanged."""
+        preformatted = "'X', 'Y'"
+        result = MySQLColumnBuilder._format_set_values(None, preformatted)
+        assert result == preformatted
+
+    def test_non_string_elements_stringified(self):
+        """Non-string list elements are stringified and quoted without raising AttributeError."""
+        result = MySQLColumnBuilder._format_set_values(None, [True, 42])
+        assert result == "'True', '42'"
